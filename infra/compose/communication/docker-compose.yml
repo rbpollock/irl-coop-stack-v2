@@ -1,0 +1,59 @@
+services:
+  # Stalwart Mail Server
+  stalwart:
+    image: stalwartlabs/mail-server:0.19.0
+    restart: always
+    volumes:
+      - /opt/app/communication/data/mail:/opt/stalwart-mail/data
+      - /opt/app/communication/config/stalwart:/opt/stalwart-mail/etc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mail.rule=Host(`mail.${DOMAIN}`)"
+      - "traefik.http.routers.mail.entrypoints=websecure"
+      - "traefik.http.routers.mail.tls=true"
+
+  # Matrix Synapse
+  synapse:
+    image: matrixdotorg/synapse:v1.115.0
+    restart: always
+    volumes:
+      - /opt/app/communication/data/matrix:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.matrix.rule=Host(`chat.${DOMAIN}`)"
+      - "traefik.http.routers.matrix.entrypoints=websecure"
+      - "traefik.http.routers.matrix.tls=true"
+
+  # Jitsi Meet
+  jitsi-web:
+    image: jitsi/web:stable-9149
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jitsi.rule=Host(`meet.${DOMAIN}`)"
+      - "traefik.http.routers.jitsi.entrypoints=websecure"
+      - "traefik.http.routers.jitsi.tls=true"
+
+  # Cal.com
+  calcom:
+    image: calcom/calcom:v5.0.0
+    restart: always
+    environment:
+      - NEXT_PUBLIC_WEBAPP_URL=https://cal.${DOMAIN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cal.rule=Host(`cal.${DOMAIN}`)"
+      - "traefik.http.routers.cal.entrypoints=websecure"
+      - "traefik.http.routers.cal.tls=true"
+
+  # FusionPBX / Asterisk
+  fusionpbx:
+    image: fusionpbx/fusionpbx:latest
+    restart: always
+    volumes:
+      - /opt/app/communication/data/freeswitch:/var/lib/freeswitch
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pbx.rule=Host(`pbx.${DOMAIN}`)"
+      - "traefik.http.routers.pbx.entrypoints=websecure"
+      - "traefik.http.routers.pbx.tls=true"
