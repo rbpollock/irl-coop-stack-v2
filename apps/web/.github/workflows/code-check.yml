@@ -1,0 +1,91 @@
+name: Code Check
+
+on: [pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "pnpm"
+
+      - name: Install dependencies and lint full-kit
+        working-directory: full-kit
+        run: |
+          pnpm install
+          pnpm run lint
+
+      - name: Install dependencies and lint starter-kit
+        working-directory: starter-kit
+        run: |
+          pnpm install
+          pnpm run lint
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "pnpm"
+
+      - name: Install dependencies and check format for full-kit
+        working-directory: full-kit
+        run: |
+          pnpm install
+          pnpm run format
+
+      - name: Install dependencies and check format for starter-kit
+        working-directory: starter-kit
+        run: |
+          pnpm install
+          pnpm run format
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "pnpm"
+
+      - name: Install dependencies and type-check full-kit
+        working-directory: full-kit
+        run: |
+          pnpm install
+          pnpm exec tsc --noEmit
+
+      - name: Install dependencies and type-check starter-kit
+        working-directory: starter-kit
+        run: |
+          pnpm install
+          pnpm exec tsc --noEmit

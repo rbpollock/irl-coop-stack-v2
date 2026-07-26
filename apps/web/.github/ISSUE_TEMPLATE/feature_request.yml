@@ -1,0 +1,13 @@
+name: Feature Request
+description: Suggest a new component or functionality
+labels: [enhancement, feature]
+title: "[feat] "
+
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's your idea?
+      description: Describe what you'd like to see added.
+    validations:
+      required: true

@@ -1,0 +1,13 @@
+name: Refactor Request
+description: Suggest a refactor to improve code structure, readability, or maintainability
+labels: [enhancement, refactor]
+title: "[refactor] "
+
+body:
+  - type: textarea
+    id: reason
+    attributes:
+      label: What needs refactoring and why?
+      description: Describe what needs to be refactored and the reason for the change (e.g., readability, performance).
+    validations:
+      required: true

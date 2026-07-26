@@ -1,0 +1,38 @@
+name: Bug Report
+description: Report a bug in the dashboard
+labels: [bug]
+title: "[bug] "
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the issue you encountered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What steps caused the issue? Include screenshots if possible.
+      placeholder: |
+        1. Go to...
+        2. Click on...
+        3. Scroll down to...
+        4. See error...
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & OS
+      description: e.g., Chrome 123 on Windows 11
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console Output / Errors
+      description: Paste relevant logs or error messages.

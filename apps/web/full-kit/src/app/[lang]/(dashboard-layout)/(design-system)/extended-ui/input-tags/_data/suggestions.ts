@@ -1,0 +1,17 @@
+export const suggestionsData = [
+  "React",
+  "TypeScript",
+  "JavaScript",
+  "Next.js",
+  "Node.js",
+  "TailwindCSS",
+  "CSS",
+  "HTML",
+  "Git",
+  "GitHub",
+  "VS Code",
+  "Python",
+  "Java",
+  "C++",
+  "Ruby",
+]

@@ -1,0 +1,258 @@
+# Navigation
+
+This guide explains how to configure and customize the navigation structure of your application. The navigation data is defined in the `src/data/navigation.ts` file, which allows you to set up navigation sections, items, and submenus according to your project's needs.
+
+---
+
+## 1. Overview
+
+The `navigationsData` constant holds an array of navigation sections (or root items). Each section contains a set of navigation items. You can customize this structure to define which links and sections appear in your app's navigation menu.
+
+---
+
+## 2. File Structure
+
+The navigation data follows this format:
+
+```typescript
+const navigationsData: NavigationType[] = [
+  {
+    title: "Section Title", // The title of the navigation section (e.g., "Dashboards")
+    items: [
+      {
+        title: "Item Title", // The title of the navigation item
+        href: "/some/path", // or "items" for nested items
+        iconName: "IconName", // The associated Lucide icon name
+        label: "Optional Label", // Optional label (e.g., "New", "Soon")
+        items: [
+          // For nested items
+          {
+            title: "Nested Item",
+            href: "/nested/path",
+          },
+        ],
+      },
+    ],
+  },
+]
+```
+
+---
+
+## 3. Navigation Properties
+
+- **title**: The name of the navigation group (e.g., "Dashboards", "Pages").
+- **items**: A list of navigation items within that group.
+  - **title**: The name of the navigation item.
+  - **iconName**: The name of the Lucide icon associated with the navigation item (e.g., "ChartPie", "User").
+  - **label**: Optional label for items (e.g., "Soon" or "New").
+  - Each navigation item must have one of the following:
+    - **href**: The URL path for the navigation item.
+      <br />
+      **or**
+    - **items**: A list of navigation items within that item.
+      - **title**: The name of the navigation item.
+      - **label**: Optional label for items (e.g., "Soon" or "New").
+      - Each navigation item must have one of the following:
+        - **href**: The URL path for the navigation item.
+          <br />
+          **or**
+        - **items**: A list of navigation items within that item.
+
+---
+
+## 4. Example: Default Navigation Structure
+
+```typescript
+import type { NavigationType } from "@/types"
+
+export const navigationsData: NavigationType[] = [
+  {
+    title: "Dashboards",
+    items: [
+      {
+        title: "Analytics",
+        href: "/dashboards/analytics",
+        iconName: "ChartPie",
+      },
+      {
+        title: "CRM",
+        href: "/dashboards/crm",
+        iconName: "ChartBar",
+      },
+      {
+        title: "eCommerce",
+        href: "/dashboards/ecommerce",
+        iconName: "ShoppingCart",
+      },
+    ],
+  },
+  {
+    title: "Pages",
+    items: [
+      {
+        title: "Landing",
+        href: "#",
+        label: "Soon",
+        iconName: "LayoutTemplate",
+      },
+      {
+        title: "Pricing",
+        href: "/pages/pricing",
+        iconName: "CircleDollarSign",
+      },
+      {
+        title: "Payment",
+        href: "/pages/payment",
+        iconName: "CreditCard",
+      },
+      {
+        title: "Help Center",
+        href: "#",
+        label: "Soon",
+        iconName: "Headset",
+      },
+      {
+        title: "Settings",
+        href: "/pages/account/settings",
+        iconName: "UserCog",
+      },
+      {
+        title: "Profile",
+        href: "/pages/account/profile",
+        label: "Soon",
+        iconName: "User",
+      },
+      {
+        title: "Fallback",
+        iconName: "Replace",
+        items: [
+          {
+            title: "Coming Soon",
+            href: "/pages/coming-soon",
+          },
+          {
+            title: "Not Found 404",
+            href: "/pages/not-found-404",
+          },
+          {
+            title: "Unauthorized 401",
+            href: "/pages/unauthorized-401",
+          },
+          {
+            title: "Maintenance",
+            href: "/pages/maintenance",
+          },
+        ],
+      },
+      {
+        title: "Authentication",
+        iconName: "LogIn",
+        items: [
+          {
+            title: "Forgot Password",
+            href: "/pages/forgot-password",
+          },
+          {
+            title: "New Password",
+            href: "/pages/new-password",
+          },
+          {
+            title: "Verify Email",
+            href: "/pages/verify-email",
+          },
+          {
+            title: "Register",
+            href: "/pages/register",
+          },
+          {
+            title: "Sign In",
+            href: "/pages/sign-in",
+          },
+        ],
+      },
+    ],
+  },
+]
+```
+
+---
+
+## 5. How to Modify the Navigation
+
+### Add a New Navigation Section (Root Item)
+
+To add a new section (root item), append a new object to the `navigationsData` array. The section must include a `title` and an `items` array containing the navigation items for that section.
+
+**Example**: Add a "Support" root item:
+
+```typescript
+export const navigationsData: NavigationType[] = [
+  {
+    title: "Support",
+    items: [],
+  },
+]
+```
+
+This will create a new "Support" section in the navigation menu.
+
+---
+
+### Add a New Navigation Item
+
+To add a new item under an existing section, insert a new object into the `items` array of the relevant section. Each item must include either an `href` or an `items` field (for nested items). If the item is a root item, make sure to add the `iconName` property.
+
+**Example**: Add a "Dashboard" item under the "Dashboards" section:
+
+```typescript
+export const navigationsData: NavigationType[] = [
+  {
+    title: "Dashboards",
+    items: [
+      {
+        title: "Dashboard",
+        href: "/dashboard",
+        iconName: "ChartPie",
+      },
+    ],
+  },
+]
+```
+
+---
+
+### Add a Nested Navigation Item
+
+To create a submenu, insert a new item into the `items` array of an existing navigation item. This allows you to define hierarchical navigation.
+
+**Example**: Add a "Settings" item under the "Dashboard" item:
+
+```typescript
+export const navigationsData: NavigationType[] = [
+  {
+    title: "Dashboards",
+    items: [
+      {
+        title: "Dashboard",
+        iconName: "ChartPie",
+        items: [
+          {
+            title: "Settings",
+            href: "/dashboard/settings",
+          },
+        ],
+      },
+    ],
+  },
+]
+```
+
+---
+
+## 6. Important Notes
+
+1. **Icon Names**: Root navigation sections (root items) must include an `iconName` property, while nested items do not need one.
+2. **Item Structure**: Each navigation item must contain either an `href` (link) or an `items` array (for nested items). Items with nested `items` will appear as collapsible sections in the navigation.
+
+By following these guidelines, you can easily customize and extend the navigation structure of your application to fit your needs.

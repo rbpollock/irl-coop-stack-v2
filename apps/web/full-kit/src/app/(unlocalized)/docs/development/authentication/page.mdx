@@ -1,0 +1,206 @@
+# Authentication
+
+This guide provides step-by-step instructions for adding authentication to your application using **NextAuth.js**.
+
+---
+
+## 1. Install Authentication Dependencies
+
+To begin, install the required packages for setting up authentication with **NextAuth.js**:
+
+```bash
+pnpm install next-auth @auth/prisma-adapter @prisma/client prisma
+```
+
+```bash
+pnpm install --save-dev @types/picomatch
+```
+
+---
+
+## 2. Configure Environment Variables
+
+Add the following environment variables to your `.env` file. For sample values, refer to the **full-kit**:
+
+```env
+API_URL=your_api_url
+NEXTAUTH_URL=your_nextauth_url
+NEXTAUTH_SECRET=your_nextauth_secret
+```
+
+---
+
+## 3. Add Required Files
+
+Next, copy the necessary files and directories from the **full-kit**:
+
+- **Prisma Schema**: `prisma/schema.prisma`
+- **API Route for NextAuth.js**: `src/app/api/auth/[...nextauth]/route.ts`
+- **API Route for Sign In Page**: `src/app/api/auth/sign-in/route.ts`
+- **Schema for Sign In API Route**: `src/schemas/sign-in-schema.ts`
+- **Authentication Layout and Pages**: `src/app/(plain-layout)/(auth)`
+  - For now, just include `sign-in` and ensure that you include its dependencies from the **full-kit**.
+  - If you don't wish to use internationalization (i18n), make sure to remove its dependencies.
+- **Authentication UI Pages**: `src/components/auth`
+  - If i18n is not needed, remove the i18n-related dependencies.
+- **Authentication Routes Configuration**: `src/configs/auth-routes.ts`
+- **NextAuth Configuration**: `src/configs/next-auth.ts`
+- **Prisma Client**: `src/lib/prisma.ts`
+- **Authentication Utilities**: `src/lib/auth.ts`
+- **Authentication Routes Utilities**: `src/lib/auth-routes.ts`
+- **NextAuth Provider**: `src/providers/next-auth-provider.tsx`
+- **Middleware**: `src/middleware.js`
+  - If you do not need i18n, refer to the "Removing i18n Logic from Middleware" section below for further steps.
+
+---
+
+## 4. Removing i18n Logic from Middleware (Optional)
+
+If you choose **not** to use internationalization (i18n) in your project, follow the steps below to modify `src/middleware.js`:
+
+### 4.1. Remove I18n Imports
+
+Delete any imports related to i18n:
+
+```js
+import {
+  ensureLocalizedPathname,
+  getLocaleFromPathname,
+  getPreferredLocale,
+  isPathnameMissingLocale,
+} from "@/lib/i18n"
+```
+
+### 4.2. Simplify the `redirect` Function
+
+Update the `redirect` function to focus solely on redirecting to the given pathname, without handling locale:
+
+```ts
+function redirect(pathname: string, request: NextRequestWithAuth) {
+  const redirectUrl = new URL(pathname, request.url).toString()
+  return NextResponse.redirect(redirectUrl)
+}
+```
+
+### 4.3. Remove Locale Extraction and Handling
+
+Inside the `middleware` function, remove these blocks:
+
+```ts
+const locale = getLocaleFromPathname(pathname)
+const pathnameWithoutLocale = ensureWithoutPrefix(pathname, `/${locale}`)
+```
+
+```ts
+if (!locale) {
+  return redirect(pathname, request)
+}
+```
+
+Since we are removing locale logic, we don't need `pathnameWithoutLocale`. Instead, use `pathname` directly.
+
+### 4.5. Replace `pathnameWithoutLocale` with `pathname`
+
+Wherever `pathnameWithoutLocale` was used, replace it with `pathname`.
+
+---
+
+## 5. Update the `Providers` Component
+
+Ensure the `NextAuth` provider is included in your project by updating the `src/providers/index.tsx` file. Don't forget to add the `session` prop. Refer to the **full-kit** for an example implementation.
+
+---
+
+## 6. Update `package.json` Scripts
+
+Add the following scripts to the `scripts` section of your `package.json`:
+
+```json
+"scripts": {
+    ...
+    "migrate": "pnpm exec prisma migrate dev",
+    "postinstall": "pnpm exec prisma generate"
+}
+```
+
+---
+
+## 7. Set Up Prisma
+
+Run the following command to generate the Prisma client:
+
+```bash
+pnpm exec prisma generate
+```
+
+---
+
+### 8. Protecting Routes
+
+To ensure that specific routes in your Next.js application are only accessible to authenticated users, you can implement middleware to enforce authentication checks. This allows you to protect sensitive pages while providing access to others based on user authentication status.
+
+#### How Route Protection Works
+
+- **Protected Routes (Default)**: By default, all routes require authentication. If an unauthenticated user tries to access these routes, they will be redirected to the `/sign-in` page.
+- **Guest Routes**: These routes are only accessible to unauthenticated users. If an authenticated user attempts to access these routes, they will be redirected to a different page (e.g., the homepage or dashboard).
+- **Public Routes**: These routes can be accessed by both authenticated and unauthenticated users. However, exceptions can be configured, so some paths within these routes may still require authentication.
+
+#### How to Implement Route Protection
+
+In order to configure route protection, you’ll define the access control rules in the `src/configs/auth-routes.ts` file. Below is an example configuration:
+
+```ts
+import type { RouteType } from "@/types"
+
+export const routeMap = new Map<string, RouteType>([
+  ["/sign-in", { type: "guest" }], // Only unauthenticated users can access sign-in
+  ["/register", { type: "guest" }], // Only unauthenticated users can access register
+  ["/forgot-password", { type: "guest" }], // Only unauthenticated users can access forgot-password
+  ["/verify-email", { type: "guest" }], // Only unauthenticated users can access verify-email
+  ["/new-password", { type: "guest" }], // Only unauthenticated users can access new-password
+  ["/home", { type: "public", exceptions: ["/home/items"] }], // Home is public, but /home/items is protected
+  ["/docs", { type: "public" }], // Docs page is public
+])
+```
+
+Each route in the `routeMap` follows the structure:
+
+```ts
+[routePathname, { type: routeType, exceptions?: string[] }]
+```
+
+Where:
+
+- **`routePathname`**: A string representing the URL path for the route, such as `/sign-in`, `/home`, or `/dashboards/analytics`.
+- **`type`**: Defines the access control for that route, and it can be one of the following:
+  - **`"guest"`**: Accessible only to unauthenticated users. Authenticated users will be redirected to a different page (e.g., homepage or dashboard).
+  - **`"public"`**: Accessible to both authenticated and unauthenticated users. You can define exceptions for specific pages within the route that may require authentication.
+- **`exceptions` (Optional)**: A list of specific paths within a route that require authentication, even though the parent route is marked as public or guest. For example, `/home/items` can require authentication, while the general `/home` route remains accessible to everyone.
+
+The middleware will examine the `pathname` of the request and compare it with the keys in the `routeMap`. Based on the matching route type, the middleware will determine whether the route should be accessible to the user, or if a redirect is necessary.
+
+---
+
+## 9. Additional Resources
+
+For further information on setting up and using **NextAuth.js**, refer to the following resources:
+
+- **NextAuth.js Documentation**  
+  For a comprehensive guide on how to configure authentication, including advanced features and customization options, visit the official **NextAuth.js** documentation:  
+  [NextAuth.js Documentation](https://next-auth.js.org/)
+
+- **Next.js Middleware Documentation**  
+  Learn about implementing middleware in Next.js, which is useful for authentication, route protection, and custom redirect logic:  
+  [Next.js Middleware Documentation](https://nextjs.org/docs/app/building-your-application/routing/middleware)
+
+- **Prisma Documentation**  
+  Understand how to use **Prisma** for database schema modeling, migrations, and interacting with your database, which is integral for your authentication flow:  
+  [Prisma Documentation](https://www.prisma.io/docs)
+
+- **Next.js Environment Variables Guide**  
+  Learn about handling environment variables in Next.js securely, which is essential for configuring sensitive data like authentication secrets:  
+  [Next.js Environment Variables Documentation](https://nextjs.org/docs/basic-features/environment-variables)
+
+- **OWASP Authentication Cheat Sheet**  
+  For best practices in secure authentication and understanding common security pitfalls, refer to the **OWASP Authentication Cheat Sheet**:  
+  [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)

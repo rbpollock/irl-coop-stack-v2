@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Need Help?
+    url: https://github.com/Qualiora/shadboard/discussions/new?category=general
+    about: Use this link for general help or questions not related to a bug or feature.

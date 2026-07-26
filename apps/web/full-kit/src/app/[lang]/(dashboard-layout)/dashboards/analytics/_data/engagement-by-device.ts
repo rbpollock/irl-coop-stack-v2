@@ -1,0 +1,60 @@
+import type { EngagementByDeviceType } from "../types"
+
+export const engagementByDeviceData: EngagementByDeviceType[] = [
+  {
+    deviceType: "Windows",
+    sessionDuration: 300000,
+    pagesPerSession: 6.8,
+    bounceRate: 0.35,
+    userPercentage: 0.42,
+    conversionRate: 0.08,
+  },
+  {
+    deviceType: "macOS",
+    sessionDuration: 290000,
+    pagesPerSession: 6.5,
+    bounceRate: 0.3,
+    userPercentage: 0.25,
+    conversionRate: 0.1,
+  },
+  {
+    deviceType: "iOS",
+    sessionDuration: 180000,
+    pagesPerSession: 4.2,
+    bounceRate: 0.45,
+    userPercentage: 0.15,
+    conversionRate: 0.06,
+  },
+  {
+    deviceType: "Android",
+    sessionDuration: 200000,
+    pagesPerSession: 4.0,
+    bounceRate: 0.4,
+    userPercentage: 0.1,
+    conversionRate: 0.05,
+  },
+  {
+    deviceType: "ChromeOS",
+    sessionDuration: 250000,
+    pagesPerSession: 5.5,
+    bounceRate: 0.38,
+    userPercentage: 0.04,
+    conversionRate: 0.07,
+  },
+  {
+    deviceType: "Linux",
+    sessionDuration: 270000,
+    pagesPerSession: 5.8,
+    bounceRate: 0.37,
+    userPercentage: 0.03,
+    conversionRate: 0.09,
+  },
+  {
+    deviceType: "Other",
+    sessionDuration: 150000,
+    pagesPerSession: 3.7,
+    bounceRate: 0.5,
+    userPercentage: 0.01,
+    conversionRate: 0.02,
+  },
+]

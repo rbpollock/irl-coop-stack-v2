@@ -1,0 +1,150 @@
+# Kits
+
+This guide compares the **Starter Kit** and **Full Kit**, helping you decide which version is best for your Next.js project. Whether you’re building a simple application or a full-featured dashboard, these kits offer different levels of functionality to suit your needs.
+
+---
+
+## 1. Starter Kit
+
+The **Starter Kit** is a lightweight solution designed for developers who prefer a minimalistic approach to building a Next.js application. It includes only the essentials, offering flexibility for customization as you go.
+
+### Features:
+
+- **No Bloat or Extra Code**: Includes only the core features needed to run a Next.js app, ensuring a fast and clean setup.
+- **No Internationalization (I18n)**: Designed for single-language projects, it does not include I18n features by default.
+- **No Authentication**: No built-in authentication, giving you the freedom to integrate your own user management solution.
+- **No Customizer**: Does not include additional UI customization tools or settings.
+- **Two Pages**:
+  - **Home Page**: The basic landing page of your application.
+  - **Not Found Page**: A default 404 error page for handling invalid routes.
+
+### Folder Structure:
+
+```plaintext
+.
+├── public/
+│   └── images/
+├── src/
+│   ├── app/
+│   │   ├── (dashboard-layout)/
+│   │   ├── [...not-found]/
+│   │   ├── favicon.ico
+│   │   ├── global-error.tsx
+│   │   ├── globals.css
+│   │   └── layout.tsx
+│   ├── components/
+│   │   ├── dynamic-icon.tsx
+│   │   ├── layout/
+│   │   ├── pages/
+│   │   └── ui/
+│   ├── configs/
+│   ├── contexts/
+│   ├── data/
+│   ├── hooks/
+│   ├── lib/
+│   ├── providers/
+│   └── types.ts
+├── .env.example
+├── .gitignore
+├── .npmrc
+├── components.json
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.mjs
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── postcss.config.mjs
+├── prettier.config.mjs
+├── README.md
+└── tsconfig.json
+```
+
+### Why Choose the Starter Kit?
+
+The **Starter Kit** is ideal for developers who want a **clean, streamlined** starting point. It offers **easy customization** and is perfect for **scaling** as your project grows. With its minimal setup, you can focus on building your unique application without unnecessary distractions or dependencies.
+
+---
+
+## 2. Full Kit
+
+The **Full Kit** is a comprehensive solution that provides everything you need to develop a sophisticated and scalable Next.js application right out of the box. It’s designed for projects that require a broad set of tools and pre-built components.
+
+### Features:
+
+- **Packed with Demo Functionalities**: Includes all features demonstrated in the demo for a complete working solution.
+  - **Internationalization (I18n)**: Built-in support for multiple languages, making it easy to expand your app globally.
+  - **Authentication**: Integrated user authentication and session management.
+  - **Customizer**: A tool for dynamically changing the style and colors of the dashboard. It’s perfect for previewing and selecting preferred themes.
+  - **Full Set of Pages and Components**: Includes pre-built pages like Settings, CRM, and Analytics, along with reusable components such as DashboardCard, SocialMedia, and more.
+
+### Folder Structure:
+
+```plaintext
+.
+├── prisma/
+│   ├── migrations/
+│   └── schema.prisma
+├── public/
+│   └── images/
+├── src/
+│   ├── app/
+│   │   ├── (unlocalized)/
+│   │   │   ├── docs/
+│   │   │   └── layout.tsx
+│   │   ├── [lang]/
+│   │   │   ├── (dashboard-layout)/
+│   │   │   ├── (plain-layout)/
+│   │   │   ├── [...not-found]
+│   │   │   ├── global-error.tsx
+│   │   │   └── layout.tsx
+│   │   ├── api/
+│   │   │   ├── [...nextauth]
+│   │   │   └── sign-in/
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   └── themes.css
+│   ├── components/
+│   │   ├── dynamic-icon.tsx
+│   │   ├── auth/
+│   │   ├── layout/
+│   │   ├── dashboards/
+│   │   ├── pages/
+│   │   └── ui/
+│   ├── configs/
+│   ├── contexts/
+│   ├── data/
+│   ├── hooks/
+│   ├── lib/
+│   ├── providers/
+│   ├── schemas/
+│   ├── mdx-components.tsx
+│   ├── middleware.ts
+│   └── types.ts
+├── .env.example
+├── .gitignore
+├── .npmrc
+├── components.json
+├── eslint.config.mjs
+├── mdx.d.ts
+├── next-env.d.ts
+├── next.config.mjs
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── postcss.config.mjs
+├── prettier.config.mjs
+├── README.md
+└── tsconfig.json
+```
+
+### Why Choose the Full Kit?
+
+The **Full Kit** is ideal for projects that require a **comprehensive, ready-to-go solution**. It includes all the necessary tools for building a feature-rich application, including a customizable dashboard, authentication, multi-language support, and much more. The Full Kit is perfect for developers who need everything pre-configured and want to hit the ground running with the flexibility to customize as needed.
+
+---
+
+## 3. Conclusion
+
+- **Starter Kit**: Best for **lean, simple projects** where you want a minimal setup with the ability to customize and scale.
+- **Full Kit**: Perfect for **feature-rich projects** that need a comprehensive, ready-to-go solution with built-in **authentication**, **multi-language support**, and a **customizable dashboard**.

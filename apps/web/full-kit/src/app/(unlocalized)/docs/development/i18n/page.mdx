@@ -1,0 +1,182 @@
+# Internationalization (I18n)
+
+This guide outlines the steps to add **multi-language support** (I18n) to your application, enabling **Right-to-Left (RTL)** and **Left-to-Right (LTR)** layouts based on the selected language.
+
+---
+
+## 1. Install I18n Dependencies
+
+To support locale matching and negotiation, install the necessary packages:
+
+```bash
+pnpm install @formatjs/intl-localematcher negotiator
+```
+
+For TypeScript support, install the following development dependencies:
+
+```bash
+pnpm install --save-dev @types/negotiator
+```
+
+---
+
+## 2. Restructure the Application
+
+To set up the application for I18n support, follow these steps:
+
+1. In the `src/app` directory, create a new folder named `[lang]`.
+2. Move all content from `src/app` into the newly created `src/app/[lang]` folder, **except** for:
+   - `src/app/api`
+   - `favicon`
+   - `global.css`
+3. Update all path references in the moved files to align with the new folder structure.
+
+---
+
+## 3. Add Required Files
+
+From the **full-kit**, add the following files to your project:
+
+- `src/configs/i18n.ts`
+- `src/lib/i18n.ts` (make sure to include the dependencies from the **full-kit**)
+- `src/lib/get-dictionary.ts`
+
+---
+
+## 4. Add Language Dictionaries
+
+1. Create a folder named `dictionaries` inside `src/data`.
+2. Inside the `dictionaries` folder, create a JSON file for each supported language (e.g., `en.json`, `ar.json`).
+
+**Example**: `src/data/dictionaries/en.json`:
+
+```json
+{
+  "user-nav": {
+    "profile": "Profile",
+    "settings": "Settings",
+    "sign-out": "Sign out"
+  }
+}
+```
+
+Repeat this process for all supported languages, creating corresponding dictionary files such as `ar.json`, `fr.json`, etc.
+
+---
+
+## 5. Update the `get-dictionary.ts` File
+
+Modify the `src/lib/get-dictionary.ts` file to include the necessary language dictionaries within the `dictionaries` object.
+
+**Example**:
+
+```typescript
+const dictionaries = {
+  en: () =>
+    import("@/data/dictionaries/en.json").then((module) => module.default),
+  ar: () =>
+    import("@/data/dictionaries/ar.json").then((module) => module.default),
+}
+```
+
+---
+
+## 6. Update the `DashboardLayout` Component
+
+In the `src/app/[lang]/(dashboard-layout)/layout.tsx` file, update the `DashboardLayout` component as follows to incorporate the selected language dictionary:
+
+```typescript
+import { getDictionary } from "@/lib/getDictionary";
+
+import type { LocaleType } from "@/types";
+
+import { Layout } from "@/components/layout";
+
+export default async function DashboardLayout({
+  children,
+  params,
+}: {
+  children: ReactNode;
+  params: { lang: LocaleType };
+}) {
+  const dictionary = await getDictionary(params.lang);
+
+  return <Layout dictionary={dictionary}>{children}</Layout>;
+}
+```
+
+---
+
+## 7. Update the `Layout` Component
+
+Next, update the `Layout` component in `src/components/layout/index.tsx` to make use of the `dictionary` prop:
+
+```typescript
+"use client";
+
+import { useSettings } from "@/hooks/use-settings";
+
+import type { ReactNode } from "react"
+import type { DictionaryType } from "@/lib/getDictionary";
+
+import { VerticalLayout } from "./vertical-layout";
+import { HorizontalLayout } from "./horizontal-layout";
+
+export function Layout({
+  children,
+  dictionary,
+}: {
+  children: ReactNode;
+  dictionary: DictionaryType;
+}) {
+  const { settings } = useSettings();
+  const isVertical = settings.layout === "vertical";
+
+  return isVertical ? (
+    <VerticalLayout dictionary={dictionary}>{children}</VerticalLayout>
+  ) : (
+    <HorizontalLayout dictionary={dictionary}>{children}</HorizontalLayout>
+  );
+}
+```
+
+---
+
+## 8. Update Layout Components
+
+Use the implementations of VerticalLayout and HorizontalLayout from the **full-kit**, ensuring:
+
+1. They accept the dictionary prop of type DictionaryType.
+2. All nested components within these layouts utilize the dictionary prop as needed.
+
+---
+
+## 9. Update Headers and Components for Localization
+
+Make sure all components requiring localization (e.g., dropdowns, navigation menus) are updated to accept and utilize the `dictionary` prop.
+
+### Example: Updating `DropdownMenuLabel`
+
+Replace any hardcoded text with dynamic content from the dictionary.
+
+**Before**:
+
+```tsx
+<DropdownMenuLabel>language</DropdownMenuLabel>
+```
+
+**After**:
+
+```tsx
+<DropdownMenuLabel>
+  {dictionary.navigation.language["language"]}
+</DropdownMenuLabel>
+```
+
+---
+
+## 10. Additional Resources
+
+For further information on implementing Internationalization (I18n) in Next.js, refer to the official documentation:
+
+[Next.js I18n Documentation](https://nextjs.org/docs/app/building-your-application/routing/internationalization)
