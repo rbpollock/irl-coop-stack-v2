@@ -1,0 +1,11 @@
+  # FusionPBX + FreeSWITCH
+  fusionpbx:
+    image: fusionpbx/fusionpbx:latest
+    restart: always
+    volumes:
+      - /opt/app/communication/data/freeswitch:/var/lib/freeswitch
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pbx.rule=Host(`pbx.${DOMAIN}`)"
+      - "traefik.http.routers.pbx.entrypoints=websecure"
+      - "traefik.http.routers.pbx.tls=true"
