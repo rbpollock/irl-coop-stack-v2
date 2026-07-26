@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /opt/app/storage/data/postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  minio:
+    image: minio/minio:RELEASE.2024-01-01T00-00-00Z
+    command: server /data
+    volumes:
+      - /opt/app/storage/data/minio:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`s3.${DOMAIN}`)"
+
+  nocodb:
+    image: nocodb/nocodb:latest
+    environment:
+      NC_DB: pg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/nocodb
+    depends_on:
+      - postgres
+
+  cryptpad:
+    image: cryptpad/cryptpad:latest
+    volumes:
+      - /opt/app/storage/data/cryptpad:/cryptpad/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pad.rule=Host(`pad.${DOMAIN}`)"
