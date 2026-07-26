@@ -109,16 +109,19 @@ Users can spin up localized, independent sub-cooperatives (e.g., "Swim Buddies")
 
 The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB Swap** hardware profile:
 
-| Service | Architecture Role | Language/Implementation | RAM footprint |
-| :--- | :--- | :--- | :--- |
-| **Web App & Portal** | Client-Side ZK & WebAuthn | Next.js / React (Static export) | ~0MB (Browser executed) |
-| **Coop API Gateway** | ERC-4337 Paymaster & Relayer | Node.js (Rust backend helpers) | ~150MB |
-| **Database** | Sharded State Tracking | Citus / PostgreSQL | ~500MB |
-| **Reverse Proxy** | Network Routing | Nginx | ~20MB |
-| **Sovereign Local Node** | Local RPC & Validation | Geth / Hardhat (Docker Bundle) | ~800MB |
-| **Cache & Buffers** | Session Cache & Batch Buffering | Redis | ~50MB |
+| Service | Architecture Role | Language/Implementation | RAM footprint | Fork / Submodule Source |
+| :--- | :--- | :--- | :--- | :--- |
+| **Web App & Portal** | Client-Side ZK & WebAuthn | Next.js / React (Static export) | ~0MB (Browser executed) | Monorepo Core (`apps/web`) |
+| **Coop API Gateway** | ERC-4337 Paymaster & Relayer | Node.js (Rust backend helpers) | ~150MB | Monorepo Core (`apps/coop-api`) |
+| **Contracts** | On-chain verification, Safe AA | Solidity (Hardhat/Foundry) | ~0MB (On-chain) | Monorepo Core (`contracts`) |
+| **Ticketing Engine** | RSVP & Ticket sales | Hi.Events (PHP/Laravel/Postgres) | ~150MB | [Forked Repo] `git@github.com:hieventsdev/hi.events.git` |
+| **Surveys & Forms** | Anonymous ZK Feedback | Formbricks (Next.js/Node/Postgres)| ~200MB | [Forked Repo] `git@github.com:formbricks/formbricks.git` |
+| **Sovereign Local Node** | Local RPC & Validation | Geth / Hardhat (Docker Bundle) | ~800MB | Standard Docker Image |
+| **Database** | Sharded State Tracking | Citus / PostgreSQL | ~500MB | Standard Docker Image |
+| **Reverse Proxy** | Network Routing | Nginx | ~20MB | Standard Docker Image |
+| **Cache & Buffers** | Session Cache & Batch Buffering | Redis | ~50MB | Standard Docker Image |
 
-**Total Estimated Server Memory Footprint:** ~1.52GB (Leaving plenty of headroom for OS buffers and local host processes).
+**Total Estimated Server Memory Footprint:** ~1.87GB (Leaving plenty of headroom for OS buffers and local host processes).
 
 ---
 
@@ -132,7 +135,7 @@ The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB
 *   [ ] **Phase 3: The Cryptographic Privacy & Routing Layer**
     *   Build `CoopRegistry.sol` (Merkle Root member registries) and `CoopBatchRouter.sol` (the public-to-private batch clearing system).
     *   Integrate a mockup of the ZK-Shielded UTXO pool (using Semaphore for private voting and a mock Railgun interface for asset shielding).
-*   [ ] **Phase 4: Provisional peer.xyz On-Ramp Integration**
-    *   Draft the escrow release routing integration connecting the peer.xyz SDK swap contracts to the `CoopBatchRouter.sol` contract.
+*   [ ] **Phase 4: Forked Open-Source Integrations**
+    *   Setup `docker-compose.yml` to spin up forked submodules for **Hi.Events** (Ticketing) and **Formbricks** (ZK-Feedback) in standalone, sharded configurations.
 *   [ ] **Phase 5: Sovereign Shard Node Docker Bundle**
     *   Package all backend services (Postgres, Redis, Nginx, Coop API, and Local Node Geth instance) into a single, optimized Docker-compose configuration tailored for the 4GB RAM host machine.
