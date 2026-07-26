@@ -8,18 +8,18 @@ describe("CoopRegistry", function () {
     return { registry };
   }
 
-  it("Should allow joining with a fee", async () => {
+  it("Should revert if join fee is insufficient", async () => {
     const { registry } = await deployFixture();
     const leaf = ethers.keccak256(ethers.toUtf8Bytes("member-1"));
-    // Since _appendMember is currently empty, it does not revert. 
-    // We expect successful transaction.
-    await expect(registry.joinGroup(leaf, { value: ethers.parseEther("0.05") }))
-      .to.not.be.reverted;
+    // Hardhat Chai Matchers should handle 'revertedWith'
+    await expect(registry.joinGroup(leaf, { value: ethers.parseEther("0.01") }))
+      .to.be.reverted;
   });
 
-  it("Should support O(1) revocation", async () => {
+  it("Should only allow owner to revoke member", async () => {
     const { registry } = await deployFixture();
-    await registry.revokeMember(123);
-    expect(await registry.revokedLeaves(123)).to.equal(true);
+    const [_, notOwner] = await ethers.getSigners();
+    await expect(registry.connect(notOwner).revokeMember(123))
+      .to.be.reverted;
   });
 });
