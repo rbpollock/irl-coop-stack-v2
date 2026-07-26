@@ -17,6 +17,21 @@
         recursive: yes
       loop: "{{ pillars }}"
 
+    - name: Render environment files
+      ansible.builtin.template:
+        src: "../compose/{{ item }}/.env.example"
+        dest: "/opt/app/{{ item }}/.env"
+        mode: '0600'
+      loop: "{{ pillars }}"
+      ignore_errors: yes
+
+    - name: Ensure proxy acme.json exists
+      ansible.builtin.file:
+        path: /opt/app/proxy/acme.json
+        state: touch
+        mode: '0600'
+      when: "'proxy' in pillars"
+
     - name: Restart services
       ansible.builtin.shell: "docker compose -f /opt/app/{{ item }}/docker-compose.yml up -d --remove-orphans"
       loop: "{{ pillars }}"
