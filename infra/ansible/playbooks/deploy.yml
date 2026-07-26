@@ -1,0 +1,22 @@
+---
+- name: Deploy pillars
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure pillars dir exists
+      ansible.builtin.file:
+        path: "/opt/app/{{ item }}"
+        state: directory
+        owner: app
+      loop: "{{ pillars }}"
+
+    - name: Sync compose files
+      ansible.posix.synchronize:
+        src: "../compose/{{ item }}/"
+        dest: "/opt/app/{{ item }}/"
+        recursive: yes
+      loop: "{{ pillars }}"
+
+    - name: Restart services
+      ansible.builtin.shell: "docker compose -f /opt/app/{{ item }}/docker-compose.yml up -d --remove-orphans"
+      loop: "{{ pillars }}"

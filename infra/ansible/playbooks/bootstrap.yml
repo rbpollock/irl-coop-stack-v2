@@ -1,0 +1,25 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Setup App User
+      user:
+        name: app
+        shell: /bin/bash
+        groups: docker
+        append: yes
+
+    - name: Install Docker and Compose
+      ansible.builtin.apt:
+        name: 
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Setup App Root
+      ansible.builtin.file:
+        path: /opt/app
+        state: directory
+        owner: app
+        mode: '0755'
