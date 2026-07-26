@@ -46,14 +46,14 @@ services:
       - "traefik.http.routers.cal.entrypoints=websecure"
       - "traefik.http.routers.cal.tls=true"
 
-  # FusionPBX / Asterisk
-  fusionpbx:
-    image: fusionpbx/fusionpbx:latest
+  # Owncast
+  owncast:
+    image: owncast/owncast:latest
     restart: always
     volumes:
-      - /opt/app/communication/data/freeswitch:/var/lib/freeswitch
+      - /opt/app/communication/data/owncast:/app/data
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pbx.rule=Host(`pbx.${DOMAIN}`)"
-      - "traefik.http.routers.pbx.entrypoints=websecure"
-      - "traefik.http.routers.pbx.tls=true"
+      - "traefik.http.routers.owncast.rule=Host(`live.${DOMAIN}`)"
+      - "traefik.http.routers.owncast.entrypoints=websecure"
+      - "traefik.http.routers.owncast.tls=true"

@@ -112,7 +112,7 @@ The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB
 ### The Core Infrastructure
 - **Persistence & Coordination:** Postgres/Citus (Database), Redis (Queue/Cache), Minio (S3 Storage).
 - **Asynchronous State-Flow:** Temporal.io (Durable workflow engine for ZK-syncs).
-- **Communication Layer:** Matrix (Synapse), Jitsi (RTC), Element (UI), Stalwart (Email Server), Asterisk/FreeSWITCH + FusionPBX (VOIP).
+- **Communication Layer:** Matrix (Synapse), Jitsi (RTC), Element (UI), Stalwart (Email Server), Owncast (Live Streaming).
 
 ### Modular Coop OS Components (Forked/Containerized)
 - **Governance & Docs:** CryptPad (Zero-knowledge collaboration).
