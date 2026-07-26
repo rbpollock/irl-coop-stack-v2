@@ -107,19 +107,34 @@ Users can spin up localized, independent sub-cooperatives (e.g., "Swim Buddies")
 
 ## 3. Sovereign Shard Infrastructure Layer (Memory Constraint Tuning)
 
-The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB Swap** hardware profile:
+The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB Swap** hardware profile, orchestrated via `docker-compose.yml`.
+
+### The Core Infrastructure
+- **Persistence & Coordination:** Postgres/Citus (Database), Redis (Queue/Cache), Minio (S3 Storage).
+- **Asynchronous State-Flow:** Temporal.io (Durable workflow engine for ZK-syncs).
+- **Communication Layer:** Matrix (Synapse), Jitsi (RTC), Element (UI), Stalwart (Email Server), Asterisk/FreeSWITCH + FusionPBX (VOIP).
+
+### Modular Coop OS Components (Forked/Containerized)
+- **Governance & Docs:** CryptPad (Zero-knowledge collaboration).
+- **RSVP & Events:** Hi.Events (Ticket/RSVP engine).
+- **Feedback & ZK-Surveys:** Formbricks (Typeform-style ZK-forms).
+- **Project/Tasks:** OpenProject.
+- **Scheduling:** Cal.com.
+- **Web Presence:** Webstudio (Visual site builder).
+- **Social Distribution:** Postiz (Fediverse distribution).
+- **Data/Dashboards:** NocoDB (Spreadsheet-like DB interface).
 
 | Service | Architecture Role | Language/Implementation | RAM footprint | Fork / Submodule Source |
 | :--- | :--- | :--- | :--- | :--- |
-| **Web App & Portal** | Client-Side ZK & WebAuthn | Next.js / React (Static export) | ~0MB (Browser executed) | Monorepo Core (`apps/web`) |
+| **Web App & Portal** | Client-Side ZK & WebAuthn | Next.js / React (Static export) | ~0MB (Browser) | Monorepo Core (`apps/web`) |
 | **Coop API Gateway** | ERC-4337 Paymaster & Relayer | Node.js (Rust backend helpers) | ~150MB | Monorepo Core (`apps/coop-api`) |
 | **Contracts** | On-chain verification, Safe AA | Solidity (Hardhat/Foundry) | ~0MB (On-chain) | Monorepo Core (`contracts`) |
-| **Ticketing Engine** | RSVP & Ticket sales | Hi.Events (PHP/Laravel/Postgres) | ~150MB | [Forked Repo] `git@github.com:hieventsdev/hi.events.git` |
-| **Surveys & Forms** | Anonymous ZK Feedback | Formbricks (Next.js/Node/Postgres)| ~200MB | [Forked Repo] `git@github.com:formbricks/formbricks.git` |
-| **Sovereign Local Node** | Local RPC & Validation | Geth / Hardhat (Docker Bundle) | ~800MB | Standard Docker Image |
+| **Ticketing Engine** | RSVP & Ticket sales | Hi.Events | ~150MB | `git@github.com:hieventsdev/hi.events.git` |
+| **Surveys & Forms** | Anonymous ZK Feedback | Formbricks | ~200MB | `git@github.com:formbricks/formbricks.git` |
+| **Sovereign Local Node**| Local RPC & Validation | Geth / Hardhat | ~800MB | Standard Docker Image |
 | **Database** | Sharded State Tracking | Citus / PostgreSQL | ~500MB | Standard Docker Image |
 | **Reverse Proxy** | Network Routing | Nginx | ~20MB | Standard Docker Image |
-| **Cache & Buffers** | Session Cache & Batch Buffering | Redis | ~50MB | Standard Docker Image |
+| **Cache & Buffers** | Session Cache & Buffers | Redis | ~50MB | Standard Docker Image |
 
 **Total Estimated Server Memory Footprint:** ~1.87GB (Leaving plenty of headroom for OS buffers and local host processes).
 

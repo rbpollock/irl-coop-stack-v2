@@ -6,9 +6,12 @@
     "dev": "ts-node-dev --respawn src/server.ts"
   },
   "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "dotenv": "^16.4.5",
     "fastify": "^4.26.1",
     "fastify-plugin": "^4.5.1",
-    "dotenv": "^16.4.5"
+    "jsonwebtoken": "^9.0.3",
+    "jwks-rsa": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
