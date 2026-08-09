@@ -6,7 +6,7 @@ export const navigationsData: NavigationType[] = [
     items: [
       {
         title: "Dashboard",
-        href: "/",
+        href: "/dashboards/overview",
         iconName: "LayoutDashboard",
       },
       {
@@ -31,8 +31,7 @@ export const navigationsData: NavigationType[] = [
     items: [
       {
         title: "Landing",
-        href: "/pages/landing",
-        label: "New",
+        href: "/",
         iconName: "LayoutTemplate",
       },
       {
