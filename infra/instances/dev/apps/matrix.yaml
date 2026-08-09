@@ -9,12 +9,16 @@
 name: matrix
 pillar: communication
 type: image
-image: matrixdotorg/synapse:v1.118.0
+# irlcoop/synapse-s3 = stock Synapse + the S3 media provider (shared MinIO)
+image: irlcoop/synapse-s3:v1.118.0
 ports:
   - "8008:8008"
 env:
   SYNAPSE_SERVER_NAME: matrix.${DOMAIN}
   SYNAPSE_REPORT_STATS: "no"
+  # the mounted homeserver.yaml (./config/matrix, dev volume) — the image's
+  # default path is /data/homeserver.yaml, so point it at the mount
+  SYNAPSE_CONFIG_PATH: /config/homeserver.yaml
   # shared Citus postgres — provisioned role `matrix` + db `matrix`
   # (consumed by the mounted homeserver.yaml; recorded here as the declarative fact)
   SYNAPSE_POSTGRES_HOST: 172.17.0.1

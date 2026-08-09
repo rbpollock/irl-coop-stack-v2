@@ -22,6 +22,9 @@ apps/web/full-kit/.next/
 apps/web/starter-kit/.next/
 dist/
 build/
+# ...but infra/build/ is the declarative pipeline source (generator.py,
+# custom-image Dockerfiles) — never ignore it
+!infra/build/
 *.tsbuildinfo
 
 # Generated deployment output (derived from infra/instances + generator.py)
@@ -47,3 +50,9 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Matrix stack runtime configs (homeserver.yaml, coturn secret, client configs)
+infra/instances/dev/config/matrix/
+infra/instances/dev/config/element-web/
+infra/instances/dev/config/element-call/
+infra/instances/dev/etc/coturn/

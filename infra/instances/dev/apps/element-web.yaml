@@ -6,16 +6,17 @@
 name: element-web
 pillar: communication
 type: image
-image: vectorim/element-web:latest
+# irlcoop/element-web = the official release tarball + nginx (config mounted)
+image: irlcoop/element-web:v1.12.18
 ports:
-  - "8084:80"
+  - "8086:80"
 volumes:
   - /opt/app/communication/data/element-web:/data
 dev:
   volumes:
     - ./data/element-web:/data
-    - ./config/element-web:/config:ro
+    - ./config/element-web/config.json:/usr/share/nginx/html/config.json:ro
 proxy:
   hostname: element.${DOMAIN}
-  port: 8084
+  port: 8086
   description: Element Web client (also the dashboard chat widget source)

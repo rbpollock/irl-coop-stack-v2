@@ -6,15 +6,16 @@
 name: element-call
 pillar: communication
 type: image
-image: vectorim/element-call:latest
+# official GHCR image; serves /app, config.json mounted there
+image: ghcr.io/element-hq/element-call:latest
 ports:
-  - "8085:8080"
+  - "8085:80"
 volumes:
   - /opt/app/communication/data/element-call:/data
 dev:
   volumes:
     - ./data/element-call:/data
-    - ./config/element-call:/config:ro
+    - ./config/element-call/config.json:/app/config.json:ro
 proxy:
   hostname: call.${DOMAIN}
   port: 8085

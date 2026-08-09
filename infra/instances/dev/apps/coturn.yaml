@@ -7,11 +7,13 @@ name: coturn
 pillar: communication
 type: image
 image: coturn/coturn:latest
-ports:
-  - "3478:3478"
-  - "3478:3478/udp"
-  - "5349:5349"
-  - "49152-65535:49152-65535/udp"
+# the image's entrypoint only searches the default config paths; pass the
+# mounted turnserver.conf explicitly
+command: ["-c", "/etc/coturn/turnserver.conf"]
+# host networking: the relay range (49152-65535/udp) is bound on-demand at
+# runtime — publishing the whole range through docker's port mapper collides
+# with host sockets. The TURN ports are direct (no edge proxy).
+network_mode: host
 env:
   # recorded declarative facts; the real secret + certs are provisioned at
   # deploy (gitignored, like the other secrets in this tree)
