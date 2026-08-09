@@ -3,6 +3,8 @@ import * as jwt from "jsonwebtoken";
 const jwtSecret = process.env.JWT_SECRET ?? "local-development-secret-irl-coop-v4";
 
 // Verify the Bearer coop-api JWT; replies 401 and returns null on failure.
+// The full-kit holds this JWT (minted at the OAuth token exchange) in its
+// NextAuth session — sub is the Keycloak user id.
 export function verifyBearer(request: any, reply: any): any | null {
   const auth = request.headers.authorization ?? "";
   if (!auth.startsWith("Bearer ")) {

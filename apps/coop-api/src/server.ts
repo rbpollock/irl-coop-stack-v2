@@ -5,6 +5,7 @@ import formbody from '@fastify/formbody'
 import authRoutes from './auth'
 import onboardingRoutes from './onboarding'
 import safeRoutes from './safe'
+import usernameRoutes from './username'
 
 const fastify = Fastify({
   logger: true,
@@ -12,7 +13,7 @@ const fastify = Fastify({
 })
 
 fastify.register(cors, {
-  origin: ['http://localhost:3000'], // Allow frontend origin specifically
+  origin: ['http://localhost:3000', 'https://irl.coop', 'https://api.irl.coop'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Allow cookies and authorization headers
@@ -22,6 +23,7 @@ fastify.register(formbody)
 fastify.register(authRoutes)
 fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)
+fastify.register(usernameRoutes)
 
 const start = async () => {
   try {
