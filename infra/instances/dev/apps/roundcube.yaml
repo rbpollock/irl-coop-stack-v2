@@ -1,0 +1,34 @@
+# Roundcube — irl.coop webmail (communication pillar).
+# Custom image irlcoop/roundcube-oidc:1.6 = stock roundcube + config.inc.php
+# (oauth2 plugin → Keycloak realm irl-coop client `roundcube`; IMAP/SMTP →
+# Stalwart via XOAUTH2). SQLite mailbox db on a named volume.
+name: roundcube
+pillar: communication
+type: image
+image: irlcoop/roundcube-oidc:1.6
+ports:
+  - "8084:80"
+env:
+  ROUNDCUBEMAIL_DB_TYPE: "pgsql"
+  ROUNDCUBEMAIL_DB_HOST: "172.17.0.1"
+  ROUNDCUBEMAIL_DB_PORT: "5432"
+  ROUNDCUBEMAIL_DB_USER: "roundcube"
+  ROUNDCUBEMAIL_DB_PASSWORD: "roundcubedevpass"
+  ROUNDCUBEMAIL_DB_NAME: "roundcube"
+  ROUNDCUBEMAIL_DEFAULT_HOST: "tls://172.17.0.1"
+  ROUNDCUBEMAIL_DEFAULT_PORT: "143"
+  ROUNDCUBEMAIL_SMTP_SERVER: "tls://172.17.0.1"
+  ROUNDCUBEMAIL_SMTP_PORT: "587"
+  ROUNDCUBEMAIL_DES_KEY: "9f8c4d2e1a7b6c3d5e8f0a1b2c3d4e5f6a7b8c9d"
+  ROUNDCUBEMAIL_SKIN: "elastic"
+proxy:
+  hostname: webmail.${DOMAIN}
+  port: 8084
+  description: webmail (roundcube, oauth2 → keycloak, XOAUTH2 → stalwart)
+oidc:
+  client_id: roundcube
+  redirects:
+    - https://webmail.${DOMAIN}/index.php/login/oauth
+    - https://webmail.${DOMAIN}/plugins/oauth2/oauth2callback
+  public: false
+restart: unless-stopped

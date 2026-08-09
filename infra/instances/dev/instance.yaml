@@ -19,6 +19,7 @@ apps:
   - minio
   - nocodb
   - stalwart
+  - roundcube
   - cryptpad
   - temporal
   - formbricks
