@@ -154,7 +154,15 @@
       "profile": "Profile",
       "settings": "Settings",
       "signOut": "Sign out"
-    }
+    },
+    "coop": "Coop",
+    "home": "Home",
+    "projects": "Projects",
+    "databases": "Databases",
+    "api": "API",
+    "administration": "Administration",
+    "account": "Account",
+    "build": "Build"
   },
   "label": {
     "soon": "Soon",

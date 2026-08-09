@@ -1,19 +1,21 @@
 import type { Metadata } from "next"
 
-import { Activity, FolderKanban, Server, Users, Wallet } from "lucide-react"
+import { Activity, Database, FolderKanban, Mail, Server, Users, Wallet } from "lucide-react"
+
+import { CoopGreeting } from "@/components/dashboards/coop-greeting"
 
 import {
   DashboardCardActionsDropdown,
   DashboardOverviewCard,
 } from "@/components/dashboards/dashboard-card"
 
-// Plane CE project management — same-org SSO via Keycloak (zero per-service credentials)
-const PLANE_URL = process.env.NEXT_PUBLIC_PLANE_URL ?? "http://localhost:3002"
-
-// Define metadata for the page
 export const metadata: Metadata = {
   title: "IRL Co-op Dashboard",
 }
+
+// External services sign in with the same coop identity (zero per-service credentials).
+const PLANE_URL = process.env.NEXT_PUBLIC_PLANE_URL ?? "https://app.irl.coop"
+const NOCODB_URL = process.env.NEXT_PUBLIC_NOCODB_URL ?? "https://nocodb.irl.coop"
 
 // Mock data — replace with real API calls when the backend is wired up
 const overviewData = {
@@ -23,7 +25,71 @@ const overviewData = {
   pendingTxns: { value: 23, percentageChange: -11.4 },
 }
 
-function OverviewCards() {
+// Every important subject, one hop away.
+const QUICK_LINKS = [
+  {
+    title: "Projects",
+    description: "Plan and run cooperative projects",
+    icon: FolderKanban,
+    href: PLANE_URL,
+    external: true,
+  },
+  {
+    title: "Databases",
+    description: "Shared tables and records for your group",
+    icon: Database,
+    href: NOCODB_URL,
+    external: true,
+  },
+  {
+    title: "Webmail",
+    description: "Your @irl.coop mailbox",
+    icon: Mail,
+    href: "/apps/webmail",
+  },
+  {
+    title: "Safes",
+    description: "The coop's smart wallets",
+    icon: Wallet,
+    href: "/dashboards/ecommerce",
+  },
+  {
+    title: "Members",
+    description: "The people in your coop",
+    icon: Users,
+    href: "/dashboards/crm",
+  },
+  {
+    title: "Shard Nodes",
+    description: "The network's health at a glance",
+    icon: Server,
+    href: "/dashboards/analytics",
+  },
+]
+
+function QuickAccess() {
+  return (
+    <div className="col-span-full grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <h3 className="col-span-full text-lg font-semibold">Quick access</h3>
+      {QUICK_LINKS.map((link) => (
+        <a
+          key={link.title}
+          href={link.href}
+          {...(link.external ? { target: "_blank", rel: "noreferrer" } : {})}
+          className="flex items-start gap-3 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:border-primary/50 hover:bg-accent"
+        >
+          <link.icon className="mt-0.5 size-5 shrink-0 text-primary" />
+          <div>
+            <div className="font-medium text-sm">{link.title}</div>
+            <div className="text-xs text-muted-foreground">{link.description}</div>
+          </div>
+        </a>
+      ))}
+    </div>
+  )
+}
+
+function CoopVitals() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-full md:grid-cols-4">
       <DashboardOverviewCard
@@ -101,68 +167,13 @@ function NetworkStatusSection() {
   )
 }
 
-function QuickActions() {
-  return (
-    <div className="col-span-full grid gap-4 md:grid-cols-3">
-      <h3 className="col-span-full text-lg font-semibold">Quick Actions</h3>
-      {[
-        { label: "Deploy New Safe", description: "Create a new ERC-4337 smart wallet for a member", icon: Wallet },
-        { label: "Add Shard Node", description: "Onboard a new sovereign shard to the cooperative", icon: Server },
-        { label: "View Activity Log", description: "Inspect recent transactions and governance actions", icon: Activity },
-      ].map((action) => (
-        <button
-          key={action.label}
-          type="button"
-          className="flex items-start gap-3 rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent"
-        >
-          <action.icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-          <div>
-            <div className="font-medium text-sm">{action.label}</div>
-            <div className="text-xs text-muted-foreground">{action.description}</div>
-          </div>
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function ProjectTools() {
-  return (
-    <div className="col-span-full grid gap-4 md:grid-cols-3">
-      <h3 className="col-span-full text-lg font-semibold">Project Tools</h3>
-      {[
-        {
-          label: "Projects",
-          description: "Plan, track, and collaborate — signed in with your co-op identity",
-          icon: FolderKanban,
-          href: PLANE_URL,
-        },
-      ].map((tool) => (
-        <a
-          key={tool.label}
-          href={tool.href}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-start gap-3 rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent"
-        >
-          <tool.icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-          <div>
-            <div className="font-medium text-sm">{tool.label}</div>
-            <div className="text-xs text-muted-foreground">{tool.description}</div>
-          </div>
-        </a>
-      ))}
-    </div>
-  )
-}
-
 export default function IRLCoopDashboardPage() {
   return (
     <section className="container grid gap-4 p-4 md:grid-cols-2">
-      <OverviewCards />
+      <CoopGreeting />
+      <QuickAccess />
+      <CoopVitals />
       <NetworkStatusSection />
-      <QuickActions />
-      <ProjectTools />
     </section>
   )
 }
