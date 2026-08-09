@@ -298,21 +298,22 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
   `--oidc-issuer-url=https://api.${DOMAIN}` (+ removed the now-unused
   `extra_hosts` auth entry). NEXT: regen + `up -d --force-recreate nocodb-gate`
   + verify (gate SSO redirects to api.irl.coop).
-- **TODO — roundcube:** the oauth2 issuer lives in the baked
-  `irlcoop/roundcube-oidc:1.6` image's config.inc.php (docker exec grep
-  denied); the image Dockerfile is NOT in `infra/build/images/` (only
-  element-web + synapse-s3) — locate the Dockerfile/config (likely under
-  /tmp or the original build session), set the oauth2 issuer →
-  `https://api.irl.coop`, rebuild, recreate.
-- **TODO — stalwart:** the OIDC directory's issuer → `https://api.irl.coop`
-  (webadmin API; the pattern in the irl-coop-stack skill
-  `references/webmail-roundcube-stalwart.md`; then full restart + JWKS
-  cold-window wait).
-- **TODO — plane:** OIDC config location NOT found yet (no OIDC/issuer keys
-  in `/home/service/plane/.env` or `.env.production`) — likely configured in
+- **DONE — roundcube:** the baked `infra/compose/communication/roundcube/config.inc.php`
+  oauth2 URIs → the gateway (`oauth_auth_uri/token_uri/identity_uri` →
+  `api.irl.coop/api/auth/*`), image `irlcoop/roundcube-oidc:1.6` rebuilt,
+  container recreated, webmail 200 through the edge. Browser E2E of the
+  instant login still TODO (the automation's browser lacks the cookie).
+- **BLOCKED — stalwart:** the webadmin API (`/api/discover`, `/api/auth`)
+  returns 500 for the recovery admin (container healthy, webadmin root 302s,
+  tracer silent — docker logs empty). The OIDC directory's issuer flip to
+  `api.irl.coop` is queued behind this. Likely next: check the stalwart
+  postgres connectivity / the trace, or recreate the container with the
+  recovery-admin env and retry the API.
+- **TODO — plane:** the OIDC config is NOT env-driven (no OIDC keys in
+  `/home/service/plane/.env*` or the apiserver settings) — likely stored in
   the plane DB/settings; inventory before changing.
 - **TODO:** fleet E2E (fresh cookie login → each app instant) + commit the
-  uncommitted `apps/nocodb.yaml`.
+  uncommitted roundcube config.
 
 ## Pending / open
 

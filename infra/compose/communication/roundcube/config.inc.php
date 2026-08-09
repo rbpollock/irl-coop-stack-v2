@@ -7,14 +7,16 @@
 // the include. Dev secrets inline (stack convention); prod should ARG-inject.
 $config['plugins'] = array();   // keep the entrypoint's array_merge happy
 
-// --- OAuth2: Keycloak realm irl-coop, client `roundcube` (confidential, S256 PKCE) ---
+// --- OAuth2: the fleet session gateway (coop-api issuer at api.irl.coop),
+//     client `roundcube` (confidential, S256 PKCE) — the coop_session cookie
+//     makes the authorize instant after the dashboard login ---
 $config['oauth_provider'] = 'generic';
 $config['oauth_provider_name'] = 'irl.coop';
 $config['oauth_client_id'] = 'roundcube';
 $config['oauth_client_secret'] = '1n41ZsE9nWfmZ8ssOsSjL9lH6XFvtYsz';
-$config['oauth_auth_uri'] = 'https://auth.irl.coop/realms/irl-coop/protocol/openid-connect/auth';
-$config['oauth_token_uri'] = 'https://auth.irl.coop/realms/irl-coop/protocol/openid-connect/token';
-$config['oauth_identity_uri'] = 'https://auth.irl.coop/realms/irl-coop/protocol/openid-connect/userinfo';
+$config['oauth_auth_uri'] = 'https://api.irl.coop/api/auth/authorize';
+$config['oauth_token_uri'] = 'https://api.irl.coop/api/auth/token';
+$config['oauth_identity_uri'] = 'https://api.irl.coop/api/auth/userinfo';
 $config['oauth_scope'] = 'openid email profile';
 $config['oauth_identity_fields'] = ['email'];
 $config['oauth_login_redirect'] = true;   // OAuth-only login (no password form)
