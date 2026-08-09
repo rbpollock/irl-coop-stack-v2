@@ -160,6 +160,19 @@ reconcile by applying its generated compose when touching it.
   creates the account when the email claim is @irl.coop). Browser E2E passed
   (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
   robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
+- **coop-api as the fleet OIDC issuer** (SLICE 1 DONE 2026-08-09, Robbie's
+  Shape-2 decision): the fleet stops showing the Keycloak page. coop-api
+  serves discovery + `/jwks` at https://api.irl.coop; the coop JWT is now
+  RS256 (keypair in the gitignored .env `COOP_JWT_PRIVATE_KEY_B64`); client
+  registry `OIDC_CLIENTS` env (plane/nocodb-gate/roundcube/web-app/nextauth —
+  existing secrets + redirect URIs); `coop_session` cookie (HttpOnly, Secure,
+  SameSite=Lax, .irl.coop, 30d) — authorize issues a code directly from the
+  session (no Keycloak redirect); `POST /api/auth/login` = password
+  direct-grant (zero redirect). Verified: 12/12 ad-hoc + full-kit login green.
+  SLICES 2-4 PENDING: fleet app migration (roundcube → plane → nocodb-gate:
+  repoint issuer + validate via the coop JWKS), the full-kit sign-in page
+  switching to the password-login endpoint, and (later) the coop-owned
+  interactive ceremony for Google/passkey/QR (one flow, then cookie-everywhere).
 - Root cause of the "mail refused" mystery: stalwart was stuck in bootstrap mode
   (recovery listener only) — setup completed via the admin API, not the wizard
   (the secret-reference dropdown is un-drivable; the OIDC step had a validation
