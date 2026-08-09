@@ -145,8 +145,8 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 
 ## Pending
 
-- Stalwart MinIO blob store (S3 172.17.0.1:9000, bucket `stalwart`) + Keycloak
-  OIDC directory.
+- Webmail: Roundcube at webmail.irl.coop (Keycloak client `roundcube` created;
+  Stalwart OIDC directory + MinIO blob store now live) — deployment next.
 - DMARC hardening p=none → quarantine (after real volume is observed).
 - Federation / takedown-resilient DNS+edge design session — PARKED; do not
   design/build until Robbie raises it.

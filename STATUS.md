@@ -114,6 +114,19 @@ reconcile by applying its generated compose when touching it.
 
 - Stalwart v0.16, container `stalwart16`, webadmin :8083; postgres store
   (23 tables in citus); internal directory; permanent admin `admin@irl.coop`.
+- **Blob store: S3 → MinIO** (DONE 2026-08-08): bucket `stalwart`, endpoint
+  http://172.17.0.1:9000, region us-east-1, access key stalwart-s3 (scoped
+  bucket policy) — set via x:BlobStore/set (registry singleton).
+- **Directory: OIDC → Keycloak** (DONE 2026-08-08): Directory object
+  `i1y9sgv1abaa` (issuer https://auth.irl.coop/realms/irl-coop, requireAudience
+  `roundcube`, claimUsername preferred_username, usernameDomain irl.coop,
+  claimName name, claimGroups groups); Authentication singleton directoryId
+  pointed at it (argon2id + role defaults intact). OIDC-caveat handled: accounts
+  pre-created (e2e-test, gate-sso-test, robertbrucepollockjr + admin) so
+  inbound mail isn't rejected before first auth.
+- **Webmail client `roundcube`** (Keycloak, DONE): confidential client,
+  redirects https://webmail.irl.coop/index.php/login/oauth +
+  /plugins/oauth2/oauth2callback; secret in Keycloak. Roundcube deployment PENDING.
 - Root cause of the "mail refused" mystery: stalwart was stuck in bootstrap mode
   (recovery listener only) — setup completed via the admin API, not the wizard
   (the secret-reference dropdown is un-drivable; the OIDC step had a validation
