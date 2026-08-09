@@ -160,6 +160,23 @@ reconcile by applying its generated compose when touching it.
   creates the account when the email claim is @irl.coop). Browser E2E passed
   (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
   robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
+- **Matrix stack LIVE** (DONE 2026-08-09): Synapse (federation disabled,
+  `matrix.irl.coop`), Element Web (`element.irl.coop` — also the dashboard
+  widget source), Element Call (`call.irl.coop`), coturn (host network, TURN
+  3478). One Keycloak client `matrix` (confidential) — the web clients ride
+  the homeserver SSO; the localpart derives from the EMAIL claim
+  (`{{ user.email.split('@')[0] }}` — the gmail-username trap avoided again).
+  Shared Citus postgres (matrix db, C collation) + MinIO media (matrix-media/
+  matrix-s3). Custom images: irlcoop/synapse-s3 (S3 media provider) +
+  irlcoop/element-web (official tarball v1.12.18); element-call is the
+  official GHCR image. Browser-E2E: Element Web → SSO → Keycloak → room list
+  (@e2e-test:matrix.irl.coop). Pitfalls learned: the element-call image's
+  nginx listens on 8080 (not 80); single-file bind mounts hold the OLD inode
+  after an atomic write_file replace (recreate the container); config files
+  written 0600 403 the nginx (chmod 644); the generator needed a network_mode
+  passthrough; a zombie docker-proxy held host 8084 (needs a manual sudo
+  pkill — port moved to 8086). Pending: the dashboard side-chat widget;
+  router forwards for the TURN range (WAN calls).
 - **Robbie's webmail fixed** (DONE 2026-08-09): the last roundcube login
   blocker was the OIDC directory's `claimUsername: preferred_username` — the
   Google broker sets the Keycloak username to the gmail address
