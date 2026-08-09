@@ -23,6 +23,9 @@ $config['oauth_verify_host'] = true;
 
 // --- behind the traefik edge (https) ---
 $config['use_https'] = true;
+// Allow embedding inside the full-kit shadboard (iframe). The default
+// 'sameorigin' would refuse framing from irl.coop (different origin).
+$config['x_frame_options'] = false;
 
 // --- IMAP/SMTP TLS: self-hosted bridge IP (172.17.0.1) — the *.irl.coop cert
 //     can't match the IP, so skip peer verification on the mail legs (dev).

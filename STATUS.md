@@ -146,6 +146,10 @@ reconcile by applying its generated compose when touching it.
   security/role config); after every restart there is a 5-minute JWKS
   cold-cache window where OIDC auths fail ("Unknown key id" — the cache only
   refetches after 300s).
+- **full-kit embed** (DONE 2026-08-09): nav item "Webmail" (Apps section) →
+  /apps/webmail — full-height iframe of webmail.irl.coop + "Open full screen"
+  button; roundcube `x_frame_options = false` to allow framing; auto-login in
+  the iframe works via the shared Keycloak realm session (verified in browser).
 - Root cause of the "mail refused" mystery: stalwart was stuck in bootstrap mode
   (recovery listener only) — setup completed via the admin API, not the wizard
   (the secret-reference dropdown is un-drivable; the OIDC step had a validation

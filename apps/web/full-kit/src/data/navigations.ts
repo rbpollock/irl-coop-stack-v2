@@ -168,6 +168,11 @@ export const navigationsData: NavigationType[] = [
     title: "Apps",
     items: [
       {
+        title: "Webmail",
+        href: "/apps/webmail",
+        iconName: "Mail",
+      },
+      {
         title: "Email",
         href: "/apps/email",
         iconName: "AtSign",
