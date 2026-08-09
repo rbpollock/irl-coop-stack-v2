@@ -20,6 +20,11 @@ export function ensureLocalizedPathname(pathname: string, locale: string) {
   if (!pathname || !locale)
     throw new Error("Pathname or Locale cannot be empty")
 
+  // Absolute URLs (external services — Plane, NocoDB, coop-api — that share
+  // the coop identity) are not app routes: pass them through untouched
+  // instead of localizing them into "/en/https://…".
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(pathname)) return pathname
+
   // Add the locale prefix to the pathname if it is missing, otherwise return the original pathname
   return isPathnameMissingLocale(pathname)
     ? `${ensureWithPrefix(locale, "/")}${ensureWithPrefix(pathname, "/")}`
