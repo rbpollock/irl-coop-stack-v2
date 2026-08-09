@@ -45,14 +45,60 @@ pillar.
 LAN: surfy `.11` = retired v1 edge (`ssh service@surfy`); THIS host `.20` = v4 node.
 Tailnet `100.122.136.95`.
 
-## Source of truth + generation
+## Configuration flow — START HERE before touching any running service
 
-- `infra/instances/dev/` — declarative source of truth (instance.yaml + apps/*.yaml).
-- `infra/out/dev/` — GENERATED compose + traefik dynamic config (never hand-edit).
-- `certs/` — source-tree asset (renewed certs land here; privkey 0600).
-- After regenerating, traefik needs a restart to pick up a rewritten
-  `dynamic.yml` (the file-provider inotify breaks on atomic rewrites) — this is
-  a known, expected workflow step.
+The stack is declarative: `infra/instances/dev/` is the source of truth, the
+generator emits deployment artifacts, and every change follows the pipeline.
+Never hand-edit `infra/out/` and never poke containers directly — add an app by
+editing the tree and regenerating.
+
+```
+infra/instances/dev/instance.yaml      ← domain, hosts (roles), app list, enabled pillars
+infra/instances/dev/apps/<app>.yaml    ← per-app spec (schema below)
+infra/build/generator.py               ← reads the tree → writes infra/out/dev/
+infra/out/dev/compose/<pillar>/        ← GENERATED compose (+ .override.yml)
+infra/out/dev/compose/proxy/dynamic.yml← GENERATED traefik file-provider (LIVE edge)
+infra/out/dev/keycloak/clients.yaml    ← GENERATED OIDC client registry
+infra/out/dev/MANIFEST.md              ← what was generated from what
+```
+
+Generate:  `uv run --with pyyaml python infra/build/generator.py dev`
+Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml config`
+
+### App spec schema (fields the generator consumes — see apps/*.yaml for examples)
+
+| field | meaning |
+|---|---|
+| `name`, `pillar` | filename = name; pillar = compose grouping (proxy/authentication/cache/storage/communication/workflow/...) |
+| `type` | `image` (compose emitted) or `source` (app ships its own compose — plane) |
+| `image`, `command`, `ports`, `env`, `volumes`, `depends_on`, `labels`, `healthcheck`, `extra_hosts`, `restart` | passed through to the compose service |
+| `sidecars`, `named_volumes` | extra services / named volumes in the same compose file |
+| `dev.volumes` | host paths relative to the instance dir — absolutized at generation into the `.override.yml` |
+| `proxy` | `{hostname, port, description}` (or a list) → edge route `https://<hostname>` → `172.17.0.1:<port>` |
+| `oidc` | `{client_id, redirect \| redirects, public}` → keycloak/clients.yaml registry entry |
+| `web` | base URL combined with `oidc.redirect` to form the redirect URI |
+| `data` | `{scoped_by: sub, views: [...]}` → plane data-scoping view scripts |
+| `routes` | traefik app only — extra file-provider routes (e.g. the apex → full-kit :3000) |
+
+`${DOMAIN}` is substituted with the instance domain at generation time.
+
+### Adding an app (the recipe)
+
+1. Write `infra/instances/dev/apps/<name>.yaml` — copy the closest existing spec (plane.yaml shows oidc+proxy+data; stalwart.yaml shows ports+volumes+env; minio.yaml shows a multi-entry proxy list + labels).
+2. Append `<name>` to `apps:` in `infra/instances/dev/instance.yaml`.
+3. Regenerate (`generator.py dev`). `infra/out/` is gitignored — never commit it.
+4. Apply: `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml -f infra/out/dev/compose/<pillar>/docker-compose.override.yml up -d <service>`
+5. Restart the edge: `docker restart proxy-traefik-1` — the file-provider inotify breaks on atomic rewrites of `dynamic.yml`; this restart is a known, expected step.
+6. Provision the OIDC client in Keycloak from `out/dev/keycloak/clients.yaml` (client id, redirect URIs, public/confidential; secret via the admin console for confidential clients).
+7. DNS: the Gandi wildcard `*.irl.coop` → 64.135.141.73 already covers any new subdomain — only add an A record for non-wildcard needs.
+8. Verify through the edge (`https://<hostname>.irl.coop` / browser E2E for SSO), never bare `docker exec curl/printenv`.
+
+### Known quirks
+
+- `type: source` apps (plane) ship their own compose; the generator only emits their OIDC client, env block and data-scoping views.
+- Generated-vs-running drift: the edge (traefik) runs generated `out/` (dynamic.yml + instance-tree certs mounted); some containers (stalwart16) were bootstrapped from scratch compose at `/tmp/stalwart16` before the pipeline existed. When touching a drifted pillar, reconcile by applying its generated compose.
+- Stalwart-internal config (datastore, blob store, OIDC directory, accounts) is stored in its postgres DB and managed via the webadmin/admin API — the declarative layer only deploys the container/ports/env/edge.
+- Secrets never enter the tree: `.env*` files and `infra/instances/dev/certs/` (wildcard privkey + ACME state) are gitignored. Renewed certs land under `infra/instances/dev/certs/` (privkey 0600); renewal is acme.sh + Gandi DNS-01 (daily cron, renewal-window guarded).
 
 ## Key operational facts
 

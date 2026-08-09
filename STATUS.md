@@ -1,6 +1,41 @@
 # STATUS.md — irl.coop v2 infrastructure status
 
-Last updated: 2026-08-08 (late session: NocoDB migration + base-view fixes).
+Last updated: 2026-08-08 (config-flow docs; Stalwart webmail/roundcube + blob-store/OIDC work upcoming).
+
+## Configuration flow — how to add an app (START HERE)
+
+The stack is declarative. `infra/instances/dev/` is the source of truth; the
+generator emits deployment artifacts into `infra/out/dev/` (gitignored); the
+edge (traefik) runs the generated `dynamic.yml` live. Never hand-edit
+`infra/out/` — add an app by editing the tree and regenerating.
+
+```
+instance.yaml  +  apps/<app>.yaml  →  infra/build/generator.py dev  →  infra/out/dev/
+                                                                          ├─ compose/<pillar>/docker-compose.yml (+ .override.yml)
+                                                                          ├─ compose/proxy/dynamic.yml   (edge routes — LIVE)
+                                                                          ├─ keycloak/clients.yaml      (OIDC registry)
+                                                                          └─ MANIFEST.md
+```
+
+Recipe: (1) write `apps/<name>.yaml` (copy an existing spec — plane.yaml shows
+oidc+proxy+data, stalwart.yaml shows ports/volumes, minio.yaml shows a
+multi-entry proxy list + labels; schema table in AGENTS.md), (2) add the name
+to `instance.yaml → apps:`,
+(3) `uv run --with pyyaml python infra/build/generator.py dev`,
+(4) `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml -f infra/out/dev/compose/<pillar>/docker-compose.override.yml up -d <service>`,
+(5) `docker restart proxy-traefik-1` (file-provider inotify breaks on atomic
+rewrites of `infra/out/dev/compose/proxy/dynamic.yml` — expected),
+(6) provision the OIDC client in Keycloak from
+`infra/out/dev/keycloak/clients.yaml`, (7) DNS is covered by the `*.irl.coop`
+wildcard (Gandi → 64.135.141.73), (8) verify through the edge.
+
+Current declared apps (14): traefik, keycloak, citus, irl-redis, minio, nocodb,
+stalwart, cryptpad, temporal, formbricks, webstudio, postiz, plane, coop-api.
+`enabled_pillars`: proxy, authentication, cache, storage, communication.
+Webstudio/postiz are declared with OIDC clients but no redirect URIs yet (not
+wired). Known drift: the edge runs generated `out/`; stalwart16 was
+bootstrapped from scratch compose (`/tmp/stalwart16`) before the pipeline —
+reconcile by applying its generated compose when touching it.
 
 ## Identity pillar — LIVE
 
