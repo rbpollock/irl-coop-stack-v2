@@ -160,6 +160,15 @@ reconcile by applying its generated compose when touching it.
   creates the account when the email claim is @irl.coop). Browser E2E passed
   (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
   robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
+- **Robbie's webmail fixed** (DONE 2026-08-09): the last roundcube login
+  blocker was the OIDC directory's `claimUsername: preferred_username` — the
+  Google broker sets the Keycloak username to the gmail address
+  (`robertbrucepollockjr@gmail.com`), and account resolution split at the last
+  `@` → domain `gmail.com` → "Account domain does not exist" even for the
+  existing account. Directory switched to `claimUsername: email` (accounts
+  derive from the canonical email claim) + full restart; verified via raw
+  IMAP probe and the browser (full mailbox for robertbrucepollockjr@irl.coop).
+  This also makes future Google users immune to the username quirk.
 - **Dashboard/nav persona redesign** (DONE 2026-08-09): sidebar reorganized by
   member personas — Coop (Home, Projects/Plane, Databases/NocoDB, Webmail),
   Administration (Shard Nodes, Members, Safes), Account (Profile, Settings),
