@@ -14,6 +14,8 @@ import {
   Scale,
   Server,
   ShieldCheck,
+  Users,
+  Vote,
   Wallet,
   Workflow,
 } from "lucide-react"
@@ -100,6 +102,7 @@ export default async function LandingPage({
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#apps" className="hover:text-foreground">Apps</a>
             <a href="#identity" className="hover:text-foreground">One identity</a>
+            <a href="#network" className="hover:text-foreground">Groups</a>
             <a href="#architecture" className="hover:text-foreground">Architecture</a>
           </nav>
           <div className="flex items-center gap-2">
@@ -204,6 +207,73 @@ export default async function LandingPage({
             <p className="flex items-center gap-2 text-sm">
               <KeyRound className="size-4 text-primary" />
               No per-app passwords. Ever.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* How groups interconnect */}
+      <section id="network" className="border-y bg-muted/40">
+        <div className="container py-20">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <p className="mb-2 text-xs font-bold tracking-widest text-primary">
+              HOW GROUPS CONNECT
+            </p>
+            <h2 className="text-3xl font-black tracking-tight md:text-4xl">
+              Groups, not silos.
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Every person and every group is a node in one network. Every
+              connection is an explicit edge — decisions · space · trust ·
+              money — so groups can interlock deeply without losing themselves.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              {
+                icon: Users,
+                title: "Grouping",
+                description:
+                  "Groups can hold groups. A regional coalition seats its member farms, and subgroups share its space and services while keeping their own decisions. No silos — nested, not fenced.",
+              },
+              {
+                icon: Vote,
+                title: "Voting",
+                description:
+                  "Every decision runs on a quorum: 1-of-1 for you, N-of-M for a group. No server, operator, or hostile backend can act alone — the math forbids it — and timelocks make big changes reversible.",
+              },
+              {
+                icon: Wallet,
+                title: "Money",
+                description:
+                  "Every group gets a treasury: shared savings, quorum-gated pools, funds with spending rules, automatic distributions. Balances stay private by default, with proofs available on demand.",
+              },
+            ].map((primitive) => (
+              <Card
+                key={primitive.title}
+                className="flex flex-col gap-3 p-6"
+              >
+                <div className="grid size-11 place-items-center rounded-lg border bg-background">
+                  <primitive.icon className="size-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-bold">{primitive.title}</h3>
+                <p className="text-sm text-muted-foreground">{primitive.description}</p>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-8 rounded-xl border border-primary/30 bg-primary/5 p-6 md:p-8">
+            <h3 className="text-xl font-black tracking-tight">
+              Membership is a set, not a tree.
+            </h3>
+            <p className="mt-2 max-w-3xl text-muted-foreground">
+              You can sit in many groups at once and move between them without
+              switching hats. The group you&apos;re acting for is part of the
+              action itself: &ldquo;approve as member of Cold Storage Co-op —
+              2-of-3&rdquo;. One identity, many seats, one approval inbox — and
+              from these three primitives, new cooperation forms emerge on
+              their own: labor swaps between farms, joint regional purchasing,
+              data-sharing agreements, federated partners who keep their own
+              trucks.
             </p>
           </div>
         </div>
