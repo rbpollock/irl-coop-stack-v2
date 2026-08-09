@@ -18,6 +18,10 @@ env:
   KC_HOSTNAME: auth.${DOMAIN}
   KC_PROXY_HEADERS: xforwarded
   KC_HTTP_PORT: "8081"
+  # frame policy is governed by the realm CSP (frame-ancestors *.irl.coop);
+  # the legacy X-Frame-Options would block the dashboard chat widget's SSO
+  # iframe, so drop the header entirely
+  KC_XFRAMEOPTIONS: "NONE"
 proxy:
   hostname: auth.${DOMAIN}
   port: 8081

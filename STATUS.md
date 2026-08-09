@@ -160,6 +160,16 @@ reconcile by applying its generated compose when touching it.
   creates the account when the email claim is @irl.coop). Browser E2E passed
   (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
   robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
+- **Chat widget SSO: frame policy fixed** (DONE 2026-08-09): the widget's
+  in-iframe SSO showed "auth.irl.coop refused to connect" — the realm's
+  `browserSecurityHeaders.xFrameOptions: SAMEORIGIN` blocked the frame
+  despite the CSP. Fixed both layers: realm xFrameOptions → NONE (admin API)
+  and the keycloak spec's `KC_XFRAMEOPTIONS: "NONE"` env (declarative — the
+  realm setting wins at runtime, the env documents the intent). Live-verified:
+  the login page now sends `x-frame-options: NONE` + the CSP
+  `frame-ancestors 'self' https://*.irl.coop` — the frame control is the CSP
+  alone. The in-iframe click itself is unverifiable by the automation
+  (synthetic clicks don't drive the cross-origin iframe's React handlers).
 - **Chat widget SSO: zero-password** (DONE 2026-08-09): the element-web
   config gained `sso_immediate_redirect: true` and the `matrix` client's
   `consentRequired` is false — the widget's SSO now auto-authenticates from
