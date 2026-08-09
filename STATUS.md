@@ -160,6 +160,16 @@ reconcile by applying its generated compose when touching it.
   creates the account when the email claim is @irl.coop). Browser E2E passed
   (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
   robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
+- **Chat widget SSO: zero-password** (DONE 2026-08-09): the element-web
+  config gained `sso_immediate_redirect: true` and the `matrix` client's
+  `consentRequired` is false — the widget's SSO now auto-authenticates from
+  the realm session (no credentials; browser-E2E: the Keycloak redirect
+  logged in as E2E Tester with no password). Remaining first-run friction is
+  element-web's own E2EE device-verification flow (one-time, product-level);
+  after it, the matrix session persists in the widget origin and the widget
+  opens directly into the chat. The sso_immediate_redirect option did not
+  visibly auto-bounce the welcome page in testing — possibly needs a
+  companion setting in element-web 1.12.
 - **Chat widget LIVE** (DONE 2026-08-09): the dashboard's bottom-right
   "Coop chat" button opens an Element Web panel (iframe of element.irl.coop,
   NEXT_PUBLIC_ELEMENT_URL, i18n en/ar). The realm's `browserSecurityHeaders`
