@@ -160,6 +160,15 @@ reconcile by applying its generated compose when touching it.
   creates the account when the email claim is @irl.coop). Browser E2E passed
   (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
   robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
+- **Dashboard/nav persona redesign** (DONE 2026-08-09): sidebar reorganized by
+  member personas — Coop (Home, Projects/Plane, Databases/NocoDB, Webmail),
+  Administration (Shard Nodes, Members, Safes), Account (Profile, Settings),
+  Build (API); the template Pages group, demo apps and Design System library
+  removed from the nav (routes stay reachable). Home page
+  (/dashboards/overview): time-of-day greeting with the member's name +
+  status-tailored banner (the canonical-identity claim CTA for non-@irl.coop
+  emails), a quick-access hub (one hop to every important subject), then the
+  coop vitals. Verified 18/18 + browser.
 - **Landing page as the default homepage** (DONE 2026-08-09): the root (/)
   serves a redesigned irl.coop landing (data from irlcoop.vercel.app + the
   live stack config). Hero "We're here for cooperation." + prominent
