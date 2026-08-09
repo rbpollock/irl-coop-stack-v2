@@ -204,3 +204,89 @@ For further information on setting up and using **NextAuth.js**, refer to the fo
 - **OWASP Authentication Cheat Sheet**  
   For best practices in secure authentication and understanding common security pitfalls, refer to the **OWASP Authentication Cheat Sheet**:  
   [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+
+---
+
+## irl.coop Authentication Architecture
+
+> This section documents how authentication is actually wired in this repository — the guide above is the upstream template walkthrough.
+
+The irl.coop dashboard does **not** authenticate directly against Keycloak or Google. Authentication is decoupled behind a dedicated service:
+
+```
+NextAuth (this app, :3000) → coop-api (:3001) → Keycloak (:8081, realm irl-coop) → Google
+```
+
+### Why
+
+- The frontend holds **no** Keycloak or Google credentials — no issuer URL, no broker secrets. Swapping the identity provider later only touches coop-api.
+- coop-api mints its own JWT at login; that same JWT is the Bearer credential for the auth-to-EVM bridge (`POST /api/onboard`).
+- Additional frontends (e.g. a mobile app) reuse the same OAuth surface without ever seeing Keycloak.
+
+### How it works
+
+1. `src/configs/next-auth.ts` defines a custom OAuth provider with `id: "coop-api"`:
+
+   ```ts
+   {
+     id: "coop-api",
+     name: "irl.coop",
+     type: "oauth",
+     clientId: process.env.COOP_API_CLIENT_ID ?? "",
+     clientSecret: process.env.COOP_API_CLIENT_SECRET ?? "",
+     authorization: {
+       url: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/authorize`,
+       params: { scope: "openid profile email" },
+     },
+     token: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/token`,
+     userinfo: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/userinfo`,
+     profile(profile) {
+       return { id: profile.sub, name: profile.name, email: profile.email, avatar: profile.avatar, status: "ONLINE" }
+     },
+   }
+   ```
+
+2. coop-api (`apps/coop-api/src/auth.ts`) implements the OAuth endpoints and does the real OIDC dance with Keycloak, verifying the Keycloak ID token against the realm JWKS before minting its own JWT.
+3. The session exposes `session.accessToken` (the coop-api JWT) so client code can call the API with `Authorization: Bearer <jwt>`.
+4. `allowDangerousEmailAccountLinking: true` on the provider lets the same person sign in with a second method (e.g. future passkeys, another IdP) and join their existing account by verified email instead of NextAuth throwing `OAuthAccountNotLinked`. Emails are verified by Google via Keycloak, so this is safe.
+5. On fresh logins the JWT callback prefers the coop-api profile (`profile.name`/`profile.avatar`) over the stored user, so the onboarding display name is authoritative.
+
+### Onboarding
+
+coop-api is the onboarding authority (mobile frontends reuse the same endpoints):
+
+| Method | coop-api endpoint             | Purpose                                                  |
+|--------|-------------------------------|----------------------------------------------------------|
+| GET    | `/api/auth/onboarding/status` | `{ onboarded, profile }` for the Bearer JWT's subject    |
+| POST   | `/api/auth/onboarding`        | `{ displayName, avatar? }` → marks the user onboarded    |
+
+- Profiles persist in `apps/coop-api/data/profiles.json` (`COOP_PROFILE_STORE`; swap for Postgres when coop-api gets a real DB).
+- The onboarding display name/avatar are merged into the JWT on subsequent logins.
+- The dashboard layout mounts `OnboardingGuard` (`src/components/auth/onboarding-guard.tsx`), which redirects authenticated users who haven't onboarded to `/[lang]/onboarding` (the page at `src/app/[lang]/onboarding/page.tsx`).
+
+### Environment variables
+
+```env
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<secret>
+COOP_API_URL=http://localhost:3001
+COOP_API_CLIENT_ID=nextauth
+COOP_API_CLIENT_SECRET=<shared secret — must match coop-api .env OAUTH_CLIENT_SECRET>
+```
+
+### Redirect-URI matrix (3 places — keep in sync when ports change)
+
+| Where                    | Value                                                              |
+|--------------------------|--------------------------------------------------------------------|
+| Google Cloud Console     | `http://localhost:8081/realms/irl-coop/broker/google/endpoint`     |
+| Keycloak client `coop-api` | `http://localhost:3001/api/auth/keycloak/callback`               |
+| coop-api allowlist       | `http://localhost:3000/api/auth/callback/coop-api`                 |
+
+### Troubleshooting
+
+- **`OAuthAccountNotLinked` in NextAuth** → the email already exists under a different provider. Fixed by `allowDangerousEmailAccountLinking: true` on the coop-api provider (safe: emails are Google-verified). New methods (passkeys, other IdPs) link to the same account.
+- **`Error 400: redirect_uri_mismatch` on Google's page** → the broker endpoint above is missing from Google Cloud Console's Authorized redirect URIs. Open the "error details" dialog to see the exact URI Google received.
+- **`unauthorized_client` / "Invalid client or Invalid client credentials" in coop-api logs** → the `KEYCLOAK_CLIENT_SECRET` in `apps/coop-api/.env` is out of sync with Keycloak (Admin Console → Clients → `coop-api` → Credentials). Sync them and restart coop-api.
+- **`id_token not present in TokenSet` in the NextAuth log** → openid-client 5.7+ requires an `id_token` in the OAuth token response. coop-api returns one by design (HS256, signed with `OAUTH_CLIENT_SECRET`, `iss=coop-api`, `aud=nextauth`); keep `issuer: "coop-api"` and `client: { id_token_signed_response_alg: "HS256" }` on the provider in `src/configs/next-auth.ts`.
+- **Generic `OAuthSignin` error in NextAuth** → the real failure is in coop-api's logs. Check `GET /api/auth/config` (the URL-chain self-check) first, then the coop-api console output.
+- **Login works but dies on callback** → restart coop-api mid-login invalidates the one-time code; just click sign-in again.

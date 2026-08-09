@@ -1,0 +1,13 @@
+# Postiz — social media scheduling (workflow pillar).
+name: postiz
+pillar: workflow
+type: image
+image: ghcr.io/gitroomhq/postiz-app:latest
+env:
+  # Postiz runs on its own DB by default; wire to the main postgres when
+  # adopted (POSTIZ_DATABASE_URL). OIDC client + webhook (push notifications)
+  # TODO on adoption.
+  MAIN_API_URL: https://${DOMAIN}
+oidc:
+  client_id: postiz
+  webhook: /api/webhooks/postiz

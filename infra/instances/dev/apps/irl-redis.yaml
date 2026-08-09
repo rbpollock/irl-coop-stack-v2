@@ -1,0 +1,19 @@
+# irl.coop shared cache — ONE Redis owned by the co-op level (cache pillar).
+# Every app consumes it with a strict key prefix (plane:*, coop:*, ...);
+# pub/sub channels are global in Redis — namespace them (irl:notify:{sub}).
+name: irl-redis
+pillar: cache
+type: image
+image: redis:7-alpine
+command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+ports:
+  - "6379:6379"
+volumes:
+  - redis_data:/data
+healthcheck:
+  test: ["CMD", "redis-cli", "ping"]
+  interval: 5s
+  timeout: 3s
+  retries: 5
+named_volumes:
+  redis_data: {}

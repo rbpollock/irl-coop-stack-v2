@@ -1,0 +1,32 @@
+# irl.coop instance definition — the declarative source of truth.
+# The generator (infra/build/generator.py) emits compose, ansible, env and
+# keycloak artifacts from this tree into infra/out/<name>/.
+name: dev
+domain: irl.coop
+
+# server roles → host. Roles come from the pillar map; a role hosts the
+# pillars listed in its definition (see infra/README.md topology).
+hosts:
+  identity_data: localhost
+  workflow_ops: localhost
+
+# apps that belong to this instance (each resolves to infra/instances/dev/apps/<name>.yaml)
+apps:
+  - traefik
+  - keycloak
+  - citus
+  - irl-redis
+  - minio
+  - nocodb
+  - stalwart
+  - cryptpad
+  - temporal
+  - formbricks
+  - webstudio
+  - postiz
+  - plane
+  - coop-api
+
+# which pillars actually run on the dev box today (deployment concern — the
+# compose artifacts for all apps are generated regardless)
+enabled_pillars: [proxy, authentication, cache, storage, communication]

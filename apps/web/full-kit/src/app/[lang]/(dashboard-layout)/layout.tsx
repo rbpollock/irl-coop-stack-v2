@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { getDictionary } from "@/lib/get-dictionary"
 
 import { Layout } from "@/components/layout"
+import { OnboardingGuard } from "@/components/auth/onboarding-guard"
 
 export default async function DashboardLayout(props: {
   children: ReactNode
@@ -15,5 +16,10 @@ export default async function DashboardLayout(props: {
 
   const dictionary = await getDictionary(params.lang)
 
-  return <Layout dictionary={dictionary}>{children}</Layout>
+  return (
+    <>
+      <OnboardingGuard />
+      <Layout dictionary={dictionary}>{children}</Layout>
+    </>
+  )
 }

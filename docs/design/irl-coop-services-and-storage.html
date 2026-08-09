@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>irl.coop Services &amp; Storage</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1240px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1100px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>irl.coop Services &amp; Storage</h1>
+      </div>
+      <p class="subtitle">Conceptual map — how the web interface, core services, and storage mechanisms interact</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1200 800">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- ==================== ARROWS ==================== -->
+        <line x1="180" y1="90" x2="228" y2="90" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="204" y="84" fill="#94a3b8" font-size="8" text-anchor="middle">HTTPS</text>
+        <line x1="370" y1="90" x2="418" y2="90" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- web interface interactions -->
+        <line x1="530" y1="120" x2="400" y2="218" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="440" y="170" fill="#22d3ee" font-size="8">REST · JWT</text>
+        <line x1="480" y1="120" x2="145" y2="238" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="300" y="160" fill="#fb7185" font-size="8">OIDC sign-in</text>
+        <line x1="600" y1="120" x2="618" y2="238" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="560" y="180" fill="#fb7185" font-size="8">OIDC → service UIs</text>
+
+        <!-- service layer -->
+        <line x1="210" y1="280" x2="258" y2="280" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="234" y="292" fill="#fb7185" font-size="8" text-anchor="middle">OIDC bridge</text>
+        <line x1="490" y1="270" x2="538" y2="244" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="505" y="250" fill="#fbbf24" font-size="8">provision</text>
+
+        <!-- coop-api to storage -->
+        <line x1="290" y1="340" x2="560" y2="546" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="395" y="430" fill="#fb7185" font-size="8">secrets on demand</text>
+        <line x1="330" y1="340" x2="150" y2="553" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="215" y="445" fill="#34d399" font-size="8">query proxy</text>
+        <line x1="420" y1="340" x2="390" y2="553" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="432" y="445" fill="#34d399" font-size="8">STS tokens</text>
+        <line x1="470" y1="340" x2="880" y2="553" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="640" y="430" fill="#a78bfa" font-size="8">relay · Safes</text>
+
+        <!-- services to storage -->
+        <line x1="135" y1="320" x2="135" y2="553" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="145" y="430" fill="#34d399" font-size="8">realm DB</text>
+        <line x1="700" y1="345" x2="215" y2="553" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="430" y="520" fill="#34d399" font-size="8">room state · mailbox meta</text>
+        <line x1="750" y1="345" x2="450" y2="553" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+        <text x="560" y="510" fill="#34d399" font-size="8">media · attachments</text>
+        <text x="1015" y="345" fill="#fb7185" font-size="8" text-anchor="middle">no persistent storage · rooms in-memory</text>
+
+        <!-- ==================== WEB INTERFACE ==================== -->
+        <rect x="40" y="60" width="140" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="110" y="82" fill="white" font-size="11" font-weight="600" text-anchor="middle">Members</text>
+        <text x="110" y="99" fill="#94a3b8" font-size="9" text-anchor="middle">browser · mobile</text>
+        <rect x="230" y="60" width="140" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="300" y="82" fill="white" font-size="11" font-weight="600" text-anchor="middle">Traefik</text>
+        <text x="300" y="99" fill="#94a3b8" font-size="9" text-anchor="middle">TLS · routing</text>
+        <rect x="420" y="60" width="220" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="530" y="82" fill="white" font-size="11" font-weight="600" text-anchor="middle">Web interface</text>
+        <text x="530" y="99" fill="#94a3b8" font-size="9" text-anchor="middle">full-kit dashboard · one front door</text>
+
+        <!-- ==================== CORE SERVICES ==================== -->
+        <rect x="60" y="240" width="150" height="80" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="135" y="265" fill="white" font-size="11" font-weight="600" text-anchor="middle">Keycloak</text>
+        <text x="135" y="282" fill="#94a3b8" font-size="9" text-anchor="middle">identity · OIDC hub</text>
+        <rect x="260" y="220" width="230" height="120" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="375" y="244" fill="white" font-size="12" font-weight="600" text-anchor="middle">coop-api</text>
+        <text x="375" y="262" fill="#94a3b8" font-size="9" text-anchor="middle">integration hub</text>
+        <text x="375" y="280" fill="#94a3b8" font-size="9" text-anchor="middle">onboarding · provisioning</text>
+        <text x="375" y="296" fill="#94a3b8" font-size="9" text-anchor="middle">Safe deploy · query proxy</text>
+        <text x="375" y="318" fill="#34d399" font-size="8" text-anchor="middle">the only service the UI talks to directly</text>
+        <rect x="540" y="240" width="150" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="615" y="265" fill="white" font-size="11" font-weight="600" text-anchor="middle">Stalwart</text>
+        <text x="615" y="282" fill="#94a3b8" font-size="9" text-anchor="middle">mail · IMAP/SMTP</text>
+        <rect x="740" y="240" width="150" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="815" y="265" fill="white" font-size="11" font-weight="600" text-anchor="middle">Dendrite</text>
+        <text x="815" y="282" fill="#94a3b8" font-size="9" text-anchor="middle">Matrix</text>
+        <rect x="940" y="240" width="150" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1015" y="265" fill="white" font-size="11" font-weight="600" text-anchor="middle">Jitsi</text>
+        <text x="1015" y="282" fill="#94a3b8" font-size="9" text-anchor="middle">calls · JWT rooms</text>
+
+        <!-- ==================== STORAGE ==================== -->
+        <rect x="60" y="560" width="210" height="110" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="165" y="585" fill="white" font-size="11" font-weight="600" text-anchor="middle">Citus / Postgres</text>
+        <text x="165" y="602" fill="#94a3b8" font-size="9" text-anchor="middle">relational store</text>
+        <text x="165" y="618" fill="#94a3b8" font-size="9" text-anchor="middle">realm · room state · metadata</text>
+        <rect x="310" y="560" width="210" height="110" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="415" y="585" fill="white" font-size="11" font-weight="600" text-anchor="middle">MinIO (S3)</text>
+        <text x="415" y="602" fill="#94a3b8" font-size="9" text-anchor="middle">object storage</text>
+        <text x="415" y="618" fill="#94a3b8" font-size="9" text-anchor="middle">user files · media · attachments</text>
+        <rect x="550" y="545" width="230" height="140" rx="8" fill="transparent" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="558" y="559" fill="#fb7185" font-size="8">secrets zone</text>
+        <rect x="565" y="570" width="200" height="90" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="665" y="593" fill="white" font-size="11" font-weight="600" text-anchor="middle">Vault</text>
+        <text x="665" y="610" fill="#94a3b8" font-size="9" text-anchor="middle">threshold-encrypted</text>
+        <text x="665" y="626" fill="#94a3b8" font-size="9" text-anchor="middle">keys · app passwords · salt</text>
+        <rect x="820" y="560" width="240" height="110" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="940" y="585" fill="white" font-size="11" font-weight="600" text-anchor="middle">Shared chain</text>
+        <text x="940" y="602" fill="#94a3b8" font-size="9" text-anchor="middle">accounts · registry</text>
+        <text x="940" y="618" fill="#94a3b8" font-size="9" text-anchor="middle">consent · arbitration</text>
+
+        <!-- ==================== LEGEND ==================== -->
+        <text x="40" y="730" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="40" y="738" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="62" y="746" fill="#94a3b8" font-size="8">Frontend</text>
+        <rect x="160" y="738" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="182" y="746" fill="#94a3b8" font-size="8">Backend · services</text>
+        <rect x="300" y="738" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="322" y="746" fill="#94a3b8" font-size="8">Data · storage</text>
+        <rect x="440" y="738" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="462" y="746" fill="#94a3b8" font-size="8">Security · secrets</text>
+        <rect x="580" y="738" width="16" height="10" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="602" y="746" fill="#94a3b8" font-size="8">Edge · external</text>
+        <line x1="720" y1="743" x2="736" y2="743" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="742" y="746" fill="#94a3b8" font-size="8">auth · provision flow</text>
+        <line x1="880" y1="743" x2="896" y2="743" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="902" y="746" fill="#94a3b8" font-size="8">data flow</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Identity &amp; access</h3>
+        </div>
+        <ul>
+          <li>• Keycloak is the OIDC hub for every service</li>
+          <li>• Zero per-service credentials (XOAUTH2 · STS · JWT rooms)</li>
+          <li>• Web interface authenticates once, services via OIDC</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Integration hub</h3>
+        </div>
+        <ul>
+          <li>• The UI talks directly to coop-api only (REST · JWT)</li>
+          <li>• coop-api: onboarding · provisioning · Safe deploy · query proxy</li>
+          <li>• Every other service is reached via OIDC sign-in</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Storage split</h3>
+        </div>
+        <ul>
+          <li>• Relational: Citus (realm · state · metadata)</li>
+          <li>• Objects: MinIO (files · media · attachments)</li>
+          <li>• Secrets: Vault (threshold) · Truth: shared chain</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">irl.coop • conceptual services &amp; storage map • see docs/design/account-and-key-model.md</p>
+  </div>
+</body>
+</html>

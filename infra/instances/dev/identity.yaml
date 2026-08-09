@@ -1,0 +1,32 @@
+# irl.coop identity & structure — realm, clients (derived from app oidc specs
+# by the generator), users, and the GROUP REGISTRY (the declared relationship
+# graph: groups → members → apps' data scoping).
+realm: irl-coop
+idps:
+  - google                     # broker alias; emailVerified FORCE mapper required
+
+users:
+  admin:                       # instance admin (dev)
+    email: admin@irl.coop
+  robert:
+    email: robertbrucepollockjr@gmail.com   # Google broker, real user
+    groups: [farm-coalition, cold-storage-coop]
+  e2e:
+    email: e2e-test@irl.coop
+    groups: [farm-coalition, cold-storage-coop, regional-working-group, community-fund]
+
+groups:
+  farm-coalition:
+    name: Farm Coalition
+  cold-storage-coop:
+    name: Cold Storage Coop
+  regional-working-group:
+    name: Regional Working Group
+  community-fund:
+    name: Community Fund
+# Shape 2 mapping: every group == a PRIVATE project in the union workspace
+# (slug coop-test); group names are sanitized by the provisioning engine
+# (Plane rejects '.' and '-' silently — alphanumeric + spaces only).
+union_workspace:
+  slug: coop-test
+  display: irlcoop

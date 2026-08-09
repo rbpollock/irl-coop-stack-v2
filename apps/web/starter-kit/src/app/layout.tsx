@@ -13,14 +13,16 @@ import { Toaster as Sonner } from "@/components/ui/sonner"
 import { Toaster } from "@/components/ui/toaster"
 
 // Define metadata for the application
-// More info: https://nextjs.org/docs/app/building-your-application/optimizing/metadata
 export const metadata: Metadata = {
   title: {
     template: "%s | Shadboard",
     default: "Shadboard",
   },
   description: "",
-  metadataBase: new URL(process.env.BASE_URL as string),
+  // Pass a dummy absolute URL explicitly if BASE_URL isn't set, avoiding 'Invalid URL' crashes
+  metadataBase: typeof process.env.BASE_URL === 'string' && process.env.BASE_URL.startsWith('http') 
+    ? new URL(process.env.BASE_URL) 
+    : new URL("http://localhost:3000"),
 }
 
 // Define fonts for the application

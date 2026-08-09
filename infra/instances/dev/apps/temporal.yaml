@@ -1,0 +1,10 @@
+# Temporal — durable workflows (workflow pillar).
+name: temporal
+pillar: workflow
+type: image
+image: temporalio/server:1.24.0
+env:
+  DB: postgresql
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PWD: ${POSTGRES_PASSWORD}
+  POSTGRES_SEEDS: postgres   # connect to Citus (storage pillar, shared network)

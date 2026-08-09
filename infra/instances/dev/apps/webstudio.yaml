@@ -1,0 +1,11 @@
+# Webstudio — visual web builder (workflow pillar).
+name: webstudio
+pillar: workflow
+type: image
+image: webstudio/webstudio:latest
+labels:
+  traefik.enable: "true"
+  traefik.http.routers.studio.rule: Host(`studio.${DOMAIN}`)
+oidc:
+  client_id: webstudio
+  # TODO: redirect URIs once Webstudio is up (studio.${DOMAIN}/...)

@@ -1,0 +1,10 @@
+# CryptPad — collaborative pads (storage pillar).
+name: cryptpad
+pillar: storage
+type: image
+image: cryptpad/cryptpad:latest
+volumes:
+  - /opt/app/storage/data/cryptpad:/cryptpad/data
+labels:
+  traefik.enable: "true"
+  traefik.http.routers.pad.rule: Host(`pad.${DOMAIN}`)

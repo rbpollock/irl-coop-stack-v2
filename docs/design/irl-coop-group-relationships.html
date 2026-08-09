@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>irl.coop Group Relationships &amp; the Safe</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1240px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+    svg { width: 100%; min-width: 1050px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+    .card { background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>irl.coop — Group Relationships &amp; the Safe</h1>
+      </div>
+      <p class="subtitle">Declarative model: the Safe primitive, the four relationship dimensions, and how a co-op and a nonprofit map onto them</p>
+    </div>
+
+    <!-- ============ PANEL 1: THE PRIMITIVES ============ -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1100 590">
+        <defs>
+          <marker id="ah1" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid1" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid1)" />
+
+        <text x="40" y="30" fill="white" font-size="12" font-weight="600">THE PRIMITIVES — one Safe, four dimensions, declared relationships</text>
+
+        <!-- arrows dims -> safe -->
+        <line x1="155" y1="270" x2="470" y2="182" stroke="#64748b" stroke-width="1.5" marker-end="url(#ah1)"/>
+        <line x1="415" y1="270" x2="520" y2="182" stroke="#64748b" stroke-width="1.5" marker-end="url(#ah1)"/>
+        <line x1="675" y1="270" x2="560" y2="182" stroke="#64748b" stroke-width="1.5" marker-end="url(#ah1)"/>
+        <line x1="935" y1="270" x2="630" y2="182" stroke="#64748b" stroke-width="1.5" marker-end="url(#ah1)"/>
+
+        <!-- the Safe -->
+        <rect x="380" y="60" width="340" height="120" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="550" y="84" fill="white" font-size="12" font-weight="600" text-anchor="middle">THE SAFE — universal account</text>
+        <text x="550" y="104" fill="#94a3b8" font-size="9" text-anchor="middle">owner set + threshold (N-of-M)</text>
+        <text x="550" y="120" fill="#94a3b8" font-size="9" text-anchor="middle">modules: policy · recovery · arbitration</text>
+        <text x="550" y="136" fill="#94a3b8" font-size="9" text-anchor="middle">vault access · on-chain registry entry</text>
+        <text x="550" y="154" fill="#a78bfa" font-size="8" text-anchor="middle">every actor is a Safe: person = 1-of-1 · group = N-of-M · DAO</text>
+
+        <!-- dimensions -->
+        <rect x="40" y="270" width="230" height="90" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="155" y="294" fill="white" font-size="11" font-weight="600" text-anchor="middle">Governance</text>
+        <text x="155" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">who controls</text>
+        <text x="155" y="330" fill="#94a3b8" font-size="9" text-anchor="middle">owner seats · threshold</text>
+        <rect x="300" y="270" width="230" height="90" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="415" y="294" fill="white" font-size="11" font-weight="600" text-anchor="middle">Infrastructure</text>
+        <text x="415" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">what's shared</text>
+        <text x="415" y="330" fill="#94a3b8" font-size="9" text-anchor="middle">namespace · mailboxes · quotas</text>
+        <rect x="560" y="270" width="230" height="90" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="675" y="294" fill="white" font-size="11" font-weight="600" text-anchor="middle">Trust</text>
+        <text x="675" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">interoperation</text>
+        <text x="675" y="330" fill="#94a3b8" font-size="9" text-anchor="middle">OIDC · SMTP · Matrix · arbitration</text>
+        <rect x="820" y="270" width="230" height="90" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="935" y="294" fill="white" font-size="11" font-weight="600" text-anchor="middle">Economics</text>
+        <text x="935" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">resource flow</text>
+        <text x="935" y="330" fill="#94a3b8" font-size="9" text-anchor="middle">funding · sponsorship</text>
+
+        <!-- relationship types -->
+        <rect x="40" y="420" width="230" height="90" rx="6" fill="rgba(136, 19, 55, 0.35)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="155" y="444" fill="white" font-size="11" font-weight="600" text-anchor="middle">member-of</text>
+        <text x="155" y="462" fill="#94a3b8" font-size="9" text-anchor="middle">default: ownership = membership</text>
+        <text x="155" y="480" fill="#94a3b8" font-size="9" text-anchor="middle">a seat in decisions</text>
+        <rect x="300" y="420" width="230" height="90" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="415" y="444" fill="white" font-size="11" font-weight="600" text-anchor="middle">subgroup-of</text>
+        <text x="415" y="462" fill="#94a3b8" font-size="9" text-anchor="middle">autonomous Safe + shared infra</text>
+        <text x="415" y="480" fill="#94a3b8" font-size="9" text-anchor="middle">namespace · mail · quotas</text>
+        <rect x="560" y="420" width="230" height="90" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="675" y="444" fill="white" font-size="11" font-weight="600" text-anchor="middle">federated-with</text>
+        <text x="675" y="462" fill="#94a3b8" font-size="9" text-anchor="middle">peer interop · no control</text>
+        <text x="675" y="480" fill="#94a3b8" font-size="9" text-anchor="middle">OIDC · SMTP · Matrix</text>
+        <rect x="820" y="420" width="230" height="90" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="935" y="444" fill="white" font-size="11" font-weight="600" text-anchor="middle">sponsored-by</text>
+        <text x="935" y="462" fill="#94a3b8" font-size="9" text-anchor="middle">one-way resource flow</text>
+        <text x="935" y="480" fill="#94a3b8" font-size="9" text-anchor="middle">funding · recognition</text>
+
+        <text x="40" y="540" fill="#94a3b8" font-size="9">Ownership implies membership ONLY — every other meaning is declared in the on-chain relationship record.</text>
+        <text x="40" y="556" fill="#94a3b8" font-size="9">Each relationship type activates a subset of the four dimensions.</text>
+
+        <!-- legend -->
+        <rect x="40" y="568" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="62" y="576" fill="#94a3b8" font-size="8">Safe</text>
+        <rect x="120" y="568" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="142" y="576" fill="#94a3b8" font-size="8">governance</text>
+        <rect x="230" y="568" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="252" y="576" fill="#94a3b8" font-size="8">infrastructure</text>
+        <rect x="350" y="568" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="372" y="576" fill="#94a3b8" font-size="8">trust</text>
+        <rect x="430" y="568" width="16" height="10" rx="2" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/>
+        <text x="452" y="576" fill="#94a3b8" font-size="8">economics</text>
+        <rect x="540" y="568" width="16" height="10" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="562" y="576" fill="#94a3b8" font-size="8">member (individual)</text>
+        <line x1="690" y1="573" x2="706" y2="573" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="712" y="576" fill="#94a3b8" font-size="8">declared relationship</text>
+      </svg>
+    </div>
+
+    <!-- ============ PANEL 2: COOPERATIVE ============ -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1100 640">
+        <defs>
+          <marker id="ah2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid2" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid2)" />
+
+        <text x="40" y="30" fill="white" font-size="12" font-weight="600">A COOPERATIVE — flat, member-owned</text>
+
+        <!-- arrows -->
+        <line x1="310" y1="85" x2="388" y2="85" stroke="#fb923c" stroke-width="1.5" marker-end="url(#ah2)"/>
+        <text x="349" y="79" fill="#fb923c" font-size="8" text-anchor="middle">sponsored-by</text>
+        <line x1="710" y1="85" x2="788" y2="85" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah2)"/>
+        <text x="749" y="79" fill="#fb7185" font-size="8" text-anchor="middle">member-of</text>
+        <line x1="450" y1="130" x2="200" y2="158" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah2)"/>
+        <text x="300" y="140" fill="#fbbf24" font-size="8">subgroup-of: mailbox + namespace</text>
+        <line x1="650" y1="130" x2="880" y2="158" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah2)"/>
+        <text x="780" y="140" fill="#fbbf24" font-size="8">subgroup-of: treasury allocation</text>
+        <line x1="110" y1="520" x2="500" y2="132" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah2)"/>
+        <line x1="310" y1="520" x2="520" y2="132" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah2)"/>
+        <line x1="550" y1="520" x2="550" y2="132" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah2)"/>
+        <line x1="710" y1="520" x2="580" y2="132" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah2)"/>
+        <line x1="910" y1="520" x2="600" y2="132" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah2)"/>
+        <text x="330" y="360" fill="#fb7185" font-size="8">member-of (governance seat)</text>
+
+        <!-- safes -->
+        <rect x="40" y="40" width="270" height="90" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="175" y="64" fill="white" font-size="11" font-weight="600" text-anchor="middle">Community Fund</text>
+        <text x="175" y="82" fill="#94a3b8" font-size="9" text-anchor="middle">grants to co-ops</text>
+        <text x="175" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">no control</text>
+        <rect x="790" y="40" width="270" height="90" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="925" y="64" fill="white" font-size="11" font-weight="600" text-anchor="middle">Regional Coalition Safe</text>
+        <text x="925" y="82" fill="#94a3b8" font-size="9" text-anchor="middle">co-op holds a seat</text>
+        <text x="925" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">federation of co-ops</text>
+        <rect x="390" y="40" width="320" height="90" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="550" y="64" fill="white" font-size="12" font-weight="600" text-anchor="middle">CO-OP SAFE</text>
+        <text x="550" y="84" fill="#94a3b8" font-size="9" text-anchor="middle">N-of-M: every member holds a seat · one member, one vote</text>
+        <text x="550" y="102" fill="#94a3b8" font-size="9" text-anchor="middle">service entitlements for all members</text>
+        <text x="550" y="118" fill="#a78bfa" font-size="8" text-anchor="middle">governance = flat · infra = shared by default</text>
+
+        <!-- subgroups -->
+        <rect x="60" y="160" width="280" height="100" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="200" y="184" fill="white" font-size="11" font-weight="600" text-anchor="middle">Marketing Safe</text>
+        <text x="200" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">autonomous owners</text>
+        <text x="200" y="218" fill="#94a3b8" font-size="9" text-anchor="middle">mailbox: marketing@coop.org</text>
+        <rect x="740" y="160" width="280" height="100" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="880" y="184" fill="white" font-size="11" font-weight="600" text-anchor="middle">Finance Safe</text>
+        <text x="880" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">treasury custodians</text>
+        <text x="880" y="218" fill="#94a3b8" font-size="9" text-anchor="middle">admin · steward · recovery roles</text>
+
+        <!-- members -->
+        <rect x="50" y="520" width="120" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="110" y="543" fill="white" font-size="10" font-weight="600" text-anchor="middle">Member A</text>
+        <text x="110" y="559" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="250" y="520" width="120" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="310" y="543" fill="white" font-size="10" font-weight="600" text-anchor="middle">Member B</text>
+        <text x="310" y="559" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="450" y="520" width="120" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="510" y="543" fill="white" font-size="10" font-weight="600" text-anchor="middle">Member C</text>
+        <text x="510" y="559" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="650" y="520" width="120" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="710" y="543" fill="white" font-size="10" font-weight="600" text-anchor="middle">Member D</text>
+        <text x="710" y="559" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="850" y="520" width="120" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="910" y="543" fill="white" font-size="10" font-weight="600" text-anchor="middle">Member E</text>
+        <text x="910" y="559" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+
+        <text x="40" y="612" fill="#94a3b8" font-size="9">Flat shape: membership IS the owner-set. Subgroups are autonomous Safes that share the parent's namespace; the co-op itself holds seats in higher bodies (coalition).</text>
+        <text x="40" y="628" fill="#94a3b8" font-size="9">A member can sit in many Safes at once — membership is a set, not a tree.</text>
+      </svg>
+    </div>
+
+    <!-- ============ PANEL 3: NONPROFIT ============ -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1100 650">
+        <defs>
+          <marker id="ah3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid3" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid3)" />
+
+        <text x="40" y="30" fill="white" font-size="12" font-weight="600">A HIERARCHICAL NONPROFIT — nested control</text>
+
+        <!-- arrows -->
+        <line x1="300" y1="85" x2="388" y2="85" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah3)"/>
+        <text x="344" y="79" fill="#22d3ee" font-size="8" text-anchor="middle">federated-with</text>
+        <line x1="800" y1="85" x2="712" y2="85" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah3)"/>
+        <text x="756" y="79" fill="#fb923c" font-size="8" text-anchor="middle">sponsored-by</text>
+        <line x1="450" y1="140" x2="210" y2="228" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="550" y1="140" x2="550" y2="228" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="650" y1="140" x2="890" y2="228" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <text x="430" y="180" fill="#fb7185" font-size="8">subgroup-of: board co-owns (reserved powers)</text>
+        <line x1="105" y1="530" x2="105" y2="332" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="205" y1="530" x2="205" y2="332" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="305" y1="530" x2="305" y2="332" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="455" y1="530" x2="455" y2="332" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="555" y1="530" x2="555" y2="332" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="805" y1="530" x2="805" y2="332" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <text x="350" y="450" fill="#fb7185" font-size="8">member-of (department seat)</text>
+
+        <!-- top -->
+        <rect x="40" y="40" width="260" height="90" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="170" y="64" fill="white" font-size="11" font-weight="600" text-anchor="middle">Affiliate Chapter</text>
+        <text x="170" y="82" fill="#94a3b8" font-size="9" text-anchor="middle">independent org</text>
+        <text x="170" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">trust · no control</text>
+        <rect x="390" y="40" width="320" height="100" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="550" y="64" fill="white" font-size="12" font-weight="600" text-anchor="middle">BOARD / ED SAFE</text>
+        <text x="550" y="84" fill="#94a3b8" font-size="9" text-anchor="middle">small owner set (3-of-5)</text>
+        <text x="550" y="100" fill="#94a3b8" font-size="9" text-anchor="middle">reserved powers via relationship records</text>
+        <rect x="800" y="40" width="260" height="90" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="930" y="64" fill="white" font-size="11" font-weight="600" text-anchor="middle">Foundation (donor)</text>
+        <text x="930" y="82" fill="#94a3b8" font-size="9" text-anchor="middle">restricted grants</text>
+        <text x="930" y="98" fill="#94a3b8" font-size="9" text-anchor="middle">no control</text>
+
+        <!-- departments -->
+        <rect x="60" y="230" width="300" height="100" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="210" y="254" fill="white" font-size="11" font-weight="600" text-anchor="middle">Programs Safe</text>
+        <text x="210" y="272" fill="#94a3b8" font-size="9" text-anchor="middle">staff seats (N-of-M)</text>
+        <text x="210" y="288" fill="#94a3b8" font-size="9" text-anchor="middle">program budgets · grants</text>
+        <rect x="400" y="230" width="300" height="100" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="550" y="254" fill="white" font-size="11" font-weight="600" text-anchor="middle">Finance Safe</text>
+        <text x="550" y="272" fill="#94a3b8" font-size="9" text-anchor="middle">staff seats (N-of-M)</text>
+        <text x="550" y="288" fill="#94a3b8" font-size="9" text-anchor="middle">payroll · compliance</text>
+        <rect x="740" y="230" width="300" height="100" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="890" y="254" fill="white" font-size="11" font-weight="600" text-anchor="middle">HR Safe</text>
+        <text x="890" y="272" fill="#94a3b8" font-size="9" text-anchor="middle">staff seats (N-of-M)</text>
+        <text x="890" y="288" fill="#94a3b8" font-size="9" text-anchor="middle">records · access</text>
+
+        <!-- staff -->
+        <rect x="60" y="530" width="90" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="105" y="553" fill="white" font-size="9" font-weight="600" text-anchor="middle">Staff 1</text>
+        <text x="105" y="568" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="160" y="530" width="90" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="205" y="553" fill="white" font-size="9" font-weight="600" text-anchor="middle">Staff 2</text>
+        <text x="205" y="568" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="260" y="530" width="90" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="305" y="553" fill="white" font-size="9" font-weight="600" text-anchor="middle">Staff 3</text>
+        <text x="305" y="568" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="410" y="530" width="90" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="455" y="553" fill="white" font-size="9" font-weight="600" text-anchor="middle">Staff 4</text>
+        <text x="455" y="568" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="510" y="530" width="90" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="555" y="553" fill="white" font-size="9" font-weight="600" text-anchor="middle">Staff 5</text>
+        <text x="555" y="568" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+        <rect x="760" y="530" width="90" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="805" y="553" fill="white" font-size="9" font-weight="600" text-anchor="middle">Staff 6</text>
+        <text x="805" y="568" fill="#94a3b8" font-size="8" text-anchor="middle">passkey</text>
+
+        <text x="40" y="620" fill="#94a3b8" font-size="9">Same primitives, opposite shape: authority flows top-down through declared relationships (board co-owns departments with reserved powers),</text>
+        <text x="40" y="636" fill="#94a3b8" font-size="9">while membership stays a seat. The Board's authority is declared in the relationship record — never inferred from ownership alone.</text>
+      </svg>
+    </div>
+
+    <!-- ============ PANEL 4: ONE BIG WORLD ============ -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1100 685">
+        <defs>
+          <marker id="ah4" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid4" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid4)" />
+
+        <text x="40" y="30" fill="white" font-size="12" font-weight="600">THE ONE BIG WORLD — a farmer in a farm coalition</text>
+
+        <!-- left: membership arrows -->
+        <line x1="250" y1="126" x2="150" y2="178" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah4)"/>
+        <line x1="250" y1="126" x2="420" y2="178" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah4)"/>
+        <line x1="250" y1="126" x2="280" y2="298" stroke="#fb7185" stroke-width="1.5" marker-end="url(#ah4)"/>
+        <text x="200" y="148" fill="#fb7185" font-size="8">member-of (seats)</text>
+        <line x1="280" y1="366" x2="280" y2="418" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah4)"/>
+        <text x="290" y="396" fill="#94a3b8" font-size="8">declared in the registry</text>
+
+        <!-- right: wg arrows -->
+        <line x1="540" y1="218" x2="598" y2="120" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah4)"/>
+        <text x="545" y="160" fill="#fb7185" font-size="8">member-of (farm seats)</text>
+        <line x1="680" y1="150" x2="710" y2="188" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ah4)"/>
+        <line x1="980" y1="150" x2="950" y2="188" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ah4)"/>
+        <line x1="740" y1="150" x2="710" y2="288" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ah4)"/>
+        <line x1="920" y1="150" x2="950" y2="288" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ah4)"/>
+        <text x="830" y="172" fill="#a78bfa" font-size="8" text-anchor="middle">assets of the WG Safe</text>
+        <line x1="710" y1="400" x2="710" y2="262" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah4)"/>
+        <line x1="950" y1="400" x2="950" y2="262" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah4)"/>
+        <line x1="710" y1="490" x2="710" y2="362" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah4)"/>
+        <line x1="950" y1="490" x2="950" y2="362" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#ah4)"/>
+        <text x="830" y="570" fill="#fb7185" font-size="8" text-anchor="middle">role-scoped session keys — access, not ownership</text>
+
+        <!-- left: farmer + safes -->
+        <rect x="160" y="60" width="180" height="66" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="250" y="84" fill="white" font-size="11" font-weight="600" text-anchor="middle">Farmer — Maria</text>
+        <text x="250" y="102" fill="#94a3b8" font-size="9" text-anchor="middle">one passkey · one identity</text>
+        <rect x="40" y="180" width="220" height="76" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="150" y="204" fill="white" font-size="11" font-weight="600" text-anchor="middle">Farm Safe</text>
+        <text x="150" y="222" fill="#94a3b8" font-size="9" text-anchor="middle">1-of-1 + family owners</text>
+        <text x="150" y="238" fill="#94a3b8" font-size="9" text-anchor="middle">her produce · her records</text>
+        <rect x="300" y="180" width="240" height="76" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="420" y="204" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cold Storage Co-op</text>
+        <text x="420" y="222" fill="#94a3b8" font-size="9" text-anchor="middle">2-of-3 co-owners</text>
+        <text x="420" y="238" fill="#94a3b8" font-size="9" text-anchor="middle">capital · capacity quotas</text>
+        <rect x="170" y="300" width="220" height="66" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="280" y="324" fill="white" font-size="11" font-weight="600" text-anchor="middle">Tractor-Share</text>
+        <text x="280" y="342" fill="#94a3b8" font-size="9" text-anchor="middle">time-share bookings</text>
+
+        <!-- left: relationships cluster -->
+        <rect x="40" y="420" width="500" height="150" rx="8" fill="transparent" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="60" y="440" fill="#94a3b8" font-size="9" font-weight="600">HER RELATIONSHIPS — declared edges</text>
+        <rect x="60" y="452" width="220" height="40" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="170" y="477" fill="white" font-size="9" font-weight="600" text-anchor="middle">Labor-swap · mutual credit</text>
+        <rect x="300" y="452" width="220" height="40" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="410" y="477" fill="white" font-size="9" font-weight="600" text-anchor="middle">Planting-data · provenance hashes</text>
+        <rect x="60" y="506" width="220" height="40" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="170" y="531" fill="white" font-size="9" font-weight="600" text-anchor="middle">Distributor · contract</text>
+        <rect x="300" y="506" width="220" height="40" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="410" y="531" fill="white" font-size="9" font-weight="600" text-anchor="middle">Restaurant · bulk orders</text>
+
+        <!-- right: working group -->
+        <rect x="600" y="60" width="460" height="90" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="830" y="84" fill="white" font-size="12" font-weight="600" text-anchor="middle">REGIONAL WORKING GROUP SAFE</text>
+        <text x="830" y="104" fill="#94a3b8" font-size="9" text-anchor="middle">umbrella: member farms hold seats</text>
+        <text x="830" y="122" fill="#94a3b8" font-size="9" text-anchor="middle">staff roles via guard + session-key modules</text>
+        <rect x="600" y="190" width="220" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="710" y="214" fill="white" font-size="11" font-weight="600" text-anchor="middle">Postiz</text>
+        <text x="710" y="232" fill="#94a3b8" font-size="9" text-anchor="middle">social media management</text>
+        <rect x="840" y="190" width="220" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="950" y="214" fill="white" font-size="11" font-weight="600" text-anchor="middle">Shared mailbox</text>
+        <text x="950" y="232" fill="#94a3b8" font-size="9" text-anchor="middle">orders@working-group…</text>
+        <rect x="600" y="290" width="220" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="710" y="314" fill="white" font-size="11" font-weight="600" text-anchor="middle">Ordering &amp; payments</text>
+        <text x="710" y="332" fill="#94a3b8" font-size="9" text-anchor="middle">automated checkout</text>
+        <rect x="840" y="290" width="220" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="950" y="314" fill="white" font-size="11" font-weight="600" text-anchor="middle">Website</text>
+        <text x="950" y="332" fill="#94a3b8" font-size="9" text-anchor="middle">public site</text>
+
+        <!-- right: roles -->
+        <rect x="600" y="400" width="220" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="710" y="424" fill="white" font-size="10" font-weight="600" text-anchor="middle">Social steward</text>
+        <text x="710" y="440" fill="#94a3b8" font-size="8" text-anchor="middle">from Farm A</text>
+        <rect x="840" y="400" width="220" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="950" y="424" fill="white" font-size="10" font-weight="600" text-anchor="middle">Mail steward</text>
+        <text x="950" y="440" fill="#94a3b8" font-size="8" text-anchor="middle">from Cold Storage</text>
+        <rect x="600" y="490" width="220" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="710" y="514" fill="white" font-size="10" font-weight="600" text-anchor="middle">Orders operator</text>
+        <text x="710" y="530" fill="#94a3b8" font-size="8" text-anchor="middle">from Farm B</text>
+        <rect x="840" y="490" width="220" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="950" y="514" fill="white" font-size="10" font-weight="600" text-anchor="middle">Web editor</text>
+        <text x="950" y="530" fill="#94a3b8" font-size="8" text-anchor="middle">from Farm C</text>
+
+        <text x="40" y="616" fill="#94a3b8" font-size="9">Maria's world: overlapping Safes + declared edges (barter, data, contracts) — one identity, no hat-switching.</text>
+        <text x="40" y="632" fill="#94a3b8" font-size="9">Context is derived from the action: the object she touches determines the governing Safe.</text>
+        <text x="600" y="616" fill="#94a3b8" font-size="9">The working group's external surfaces are assets of the WG Safe; staff hold role-scoped access, never ownership.</text>
+        <text x="600" y="632" fill="#94a3b8" font-size="9">Quorum friction surfaces at the right moment — "waiting on 1 more", not mode-switching.</text>
+
+        <!-- legend -->
+        <rect x="40" y="646" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="62" y="654" fill="#94a3b8" font-size="8">Safe</text>
+        <rect x="120" y="646" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="142" y="654" fill="#94a3b8" font-size="8">governance · member</text>
+        <rect x="250" y="646" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="272" y="654" fill="#94a3b8" font-size="8">infrastructure</text>
+        <rect x="360" y="646" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="382" y="654" fill="#94a3b8" font-size="8">trust · data</text>
+        <rect x="450" y="646" width="16" height="10" rx="2" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/>
+        <text x="472" y="654" fill="#94a3b8" font-size="8">economics · barter</text>
+        <rect x="570" y="646" width="16" height="10" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="592" y="654" fill="#94a3b8" font-size="8">external</text>
+        <line x1="660" y1="651" x2="676" y2="651" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="682" y="654" fill="#94a3b8" font-size="8">declared relationship</text>
+      </svg>
+    </div>
+
+    <!-- ============ PANEL 5: ZK BADGES ============ -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1100 660">
+        <defs>
+          <marker id="ah5" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid5" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid5)" />
+
+        <text x="40" y="30" fill="white" font-size="12" font-weight="600">ZK BADGES — prove participation, gate actions, reveal nothing</text>
+
+        <!-- pipeline -->
+        <line x1="240" y1="100" x2="288" y2="100" stroke="#64748b" stroke-width="1.5" marker-end="url(#ah5)"/>
+        <line x1="490" y1="100" x2="538" y2="100" stroke="#64748b" stroke-width="1.5" marker-end="url(#ah5)"/>
+        <line x1="740" y1="100" x2="788" y2="100" stroke="#64748b" stroke-width="1.5" marker-end="url(#ah5)"/>
+        <rect x="40" y="60" width="200" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="140" y="84" fill="white" font-size="10" font-weight="600" text-anchor="middle">Participation records</text>
+        <text x="140" y="102" fill="#94a3b8" font-size="9" text-anchor="middle">ledgers · provenance · activity</text>
+        <text x="140" y="120" fill="#94a3b8" font-size="8" text-anchor="middle">per-site data</text>
+        <rect x="290" y="60" width="200" height="80" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="390" y="84" fill="white" font-size="10" font-weight="600" text-anchor="middle">On-chain commitments</text>
+        <text x="390" y="102" fill="#94a3b8" font-size="9" text-anchor="middle">ledger + provenance hashes</text>
+        <text x="390" y="120" fill="#94a3b8" font-size="8" text-anchor="middle">tamper = proof dies</text>
+        <rect x="540" y="60" width="200" height="80" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="640" y="84" fill="white" font-size="10" font-weight="600" text-anchor="middle">Client-side prover</text>
+        <text x="640" y="102" fill="#94a3b8" font-size="9" text-anchor="middle">ZK proof over commitments</text>
+        <text x="640" y="120" fill="#94a3b8" font-size="8" text-anchor="middle">records never leave home</text>
+        <rect x="790" y="60" width="270" height="90" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="925" y="84" fill="white" font-size="11" font-weight="600" text-anchor="middle">ZK BADGE</text>
+        <text x="925" y="104" fill="#94a3b8" font-size="9" text-anchor="middle">predicate + proof + public inputs</text>
+        <text x="925" y="122" fill="#94a3b8" font-size="9" text-anchor="middle">holder-bound · time-limited</text>
+        <text x="925" y="138" fill="#fb7185" font-size="8" text-anchor="middle">decays unless refreshed</text>
+        <text x="40" y="162" fill="#94a3b8" font-size="8">The proof binds to the on-chain hash — a badge over tampered records is invalid. Issuance is a relationship-record output; disputes are arbitrable.</text>
+
+        <!-- predicates -->
+        <text x="40" y="196" fill="#94a3b8" font-size="9" font-weight="600">PREDICATES — prove a property, reveal nothing else</text>
+        <rect x="40" y="210" width="240" height="70" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="160" y="234" fill="white" font-size="10" font-weight="600" text-anchor="middle">≥10 quests completed</text>
+        <text x="160" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">count proven, not which</text>
+        <rect x="300" y="210" width="240" height="70" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="420" y="234" fill="white" font-size="10" font-weight="600" text-anchor="middle">time-bank balance ≥ 40</text>
+        <text x="420" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">range proven, not value</text>
+        <rect x="560" y="210" width="240" height="70" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="680" y="234" fill="white" font-size="10" font-weight="600" text-anchor="middle">verified cold-storage fills</text>
+        <text x="680" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">attribute, not farm or qty</text>
+        <rect x="820" y="210" width="240" height="70" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="940" y="234" fill="white" font-size="10" font-weight="600" text-anchor="middle">member of coalition ≥ 1 yr</text>
+        <text x="940" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">membership, not which one</text>
+
+        <!-- gates -->
+        <text x="40" y="306" fill="#94a3b8" font-size="9" font-weight="600">GATES — where the badge is required (enforced by guard modules)</text>
+        <rect x="40" y="320" width="240" height="70" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="160" y="344" fill="white" font-size="10" font-weight="600" text-anchor="middle">Quest board floor</text>
+        <text x="160" y="362" fill="#94a3b8" font-size="8" text-anchor="middle">≥3 completed quests to post</text>
+        <rect x="300" y="320" width="240" height="70" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="420" y="344" fill="white" font-size="10" font-weight="600" text-anchor="middle">Cold-storage priority</text>
+        <text x="420" y="362" fill="#94a3b8" font-size="8" text-anchor="middle">verified contributors book first</text>
+        <rect x="560" y="320" width="240" height="70" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="680" y="344" fill="white" font-size="10" font-weight="600" text-anchor="middle">Group-join tenure</text>
+        <text x="680" y="362" fill="#94a3b8" font-size="8" text-anchor="middle">member of some group ≥ 1 yr</text>
+        <rect x="820" y="320" width="240" height="70" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="940" y="344" fill="white" font-size="10" font-weight="600" text-anchor="middle">DAO vote participation</text>
+        <text x="940" y="362" fill="#94a3b8" font-size="8" text-anchor="middle">≥ N decisions to vote</text>
+
+        <!-- constraints -->
+        <text x="40" y="430" fill="#fb7185" font-size="9" font-weight="600">CONSTRAINTS</text>
+        <text x="40" y="452" fill="#94a3b8" font-size="9">DECAY — badges expire unless refreshed; participation is ongoing, which kills the badge-farming market.</text>
+        <text x="40" y="472" fill="#94a3b8" font-size="9">HOLDER-BOUND — the proof works only with the holder's key; a badge cannot be transferred or sold.</text>
+        <text x="40" y="492" fill="#94a3b8" font-size="9">CORRELATION CEILING — predicates are minimal-disclosure by design; a badge should never be a fingerprint.</text>
+        <text x="40" y="512" fill="#94a3b8" font-size="9">MONEY STAYS AUDITABLE — ZK applies to participation and social stats, never to cash flows.</text>
+        <text x="40" y="532" fill="#94a3b8" font-size="9">NO CLASS SYSTEM — badges prove contribution, never worth; floors stay low, everyone starts able to participate.</text>
+
+        <!-- legend -->
+        <rect x="40" y="560" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="62" y="568" fill="#94a3b8" font-size="8">records (per-site data)</text>
+        <rect x="220" y="560" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="242" y="568" fill="#94a3b8" font-size="8">on-chain commitments</text>
+        <rect x="400" y="560" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="422" y="568" fill="#94a3b8" font-size="8">client-side prover</text>
+        <rect x="540" y="560" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="562" y="568" fill="#94a3b8" font-size="8">zk-badge credential</text>
+        <rect x="700" y="560" width="16" height="10" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="722" y="568" fill="#94a3b8" font-size="8">gates · external</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>The Safe — universal account</h3>
+        </div>
+        <ul>
+          <li>• Owner set + threshold (N-of-M), modules, vault, registry entry</li>
+          <li>• Every actor is a Safe: person = 1-of-1 · group = N-of-M · DAO</li>
+          <li>• Ownership implies membership ONLY — nothing else</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Relationships are declared</h3>
+        </div>
+        <ul>
+          <li>• Four dimensions: governance · infrastructure · trust · economics</li>
+          <li>• member-of · subgroup-of · federated-with · sponsored-by</li>
+          <li>• Registry is the source of truth; provisioning derives from it</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>One model, two shapes</h3>
+        </div>
+        <ul>
+          <li>• Co-op: flat seats, autonomous subgroups, federation membership</li>
+          <li>• Nonprofit: nested control, reserved powers, sponsorship</li>
+          <li>• Members can sit in many Safes — a graph, not a tree</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>One big world</h3>
+        </div>
+        <ul>
+          <li>• Context is derived from the action — no hat-switching</li>
+          <li>• Unified approval inbox across all of a user's Safes</li>
+          <li>• Roles = session keys + guards (access, not ownership)</li>
+          <li>• Relationship-scoped ledgers for barter &amp; labor swaps</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>zk-badges</h3>
+        </div>
+        <ul>
+          <li>• Verifiable participation — prove it, reveal nothing</li>
+          <li>• Guard-enforced gates (quests, priority, tenure, votes)</li>
+          <li>• Holder-bound + decaying (no farming, no sale)</li>
+          <li>• Money stays auditable — ZK never touches cash flows</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">irl.coop • group relationship model • see docs/design/account-and-key-model.md</p>
+  </div>
+</body>
+</html>

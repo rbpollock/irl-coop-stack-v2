@@ -5,9 +5,7 @@ import type { Adapter } from "next-auth/adapters"
 
 import { db } from "@/lib/prisma"
 
-import CredentialsProvider from "next-auth/providers/credentials"
-
-// Extend NextAuth's Session and User interfaces to include custom properties
+// Extend NextAuth's Session, User, and JWT interfaces to include custom properties
 declare module "next-auth" {
   interface Session {
     user: {
@@ -17,6 +15,7 @@ declare module "next-auth" {
       avatar: string | null
       status: string
     }
+    accessToken?: string
   }
 
   interface User {
@@ -34,92 +33,86 @@ declare module "next-auth/jwt" {
     name: string
     avatar: string | null
     status: string
+    accessToken?: string
   }
 }
 
-// Configuration for NextAuth with custom adapters and providers
-// NextAuth.js documentation: https://next-auth.js.org/getting-started/introduction
 export const authOptions: NextAuthOptions = {
-  // Use Prisma adapter for database interaction
-  // More info: https://next-auth.js.org/getting-started/adapter
   adapter: PrismaAdapter(db) as Adapter,
   providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { type: "email" },
-        password: { type: "password" },
+    {
+      id: "coop-api",
+      name: "irl.coop",
+      type: "oauth",
+      issuer: "coop-api",
+      clientId: process.env.COOP_API_CLIENT_ID ?? "",
+      clientSecret: process.env.COOP_API_CLIENT_SECRET ?? "",
+      client: {
+        id_token_signed_response_alg: "HS256",
       },
-      // Custom authorize function to validate user credentials
-      async authorize(credentials) {
-        if (!credentials) return null
-
-        try {
-          // Authenticate the user by sending credentials to an external API
-          // Refer to the NextAuth.js documentation for handling custom sign-in flows:
-          // https://next-auth.js.org/providers/credentials
-          const res = await fetch(`${process.env.API_URL}/auth/sign-in`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          })
-
-          const payload = await res.json()
-
-          // Throw error if the response status indicates a failure
-          if (res.status >= 400) {
-            throw new Error(payload?.message ?? "An unknown error occurred.")
-          }
-
-          return payload // Return user data on successful authentication
-        } catch (e: unknown) {
-          // Handle errors and provide appropriate error message
-          throw new Error(
-            e instanceof Error ? e.message : "An unknown error occurred."
-          )
+      // Link accounts that share a verified email instead of throwing
+      // OAuthAccountNotLinked. Safe: emails arrive verified from Google
+      // via Keycloak, so the same person owns the account.
+      allowDangerousEmailAccountLinking: true,
+      authorization: {
+        url: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/authorize`,
+        params: { scope: "openid profile email" },
+      },
+      token: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/token`,
+      userinfo: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/userinfo`,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          avatar: profile.avatar,
+          status: "ONLINE",
         }
       },
-    }),
+    },
   ],
   pages: {
-    signIn: "/sign-in", // Custom sign-in page
+    signIn: "/sign-in",
   },
   session: {
-    strategy: "jwt", // Use JWT strategy for sessions
-    maxAge: 30 * 24 * 60 * 60, // Set session expiration to 30 days
-    // More info on session strategies: https://next-auth.js.org/getting-started/options#session
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
-    // Callback to add custom user properties to JWT
-    // Learn more: https://next-auth.js.org/configuration/callbacks#jwt-callback
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       if (user) {
         token.id = user.id
         token.name = user.name
-        token.avatar = user.avatar
+        token.avatar = user.avatar ?? null
         token.email = user.email
-        token.status = user.status
+        token.status = "ONLINE"
+      }
+
+      if (account) {
+        token.accessToken = account.access_token
+        // coop-api is the identity authority: its profile (incl. the
+        // onboarding display name) wins over the DB user on fresh logins.
+        const coopProfile = profile as { name?: string; avatar?: string } | null
+        if (coopProfile?.name) token.name = coopProfile.name
+        if (coopProfile?.avatar) token.avatar = coopProfile.avatar
       }
 
       return token
     },
-    // Callback to include JWT properties in the session object
-    // Learn more: https://next-auth.js.org/configuration/callbacks#session-callback
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id
-        session.user.name = token.name
+        session.user.name = token.name ?? ""
         session.user.avatar = token.avatar
         session.user.email = token.email
-        token.status = token.status
+        session.user.status = token.status
+        session.accessToken = token.accessToken
       }
 
       return session
+    },
+    async signIn({ user }) {
+      return true
     },
   },
 }

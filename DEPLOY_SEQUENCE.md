@@ -51,6 +51,23 @@ irl-coop-stack-v2/
 *   [ ] **4.2 Private Geth Private Chain Setup:** Spin up a private local Ethereum L2 simulation inside docker.
 *   [ ] **4.3 Write end-to-end automated validation runner:** Code the master validation harness `validate_system.ts`.
 
+### Phase 5: Infrastructure Layer (Self-Hosted Services)
+*   [x] **5.1 Edge (Traefik):** TLS edge generated from the declarative tree (`infra/instances/dev/` → `infra/build/generator.py` → `infra/out/dev/compose/proxy/dynamic.yml`). Routers: `auth` → keycloak:8081, `mail` → stalwart:8083, `app` → plane:3002, `nocodb` → nocodb-gate:8082, `s3`/`s3api` → minio, apex → full-kit:3000. Router 80/443 → 192.168.18.20 (externally verified).
+*   [x] **5.2 Wildcard cert + renewal:** `*.irl.coop`+`irl.coop` (LE) at `infra/instances/dev/certs/`; renewal via `infra/scripts/renew-cert.sh` (acme.sh, Gandi LiveDNS DNS-01, custom `dns_gandi_livedns.sh` hook), cron daily 03:30 with a 3-day window around the renewal date + 10-day emergency catch-up; edge restarted only on cert change. Next window: Oct 6–8 2026.
+*   [x] **5.3 Mail (Stalwart v0.16):** store on the shared Citus Postgres; listeners 25/587/143/993 (verified externally); webadmin :8083, admin `admin@irl.coop`.
+*   [x] **5.4 Mail DNS:** MX `10 mail.irl.coop.`; SPF `v=spf1 mx ~all`; DMARC `p=none` (monitoring); DKIM selector `dkim` (`dkim._domainkey` TXT) — all applied via the Gandi LiveDNS API and verified through public resolvers.
+*   [ ] **5.5 Remaining:** MinIO blob store for Stalwart, OIDC directory (Keycloak), DMARC hardening, canonical `KC_HOSTNAME=auth.irl.coop` switch, one traefik restart to serve the renewed cert.
+
+Verification (ad-hoc scripts, see `infra/README.md` for details):
+```bash
+# edge routes + cert
+python3 /tmp/hermes-verify-edge.py
+# mail ports + banner (external)
+python3 /tmp/hermes-verify-mail-external.py
+# mail DNS records (public resolvers)
+python3 /tmp/hermes-verify-mail-dns.py
+```
+
 ---
 
 ## 3. The "Self-Healing" Verification Standards

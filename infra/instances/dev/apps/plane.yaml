@@ -1,0 +1,27 @@
+# Plane — project management surface, irl.coop structure-aware.
+# Special case: SOURCE build (its own repo + compose at /home/service/plane);
+# the generator emits its OIDC client, env block and data-scoping artifacts,
+# not a compose service. Compose lives with the source.
+name: plane
+pillar: workflow
+type: source
+source: /home/service/plane
+web: http://app.${DOMAIN}
+oidc:
+  client_id: plane
+  redirect: /auth/oidc/callback/
+  public: false
+proxy:
+  hostname: app.${DOMAIN}
+  port: 3002
+  description: plane's own proxy (caddy) — 0.0.0.0-published
+env:
+  OIDC_CLIENT_ID: plane
+  OIDC_DEFAULT_WORKSPACE: coop-test   # Shape 2: SSO auto-joins the union workspace
+  DISABLE_WORKSPACE_CREATION: "1"     # nobody creates workspaces
+  REDIS_KEY_PREFIX: plane             # shared irl.coop Redis (cache pillar)
+  REDIS_URL: redis://172.17.0.1:6379/0
+data:
+  scoped_by: sub          # users.sub — the realm subject, native to the schema
+  views:
+    - infra/compose/storage/scripts/plane_user_view.sql

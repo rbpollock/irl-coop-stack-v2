@@ -1,0 +1,37 @@
+# Keycloak — the co-op's single identity (Pillar 1 of the federation layer).
+name: keycloak
+pillar: authentication
+type: image
+image: quay.io/keycloak/keycloak:24.0.4
+command: start-dev
+ports:
+  - "8081:8081"
+env:
+  KC_DB: postgres
+  KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+  KC_DB_USERNAME: keycloak
+  KC_DB_PASSWORD: password
+  KEYCLOAK_ADMIN: admin
+  KEYCLOAK_ADMIN_PASSWORD: admin
+  # canonical identity URL: auth.irl.coop IS the realm issuer (edge = traefik);
+  # xforwarded lets Keycloak trust the proxy for URL building.
+  KC_HOSTNAME: auth.${DOMAIN}
+  KC_PROXY_HEADERS: xforwarded
+  KC_HTTP_PORT: "8081"
+proxy:
+  hostname: auth.${DOMAIN}
+  port: 8081
+  description: the irl-coop realm + admin console
+depends_on:
+  - keycloak-db
+sidecars:
+  keycloak-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+named_volumes:
+  keycloak_db_data: {}

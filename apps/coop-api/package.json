@@ -6,9 +6,11 @@
     "dev": "ts-node-dev --respawn src/server.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/formbody": "^8.0.2",
     "@types/jsonwebtoken": "^9.0.10",
     "dotenv": "^16.4.5",
-    "fastify": "^4.26.1",
+    "fastify": "^5.10.0",
     "fastify-plugin": "^4.5.1",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.1.0"

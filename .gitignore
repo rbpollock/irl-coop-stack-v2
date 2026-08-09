@@ -1,0 +1,49 @@
+# ── Dependencies ────────────────────────────────────────────────
+node_modules/
+
+# ── Secrets / credentials — never commit ────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# TLS state + ACME accounts (infra/instances/dev/certs/ — private keys)
+infra/instances/dev/certs/
+
+# ── Build / generated output ────────────────────────────────────
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+apps/web/full-kit/.next/
+apps/web/starter-kit/.next/
+dist/
+build/
+*.tsbuildinfo
+
+# Generated deployment output (derived from infra/instances + generator.py)
+infra/out/
+
+# ── Runtime data ────────────────────────────────────────────────
+infra/compose/storage/data/
+apps/coop-api/data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ── Logs ────────────────────────────────────────────────────────
+*.log
+certs/renew.log
+
+# ── Editor / OS ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

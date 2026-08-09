@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 
@@ -44,14 +43,10 @@ export function Auth({
             href={ensureLocalizedPathname("/", locale)}
             className="flex text-foreground font-black z-50"
           >
-            <Image
-              src="/images/icons/shadboard.svg"
-              alt=""
-              height={24}
-              width={24}
-              className="dark:invert"
-            />
-            <span>Shadboard</span>
+            <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
+              i
+            </span>
+            <span>irl.coop</span>
           </Link>
           <LanguageDropdown dictionary={dictionary} />
         </div>
@@ -77,13 +72,10 @@ export function AuthImage({ className, imgSrc, ...props }: AuthImageProps) {
       )}
       {...props}
     >
-      <Image
+      <img
         src={imgSrc}
-        alt="Image"
-        fill
-        sizes="(max-width: 1200px) 60vw, 38vw"
-        priority
-        className="object-cover"
+        alt=""
+        className="absolute inset-0 size-full object-cover"
       />
     </div>
   )

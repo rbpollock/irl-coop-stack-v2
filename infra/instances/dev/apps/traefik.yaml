@@ -1,0 +1,39 @@
+# Traefik — the TLS edge for the instance (proxy pillar).
+# Terminates *.irl.coop with the wildcard cert (file provider) and routes the
+# public hostnames to the app containers. The router rules themselves are NOT
+# docker labels here: the generator emits a dynamic.yml (file provider) from
+# each app's `proxy:` section, so the edge works against the current running
+# stack (host-published ports) AND the future fully-generated deployment.
+name: traefik
+pillar: proxy
+type: image
+image: traefik:v3.5
+command:
+  - --providers.docker=true
+  - --providers.docker.exposedbydefault=false
+  - --providers.file.filename=/etc/traefik/dynamic.yml
+  - --entrypoints.web.address=:80
+  - --entrypoints.websecure.address=:443
+  - --entrypoints.web.http.redirections.entrypoint.to=websecure
+  - --entrypoints.web.http.redirections.entrypoint.scheme=https
+  - --api.dashboard=false
+  - --log.level=INFO
+ports:
+  - "80:80"
+  - "443:443"
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock:ro
+  - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+  - ./certs:/etc/traefik/certs:ro
+restart: always
+# certs/ (the *.irl.coop wildcard from the instance dir) live in the instance
+# tree, NOT in out/ — the dev override absolutizes the mount.
+dev:
+  volumes:
+    - ./certs:/etc/traefik/certs:ro
+# Extra file-provider routes beyond the app `proxy:` sections: the apex
+# hostname serves the v4 dashboard (full-kit on the host's :3000).
+routes:
+  - hostname: ${DOMAIN}
+    port: 3000
+    description: apex → v4 dashboard (full-kit)

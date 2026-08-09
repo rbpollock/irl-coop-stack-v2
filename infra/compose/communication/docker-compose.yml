@@ -1,59 +1,22 @@
+# Stalwart — the co-op's mail server (communication pillar).
+# v0.16: config + data live in /etc/stalwart + /var/lib/stalwart; the datastore,
+# blob and OIDC settings are managed through the webadmin (setup wizard) and
+# stored in the DB. The webadmin + JMAP share the 8080 listener (host 8083);
+# the standard mail ports are published for the router's forwards.
 services:
-  # Stalwart Mail Server
   stalwart:
-    image: stalwartlabs/mail-server:0.19.0
-    restart: always
-    volumes:
-      - /opt/app/communication/data/mail:/opt/stalwart-mail/data
-      - /opt/app/communication/config/stalwart:/opt/stalwart-mail/etc
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mail.rule=Host(`mail.${DOMAIN}`)"
-      - "traefik.http.routers.mail.entrypoints=websecure"
-      - "traefik.http.routers.mail.tls=true"
-
-  # Matrix Synapse
-  synapse:
-    image: matrixdotorg/synapse:v1.115.0
-    restart: always
-    volumes:
-      - /opt/app/communication/data/matrix:/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.matrix.rule=Host(`chat.${DOMAIN}`)"
-      - "traefik.http.routers.matrix.entrypoints=websecure"
-      - "traefik.http.routers.matrix.tls=true"
-
-  # Jitsi Meet
-  jitsi-web:
-    image: jitsi/web:stable-9149
-    restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.jitsi.rule=Host(`meet.${DOMAIN}`)"
-      - "traefik.http.routers.jitsi.entrypoints=websecure"
-      - "traefik.http.routers.jitsi.tls=true"
-
-  # Cal.com
-  calcom:
-    image: calcom/calcom:v5.0.0
-    restart: always
+    image: stalwartlabs/stalwart:v0.16
+    ports:
+      - "8083:8080"
+      - "25:25"
+      - "587:587"
+      - "143:143"
+      - "993:993"
     environment:
-      - NEXT_PUBLIC_WEBAPP_URL=https://cal.${DOMAIN}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.cal.rule=Host(`cal.${DOMAIN}`)"
-      - "traefik.http.routers.cal.entrypoints=websecure"
-      - "traefik.http.routers.cal.tls=true"
-
-  # Owncast
-  owncast:
-    image: owncast/owncast:latest
-    restart: always
+      STALWART_PUBLIC_URL: https://mail.irl.coop
+    extra_hosts:
+      - "localhost:172.17.0.1"
     volumes:
-      - /opt/app/communication/data/owncast:/app/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.owncast.rule=Host(`live.${DOMAIN}`)"
-      - "traefik.http.routers.owncast.entrypoints=websecure"
-      - "traefik.http.routers.owncast.tls=true"
+      - /opt/app/communication/etc/stalwart:/etc/stalwart
+      - /opt/app/communication/data/stalwart:/var/lib/stalwart
+    restart: unless-stopped

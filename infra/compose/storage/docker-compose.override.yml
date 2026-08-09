@@ -1,0 +1,22 @@
+# Dev-box overrides for the storage pillar: publish the main postgres on the
+# host (127.0.0.1:5432), keep data under this directory instead of /opt/app,
+# and expose MinIO (API 9000 + console 9001) with dev credentials.
+services:
+  postgres:
+    # NOT loopback-bound: containers reach it via the docker gateway
+    # (172.17.0.1:5432) — restrict at the firewall in prod.
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+  minio:
+    # NOT loopback-bound: containers reach it via the docker gateway
+    # (172.17.0.1:9000) — restrict at the firewall in prod.
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - ./data/minio:/data

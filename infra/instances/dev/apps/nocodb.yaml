@@ -1,0 +1,52 @@
+# NocoDB — spreadsheet layer over the user-scoped mirrors/views.
+name: nocodb
+pillar: storage
+type: image
+image: irlcoop/nocodb-gate-sso:2026.08.0
+env:
+  # query-string format (maintainer-confirmed); alphanumeric password —
+  # NocoDB's URL parser is fragile with special chars in the standard form
+  NC_DB: pg://postgres:5432?u=nocodb&p=nocodbdevpass&d=nocodb
+  # Gate SSO: auto-login from the oauth2-proxy identity header (patched
+  # build). v7 passes the identity as X-Forwarded-Email/User (NOT
+  # X-Auth-Request-Email — that's the response-side auth_request header).
+  NC_GATE_SSO_EMAIL_HEADER: x-forwarded-email
+depends_on:
+  - postgres
+sidecars:
+  nocodb-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    command:
+      - --provider=oidc
+      # canonical issuer (Keycloak KC_HOSTNAME=auth.irl.coop); extra_hosts
+      # routes auth.irl.coop inside the gate to the host gateway (traefik
+      # terminates TLS, the gate talks http to it)
+      - --oidc-issuer-url=https://auth.${DOMAIN}/realms/irl-coop
+      - --client-id=nocodb-gate
+      - --client-secret=nocodb-gate-secret
+      - --redirect-url=https://nocodb.${DOMAIN}/oauth2/callback
+      - --email-domain=*
+      - --upstream=http://nocodb:8080
+      - --http-address=0.0.0.0:4180
+      - --cookie-secret=irlcoop-nocodb-gate-dev-sec-1234
+      - --cookie-secure=false
+      - --skip-provider-button=true
+      # inject the identity to NocoDB's Gate SSO (v7: pass-user-headers sends
+      # X-Forwarded-Email/X-Forwarded-User to the upstream)
+      - --pass-user-headers=true
+    extra_hosts:
+      - "auth.${DOMAIN}:172.17.0.1"
+    ports:
+      # NOT loopback-bound: the traefik edge reaches the gate via the docker
+      # gateway (172.17.0.1:8082) — restrict at the firewall in prod.
+      - "8082:4180"
+    depends_on:
+      - nocodb
+proxy:
+  hostname: nocodb.${DOMAIN}
+  port: 8082
+  description: the oauth2-proxy gate (identity-gated)
+data:
+  # reads per-user views over plane-db (infra/compose/storage/scripts/plane_user_view.sql)
+  consumes_views: true
+  oidc: gate            # Tier 2: Keycloak forward-auth (native OIDC is paid)

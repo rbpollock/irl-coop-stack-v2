@@ -16,6 +16,13 @@
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
     "@semantic-release/github": "^11.0.1",
+    "@types/jsonwebtoken": "^9.0.10",
     "semantic-release": "^24.2.3"
+  },
+  "dependencies": {
+    "@simplewebauthn/browser": "^9.0.1",
+    "@simplewebauthn/server": "^9.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "next-auth": "^4.24.15"
   }
 }

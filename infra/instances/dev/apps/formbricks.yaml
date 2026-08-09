@@ -1,0 +1,10 @@
+# Formbricks — surveys/forms (workflow pillar).
+name: formbricks
+pillar: workflow
+type: image
+image: formbricks/formbricks:latest
+env:
+  DATABASE_URL: postgres://${POSTGRES_USER}:***@postgres:5432/formbricks
+labels:
+  traefik.enable: "true"
+  traefik.http.routers.forms.rule: Host(`forms.${DOMAIN}`)

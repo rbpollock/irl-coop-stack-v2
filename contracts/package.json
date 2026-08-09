@@ -16,5 +16,8 @@
     "hardhat": "^2.29.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@safe-global/safe-contracts": "^1.4.1-2"
   }
 }

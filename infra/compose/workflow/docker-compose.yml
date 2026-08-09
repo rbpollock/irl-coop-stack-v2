@@ -7,27 +7,13 @@ services:
       - POSTGRES_PWD=${POSTGRES_PASSWORD}
       - POSTGRES_SEEDS=postgres # connect to Citus
 
-  openproject:
-    image: openproject/openproject:14
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/openproject
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.project.rule=Host(`projects.${DOMAIN}`)"
-
   formbricks:
     image: formbricks/formbricks:latest
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/formbricks
+      DATABASE_URL: postgres://${POSTGRES_USER}:***@postgres:5432/formbricks
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.forms.rule=Host(`forms.${DOMAIN}`)"
-
-  postiz:
-    image: postiz/postiz:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.social.rule=Host(`social.${DOMAIN}`)"
 
   webstudio:
     image: webstudio/webstudio:latest

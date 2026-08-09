@@ -1,0 +1,30 @@
+# Stalwart — the co-op's mail server (communication pillar).
+# v0.16: config + data live in /etc/stalwart + /var/lib/stalwart; the datastore,
+# blob and OIDC settings are managed through the webadmin (setup wizard) and
+# stored in the DB. The webadmin + JMAP share the 8080 listener (host 8083);
+# SMTP/IMAP ports are published for direct protocol access.
+name: stalwart
+pillar: communication
+type: image
+image: stalwartlabs/stalwart:v0.16
+ports:
+  - "8083:8080"
+  - "25:25"
+  - "587:587"
+  - "143:143"
+  - "993:993"
+env:
+  STALWART_PUBLIC_URL: https://mail.${DOMAIN}
+extra_hosts:
+  - "localhost:172.17.0.1"
+volumes:
+  - /opt/app/communication/etc/stalwart:/etc/stalwart
+  - /opt/app/communication/data/stalwart:/var/lib/stalwart
+proxy:
+  hostname: mail.${DOMAIN}
+  port: 8083
+  description: webadmin + JMAP (the 8080 listener)
+dev:
+  volumes:
+    - ./data/stalwart/etc:/etc/stalwart
+    - ./data/stalwart/data:/var/lib/stalwart

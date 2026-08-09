@@ -1,60 +1,44 @@
-import Fastify from 'fastify';
-import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
-import jwksClient from 'jwks-rsa';
-import { promisify } from 'util';
+import 'dotenv/config'
+import Fastify from 'fastify'
+import cors from '@fastify/cors'
+import formbody from '@fastify/formbody'
+import authRoutes from './auth'
+import onboardingRoutes from './onboarding'
+import safeRoutes from './safe'
 
-dotenv.config();
+const fastify = Fastify({
+  logger: true,
+  trustProxy: true, // Trust proxy headers to correctly get client IP
+})
 
-const fastify = Fastify({ logger: true });
+fastify.register(cors, {
+  origin: ['http://localhost:3000'], // Allow frontend origin specifically
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Allow cookies and authorization headers
+})
 
-// Basic Health Check
-fastify.get('/health', async () => {
-  return { status: 'ok' };
-});
-
-const client = jwksClient({
-  jwksUri: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/certs`
-});
-
-const getSigningKey = promisify(client.getSigningKey);
-
-fastify.post('/auth/verify', async (request, reply) => {
-  const authHeader = request.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return reply.status(401).send({ error: 'Unauthorized' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  
-  try {
-    const decoded = jwt.decode(token, { complete: true });
-    if (!decoded || typeof decoded === 'string' || !decoded.header.kid) {
-        throw new Error('Invalid token structure');
-    }
-    const kid = (decoded as jwt.Jwt).header.kid!;
-    const key = await getSigningKey(kid);
-    if (!key || typeof key === 'string') throw new Error('Signing key not found');
-    const publicKey = key.getPublicKey();
-    
-    jwt.verify(token, publicKey, { algorithms: ['RS256'] });
-
-    return {
-      identity: 'robbie@irl.coop', // Extract from decoded.payload.preferred_username
-      status: 'authenticated'
-    };
-  } catch (err) {
-    return reply.status(401).send({ error: 'Invalid Token' });
-  }
-});
+fastify.register(formbody)
+fastify.register(authRoutes)
+fastify.register(onboardingRoutes)
+fastify.register(safeRoutes)
 
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000, host: '0.0.0.0' });
+    // Listen on all network interfaces (0.0.0.0) so localhost fetches work
+    await fastify.listen({ port: Number(process.env.PORT ?? 3001), host: '0.0.0.0' })
+    const issuer = process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8081/realms/irl-coop'
+    const base = process.env.COOP_API_BASE_URL ?? 'http://localhost:3001'
+    fastify.log.info('--- auth bridge chain (redirect-URI matrix) ---')
+    fastify.log.info(`NextAuth callback : http://localhost:3000/api/auth/callback/coop-api`)
+    fastify.log.info(`coop-api authorize: ${base}/api/auth/authorize`)
+    fastify.log.info(`coop-api callback : ${base}/api/auth/keycloak/callback`)
+    fastify.log.info(`Keycloak auth     : ${issuer}/protocol/openid-connect/auth`)
+    fastify.log.info(`Google broker     : ${issuer}/broker/google/endpoint (must be in Google Cloud Console authorized URIs)`)
+    fastify.log.info(`Safe factory      : ${process.env.SAFE_PROXY_FACTORY_ADDRESS ?? '(unset)'} / singleton ${process.env.SAFE_SINGLETON_ADDRESS ?? '(unset)'} @ ${process.env.RPC_URL ?? 'http://127.0.0.1:8545'}`)
   } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
+    console.error(err)
+    process.exit(1)
   }
-};
-
-start();
+}
+start()

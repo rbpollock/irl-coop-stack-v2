@@ -1,0 +1,23 @@
+# MinIO — S3 object storage (storage pillar).
+name: minio
+pillar: storage
+type: image
+image: minio/minio:latest
+command: server /data --console-address :9001
+env:
+  # dev creds (pinned — the console needs them explicitly; the provisioned
+  # stalwart-s3 user lives under these)
+  MINIO_ROOT_USER: minioadmin
+  MINIO_ROOT_PASSWORD: minioadmin123
+volumes:
+  - /opt/app/storage/data/minio:/data
+labels:
+  traefik.enable: "true"
+  traefik.http.routers.minio.rule: Host(`s3.${DOMAIN}`)
+proxy:
+  - hostname: s3.${DOMAIN}
+    port: 9001
+    description: the MinIO console (browser)
+  - hostname: s3api.${DOMAIN}
+    port: 9000
+    description: the S3 API

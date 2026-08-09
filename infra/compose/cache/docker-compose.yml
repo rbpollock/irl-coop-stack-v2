@@ -1,0 +1,26 @@
+version: '3.8'
+
+# irl.coop shared cache pillar — ONE Redis instance owned by the co-op level.
+# Every app consumes it with a strict key prefix (plane:*, coop:*, farm:*, ...):
+#   - pub/sub channels are global in Redis (ignore DB selection) => namespace
+#     channels too (irl:notify:{sub}, ...)
+#   - no hardcoded DB numbers: key prefixes survive a future Redis Cluster.
+# Host port 6379 is free (plane-redis is internal-only); containers reach it
+# via the docker bridge gateway (172.17.0.1:6379).
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis_data:

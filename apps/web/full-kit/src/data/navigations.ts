@@ -2,22 +2,27 @@ import type { NavigationType } from "@/types"
 
 export const navigationsData: NavigationType[] = [
   {
-    title: "Dashboards",
+    title: "IRL Co-op",
     items: [
       {
-        title: "Analytics",
+        title: "Dashboard",
+        href: "/",
+        iconName: "LayoutDashboard",
+      },
+      {
+        title: "Shard Nodes",
         href: "/dashboards/analytics",
-        iconName: "ChartPie",
+        iconName: "Server",
       },
       {
-        title: "CRM",
+        title: "Members",
         href: "/dashboards/crm",
-        iconName: "ChartBar",
+        iconName: "Users",
       },
       {
-        title: "eCommerce",
+        title: "Safes",
         href: "/dashboards/ecommerce",
-        iconName: "ShoppingCart",
+        iconName: "Wallet",
       },
     ],
   },

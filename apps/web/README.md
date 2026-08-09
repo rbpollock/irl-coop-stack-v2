@@ -77,3 +77,23 @@ See Shadboard in action by visiting the [live demo](https://shadboard.vercel.app
 ## Get Started
 
 Get your hands on **Shadboard** today and start building scalable, user-friendly applications with ease!
+
+---
+
+## irl.coop customizations
+
+This workspace contains the irl.coop dashboard (`full-kit`), an older experiment (`starter-kit`), and the backend services in `apps/coop-api` (auth bridge + relayer).
+
+### Authentication is decoupled
+
+The default Shadboard auth has been replaced by a three-tier chain:
+
+```
+NextAuth (frontend) → coop-api (:3001) → Keycloak (:8081, realm irl-coop) → Google
+```
+
+- The Next.js app uses a custom OAuth provider (`coop-api`) — it holds **no** Keycloak or Google credentials.
+- `apps/coop-api` implements `authorize` / `token` / `userinfo` and owns the Keycloak client secret; its JWT is also the Bearer credential for the auth-to-EVM bridge (`POST /api/onboard`).
+- Keycloak (`infra/compose/authentication`) brokers Google via an identity-provider alias.
+
+Relevant docs: [`apps/coop-api/README.md`](../coop-api/README.md), [`apps/web/full-kit/README.md`](./full-kit/README.md), and the in-app docs page (full-kit → `/docs/development/authentication`).

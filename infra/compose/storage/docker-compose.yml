@@ -11,8 +11,11 @@ services:
     restart: always
 
   minio:
-    image: minio/minio:RELEASE.2024-01-01T00-00-00Z
-    command: server /data
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
     volumes:
       - /opt/app/storage/data/minio:/data
     labels:
@@ -20,11 +23,52 @@ services:
       - "traefik.http.routers.minio.rule=Host(`s3.${DOMAIN}`)"
 
   nocodb:
-    image: nocodb/nocodb:latest
+    image: irlcoop/nocodb-gate-sso:2026.08.1
     environment:
-      NC_DB: pg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/nocodb
+      # query-string format (maintainer-confirmed); alphanumeric password —
+      # NocoDB's URL parser is fragile with special chars in the standard form
+      NC_DB: pg://postgres:5432?u=nocodb&p=nocodbdevpass&d=nocodb
+      # Gate SSO: auto-login from the oauth2-proxy identity header (patched
+      # build). v7 passes the identity as X-Forwarded-Email/User (NOT
+      # X-Auth-Request-Email — that's the response-side auth_request header).
+      NC_GATE_SSO_EMAIL_HEADER: x-forwarded-email
     depends_on:
       - postgres
+
+  # Keycloak OIDC forward-auth gate — the co-op identity at the edge
+  # (NocoDB's native OIDC is a paid feature; this is the community path).
+  nocodb-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    command:
+      - --provider=oidc
+      # canonical issuer (auth.irl.coop via the edge)
+      - --oidc-issuer-url=https://auth.irl.coop/realms/irl-coop
+      - --client-id=nocodb-gate
+      - --client-secret=nocodb-gate-secret
+      - --redirect-url=https://nocodb.irl.coop/oauth2/callback
+      - --email-domain=*
+      - --upstream=http://nocodb:8080
+      - --http-address=0.0.0.0:4180
+      - --cookie-secret=irlcoop-nocodb-gate-dev-sec-1234
+      - --cookie-secure=false
+      - --skip-provider-button=true
+      # PWA files bypass auth: the browser fetches them pre-login (no-credentials
+      # manifest fetch), and a redirect would CORS-block the manifest install.
+      - --skip-auth-route=/manifest.webmanifest
+      - --skip-auth-route=/sw.js
+      - --skip-auth-route=/favicon.ico
+      - --skip-auth-route=/robots.txt
+      # inject the identity to NocoDB's Gate SSO (v7: pass-user-headers sends
+      # X-Forwarded-Email/X-Forwarded-User to the upstream)
+      - --pass-user-headers=true
+    extra_hosts:
+      - "localhost:172.17.0.1"
+    ports:
+      # NOT loopback-bound: the traefik edge reaches the gate via the docker
+      # gateway (172.17.0.1:8082) — restrict at the firewall in prod.
+      - "8082:4180"
+    depends_on:
+      - nocodb
 
   cryptpad:
     image: cryptpad/cryptpad:latest

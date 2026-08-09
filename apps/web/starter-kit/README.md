@@ -34,3 +34,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+
+---
+
+## irl.coop note
+
+This is the earlier **starter-kit** experiment. It authenticates with **NextAuth KeycloakProvider** directly (client `web-app` in the `irl-coop` realm, issuer `http://localhost:8081/realms/irl-coop`).
+
+It has been superseded by the **full-kit** dashboard, which uses the decoupled chain `NextAuth → coop-api (:3001) → Keycloak → Google` — see [`apps/coop-api/README.md`](../../coop-api/README.md) and [`apps/web/full-kit/README.md`](../full-kit/README.md).

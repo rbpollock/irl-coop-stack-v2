@@ -112,7 +112,7 @@ The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB
 ### The Core Infrastructure
 - **Persistence & Coordination:** Postgres/Citus (Database), Redis (Queue/Cache), Minio (S3 Storage).
 - **Asynchronous State-Flow:** Temporal.io (Durable workflow engine for ZK-syncs).
-- **Communication Layer:** Matrix (Synapse), Jitsi (RTC), Element (UI), Stalwart (Email Server), Owncast (Live Streaming), FusionPBX + FreeSWITCH (VOIP).
+- **Communication Layer:** Matrix (Synapse), Jitsi (RTC), Element (UI), Stalwart (Email Server), Owncast (Live Streaming), FusionPBX + FreeSWITCH (VOIP), Postiz (Fediverse distribution).
 
 ### Modular Coop OS Components (Forked/Containerized)
 - **Governance & Docs:** CryptPad (Zero-knowledge collaboration).
@@ -121,7 +121,6 @@ The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB
 - **Project/Tasks:** OpenProject.
 - **Scheduling:** Cal.com.
 - **Web Presence:** Webstudio (Visual site builder).
-- **Social Distribution:** Postiz (Fediverse distribution).
 - **Data/Dashboards:** NocoDB (Spreadsheet-like DB interface).
 
 | Service | Architecture Role | Language/Implementation | RAM footprint | Fork / Submodule Source |
@@ -133,7 +132,7 @@ The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB
 | **Surveys & Forms** | Anonymous ZK Feedback | Formbricks | ~200MB | `git@github.com:formbricks/formbricks.git` |
 | **Sovereign Local Node**| Local RPC & Validation | Geth / Hardhat | ~800MB | Standard Docker Image |
 | **Database** | Sharded State Tracking | Citus / PostgreSQL | ~500MB | Standard Docker Image |
-| **Reverse Proxy** | Network Routing | Nginx | ~20MB | Standard Docker Image |
+| **Edge / Reverse Proxy** | TLS termination + routing (file-provider `dynamic.yml`, generated) | Traefik v3 | ~40MB | Standard Docker Image |
 | **Cache & Buffers** | Session Cache & Buffers | Redis | ~50MB | Standard Docker Image |
 
 **Total Estimated Server Memory Footprint:** ~1.87GB (Leaving plenty of headroom for OS buffers and local host processes).
@@ -142,12 +141,12 @@ The entire stack is tuned to run comfortably within your target **4GB RAM / 32GB
 
 ## 4. Phase-by-Phase Master Implementation Plan
 
-*   [ ] **Phase 1: Local Environment & Mock Signers**
+*   [x] **Phase 1: Local Environment & Mock Signers**
     *   Initialize the hardhat/foundry test suite targeting Base Sepolia.
     *   Develop mock Secp256r1 (WebAuthn) and ECDSA scripts to simulate user biometric device signatures and backend co-signing behavior.
-*   [ ] **Phase 2: Core AA Smart Contracts**
+*   [x] **Phase 2: Core AA Smart Contracts**
     *   Implement the ERC-4337 custom Safe validation modules (Passkey P-256 verifiers, Stage 1 to Stage 2 key revocation, Social Recovery, Session Keys, and Spending Limits).
-*   [ ] **Phase 3: The Cryptographic Privacy & Routing Layer**
+*   [x] **Phase 3: The Cryptographic Privacy & Routing Layer**
     *   Build `CoopRegistry.sol` (Merkle Root member registries) and `CoopBatchRouter.sol` (the public-to-private batch clearing system).
     *   Integrate a mockup of the ZK-Shielded UTXO pool (using Semaphore for private voting and a mock Railgun interface for asset shielding).
 *   [ ] **Phase 4: Forked Open-Source Integrations**

@@ -7,5 +7,6 @@ export const routeMap = new Map<string, RouteType>([
   ["/verify-email", { type: "guest" }],
   ["/new-password", { type: "guest" }],
   ["/", { type: "public" }],
+  ["", { type: "public" }],
   ["/docs", { type: "public" }],
 ])
