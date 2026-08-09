@@ -150,6 +150,16 @@ reconcile by applying its generated compose when touching it.
   /apps/webmail — full-height iframe of webmail.irl.coop + "Open full screen"
   button; roundcube `x_frame_options = false` to allow framing; auto-login in
   the iframe works via the shared Keycloak realm session (verified in browser).
+- **Canonical-identity provisioning** (DONE 2026-08-09): accounts are
+  decoupled from login method (Google/web3auth/passkeys/… all map to one
+  canonical user). The mailbox is `<username>@irl.coop`, claimed on first
+  webmail use: the full-kit webmail page gates on the session email — if it
+  isn't @irl.coop it shows the claim panel → coop-api `POST /api/v1/me/username`
+  (coop JWT auth, service account + manage-users) sets the Keycloak email →
+  stalwart self-provisions the mailbox on first auth (the OIDC directory
+  creates the account when the email claim is @irl.coop). Browser E2E passed
+  (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
+  robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
 - Root cause of the "mail refused" mystery: stalwart was stuck in bootstrap mode
   (recovery listener only) — setup completed via the admin API, not the wizard
   (the secret-reference dropdown is un-drivable; the OIDC step had a validation
