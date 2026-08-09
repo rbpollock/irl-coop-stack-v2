@@ -160,6 +160,15 @@ reconcile by applying its generated compose when touching it.
   creates the account when the email claim is @irl.coop). Browser E2E passed
   (foreign-domain test user → claim → mailbox). Robbie's canonical identity:
   robertbrucepollockjr@irl.coop (gmail kept as the login/federated identity).
+- **Landing page as the default homepage** (DONE 2026-08-09): the root (/)
+  serves a redesigned irl.coop landing (data from irlcoop.vercel.app + the
+  live stack config). Hero "We're here for cooperation." + prominent
+  Sign up / Log in → /sign-in; apps grid (Dashboard, Projects/Plane,
+  Databases/NocoDB, Webmail, Mail & Storage, API) with user-friendly copy
+  from the app specs; one-identity section; the eight pillars with LIVE
+  markers. The former root dashboard moved to /dashboards/overview
+  (auth-gated); the template landing deleted; middleware HOME_PATHNAME
+  default → /dashboards/overview. Verified 21/21 + browser.
 - **coop-api as the fleet OIDC issuer** (SLICE 1 DONE 2026-08-09, Robbie's
   Shape-2 decision): the fleet stops showing the Keycloak page. coop-api
   serves discovery + `/jwks` at https://api.irl.coop; the coop JWT is now
