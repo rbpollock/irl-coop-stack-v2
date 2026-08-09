@@ -275,6 +275,45 @@ reconcile by applying its generated compose when touching it.
    Browser E2E: login → workspace → bases → base views, console clean of the
    functional errors.
 
+## Fleet session-gateway migration (slice 2) — IN PROGRESS (2026-08-09)
+
+Goal: every app's "Sign in with irl.coop" answers from the `coop_session`
+cookie via coop-api's authorize — instant, no Keycloak page, no credentials,
+after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
+`POST /api/auth/login` (e2e-test direct-grant) → `coop_session` cookie →
+`GET /api/auth/authorize?client_id=matrix…` → **instant code** to
+`https://matrix.irl.coop/_synapse/client/oidc/callback?code=…` (no Keycloak).
+
+- **DONE — matrix/element-web:** `matrix` added to coop-api `OIDC_CLIENTS`
+  (apps/coop-api/.env, gitignored — secret = the homeserver.yaml's
+  `client_secret`, redirect `https://matrix.irl.coop/_synapse/client/oidc/callback`);
+  `infra/instances/dev/config/matrix/homeserver.yaml` OIDC provider →
+  `issuer: https://api.irl.coop`, `idp_id: coop-gateway`; coop-api restarted
+  (proc — `/tmp/coop-api-dev.log`), matrix container recreated, healthy.
+  Note: the browser E2E showed the Keycloak page because the automation's
+  browser lacks the cookie (its login predates the gateway restart) — the
+  user's real browser gets the cookie at dashboard login, so the widget SSO
+  is instant. Browser E2E of the instant path still TODO (fresh login).
+- **DONE in spec, NOT applied — nocodb-gate:** `apps/nocodb.yaml`
+  `--oidc-issuer-url=https://api.${DOMAIN}` (+ removed the now-unused
+  `extra_hosts` auth entry). NEXT: regen + `up -d --force-recreate nocodb-gate`
+  + verify (gate SSO redirects to api.irl.coop).
+- **TODO — roundcube:** the oauth2 issuer lives in the baked
+  `irlcoop/roundcube-oidc:1.6` image's config.inc.php (docker exec grep
+  denied); the image Dockerfile is NOT in `infra/build/images/` (only
+  element-web + synapse-s3) — locate the Dockerfile/config (likely under
+  /tmp or the original build session), set the oauth2 issuer →
+  `https://api.irl.coop`, rebuild, recreate.
+- **TODO — stalwart:** the OIDC directory's issuer → `https://api.irl.coop`
+  (webadmin API; the pattern in the irl-coop-stack skill
+  `references/webmail-roundcube-stalwart.md`; then full restart + JWKS
+  cold-window wait).
+- **TODO — plane:** OIDC config location NOT found yet (no OIDC/issuer keys
+  in `/home/service/plane/.env` or `.env.production`) — likely configured in
+  the plane DB/settings; inventory before changing.
+- **TODO:** fleet E2E (fresh cookie login → each app instant) + commit the
+  uncommitted `apps/nocodb.yaml`.
+
 ## Pending / open
 
 - DMARC hardening: p=none → quarantine after real volume.

@@ -18,10 +18,9 @@ sidecars:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
     command:
       - --provider=oidc
-      # canonical issuer (Keycloak KC_HOSTNAME=auth.irl.coop); extra_hosts
-      # routes auth.irl.coop inside the gate to the host gateway (traefik
-      # terminates TLS, the gate talks http to it)
-      - --oidc-issuer-url=https://auth.${DOMAIN}/realms/irl-coop
+      # the fleet session gateway — the coop_session cookie makes authorize
+      # instant (no Keycloak page when the dashboard session exists)
+      - --oidc-issuer-url=https://api.${DOMAIN}
       - --client-id=nocodb-gate
       - --client-secret=nocodb-gate-secret
       - --redirect-url=https://nocodb.${DOMAIN}/oauth2/callback
@@ -34,8 +33,6 @@ sidecars:
       # inject the identity to NocoDB's Gate SSO (v7: pass-user-headers sends
       # X-Forwarded-Email/X-Forwarded-User to the upstream)
       - --pass-user-headers=true
-    extra_hosts:
-      - "auth.${DOMAIN}:172.17.0.1"
     ports:
       # NOT loopback-bound: the traefik edge reaches the gate via the docker
       # gateway (172.17.0.1:8082) — restrict at the firewall in prod.
