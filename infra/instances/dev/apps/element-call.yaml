@@ -1,0 +1,21 @@
+# Element Call — the coop's voice/video calls (the Matrix group-call client).
+# Auth via the homeserver (SSO through the `matrix` OIDC client, like
+# element-web); media relays through coturn (the TURN server, same pillar).
+# config.json (homeserver URL, TURN/STUN, widget mode) lives in
+# ./config/element-call/ and is mounted read-only.
+name: element-call
+pillar: communication
+type: image
+image: vectorim/element-call:latest
+ports:
+  - "8085:8080"
+volumes:
+  - /opt/app/communication/data/element-call:/data
+dev:
+  volumes:
+    - ./data/element-call:/data
+    - ./config/element-call:/config:ro
+proxy:
+  hostname: call.${DOMAIN}
+  port: 8085
+  description: Element Call web client (VOIP; TURN via coturn)

@@ -1,0 +1,26 @@
+# coturn — the TURN/STUN relay for Element Call (media path for group calls).
+# Static REST auth secret shared with the Synapse homeserver (provisioned at
+# deploy; consumed by the matrix homeserver.yaml and the element-call
+# config.json). The router must forward 3478/tcp+udp + the relay range
+# 49152-65535/udp to this host (same pattern as the mail ports).
+name: coturn
+pillar: communication
+type: image
+image: coturn/coturn:latest
+ports:
+  - "3478:3478"
+  - "3478:3478/udp"
+  - "5349:5349"
+  - "49152-65535:49152-65535/udp"
+env:
+  # recorded declarative facts; the real secret + certs are provisioned at
+  # deploy (gitignored, like the other secrets in this tree)
+  TURN_REALM: ${DOMAIN}
+  TURN_EXTERNAL_IP: 64.135.141.73
+volumes:
+  - /opt/app/communication/data/coturn:/var/lib/coturn
+  - /opt/app/communication/etc/coturn:/etc/coturn
+dev:
+  volumes:
+    - ./data/coturn:/var/lib/coturn
+    - ./etc/coturn:/etc/coturn

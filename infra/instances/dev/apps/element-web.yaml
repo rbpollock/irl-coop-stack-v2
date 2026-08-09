@@ -1,0 +1,21 @@
+# Element Web — the Matrix web client; the dashboard's side-chat widget target.
+# Auth rides the HOMESERVER's SSO (the `matrix` OIDC client — Synapse's OIDC
+# provider) — no separate Keycloak client; the iframe session is the
+# homeserver session. config.json (homeserver URL, SSO default, widget API
+# support) lives in ./config/element-web/ and is mounted read-only.
+name: element-web
+pillar: communication
+type: image
+image: vectorim/element-web:latest
+ports:
+  - "8084:80"
+volumes:
+  - /opt/app/communication/data/element-web:/data
+dev:
+  volumes:
+    - ./data/element-web:/data
+    - ./config/element-web:/config:ro
+proxy:
+  hostname: element.${DOMAIN}
+  port: 8084
+  description: Element Web client (also the dashboard chat widget source)
