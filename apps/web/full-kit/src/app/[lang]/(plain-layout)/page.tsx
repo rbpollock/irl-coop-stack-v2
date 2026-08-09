@@ -73,7 +73,7 @@ const PILLARS = [
   { icon: KeyRound, name: "Authentication", live: true, note: "one identity, every login method" },
   { icon: ShieldCheck, name: "Authorization", live: true, note: "one session across every app" },
   { icon: Server, name: "Storage", live: true, note: "Citus Postgres + S3-compatible object storage" },
-  { icon: MessagesSquare, name: "Communication", live: true, note: "self-hosted mail and webmail" },
+  { icon: MessagesSquare, name: "Communication", live: true, note: "mail, webmail and Matrix chat" },
   { icon: Workflow, name: "Workflow", live: true, note: "projects and shared databases" },
   { icon: Wallet, name: "Finance", live: false, note: "group treasury — planned" },
   { icon: Scale, name: "Compliance", live: false, note: "governance tooling — planned" },

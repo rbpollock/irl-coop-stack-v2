@@ -162,7 +162,9 @@
     "api": "API",
     "administration": "Administration",
     "account": "Account",
-    "build": "Build"
+    "build": "Build",
+    "coopChat": "Coop chat",
+    "chatClose": "Close chat"
   },
   "label": {
     "soon": "Soon",
