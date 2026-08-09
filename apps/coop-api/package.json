@@ -6,6 +6,7 @@
     "dev": "ts-node-dev --respawn src/server.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/formbody": "^8.0.2",
     "@types/jsonwebtoken": "^9.0.10",

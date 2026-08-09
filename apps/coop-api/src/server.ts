@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import cookie from '@fastify/cookie'
 import formbody from '@fastify/formbody'
 import authRoutes from './auth'
 import onboardingRoutes from './onboarding'
@@ -20,6 +21,7 @@ fastify.register(cors, {
 })
 
 fastify.register(formbody)
+fastify.register(cookie)
 fastify.register(authRoutes)
 fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)

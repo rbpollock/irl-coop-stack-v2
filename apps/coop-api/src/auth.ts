@@ -1,45 +1,75 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import * as crypto from "node:crypto";
 import * as jwt from "jsonwebtoken";
 import { getProfile, type CoopProfile } from "./profile-store";
 
 // ---------------------------------------------------------------------------
-// coop-api OAuth bridge: NextAuth <-> coop-api <-> Keycloak (Google broker)
+// coop-api as the fleet's OIDC issuer (session-gateway auth)
 //
-// NextAuth treats coop-api as a plain OAuth2 provider:
-//   authorize  -> GET  /api/auth/authorize        (302 -> Keycloak)
-//   token      -> POST /api/auth/token            (code -> coop-api JWT)
-//   userinfo   -> GET  /api/auth/userinfo         (JWT -> profile)
-// Keycloak details live ONLY here, never in the Next.js app.
+//   discovery -> GET /.well-known/openid-configuration (issuer = OIDC_ISSUER)
+//   jwks      -> GET /jwks                              (RS256 signing key)
+//   authorize -> GET /api/auth/authorize  (session cookie? -> code NOW, no
+//                Keycloak page; else bounce to Keycloak once + set the cookie)
+//   token     -> POST /api/auth/token     (code + client_id/secret -> coop JWT)
+//   userinfo  -> GET /api/auth/userinfo   (coop JWT -> profile)
+//   login     -> POST /api/auth/login     (password direct-grant, zero redirect)
+//
+// Keycloak details live ONLY here, never in the apps. The fleet apps point
+// their OIDC issuer at OIDC_ISSUER and validate the coop JWT via /jwks.
 // ---------------------------------------------------------------------------
+
+const sessionTtl = (process.env.COOP_SESSION_TTL ?? "30d") as jwt.SignOptions["expiresIn"];
 
 const env = {
   issuer: process.env.KEYCLOAK_ISSUER ?? "http://localhost:8081/realms/irl-coop",
   kcClientId: process.env.KEYCLOAK_CLIENT_ID ?? "coop-api",
   kcClientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
   baseUrl: process.env.COOP_API_BASE_URL ?? "http://localhost:3001",
-  oauthClientId: process.env.OAUTH_CLIENT_ID ?? "nextauth",
-  oauthClientSecret: process.env.OAUTH_CLIENT_SECRET ?? "",
+  oidcIssuer: process.env.OIDC_ISSUER ?? "https://api.irl.coop",
+  cookieDomain: process.env.COOP_COOKIE_DOMAIN ?? ".irl.coop",
   jwtSecret: process.env.JWT_SECRET ?? "local-development-secret-irl-coop-v4",
 };
+
+// RS256 signing keypair for the coop JWT (the fleet validates via /jwks).
+const keyB64 = process.env.COOP_JWT_PRIVATE_KEY_B64 ?? "";
+const privateKeyPem = keyB64
+  ? crypto.createPrivateKey(Buffer.from(keyB64, "base64")).export({ format: "pem", type: "pkcs8" }).toString()
+  : crypto.generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey
+      .export({ format: "pem", type: "pkcs8" })
+      .toString();
+const publicKeyPem = crypto.createPublicKey(privateKeyPem).export({ format: "pem", type: "spki" }).toString();
+const publicJwk = crypto.createPublicKey(publicKeyPem).export({ format: "jwk" }) as {
+  kty: string;
+  n: string;
+  e: string;
+};
+// RFC 7638 thumbprint — the stable kid the fleet sees in the JWKS.
+const kid = crypto
+  .createHash("sha256")
+  .update(JSON.stringify({ kty: publicJwk.kty, n: publicJwk.n, e: publicJwk.e }))
+  .digest("base64url");
+
+// Fleet OIDC clients: { client_id: { secret, redirects[] } } from OIDC_CLIENTS.
+type OidcClient = { secret: string; redirects: string[] };
+const clients: Record<string, OidcClient> = (() => {
+  try {
+    return JSON.parse(process.env.OIDC_CLIENTS ?? "{}") as Record<string, OidcClient>;
+  } catch {
+    return {};
+  }
+})();
 
 const KC_AUTH_URL = `${env.issuer}/protocol/openid-connect/auth`;
 const KC_TOKEN_URL = `${env.issuer}/protocol/openid-connect/token`;
 const KC_JWKS_URL = `${env.issuer}/protocol/openid-connect/certs`;
 const KC_CALLBACK = `${env.baseUrl}/api/auth/keycloak/callback`;
 
-// NextAuth callback URIs we are allowed to redirect the browser back to.
-// localhost stays for the local dev loop; the canonical form is what the
-// public edge (irl.coop) presents.
-const ALLOWED_REDIRECTS = new Set([
-  "http://localhost:3000/api/auth/callback/coop-api",
-  "https://irl.coop/api/auth/callback/coop-api",
-]);
+const COOKIE_NAME = "coop_session";
 
-// One-time authorization codes: code -> { jwt, redirectUri, state, expiresAt }
+// One-time authorization codes: code -> { jwt, clientId, redirectUri, state, expiresAt }
 const codes = new Map<
   string,
-  { jwt: string; redirectUri: string; state: string; expiresAt: number }
+  { jwt: string; clientId: string; redirectUri: string; state: string; expiresAt: number }
 >();
 const CODE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -52,6 +82,10 @@ function safeEqual(a: string, b: string): boolean {
 
 function b64url(input: string): string {
   return Buffer.from(input).toString("base64url");
+}
+
+function client(id: string): OidcClient | undefined {
+  return clients[id];
 }
 
 // Exchange the Keycloak authorization code for tokens (server-to-server).
@@ -86,8 +120,8 @@ async function verifyIdToken(idToken: string): Promise<any> {
   const key = jwks.keys.find((k: any) => k.kid === header.kid);
   if (!key) throw new Error("unknown kid in id_token");
 
-  const publicKey = crypto.createPublicKey({ key: { kty: key.kty, n: key.n, e: key.e }, format: "jwk" });
-  const ok = crypto.verify("RSA-SHA256", Buffer.from(`${h}.${p}`), publicKey, Buffer.from(s, "base64url"));
+  const kcPublic = crypto.createPublicKey({ key: { kty: key.kty, n: key.n, e: key.e }, format: "jwk" });
+  const ok = crypto.verify("RSA-SHA256", Buffer.from(`${h}.${p}`), kcPublic, Buffer.from(s, "base64url"));
   if (!ok) throw new Error("id_token signature invalid");
 
   const payload = JSON.parse(Buffer.from(p, "base64url").toString());
@@ -97,7 +131,12 @@ async function verifyIdToken(idToken: string): Promise<any> {
   return payload;
 }
 
-function mintCoopJwt(claims: Record<string, any>, profile?: CoopProfile): string {
+// The coop JWT — RS256, validated by the fleet via /jwks.
+function mintCoopJwt(
+  claims: Record<string, any>,
+  profile?: CoopProfile,
+  ttl: jwt.SignOptions["expiresIn"] = "1h"
+): string {
   return jwt.sign(
     {
       sub: claims.sub,
@@ -107,27 +146,101 @@ function mintCoopJwt(claims: Record<string, any>, profile?: CoopProfile): string
       avatar: profile?.avatar ?? claims.picture ?? null,
       status: "ONLINE",
     },
-    env.jwtSecret,
-    { expiresIn: "1h", issuer: "coop-api", audience: "irl-coop" }
+    privateKeyPem,
+    {
+      algorithm: "RS256",
+      expiresIn: ttl,
+      issuer: env.oidcIssuer,
+      audience: "irl-coop",
+      keyid: kid,
+    }
   );
 }
 
+function verifyCoopJwt(token: string): any {
+  return jwt.verify(token, publicKeyPem, { algorithms: ["RS256"], issuer: env.oidcIssuer });
+}
+
+function setSessionCookie(reply: FastifyReply, token: string, request: FastifyRequest): void {
+  const host = (request.headers.host ?? "").split(":")[0];
+  (reply as any).setCookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: host !== "localhost" && host !== "127.0.0.1",
+    sameSite: "lax",
+    path: "/",
+    // Local dev has no parent domain to share; the fleet shares .irl.coop.
+    domain: host === "localhost" || host === "127.0.0.1" ? undefined : env.cookieDomain,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  });
+}
+
+function sessionFromRequest(request: FastifyRequest): any | null {
+  const token = (request as any).cookies?.[COOKIE_NAME];
+  if (!token) return null;
+  try {
+    return verifyCoopJwt(token);
+  } catch {
+    return null;
+  }
+}
+
 export default async function authRoutes(fastify: FastifyInstance): Promise<void> {
-  // Step 1: NextAuth bounces the browser here. We bounce it on to Keycloak,
-  // baking NextAuth's state + redirect_uri into OUR state so they survive
-  // the round trip through Keycloak untouched.
+  // ---- OIDC discovery + JWKS (the fleet's issuer surface) ----
+  fastify.get("/.well-known/openid-configuration", async () => ({
+    issuer: env.oidcIssuer,
+    authorization_endpoint: `${env.baseUrl}/api/auth/authorize`,
+    token_endpoint: `${env.baseUrl}/api/auth/token`,
+    userinfo_endpoint: `${env.baseUrl}/api/auth/userinfo`,
+    jwks_uri: `${env.baseUrl}/jwks`,
+    response_types_supported: ["code"],
+    subject_types_supported: ["public"],
+    id_token_signing_alg_values_supported: ["RS256"],
+    scopes_supported: ["openid", "profile", "email"],
+    grant_types_supported: ["authorization_code", "password"],
+  }));
+
+  fastify.get("/jwks", async () => ({
+    keys: [
+      {
+        kid,
+        kty: publicJwk.kty,
+        use: "sig",
+        alg: "RS256",
+        n: publicJwk.n,
+        e: publicJwk.e,
+      },
+    ],
+  }));
+
+  // ---- authorize: session cookie? -> code now (no Keycloak page). ----
+  //     No session -> bounce to Keycloak once; the callback sets the cookie.
   fastify.get("/api/auth/authorize", async (request, reply) => {
     const q = request.query as Record<string, string | undefined>;
     const { client_id, redirect_uri, response_type, state, scope } = q;
+    const app = client(client_id ?? "");
 
-    if (client_id !== env.oauthClientId || !ALLOWED_REDIRECTS.has(redirect_uri ?? "")) {
+    if (!app || !app.redirects.includes(redirect_uri ?? "")) {
       return reply.code(400).send({ error: "invalid_request", error_description: "unknown client or redirect_uri" });
     }
     if (response_type !== "code" || !state) {
       return reply.code(400).send({ error: "invalid_request", error_description: "response_type=code and state are required" });
     }
 
-    const kcState = b64url(JSON.stringify({ n: state, r: redirect_uri }));
+    // Already authenticated with the coop-api? Issue the code directly.
+    const session = sessionFromRequest(request);
+    if (session) {
+      const code = crypto.randomUUID();
+      codes.set(code, {
+        jwt: mintCoopJwt(session),
+        clientId: client_id!,
+        redirectUri: redirect_uri!,
+        state,
+        expiresAt: Date.now() + CODE_TTL_MS,
+      });
+      return reply.redirect(`${redirect_uri}?code=${code}&state=${encodeURIComponent(state)}`);
+    }
+
+    const kcState = b64url(JSON.stringify({ n: state, r: redirect_uri, c: client_id }));
     const authorizeUrl =
       `${KC_AUTH_URL}?client_id=${encodeURIComponent(env.kcClientId)}` +
       `&redirect_uri=${encodeURIComponent(KC_CALLBACK)}` +
@@ -138,25 +251,26 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     return reply.redirect(authorizeUrl);
   });
 
-  // Step 2: Keycloak (after Google) sends the browser back here with a code.
+  // Keycloak (after Google/password) sends the browser back here with a code.
   fastify.get("/api/auth/keycloak/callback", async (request, reply) => {
     const q = request.query as Record<string, string | undefined>;
 
-    // Un-bake NextAuth's state + redirect_uri.
     let nextState = "";
     let nextRedirect = "";
+    let nextClient = "";
     try {
       const baked = JSON.parse(Buffer.from(q.state ?? "", "base64url").toString());
       nextState = baked.n ?? "";
       nextRedirect = baked.r ?? "";
+      nextClient = baked.c ?? "";
     } catch {
       return reply.code(400).send({ error: "invalid_request", error_description: "bad state" });
     }
-    if (!ALLOWED_REDIRECTS.has(nextRedirect)) {
-      return reply.code(400).send({ error: "invalid_request", error_description: "bad redirect_uri in state" });
+    const app = client(nextClient);
+    if (!app || !app.redirects.includes(nextRedirect)) {
+      return reply.code(400).send({ error: "invalid_request", error_description: "bad client/redirect in state" });
     }
 
-    // Keycloak error (e.g. user cancelled) -> hand it back to NextAuth.
     if (q.error) {
       return reply.redirect(`${nextRedirect}?error=${encodeURIComponent(q.error)}&state=${encodeURIComponent(nextState)}`);
     }
@@ -169,9 +283,12 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       const claims = await verifyIdToken(tokens.id_token);
       const coopJwt = mintCoopJwt(claims, getProfile(claims.sub));
 
-      const code = crypto.randomUUID();
-      codes.set(code, { jwt: coopJwt, redirectUri: nextRedirect, state: nextState, expiresAt: Date.now() + CODE_TTL_MS });
+      // The coop session: subsequent authorize calls skip the Keycloak page.
+      const sessionJwt = mintCoopJwt(claims, getProfile(claims.sub), sessionTtl);
+      setSessionCookie(reply, sessionJwt, request);
 
+      const code = crypto.randomUUID();
+      codes.set(code, { jwt: coopJwt, clientId: nextClient, redirectUri: nextRedirect, state: nextState, expiresAt: Date.now() + CODE_TTL_MS });
       return reply.redirect(`${nextRedirect}?code=${code}&state=${encodeURIComponent(nextState)}`);
     } catch (err: any) {
       request.log.error({ err: err.message }, "keycloak callback failed");
@@ -179,8 +296,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     }
   });
 
-  // Step 3: NextAuth exchanges the one-time code for the coop-api JWT.
-  // Accepts client credentials via Basic auth (openid-client default) or form fields.
+  // Code exchange: code + client credentials -> coop JWT (+ id_token for NextAuth).
   fastify.post("/api/auth/token", async (request, reply) => {
     const body = (request.body ?? {}) as Record<string, string>;
     let clientId = body.client_id ?? "";
@@ -203,7 +319,8 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     if (body.grant_type !== "authorization_code") {
       return reply.code(400).send({ error: "unsupported_grant_type" });
     }
-    if (clientId !== env.oauthClientId || !safeEqual(clientSecret, env.oauthClientSecret)) {
+    const app = client(clientId);
+    if (!app || !safeEqual(clientSecret, app.secret)) {
       return reply.code(401).send({ error: "invalid_client" });
     }
 
@@ -212,7 +329,10 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       codes.delete(body.code ?? "");
       return reply.code(400).send({ error: "invalid_grant", error_description: "unknown or expired code" });
     }
-    if (!ALLOWED_REDIRECTS.has(body.redirect_uri ?? "") || entry.redirectUri !== body.redirect_uri) {
+    if (entry.clientId !== clientId) {
+      return reply.code(400).send({ error: "invalid_grant", error_description: "client mismatch" });
+    }
+    if (!app.redirects.includes(body.redirect_uri ?? "") || entry.redirectUri !== body.redirect_uri) {
       return reply.code(400).send({ error: "invalid_grant", error_description: "redirect_uri mismatch" });
     }
     if (entry.state !== body.state && body.state) {
@@ -220,23 +340,22 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     }
 
     codes.delete(body.code ?? ""); // single use
-    // openid-client (NextAuth) validates an id_token for code flows, so act
-    // like a proper OIDC provider: mint an HS256 id_token signed with the
-    // shared NextAuth secret (iss/aud match the provider config in next-auth.ts).
-    const access: any = jwt.verify(entry.jwt, env.jwtSecret);
+    const access: any = jwt.verify(entry.jwt, publicKeyPem, { algorithms: ["RS256"] });
     const now = Math.floor(Date.now() / 1000);
+    // id_token for openid-client-style consumers (NextAuth): HS256 with the
+    // client secret, iss/aud matching the provider config in next-auth.ts.
     const idToken = jwt.sign(
       {
         iss: "coop-api",
         sub: access.sub,
-        aud: env.oauthClientId,
+        aud: clientId,
         email: access.email,
         name: access.name,
         avatar: access.avatar,
         iat: now,
         exp: now + 3600,
       },
-      env.oauthClientSecret,
+      app.secret,
       { algorithm: "HS256" }
     );
     return reply.send({
@@ -247,14 +366,14 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     });
   });
 
-  // Step 4: NextAuth fetches the profile with the coop-api JWT.
+  // Profile for the bearer coop JWT.
   fastify.get("/api/auth/userinfo", async (request, reply) => {
     const authHeader = request.headers.authorization ?? "";
     if (!authHeader.startsWith("Bearer ")) {
       return reply.code(401).send({ error: "invalid_token" });
     }
     try {
-      const decoded: any = jwt.verify(authHeader.slice(7), env.jwtSecret);
+      const decoded: any = verifyCoopJwt(authHeader.slice(7));
       return reply.send({
         sub: decoded.sub,
         id: decoded.sub,
@@ -268,20 +387,61 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     }
   });
 
-  // Diagnostics: show the effective URL chain (redirect-URI matrix self-check).
+  // Password login: coop-api performs the auth server-side (zero redirect,
+  // no Keycloak page). Sets the session cookie for the SSO gateway.
+  fastify.post("/api/auth/login", async (request, reply) => {
+    const body = (request.body ?? {}) as Record<string, string>;
+    const { username, password } = body;
+    if (!username || !password) {
+      return reply.code(400).send({ error: "invalid_request", error_description: "username and password required" });
+    }
+    try {
+      const params = new URLSearchParams({
+        grant_type: "password",
+        client_id: env.kcClientId,
+        client_secret: env.kcClientSecret,
+        username,
+        password,
+        scope: "openid profile email",
+      });
+      const resp = await fetch(KC_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params,
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        return reply.code(401).send({ error: err.error ?? "invalid_grant", error_description: err.error_description ?? "bad credentials" });
+      }
+      const tokens = await resp.json();
+      const claims = await verifyIdToken(tokens.id_token);
+      const coopJwt = mintCoopJwt(claims, getProfile(claims.sub));
+      setSessionCookie(reply, mintCoopJwt(claims, getProfile(claims.sub), sessionTtl), request);
+      return reply.send({ access_token: coopJwt, token_type: "Bearer", expires_in: 3600 });
+    } catch (err: any) {
+      request.log.error({ err: err.message }, "login failed");
+      return reply.code(502).send({ error: "server_error" });
+    }
+  });
+
+  // Diagnostics: the effective URL chain + fleet client registry.
   fastify.get("/api/auth/config", async () => ({
-    oauth: {
+    oidc: {
+      issuer: env.oidcIssuer,
+      discovery: `${env.baseUrl}/.well-known/openid-configuration`,
+      jwks: `${env.baseUrl}/jwks`,
       authorize: `${env.baseUrl}/api/auth/authorize`,
       token: `${env.baseUrl}/api/auth/token`,
       userinfo: `${env.baseUrl}/api/auth/userinfo`,
+      login: `${env.baseUrl}/api/auth/login`,
+      sessionCookie: COOKIE_NAME,
     },
     keycloak: {
       issuer: env.issuer,
       clientId: env.kcClientId,
       callback: KC_CALLBACK,
-      jwks: KC_JWKS_URL,
       googleBroker: `${env.issuer}/broker/google/endpoint`,
     },
-    allowedRedirects: [...ALLOWED_REDIRECTS],
+    clients: Object.fromEntries(Object.entries(clients).map(([id, c]) => [id, { redirects: c.redirects }])),
   }));
 }
