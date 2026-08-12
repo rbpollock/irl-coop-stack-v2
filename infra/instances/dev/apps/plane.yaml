@@ -10,13 +10,13 @@ name: plane
 pillar: workflow
 type: source
 source: /home/service/plane
-web: https://app.${DOMAIN}
+web: https://plane.${DOMAIN}
 oidc:
   client_id: plane
   redirect: /auth/oidc/callback/
   public: false
 proxy:
-  hostname: app.${DOMAIN}
+  hostname: plane.${DOMAIN}
   port: 3002
   description: plane's own proxy (caddy) — 0.0.0.0-published
 env:

@@ -18,7 +18,7 @@ export const navigationsData: NavigationType[] = [
       },
       {
         title: "Projects",
-        href: process.env.NEXT_PUBLIC_PLANE_URL ?? "https://app.irl.coop",
+        href: process.env.NEXT_PUBLIC_PLANE_URL ?? "https://plane.irl.coop",
         iconName: "FolderKanban",
       },
       {

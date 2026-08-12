@@ -100,10 +100,15 @@ reconcile by applying its generated compose when touching it.
   NEXTAUTH_URL, COOP_API_URL, NEXT_PUBLIC_COOP_API_URL → api.irl.coop).
 - coop-api (https://api.irl.coop, :3001, host dev; canonical issuer +
   ALLOWED_REDIRECTS; edge route live).
-- Plane CE (https://app.irl.coop, :3002 via Caddy): web/admin/space/live images
-  rebuilt with canonical VITE_* args; api runtime APP/ADMIN/SPACE/LIVE_BASE_URL
-  + CORS canonical (localhost dev origins kept); live app env canonical.
-  E2E: app.irl.coop → Keycloak → Google sign-in verified.
+- Plane CE (https://plane.irl.coop, :3002 via Caddy — migrated from
+  app.irl.coop 2026-08-12): web/admin/space/live images rebuilt with canonical
+  VITE_* args; api runtime APP/ADMIN/SPACE/LIVE_BASE_URL + CORS canonical
+  (localhost dev origins kept); live app env canonical.
+  **Zero-click SSO**: the sign-in page auto-redirects to the fleet gateway
+  (once per browser session; button remains as fallback, relabeled
+  "with irl.coop") — an active dashboard session returns an instant code, so
+  plane.irl.coop lands logged-in with no interaction. Verified E2E.
+  E2E: plane.irl.coop → gateway → Keycloak → Google sign-in verified.
 - NocoDB (https://nocodb.irl.coop, oauth2-proxy gate → custom image):
   - Image `irlcoop/nocodb-gate-sso:2026.08.1` = 2026.08.0 base + rebuilt server
     bundle (source at /tmp/nocodb-src, develop; build in the nocodb-custom-build

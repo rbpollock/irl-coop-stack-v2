@@ -35,7 +35,7 @@ const APPS = [
   {
     icon: FolderKanban,
     title: "Projects",
-    url: "https://app.irl.coop",
+    url: "https://plane.irl.coop",
     description:
       "Plan and run cooperative projects — tasks, cycles, docs — on your own instance.",
   },
