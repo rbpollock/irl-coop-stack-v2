@@ -1,0 +1,29 @@
+# OnlyOffice DocumentServer — collaborative document editing (workflow pillar).
+# The editor is EMBEDDED by a host app (full-kit docs page); the server is not
+# an OIDC client itself — document access is JWT-signed fetch/callback URLs
+# (JWT_ENABLED). Documents live in MinIO (docs bucket); this container only
+# holds its own config + logs + cache.
+name: onlyoffice
+pillar: workflow
+type: image
+image: onlyoffice/documentserver:latest
+# Publish on a NON-CONFLICTING host port: the edge (Traefik) owns host :80/:443,
+# so the route must target the container's published port, not the default 80
+# (172.17.0.1:80 is Traefik itself → the web→websecure redirect loops forever).
+# 8083-8086 are taken by the communication pillar (stalwart/roundcube/element).
+ports:
+  - "8091:80"
+env:
+  JWT_ENABLED: "true"
+  JWT_SECRET: ${SECRET:onlyoffice.jwt}
+  JWT_HEADER: Authorization
+  JWT_IN_BODY: "true"
+volumes:
+  - /opt/app/workflow/data/onlyoffice/data:/var/www/onlyoffice/Data
+  - /opt/app/workflow/data/onlyoffice/logs:/var/log/onlyoffice
+  - /opt/app/workflow/data/onlyoffice/cache:/var/lib/onlyoffice
+  - /opt/app/workflow/data/onlyoffice/db:/var/lib/postgresql
+proxy:
+  - hostname: office.${DOMAIN}
+    port: 8091
+    description: OnlyOffice DocumentServer (editor iframe + API)

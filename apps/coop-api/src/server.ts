@@ -7,10 +7,16 @@ import authRoutes from './auth'
 import onboardingRoutes from './onboarding'
 import safeRoutes from './safe'
 import usernameRoutes from './username'
+import docsRoutes from './docs'
+import filesRoutes from './files'
+import statusRoutes from './status'
 
 const fastify = Fastify({
   logger: true,
   trustProxy: true, // Trust proxy headers to correctly get client IP
+  // Share tokens ride the URL path (variant-B: /api/v1/files/s/<token>);
+  // Fastify's default 100-char param cap would 414 them.
+  maxParamLength: 512,
 })
 
 fastify.register(cors, {
@@ -22,10 +28,19 @@ fastify.register(cors, {
 
 fastify.register(formbody)
 fastify.register(cookie)
+// Raw binary uploads (docs PUT) — Fastify has no octet-stream parser by default.
+fastify.addContentTypeParser("application/octet-stream", (request, payload, done) => {
+  const chunks: Buffer[] = []
+  payload.on("data", (c: Buffer) => chunks.push(c))
+  payload.on("end", () => done(null, Buffer.concat(chunks)))
+})
 fastify.register(authRoutes)
 fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)
 fastify.register(usernameRoutes)
+fastify.register(docsRoutes)
+fastify.register(filesRoutes)
+fastify.register(statusRoutes)
 
 const start = async () => {
   try {

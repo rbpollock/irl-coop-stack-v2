@@ -1,5 +1,6 @@
 # Formbricks — surveys/forms (workflow pillar).
 name: formbricks
+enabled: false
 pillar: workflow
 type: image
 image: formbricks/formbricks:latest

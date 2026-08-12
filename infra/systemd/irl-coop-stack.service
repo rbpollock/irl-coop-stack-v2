@@ -1,0 +1,17 @@
+[Unit]
+Description=irl.coop stack bring-up (all pillars)
+# Boot-time orchestration: every declared compose project comes up via
+# infra/scripts/stack-up.sh (idempotent `docker compose up -d` per pillar +
+# source apps). If any project fails, the unit lands in a visible `failed`
+# state and the login motd (99-irl-coop-stack) prints the per-pillar report.
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/home/service/development/irl-coop-stack-v2/infra/scripts/stack-up.sh
+Environment=STACK_REPORT=/var/lib/irl-coop/stack-status.json
+
+[Install]
+WantedBy=multi-user.target

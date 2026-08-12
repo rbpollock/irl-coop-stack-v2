@@ -31,7 +31,8 @@ apps:
   - element-web
   - element-call
   - coturn
+  - onlyoffice
 
 # which pillars actually run on the dev box today (deployment concern — the
 # compose artifacts for all apps are generated regardless)
-enabled_pillars: [proxy, authentication, cache, storage, communication]
+enabled_pillars: [proxy, authentication, cache, storage, communication, workflow]

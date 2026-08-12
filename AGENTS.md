@@ -20,7 +20,10 @@ pillar.
 - **Data**: shared Citus Postgres `172.17.0.1:5432` (roles/dbs: `irlcoop`,
   `nocodb`, `stalwart`), shared Redis `:6379` (prefix all keys; plane uses
   `KEY_PREFIX=plane`; pub/sub `irl:notify:{sub}`), MinIO `:9000/:9001`
-  (bucket `stalwart`, user `stalwart-s3`), plane-db `:5434`, keycloak-db `:5433`.
+  (buckets `docs`/`stalwart`/`matrix-media`/`plane` — service users
+  docs-s3/stalwart-s3/matrix-s3/plane-s3, all derived keys; plane-minio was
+  retired 2026-08-12, plane now uses the coop store), plane-db `:5434`,
+  keycloak-db `:5433`.
 - **Mail**: Stalwart v0.16 (`:8083` webadmin, SMTP/IMAP 25/587/143/993),
   postgres store, internal directory, DKIM selector `dkim`, DNS
   MX/SPF/DMARC/DKIM live at Gandi.
@@ -40,7 +43,7 @@ pillar.
 | Stalwart | :8083 | containers | mail; also 25/587/143/993 |
 | Citus | 172.17.0.1:5432 | containers | roles: irlcoop, nocodb, stalwart |
 | Redis | :6379 | containers | shared; prefix keys |
-| MinIO | :9000/:9001 | containers | bucket stalwart, user stalwart-s3 |
+| MinIO | :9000/:9001 | containers | buckets docs/stalwart/matrix-media/plane; users docs-s3/stalwart-s3/matrix-s3/plane-s3 |
 
 LAN: surfy `.11` = retired v1 edge (`ssh service@surfy`); THIS host `.20` = v4 node.
 Tailnet `100.122.136.95`.
@@ -70,6 +73,7 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 | field | meaning |
 |---|---|
 | `name`, `pillar` | filename = name; pillar = compose grouping (proxy/authentication/cache/storage/communication/workflow/...) |
+| `enabled` | `false` = declared-but-not-wired: no compose service, edge route, OIDC registry entry or inventory (spec stays as the intent record) |
 | `type` | `image` (compose emitted) or `source` (app ships its own compose — plane) |
 | `image`, `command`, `ports`, `env`, `volumes`, `depends_on`, `labels`, `healthcheck`, `extra_hosts`, `restart` | passed through to the compose service |
 | `sidecars`, `named_volumes` | extra services / named volumes in the same compose file |
@@ -92,13 +96,21 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 6. Provision the OIDC client in Keycloak from `out/dev/keycloak/clients.yaml` (client id, redirect URIs, public/confidential; secret via the admin console for confidential clients).
 7. DNS: the Gandi wildcard `*.irl.coop` → 64.135.141.73 already covers any new subdomain — only add an A record for non-wildcard needs.
 8. Verify through the edge (`https://<hostname>.irl.coop` / browser E2E for SSO), never bare `docker exec curl/printenv`.
+9. Whole-stack bring-up at boot: `irl-coop-stack.service` (systemd, enabled) runs `infra/scripts/stack-up.sh` — every pillar compose + source apps + drifted bootstraps, idempotent. On login, `/etc/update-motd.d/99-irl-coop-stack` prints the declared-vs-running report; the dashboard home renders the same data from `GET /api/v1/stack/status` (coop-api). Both share the algorithm in `infra/scripts/stack-report.py` (stdlib-only).
 
 ### Known quirks
 
+- **`docker ps --format '{{json .}}'` serializes `Labels` as a flattened
+  `k=v,k=v` STRING** (not an object) on this docker version, and as the
+  literal `<no value>` for containers created outside compose — both the
+  coop-api reconciler (status.ts) and stack-report.py parse all three shapes.
+- **ts-node-dev caches transpiles**: editing `apps/coop-api/src/status.ts`
+  may serve stale code after the auto-restart — kill the `npm run dev`
+  process and restart if the endpoint doesn't reflect edits.
 - `type: source` apps (plane) ship their own compose; the generator only emits their OIDC client, env block and data-scoping views.
 - Generated-vs-running drift: the edge (traefik) runs generated `out/` (dynamic.yml + instance-tree certs mounted); some containers (stalwart16) were bootstrapped from scratch compose at `/tmp/stalwart16` before the pipeline existed. When touching a drifted pillar, reconcile by applying its generated compose.
 - Stalwart-internal config (datastore, blob store, OIDC directory, accounts) is stored in its postgres DB and managed via the webadmin/admin API — the declarative layer only deploys the container/ports/env/edge.
-- Secrets never enter the tree: `.env*` files and `infra/instances/dev/certs/` (wildcard privkey + ACME state) are gitignored. Renewed certs land under `infra/instances/dev/certs/` (privkey 0600); renewal is acme.sh + Gandi DNS-01 (daily cron, renewal-window guarded).
+- Secrets never enter the tree in plaintext: `.env*` files and `infra/instances/dev/certs/` (wildcard privkey + ACME state) are gitignored. The EXCEPTION is the ansible vault (`infra/ansible/inventory/group_vars/all/vault.yml`) — ciphertext, deliberately committed (see the two-tier model under Key operational facts). Renewed certs land under `infra/instances/dev/certs/` (privkey 0600); renewal is acme.sh + Gandi DNS-01 (daily cron, renewal-window guarded).
 
 ## Key operational facts
 
@@ -108,17 +120,36 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
   edge, the browser, or inspect.
 - **Approvals**: terminal commands are approval-gated. A denied command is never
   retried or rephrased.
-- **Secrets**: values are intentionally not preserved in notes. Grep old project
-  versions for creds (irl.coop v1 kept Google creds in `.env.example`). The
-  Gandi API key is 40-char; lego's provider rejects that format — acme.sh with
+- **Secrets — TWO-TIER model (2026-08-11, derived keys + ansible vault)**:
+  1. **Derived keys**: `infra/instances/dev/secrets/master.key` (32B random,
+     gitignored, 0600) → HKDF-SHA256 derives every secret WE generate.
+     App specs reference `${SECRET:<name>}`; the generator resolves them into
+     gitignored `infra/out/dev/` compose + `out/<instance>/secrets.env` (for
+     host processes like coop-api). Secret naming: `<service>.<purpose>`
+     (postgres.irlcoop, minio.root, onlyoffice.jwt, docs.sig, vaultpass...).
+     Recreate master → rotate the whole stack. Module: `infra/build/secrets.py`.
+  2. **Ansible vault** (external secrets we CANNOT derive — Google's, third-party
+     API keys): `infra/ansible/inventory/group_vars/all/vault.yml` (AES256,
+     COMMITTABLE — ciphertext). Password is itself derived from master.key
+     (secret `vaultpass` → `infra/instances/dev/secrets/vault-pass`, gitignored
+     0600). View:
+     `ansible-vault view --vault-password-file infra/instances/dev/secrets/vault-pass infra/ansible/inventory/group_vars/all/vault.yml`
+     Edit: `ansible-vault edit --vault-password-file ... <file>`.
+     Currently holds: `google_client_secret` (the Google broker IDP secret —
+     v1's `.env.example` copy is STALE; the vault is authoritative).
+  Keycloak idp secrets CANNOT round-trip a realm export/import (admin API
+  masks them as `****`) — capture idp secrets in the vault BEFORE wiping
+  keycloak-db, and re-push them after any import.
+  The Gandi API key is 40-char; lego's provider rejects that format — acme.sh with
   the custom `infra/scripts/dns_gandi_livedns.sh` hook is the renewer.
-- **NocoDB custom image** `irlcoop/nocodb-gate-sso:2026.08.1` = stock image +
+- **NocoDB custom image** `irlcoop/nocodb-gate-sso:2026.08.2` = stock image +
   rebuilt server bundle carrying: Gate-SSO auto-login (reads
   `NC_GATE_SSO_EMAIL_HEADER` = x-forwarded-email), the workspaces read API
   (`GET /api/v1/workspaces` + `/:id` + `/:id/bases`), enterprise-op stubs
   (listScripts/dashboardList/workflowList/listSync/baseSchema/documentList/
-  workflowNodes — the OSS frontend toasts on 404/403 otherwise), and the `/404`
-  → SPA-shell (200) response so the PWA precache succeeds. Full rebuild
+  workflowNodes — the OSS frontend toasts on 404/403 otherwise), and the
+  `/404` **+ `/200`** → SPA-shell (200) response so the PWA precache
+  succeeds (workbox precaches both; 2026.08.1 only did /404). Full rebuild
   procedure in the `nocodb-custom-build` skill (`/tmp/nocodb-src` checkout,
   Dockerfile.irlcoop layers the bundle over the base tag).
 - **NocoDB data quirk**: the frontend's active workspace id comes from
@@ -145,9 +176,10 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 
 ## Pending
 
-- Webmail: Roundcube at webmail.irl.coop (Keycloak client `roundcube` created;
-  Stalwart OIDC directory + MinIO blob store now live) — deployment next.
 - DMARC hardening p=none → quarantine (after real volume is observed).
+- Fleet browser E2E from a fresh coop_session login (dashboard → each app
+  instant) — individual apps browser-verified through the Keycloak bounce;
+  the one-cookie instant path awaits a fresh session in a real browser.
 - Federation / takedown-resilient DNS+edge design session — PARKED; do not
   design/build until Robbie raises it.
 - Not in final form: Temporal, Formbricks, Webstudio, Postiz, CryptPad.

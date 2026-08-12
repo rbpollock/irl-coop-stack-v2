@@ -18,6 +18,11 @@ import shutil
 
 import yaml
 
+# infra/build/secrets.py — derived-key derivation (sibling). Imported via
+# explicit path because its name shadows the stdlib `secrets` module.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import secrets as derived_secrets  # noqa: E402
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # README topology: server role -> pillars it hosts
@@ -243,17 +248,46 @@ def emit_ansible_edge(instance, inst_dir, out_dir):
         yaml.safe_dump(playbook, f, sort_keys=False)
 
 
+def emit_secrets_env(instance, inst_dir, master_hex, out_dir):
+    """Emit out/<instance>/secrets.env — every ${SECRET:<name>} reference the
+    specs use, resolved to derived values, as KEY=name lines. Host-side
+    processes (coop-api dev) source this; gitignored with the rest of out/.
+    KEY naming: the SECRET name itself (dots stay), UPPER-SNAKE for env use."""
+    import re
+    used = []
+    for app_name in instance["apps"]:
+        raw = load(inst_dir / "apps" / f"{app_name}.yaml")
+        for m in re.finditer(r"\$\{SECRET:([a-zA-Z0-9._-]+)\}", str(raw)):
+            used.append(m.group(1))
+    lines = ["# derived-key secrets (HKDF from secrets/master.key) — generated",
+             "# source this file into host processes; gitignored with out/"]
+    for name in sorted(set(used)):
+        key = name.upper().replace(".", "_").replace("-", "_")
+        lines.append(f"{key}={derived_secrets.derive(name, master_hex, instance['domain'])}")
+    (out_dir / "secrets.env").write_text("\n".join(lines) + "\n")
+
+
 def main():
     if len(sys.argv) < 2:
         print("usage: generator.py <instance>"); sys.exit(1)
     name = sys.argv[1]
     inst_dir = ROOT / "instances" / name
     instance = load(inst_dir / "instance.yaml")
+    # Derived-key secrets: one master → every ${SECRET:<name>} reference.
+    # The master key must exist (secrets/ensure_master creates it on demand).
+    master_hex = derived_secrets.load_master(inst_dir)
     apps = []
     for app_name in instance["apps"]:
         app = load(inst_dir / "apps" / f"{app_name}.yaml")
         app["name"] = app_name
-        apps.append(substitute(app, instance["domain"]))
+        app = substitute(app, instance["domain"])
+        app = derived_secrets.substitute(app, master_hex, instance["domain"])
+        apps.append(app)
+
+    # `enabled: false` = declared but not wired (no public image / not
+    # deployed) — skip compose emission, edge routes, OIDC registry and
+    # inventory for those; the spec stays in the tree as the intent record.
+    apps = [a for a in apps if a.get("enabled", True) is not False]
 
     out = ROOT / "out" / name
     if out.exists():
@@ -263,6 +297,8 @@ def main():
     for app in apps:
         if app["type"] == "source":
             continue  # source builds ship their own compose (e.g. Plane)
+        if app.get("enabled", True) is False:
+            continue  # declared-but-not-wired (no public image / no deploy yet)
         by_pillar.setdefault(app["pillar"], []).append(app)
     for pillar, pillar_apps in by_pillar.items():
         dir_ = out / "compose" / pillar
@@ -274,6 +310,7 @@ def main():
     emit_views(apps, out)
     emit_proxy(instance, apps, out)
     emit_ansible_edge(instance, inst_dir, out)
+    emit_secrets_env(instance, inst_dir, master_hex, out)
 
     manifest = out / "MANIFEST.md"
     manifest.write_text(

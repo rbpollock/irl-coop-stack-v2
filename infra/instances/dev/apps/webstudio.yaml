@@ -1,5 +1,8 @@
 # Webstudio — visual web builder (workflow pillar).
+# Self-hosted builder; auth is Webstudio's own (GitHub/dashboard), the OIDC
+# client below is for the future when the builder supports external SSO.
 name: webstudio
+enabled: false
 pillar: workflow
 type: image
 image: webstudio/webstudio:latest
@@ -9,3 +12,7 @@ labels:
 oidc:
   client_id: webstudio
   # TODO: redirect URIs once Webstudio is up (studio.${DOMAIN}/...)
+proxy:
+  - hostname: studio.${DOMAIN}
+    port: 3000
+    description: Webstudio builder

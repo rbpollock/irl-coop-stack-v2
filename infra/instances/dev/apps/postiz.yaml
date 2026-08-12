@@ -1,5 +1,6 @@
 # Postiz — social media scheduling (workflow pillar).
 name: postiz
+enabled: false
 pillar: workflow
 type: image
 image: ghcr.io/gitroomhq/postiz-app:latest

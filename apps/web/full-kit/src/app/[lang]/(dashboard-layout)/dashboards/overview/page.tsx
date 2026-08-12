@@ -1,13 +1,9 @@
 import type { Metadata } from "next"
 
-import { Activity, Database, FolderKanban, Mail, Server, Users, Wallet } from "lucide-react"
+import { Database, FolderKanban, Mail, Server, Users, Wallet } from "lucide-react"
 
 import { CoopGreeting } from "@/components/dashboards/coop-greeting"
-
-import {
-  DashboardCardActionsDropdown,
-  DashboardOverviewCard,
-} from "@/components/dashboards/dashboard-card"
+import StackHealth from "@/components/dashboards/stack-health"
 
 export const metadata: Metadata = {
   title: "IRL Co-op Dashboard",
@@ -16,14 +12,6 @@ export const metadata: Metadata = {
 // External services sign in with the same coop identity (zero per-service credentials).
 const PLANE_URL = process.env.NEXT_PUBLIC_PLANE_URL ?? "https://app.irl.coop"
 const NOCODB_URL = process.env.NEXT_PUBLIC_NOCODB_URL ?? "https://nocodb.irl.coop"
-
-// Mock data — replace with real API calls when the backend is wired up
-const overviewData = {
-  activeNodes: { value: 12, percentageChange: 8.3 },
-  safeWallets: { value: 89, percentageChange: 14.7 },
-  members: { value: 342, percentageChange: 5.2 },
-  pendingTxns: { value: 23, percentageChange: -11.4 },
-}
 
 // Every important subject, one hop away.
 const QUICK_LINKS = [
@@ -89,91 +77,12 @@ function QuickAccess() {
   )
 }
 
-function CoopVitals() {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-full md:grid-cols-4">
-      <DashboardOverviewCard
-        data={overviewData.activeNodes}
-        title="Active Shard Nodes"
-        period="Last 30 days"
-        icon={Server}
-        action={<DashboardCardActionsDropdown />}
-      />
-      <DashboardOverviewCard
-        data={overviewData.safeWallets}
-        title="Safe Wallets"
-        period="Total deployed"
-        icon={Wallet}
-        action={<DashboardCardActionsDropdown />}
-      />
-      <DashboardOverviewCard
-        data={overviewData.members}
-        title="Members"
-        period="All time"
-        icon={Users}
-        action={<DashboardCardActionsDropdown />}
-      />
-      <DashboardOverviewCard
-        data={overviewData.pendingTxns}
-        title="Pending Transactions"
-        period="Awaiting execution"
-        icon={Activity}
-        action={<DashboardCardActionsDropdown />}
-      />
-    </div>
-  )
-}
-
-function NetworkStatusSection() {
-  const shardNodes = [
-    { id: 1, name: "Shard Node Alpha", status: "online", uptime: "99.8%", region: "US-East" },
-    { id: 2, name: "Shard Node Beta", status: "online", uptime: "99.6%", region: "EU-West" },
-    { id: 3, name: "Shard Node Gamma", status: "online", uptime: "99.9%", region: "APAC" },
-    { id: 4, name: "Shard Node Delta", status: "syncing", uptime: "87.2%", region: "US-West" },
-  ]
-
-  return (
-    <div className="col-span-full grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <h3 className="col-span-full text-lg font-semibold">Network Status</h3>
-      {shardNodes.map((node) => (
-        <div
-          key={node.id}
-          className="flex flex-col gap-2 rounded-lg border bg-card p-4 shadow-sm"
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-sm">{node.name}</span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                node.status === "online"
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-              }`}
-            >
-              <span
-                className={`inline-block size-1.5 rounded-full ${
-                  node.status === "online" ? "bg-green-500" : "bg-yellow-500"
-                }`}
-              />
-              {node.status === "online" ? "Online" : "Syncing"}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Uptime: {node.uptime}</span>
-            <span>{node.region}</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export default function IRLCoopDashboardPage() {
   return (
     <section className="container grid gap-4 p-4 md:grid-cols-2">
       <CoopGreeting />
       <QuickAccess />
-      <CoopVitals />
-      <NetworkStatusSection />
+      <StackHealth />
     </section>
   )
 }

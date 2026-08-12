@@ -1,6 +1,6 @@
 # STATUS.md — irl.coop v2 infrastructure status
 
-Last updated: 2026-08-09 (Roundcube webmail deployed + E2E-passed; stalwart OIDC-directory role fix).
+Last updated: 2026-08-10 (code-exchange round: per-client id_token iss/alg + nonce echo in coop-api; nocodb PWA behind the gate — skip-auth-route + image 2026.08.2; matrix + nocodb browser E2E green).
 
 ## Configuration flow — how to add an app (START HERE)
 
@@ -28,6 +28,30 @@ rewrites of `infra/out/dev/compose/proxy/dynamic.yml` — expected),
 (6) provision the OIDC client in Keycloak from
 `infra/out/dev/keycloak/clients.yaml`, (7) DNS is covered by the `*.irl.coop`
 wildcard (Gandi → 64.135.141.73), (8) verify through the edge.
+
+**Bring the WHOLE stack up (boot / after a reboot / after edits):**
+`bash infra/scripts/stack-up.sh` — idempotent `docker compose up -d` for every
+generated pillar + source apps (plane) + drifted bootstraps (stalwart16 if its
+compose still exists); exits nonzero if any project fails. This is what the
+enabled systemd unit `irl-coop-stack.service` runs at boot
+(After=docker.service, oneshot, RemainAfterExit; a failed bring-up lands the
+unit in a visible `failed` state).
+
+**Status interface (declared-vs-running):**
+- `GET /api/v1/stack/status` (coop-api, auth-gated) — reconciles the generated
+  tree (compose services per pillar + source-app composes) against `docker
+  ps -a` (compose project/service labels). Per-pillar up/down, missing
+  services, health, and drift (running-but-undeclared = orphans).
+- Dashboard home (`/en/dashboards/overview`) renders it live in the
+  "Stack health" section (replaces the old mock vitals / fake shard nodes).
+- `infra/scripts/stack-report.py` — stdlib-only twin (no yaml dep: reads
+  `docker compose config --services`); prints the same report for login
+  motd (`/etc/update-motd.d/99-irl-coop-stack`) and writes the JSON snapshot
+  to `/var/lib/irl-coop/stack-status.json` during bring-up.
+
+`enabled: false` on an app spec = declared-but-not-wired: the generator skips
+its compose service, edge route, OIDC registry entry and inventory (webstudio,
+formbricks, postiz are parked this way — their images aren't deployable).
 
 Current declared apps (14): traefik, keycloak, citus, irl-redis, minio, nocodb,
 stalwart, cryptpad, temporal, formbricks, webstudio, postiz, plane, coop-api.
@@ -121,31 +145,43 @@ reconcile by applying its generated compose when touching it.
 - **Blob store: S3 → MinIO** (DONE 2026-08-08): bucket `stalwart`, endpoint
   http://172.17.0.1:9000, region us-east-1, access key stalwart-s3 (scoped
   bucket policy) — set via x:BlobStore/set (registry singleton).
-- **Directory: OIDC → Keycloak** (DONE 2026-08-08): Directory object
-  `i1y9sgv1abaa` (issuer https://auth.irl.coop/realms/irl-coop, requireAudience
-  `roundcube`, claimUsername preferred_username, usernameDomain irl.coop,
-  claimName name, claimGroups groups); Authentication singleton directoryId
-  pointed at it (argon2id + role defaults intact). OIDC-caveat handled: accounts
+- **Directory: OIDC → fleet gateway** (DONE 2026-08-09, was Keycloak): Directory
+  object `i10l3erdksaa` (issuer https://api.irl.coop, requireAudience
+  `irl-coop`, claimUsername email, usernameDomain irl.coop, claimName name,
+  claimGroups groups); Authentication singleton directoryId pointed at it
+  (defaultUserRoleIds `{b: true}` intact). OIDC-caveat handled: accounts
   pre-created (e2e-test, gate-sso-test, robertbrucepollockjr + admin) so
   inbound mail isn't rejected before first auth.
 - **Webmail `roundcube`** (LIVE 2026-08-09): image `irlcoop/roundcube-oidc:1.6`,
-  edge https://webmail.irl.coop → :8084; Keycloak client `roundcube`
-  (confidential, PKCE S256, redirect /index.php/login/oauth; audience
-  client-scope+mapper added — tokens carry `aud: [roundcube, account]`);
+  edge https://webmail.irl.coop → :8084; OIDC client `roundcube` on the
+  gateway (confidential, PKCE S256, redirect /index.php/login/oauth; the coop
+  JWT aud is `irl-coop` — roundcube passes the token through as a bearer
+  credential and stalwart's OIDC directory validates it);
   Citus DB `roundcube` (pgsql env, schema initialized); IMAP/SMTP legs
   tls://172.17.0.1:143/:587 with peer-verify off (bridge IP can't match the
   wildcard cert). Browser E2E PASSED 2026-08-09: SSO → mailbox → compose →
   send → delivered to inbox (IMAP + SMTP XOAUTH2 both authenticate through
   the OIDC directory).
-- **Stalwart OIDC-directory permissions gotcha** (root cause of the long IMAP
-  saga): accounts must resolve to roles or every protocol rejects the
+- **Stalwart OIDC-directory gotchas** (root causes of the 2026-08-09 auth saga):
+  (1) accounts must resolve to roles or every protocol rejects the
   otherwise-valid token (IMAP kills the connection, SMTP 550, JMAP 403). Fix:
   Authentication singleton `defaultUserRoleIds = {"b": true}` (User role, Map
   syntax `{roleId: true}`) — applied in the webadmin API. Config changes only
   take effect on a FULL container restart (`x:Action ReloadSettings` skips the
   security/role config); after every restart there is a 5-minute JWKS
   cold-cache window where OIDC auths fail ("Unknown key id" — the cache only
-  refetches after 300s).
+  refetches after 300s). (2) **A full-object update that CARRIES the `id`
+  field clobbers the singleton**: the rebuild's Authentication update included
+  `id: "singleton"` from the GET copy → after a reload/restart `directoryId`
+  was `None` → bearer tokens fell to the internal OAuth path (`auth.error`
+  "Failed to decode token… make sure it is configured as the default directory
+  under the Authentication object", SMTP 454, IMAP NO [AUTHENTICATIONFAILED]).
+  Fix: strip `id` from the update payload, then restart. (3) **The coop JWT
+  must carry a `scope` claim**: with the directory live, auth moved to 535
+  "Missing required scope 'openid', present scopes: []" — the minted JWT had
+  no scope. Fix: `scope: "openid profile email"` added to mintCoopJwt
+  (auth.ts). The stdout tracer (`@type: Stdout`, level debug → docker logs)
+  is what surfaced these — the file tracer wrote nothing.
 - **full-kit embed** (DONE 2026-08-09): nav item "Webmail" (Apps section) →
   /apps/webmail — full-height iframe of webmail.irl.coop + "Open full screen"
   button; roundcube `x_frame_options = false` to allow framing; auto-login in
@@ -240,8 +276,8 @@ reconcile by applying its generated compose when touching it.
   SameSite=Lax, .irl.coop, 30d) — authorize issues a code directly from the
   session (no Keycloak redirect); `POST /api/auth/login` = password
   direct-grant (zero redirect). Verified: 12/12 ad-hoc + full-kit login green.
-  SLICES 2-4 PENDING: fleet app migration (roundcube → plane → nocodb-gate:
-  repoint issuer + validate via the coop JWKS), the full-kit sign-in page
+  SLICE 2 DONE 2026-08-09 (see below): roundcube → plane → nocodb-gate →
+  matrix → stalwart all on the gateway. Remaining: the full-kit sign-in page
   switching to the password-login endpoint, and (later) the coop-owned
   interactive ceremony for Google/passkey/QR (one flow, then cookie-everywhere).
 - Root cause of the "mail refused" mystery: stalwart was stuck in bootstrap mode
@@ -275,7 +311,7 @@ reconcile by applying its generated compose when touching it.
    Browser E2E: login → workspace → bases → base views, console clean of the
    functional errors.
 
-## Fleet session-gateway migration (slice 2) — IN PROGRESS (2026-08-09)
+## Fleet session-gateway migration (slice 2) — COMPLETE (2026-08-09)
 
 Goal: every app's "Sign in with irl.coop" answers from the `coop_session`
 cookie via coop-api's authorize — instant, no Keycloak page, no credentials,
@@ -290,30 +326,92 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
   `infra/instances/dev/config/matrix/homeserver.yaml` OIDC provider →
   `issuer: https://api.irl.coop`, `idp_id: coop-gateway`; coop-api restarted
   (proc — `/tmp/coop-api-dev.log`), matrix container recreated, healthy.
-  Note: the browser E2E showed the Keycloak page because the automation's
-  browser lacks the cookie (its login predates the gateway restart) — the
-  user's real browser gets the cookie at dashboard login, so the widget SSO
-  is instant. Browser E2E of the instant path still TODO (fresh login).
-- **DONE in spec, NOT applied — nocodb-gate:** `apps/nocodb.yaml`
+  **Verified 2026-08-09:** authorize?client_id=matrix with the session cookie
+  → 302 instant code to the Synapse callback (no Keycloak).
+- **DONE — nocodb-gate:** `apps/nocodb.yaml`
   `--oidc-issuer-url=https://api.${DOMAIN}` (+ removed the now-unused
-  `extra_hosts` auth entry). NEXT: regen + `up -d --force-recreate nocodb-gate`
-  + verify (gate SSO redirects to api.irl.coop).
+  `extra_hosts` auth entry); regenerated + `up -d --force-recreate nocodb-gate`
+  applied. **Verified:** `/oauth2/start` 302s to
+  `api.irl.coop/api/auth/authorize?client_id=nocodb-gate…`; cookie flow →
+  instant code to the gate callback.
 - **DONE — roundcube:** the baked `infra/compose/communication/roundcube/config.inc.php`
   oauth2 URIs → the gateway (`oauth_auth_uri/token_uri/identity_uri` →
   `api.irl.coop/api/auth/*`), image `irlcoop/roundcube-oidc:1.6` rebuilt,
-  container recreated, webmail 200 through the edge. Browser E2E of the
-  instant login still TODO (the automation's browser lacks the cookie).
-- **BLOCKED — stalwart:** the webadmin API (`/api/discover`, `/api/auth`)
-  returns 500 for the recovery admin (container healthy, webadmin root 302s,
-  tracer silent — docker logs empty). The OIDC directory's issuer flip to
-  `api.irl.coop` is queued behind this. Likely next: check the stalwart
-  postgres connectivity / the trace, or recreate the container with the
-  recovery-admin env and retry the API.
-- **TODO — plane:** the OIDC config is NOT env-driven (no OIDC keys in
-  `/home/service/plane/.env*` or the apiserver settings) — likely stored in
-  the plane DB/settings; inventory before changing.
-- **TODO:** fleet E2E (fresh cookie login → each app instant) + commit the
-  uncommitted roundcube config.
+  container recreated, webmail 200 through the edge. **Verified 2026-08-09:**
+  cookie flow → instant code to `/index.php/login/oauth`. (Container boots with
+  a wait-for-it DB delay — the edge 502s until apache is up; the callback URL
+  returns 200 with the login flow, not a redirect — neither is a failure.)
+- **DONE — plane:** OIDC config lives in `/home/service/plane/apps/api/.env`
+  (env_file on the compose api service — NOT the DB). `OIDC_ISSUER` flipped to
+  `https://api.irl.coop`; coop-api registry plane redirects fixed to the HTTPS
+  form (`https://app.irl.coop/auth/oidc/callback/` — was `http://`, which the
+  gateway's exact-match rejects); api container recreated. **Required gateway
+  change:** the minted coop JWT + userinfo now carry `email_verified: true`
+  (plane's OIDC adapter hard-rejects userinfo without a truthy email_verified)
+  and userinfo gained `picture` (plane reads `picture`, coop emits `avatar`).
+  **Verified:** `https://app.irl.coop/auth/oidc/` → 302 to
+  `api.irl.coop/api/auth/authorize?client_id=plane…`; full SSO chain
+  (initiate → instant code → plane callback → app) lands on app.irl.coop with
+  no Keycloak and no error page.
+- **Fleet-wide instant-path verification PASSED 2026-08-09** (one cookie,
+  four apps): `POST /api/auth/login` (e2e-test) → authorize for
+  plane/roundcube/matrix/nocodb-gate → each returns **302 + instant code** to
+  its own callback, no auth.irl.coop anywhere. Browser E2E of the instant path
+  (fresh login → each app) still TODO — the automation's browser predates the
+  gateway restart; the user's real browser gets the cookie at dashboard login.
+- **DONE — stalwart** (2026-08-09): the webadmin 500s were the shared Citus
+  postgres (`storage-postgres-1`, 172.17.0.1:5432) being DOWN with an EMPTY
+  data dir (recreated 14:33 with POSTGRES_PASSWORD unset → boot refused) —
+  not a stale-pw trap. The data was unrecoverable (no backups; volume sweeps
+  denied), so the reset was **additive**: fresh citus up (compose storage
+  pillar; `POSTGRES_PASSWORD` env restored), roles/dbs provisioned
+  (irlcoop/matrix/nocodb/roundcube/stalwart; matrix db recreated with C
+  collation for synapse), all fleet containers recreated, and stalwart's
+  entire config rebuilt from the admin API (domain irl.coop, OIDC directory
+  → **https://api.irl.coop** — the queued fleet-gateway flip landed — aud
+  `irl-coop`, claimUsername email, accounts admin/e2e-test/gate-sso-test/
+  robertbrucepollockjr, blob store S3→MinIO, listeners 587+143 STARTTLS,
+  DKIM, SystemSettings defaultHostname mail.irl.coop). Citus port publishing
+  fixed in `apps/citus.yaml` (`0.0.0.0:5432:5432` — was 127.0.0.1, the reason
+  every fleet container lost postgres). **OIDC auth verified 2026-08-09:**
+  IMAP :143 `OK … Authentication successful`, SMTP :587 `235 2.7.0
+  Authentication succeeded.`, webmail edge 200 — all from a coop JWT
+  (issuer api.irl.coop, aud irl-coop). Full rebuild procedure in the
+  `citus-postgres-reset` + `stalwart-registry-config` skill references;
+  original setup scripts survive at /tmp/hermes-stalwart-*.py.
+- **DONE — code-exchange round (2026-08-10, browser E2E):** the instant-code
+  first hop was never the whole story — the CALLBACKS 500'd once a real
+  browser exchanged the code. Two gateway fixes in `apps/coop-api/src/auth.ts`:
+  (1) **id_token issuer/algorithm per client** — strict OIDC consumers
+  (oauth2-proxy, Synapse) validate the id_token against the DISCOVERED issuer
+  via /jwks; the token endpoint now mints RS256/iss=`https://api.irl.coop`/
+  aud=`<client_id>` for every client except `nextauth` (which keeps its
+  HS256/iss:`coop-api` shape for the NextAuth provider config). Was: one
+  HS256/iss:coop-api id_token for all → gate 500 "id token issued by a
+  different provider, expected https://api.irl.coop got coop-api".
+  (2) **nonce echo** — Synapse requires the id_token to carry the nonce it
+  sent at authorize (`missing_claim: Missing "nonce" claim`); the authorize
+  handler now captures `nonce` (instant path + Keycloak-bounce state) and the
+  token endpoint echoes it. **Browser E2E 2026-08-10:** nocodb (gate) →
+  dashboard + workspace render, console ZERO errors; element/matrix → logged
+  in as @e2e-test:matrix.irl.coop, sync live, crypto keys created. Ad-hoc
+  verified: id_token RS256/iss/aud + nonce echo (matrix + nocodb-gate paths).
+- **DONE — nocodb PWA behind the gate (2026-08-10):** the browser's first-load
+  `/manifest.webmanifest` fetch is no-credentials → the gate 302'd it to
+  authorize → cross-origin redirect CORS-blocked (manifest never installs),
+  and workbox `bad-precaching` on `/200` killed the SW install. Fixes:
+  (1) `apps/nocodb.yaml` gate gained `--skip-auth-route` for
+  `/manifest.webmanifest`, `/sw.js`, `/favicon.ico`, `/robots.txt` (data
+  paths stay gated); (2) image rebuilt `2026.08.0` → **`2026.08.2`** —
+  `gui.middleware.ts` answers BOTH `/404` and `/200` with the SPA shell
+  (workbox precaches both; 2026.08.1 only did /404), and the spec had drifted
+  to the pre-workspaces-API `.0` (the `/api/v1/workspaces` 404s). Verified:
+  pre-login files 200 unauthenticated, `/` still 302, `/api/v1/workspaces`
+  401 (registered, was 404), browser console clean.
+- **TODO:** fleet browser E2E from a FRESH coop_session login (dashboard →
+  each app instant) once the user's browser picks up a fresh gateway session;
+  the automation browser completes the full flow but through the Keycloak
+  bounce (no stored cookie).
 
 ## Pending / open
 
@@ -323,8 +421,9 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
   single router WAN IP, one wildcard cert, surfy/this-host split.
 - Not in final form: Temporal, Formbricks, Webstudio, Postiz, CryptPad.
 - NocoDB cosmetic console noise (not errors, no toasts): `maintenance_staging`
-  config probe 404 (OSS baseline), workbox precache /404 (now served as the SPA
-  shell), chatwoot iframe refusal, browser-extension content-script chatter.
+  config probe 404 (OSS baseline), chatwoot iframe refusal, browser-extension
+  content-script chatter. (The workbox precache /404 + /200 warnings are FIXED
+  in 2026.08.2 — both serve the SPA shell.)
 
 ## Test accounts / credentials locations
 

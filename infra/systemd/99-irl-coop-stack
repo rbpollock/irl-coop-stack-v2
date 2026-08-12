@@ -1,0 +1,8 @@
+#!/bin/sh
+# irl.coop stack status on login — declared-vs-running, live snapshot.
+# Installed at /etc/update-motd.d/99-irl-coop-stack (source: infra/systemd/).
+# Prints per-pillar up/down, down services, and drift (orphans). Exit 0
+# silently if the stack or docker is unavailable.
+[ -x /usr/bin/python3 ] || exit 0
+timeout 15 python3 /home/service/development/irl-coop-stack-v2/infra/scripts/stack-report.py 2>/dev/null \
+  || echo "irl.coop stack: status unavailable (docker down?)"

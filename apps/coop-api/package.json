@@ -9,10 +9,12 @@
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/formbody": "^8.0.2",
+    "@types/js-yaml": "^4.0.9",
     "@types/jsonwebtoken": "^9.0.10",
     "dotenv": "^16.4.5",
     "fastify": "^5.10.0",
     "fastify-plugin": "^4.5.1",
+    "js-yaml": "^5.2.3",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.1.0"
   },
