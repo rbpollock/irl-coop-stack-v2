@@ -13,3 +13,14 @@ proxy:
   hostname: api.${DOMAIN}
   port: 3001
   description: coop-api auth bridge (host process)
+# Derived-key secrets consumed by the host process (docs module): the
+# generator resolves these into out/<instance>/secrets.env, which the
+# coop-api dev process sources at start. Keys match docs.ts env reads.
+env:
+  MINIO_ACCESS_KEY: docs-s3
+  MINIO_SECRET_KEY: ${SECRET:minio.docs-s3}
+  ONLYOFFICE_JWT_SECRET: ${SECRET:onlyoffice.jwt}
+  # HMAC secret for the short-lived content relay tokens (docs.sig).
+  DOCS_SIG: ${SECRET:docs.sig}
+  # HMAC secret for the file-panel share tokens (variant B, files.sig).
+  FILES_SIG: ${SECRET:files.sig}

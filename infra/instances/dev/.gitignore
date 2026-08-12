@@ -1,0 +1,4 @@
+secrets/
+vault-pass
+# container runtime data (postgres dirs are root-owned)
+data/

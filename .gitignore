@@ -15,6 +15,7 @@ node_modules/
 infra/instances/dev/certs/
 
 # ── Build / generated output ────────────────────────────────────
+__pycache__/
 contracts/artifacts/
 contracts/cache/
 contracts/typechain-types/

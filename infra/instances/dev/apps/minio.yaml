@@ -4,11 +4,24 @@ pillar: storage
 type: image
 image: minio/minio:latest
 command: server /data --console-address :9001
+ports:
+  - "9000:9000"
+  - "9001:9001"
 env:
   # dev creds (pinned — the console needs them explicitly; the provisioned
-  # stalwart-s3 user lives under these)
+  # stalwart-s3 user lives under these). The image ships MINIO_ROOT_USER_FILE
+  # / MINIO_ROOT_PASSWORD_FILE defaults (secret-file mode) — null them out so
+  # the entrypoint falls back to the env creds above instead of a stale file.
   MINIO_ROOT_USER: minioadmin
-  MINIO_ROOT_PASSWORD: minioadmin123
+  MINIO_ROOT_PASSWORD: ${SECRET:minio.root}
+  MINIO_ROOT_USER_FILE: ""
+  MINIO_ROOT_PASSWORD_FILE: ""
+  MINIO_ACCESS_KEY_FILE: ""
+  MINIO_SECRET_KEY_FILE: ""
+  # image default points at a kms_master_key file that doesn't exist —
+  # without it MinIO can't decrypt the stored root secret; null it too.
+  MINIO_KMS_SECRET_KEY_FILE: ""
+  MINIO_CONFIG_ENV_FILE: ""
 volumes:
   - /opt/app/storage/data/minio:/data
 labels:

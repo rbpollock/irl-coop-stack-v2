@@ -10,9 +10,9 @@ env:
   KC_DB: postgres
   KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
   KC_DB_USERNAME: keycloak
-  KC_DB_PASSWORD: password
+  KC_DB_PASSWORD: ${SECRET:keycloak.db}
   KEYCLOAK_ADMIN: admin
-  KEYCLOAK_ADMIN_PASSWORD: admin
+  KEYCLOAK_ADMIN_PASSWORD: ${SECRET:keycloak.admin}
   # canonical identity URL: auth.irl.coop IS the realm issuer (edge = traefik);
   # xforwarded lets Keycloak trust the proxy for URL building.
   KC_HOSTNAME: auth.${DOMAIN}
@@ -34,7 +34,7 @@ sidecars:
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${SECRET:keycloak.db}
     ports:
       - "5433:5432"
 named_volumes:

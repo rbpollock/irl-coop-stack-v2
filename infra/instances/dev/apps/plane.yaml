@@ -2,11 +2,15 @@
 # Special case: SOURCE build (its own repo + compose at /home/service/plane);
 # the generator emits its OIDC client, env block and data-scoping artifacts,
 # not a compose service. Compose lives with the source.
+# Storage (2026-08-12): plane uses the COOP MinIO (bucket `plane`, user
+# `plane-s3`, derived keys) — the old bundled plane-minio was retired after a
+# full mirror of its uploads. plane's .env + apps/api/.env point at
+# 172.17.0.1:9000.
 name: plane
 pillar: workflow
 type: source
 source: /home/service/plane
-web: http://app.${DOMAIN}
+web: https://app.${DOMAIN}
 oidc:
   client_id: plane
   redirect: /auth/oidc/callback/

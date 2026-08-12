@@ -5,14 +5,14 @@ service_name: postgres
 type: image
 image: citusdata/citus:12.1
 env:
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_PASSWORD: ${SECRET:postgres.irlcoop}
 volumes:
   - /opt/app/storage/data/postgres:/var/lib/postgresql/data
 # dev override (generator emits docker-compose.override.yml when
 # instance.yaml has dev_overrides: true)
 dev:
   ports:
-    - "127.0.0.1:5432:5432"
+    - "0.0.0.0:5432:5432"   # fleet containers reach it via 172.17.0.1:5432 (bridge gateway)
   volumes:
     - ./data/postgres:/var/lib/postgresql/data
 data:
