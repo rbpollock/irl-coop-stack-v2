@@ -60,13 +60,18 @@ export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
   if (isHoizontalAndDesktop) return null
 
   const renderMenuItem = (item: NavigationRootItem | NavigationNestedItem) => {
-    const title = getDictionaryValue(
-      titleCaseToCamelCase(item.title),
-      dictionary.navigation
-    )
+    const titleKey = titleCaseToCamelCase(item.title)
+    // Dynamic titles (e.g. plane project names) are not dictionary keys —
+    // fall back to the raw title instead of throwing.
+    const title =
+      titleKey in dictionary.navigation
+        ? getDictionaryValue(titleKey, dictionary.navigation)
+        : item.title
     const label =
       item.label &&
-      getDictionaryValue(titleCaseToCamelCase(item.label), dictionary.label)
+      (titleCaseToCamelCase(item.label) in dictionary.label
+        ? getDictionaryValue(titleCaseToCamelCase(item.label), dictionary.label)
+        : item.label)
 
     // If the item has nested items, render it with a collapsible dropdown.
     if (item.items) {
