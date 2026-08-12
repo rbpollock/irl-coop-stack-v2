@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { ArrowRight, KeyRound } from "lucide-react"
 
+import { useCanonicalEmail } from "@/hooks/use-canonical-email"
 import { buttonVariants } from "@/components/ui/button"
 
 function timeOfDay(): string {
@@ -19,7 +20,13 @@ export function CoopGreeting() {
   const { data: session } = useSession()
   const name = session?.user?.name || "co-op member"
   const email = session?.user?.email || ""
-  const hasCanonicalIdentity = email.endsWith("@irl.coop")
+  // Live canonical email is the truth — the session email is a login-time
+  // snapshot that lags a just-claimed username (fallback while loading).
+  const [canonicalEmail] = useCanonicalEmail(session?.accessToken)
+  const hasCanonicalIdentity =
+    canonicalEmail !== undefined
+      ? !!canonicalEmail && canonicalEmail.endsWith("@irl.coop")
+      : email.endsWith("@irl.coop")
 
   return (
     <div className="col-span-full flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-sm md:flex-row md:items-center md:justify-between">

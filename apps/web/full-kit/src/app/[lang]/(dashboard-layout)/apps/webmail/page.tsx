@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { ExternalLink, Mail } from "lucide-react"
 
+import { useCanonicalEmail } from "@/hooks/use-canonical-email"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,10 +29,10 @@ export default function WebmailPage() {
   // Live canonical email from coop-api — the server truth. The NextAuth
   // session email is a login-time snapshot that lags a just-claimed
   // username (and a fresh login may not have happened yet), so the gate
-  // must not rely on it. null = still loading.
-  const [canonicalEmail, setCanonicalEmail] = useState<
-    string | null | undefined
-  >(undefined)
+  // must not rely on it. undefined = still loading.
+  const [canonicalEmail, setCanonicalEmail] = useCanonicalEmail(
+    session?.accessToken
+  )
 
   const email = session?.user?.email ?? ""
   const needsUsername =
@@ -39,28 +40,6 @@ export default function WebmailPage() {
     canonicalEmail !== undefined &&
     !!email &&
     !canonicalEmail?.endsWith("@irl.coop")
-
-  // Resolve the canonical identity once the session is ready.
-  const accessToken = session?.accessToken
-  useEffect(() => {
-    if (!accessToken || canonicalEmail !== undefined) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch(`${COOP_API_URL}/api/v1/me`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-        if (!res.ok) return
-        const me = (await res.json()) as { email: string | null }
-        if (!cancelled) setCanonicalEmail(me.email)
-      } catch {
-        /* keep the gate closed on network errors — webmail is still reachable */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [accessToken, canonicalEmail])
 
   if (status === "loading") return null
   if (status === "unauthenticated") return null
