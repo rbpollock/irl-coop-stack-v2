@@ -2,13 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
-
-import { Activity, AlertTriangle, CheckCircle2, CircleDashed, RefreshCw, Server } from "lucide-react"
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  CircleDashed,
+  RefreshCw,
+  Server,
+} from "lucide-react"
 
 // Stack health — declared-vs-running reconciler fed by coop-api
 // (GET /api/v1/stack/status). The tree in infra/instances/dev/ is the
 // declared state; docker is the running state; the difference is drift.
-const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+const COOP_API_URL =
+  process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 const POLL_MS = 30_000
 
 type ContainerView = {
@@ -85,14 +92,20 @@ function PillarChip({ pillar }: { pillar: PillarView }) {
           return (
             <span
               key={s.service}
-              title={s.container ? `${s.container.name} · ${s.container.status}` : `${s.service}: declared, not running`}
+              title={
+                s.container
+                  ? `${s.container.name} · ${s.container.status}`
+                  : `${s.service}: declared, not running`
+              }
               className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] ${
                 ok
                   ? "bg-emerald-500/10 text-emerald-700"
                   : "bg-red-500/10 text-red-700"
               }`}
             >
-              <span className={`size-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-red-500"}`} />
+              <span
+                className={`size-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-red-500"}`}
+              />
               {s.service}
             </span>
           )
@@ -170,32 +183,44 @@ export default function StackHealth() {
                 <Server className="size-3.5" /> Services up
               </div>
               <div className="mt-1 text-2xl font-semibold">{s.up}</div>
-              <div className="text-xs text-muted-foreground">of {s.declared} declared</div>
+              <div className="text-xs text-muted-foreground">
+                of {s.declared} declared
+              </div>
             </div>
             <div className="rounded-lg border bg-card p-4 shadow-sm">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <AlertTriangle className="size-3.5" /> Services down
               </div>
-              <div className={`mt-1 text-2xl font-semibold ${s.down > 0 ? "text-red-600" : ""}`}>
+              <div
+                className={`mt-1 text-2xl font-semibold ${s.down > 0 ? "text-red-600" : ""}`}
+              >
                 {s.down}
               </div>
-              <div className="text-xs text-muted-foreground">stopped, exited, missing</div>
+              <div className="text-xs text-muted-foreground">
+                stopped, exited, missing
+              </div>
             </div>
             <div className="rounded-lg border bg-card p-4 shadow-sm">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CheckCircle2 className="size-3.5" /> Healthy
               </div>
               <div className="mt-1 text-2xl font-semibold">{s.healthy}</div>
-              <div className="text-xs text-muted-foreground">healthchecks passing</div>
+              <div className="text-xs text-muted-foreground">
+                healthchecks passing
+              </div>
             </div>
             <div className="rounded-lg border bg-card p-4 shadow-sm">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CircleDashed className="size-3.5" /> Drift
               </div>
-              <div className={`mt-1 text-2xl font-semibold ${s.orphans > 0 ? "text-amber-600" : ""}`}>
+              <div
+                className={`mt-1 text-2xl font-semibold ${s.orphans > 0 ? "text-amber-600" : ""}`}
+              >
                 {s.orphans}
               </div>
-              <div className="text-xs text-muted-foreground">undeclared containers</div>
+              <div className="text-xs text-muted-foreground">
+                undeclared containers
+              </div>
             </div>
           </div>
 
@@ -208,7 +233,8 @@ export default function StackHealth() {
           {status.orphans.length > 0 && (
             <div className="rounded-lg border border-amber-300/50 bg-amber-500/5 p-3 text-xs text-amber-700">
               <div className="mb-1 flex items-center gap-1.5 font-medium">
-                <Activity className="size-3.5" /> Orphaned containers (running, not declared in the tree)
+                <Activity className="size-3.5" /> Orphaned containers (running,
+                not declared in the tree)
               </div>
               {status.orphans.map((o) => (
                 <div key={o.name} className="flex justify-between gap-2 py-0.5">

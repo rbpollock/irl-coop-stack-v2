@@ -4,11 +4,12 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 
-import { buttonVariants } from "@/components/ui/button"
-
 import type { LocaleType } from "@/types"
 
-const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
+import { buttonVariants } from "@/components/ui/button"
+
+const COOP_API_URL =
+  process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
 
 export default function OnboardingPage() {
   const { data: session, status } = useSession()
@@ -49,8 +50,8 @@ export default function OnboardingPage() {
       })
       if (!res.ok) throw new Error(`onboarding failed (${res.status})`)
       router.replace(`/${lang}/dashboards/analytics`)
-    } catch (err: any) {
-      setError(err.message ?? "Failed to save profile")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save profile")
     } finally {
       setSaving(false)
     }

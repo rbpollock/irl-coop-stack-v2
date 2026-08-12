@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-
 import { MessagesSquare, X } from "lucide-react"
 
 import type { DictionaryType } from "@/lib/get-dictionary"
@@ -27,7 +26,11 @@ export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
         onClick={() => setOpen((v) => !v)}
         className="fixed bottom-4 end-4 z-50 size-12 rounded-full shadow-lg"
       >
-        {open ? <X className="size-5" /> : <MessagesSquare className="size-5" />}
+        {open ? (
+          <X className="size-5" />
+        ) : (
+          <MessagesSquare className="size-5" />
+        )}
       </Button>
       {open && (
         <div className="fixed bottom-20 end-4 z-50 flex h-[70vh] w-[min(92vw,380px)] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">

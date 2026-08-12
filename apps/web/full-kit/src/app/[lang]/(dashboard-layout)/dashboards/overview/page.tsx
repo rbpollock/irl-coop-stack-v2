@@ -1,6 +1,13 @@
-import type { Metadata } from "next"
+import {
+  Database,
+  FolderKanban,
+  Mail,
+  Server,
+  Users,
+  Wallet,
+} from "lucide-react"
 
-import { Database, FolderKanban, Mail, Server, Users, Wallet } from "lucide-react"
+import type { Metadata } from "next"
 
 import { CoopGreeting } from "@/components/dashboards/coop-greeting"
 import StackHealth from "@/components/dashboards/stack-health"
@@ -10,7 +17,8 @@ export const metadata: Metadata = {
 }
 
 // External services sign in with the same coop identity (zero per-service credentials).
-const NOCODB_URL = process.env.NEXT_PUBLIC_NOCODB_URL ?? "https://nocodb.irl.coop"
+const NOCODB_URL =
+  process.env.NEXT_PUBLIC_NOCODB_URL ?? "https://nocodb.irl.coop"
 
 // Every important subject, one hop away.
 const QUICK_LINKS = [
@@ -67,7 +75,9 @@ function QuickAccess() {
           <link.icon className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
             <div className="font-medium text-sm">{link.title}</div>
-            <div className="text-xs text-muted-foreground">{link.description}</div>
+            <div className="text-xs text-muted-foreground">
+              {link.description}
+            </div>
           </div>
         </a>
       ))}

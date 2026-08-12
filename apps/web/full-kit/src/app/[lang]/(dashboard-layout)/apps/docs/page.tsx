@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
-
 import {
   ExternalLink,
+  File as FileIcon,
   FilePlus2,
   FileSpreadsheet,
   FileText,
   FileType2,
-  File as FileIcon,
   FolderOpen,
   Presentation,
   RefreshCw,
@@ -22,8 +21,10 @@ import { Input } from "@/components/ui/input"
 // Docs — MinIO-backed documents edited in the embedded OnlyOffice editor.
 // Auth is the coop JWT (same session as everything else); the editor config
 // is minted + JWT-signed by coop-api (onlyoffice verifies the signature).
-const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
-const ONLYOFFICE_PUBLIC_URL = process.env.NEXT_PUBLIC_ONLYOFFICE_URL ?? "https://office.irl.coop"
+const COOP_API_URL =
+  process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+const ONLYOFFICE_PUBLIC_URL =
+  process.env.NEXT_PUBLIC_ONLYOFFICE_URL ?? "https://office.irl.coop"
 
 type DocMeta = { name: string; size: number; modified: string }
 
@@ -37,7 +38,9 @@ type EditorConfig = {
 
 declare global {
   interface Window {
-    DocsAPI?: { DocEditor: new (id: string, config: Record<string, unknown>) => unknown }
+    DocsAPI?: {
+      DocEditor: new (id: string, config: Record<string, unknown>) => unknown
+    }
   }
 }
 
@@ -119,7 +122,10 @@ export default function DocsPage() {
     try {
       const res = await fetch(`${COOP_API_URL}/api/v1/docs/new`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ type }),
       })
       if (!res.ok) throw new Error(`create failed (${res.status})`)
@@ -137,10 +143,13 @@ export default function DocsPage() {
     if (!token) return
     setError(null)
     try {
-      const res = await fetch(`${COOP_API_URL}/api/v1/files/docs/${encodeURIComponent(name)}/share`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(
+        `${COOP_API_URL}/api/v1/files/docs/${encodeURIComponent(name)}/share`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
       if (!res.ok) throw new Error(`share failed (${res.status})`)
       const { url } = (await res.json()) as { url: string }
       setShareUrl(url)
@@ -155,12 +164,16 @@ export default function DocsPage() {
     setError(null)
     try {
       for (const file of Array.from(files)) {
-        const res = await fetch(`${COOP_API_URL}/api/v1/docs/${encodeURIComponent(file.name)}`, {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
-          body: file,
-        })
-        if (!res.ok) throw new Error(`upload ${file.name} failed (${res.status})`)
+        const res = await fetch(
+          `${COOP_API_URL}/api/v1/docs/${encodeURIComponent(file.name)}`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}` },
+            body: file,
+          }
+        )
+        if (!res.ok)
+          throw new Error(`upload ${file.name} failed (${res.status})`)
       }
       await refresh()
     } catch (err) {
@@ -181,7 +194,7 @@ export default function DocsPage() {
       try {
         const res = await fetch(
           `${COOP_API_URL}/api/v1/docs/${encodeURIComponent(editing)}/editor`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          { headers: { Authorization: `Bearer ${token}` } }
         )
         if (!res.ok) throw new Error(`editor config failed (${res.status})`)
         const cfg = (await res.json()) as EditorConfig
@@ -198,15 +211,18 @@ export default function DocsPage() {
         }
         if (cancelled) return
         if (!window.DocsAPI || !editorHostRef.current) return
-        editorRef.current = new window.DocsAPI.DocEditor(editorHostRef.current.id, {
-          document: cfg.document,
-          documentType: cfg.documentType,
-          editorConfig: cfg.editorConfig,
-          height: "100%",
-          type: cfg.type,
-          token: cfg.token,
-          width: "100%",
-        })
+        editorRef.current = new window.DocsAPI.DocEditor(
+          editorHostRef.current.id,
+          {
+            document: cfg.document,
+            documentType: cfg.documentType,
+            editorConfig: cfg.editorConfig,
+            height: "100%",
+            type: cfg.type,
+            token: cfg.token,
+            width: "100%",
+          }
+        )
       } catch (err) {
         if (!cancelled) setError((err as Error).message)
       }
@@ -218,7 +234,9 @@ export default function DocsPage() {
 
   function backToList() {
     try {
-      ;(editorRef.current as { destroyEditor?: () => void } | null)?.destroyEditor?.()
+      ;(
+        editorRef.current as { destroyEditor?: () => void } | null
+      )?.destroyEditor?.()
     } catch {
       /* the iframe may already be gone */
     }
@@ -235,8 +253,14 @@ export default function DocsPage() {
   function DocRow({ doc, showShare }: { doc: DocMeta; showShare?: boolean }) {
     const Icon = docIcon(doc.name)
     return (
-      <li key={doc.name} className="group flex items-center gap-3 rounded-lg border bg-background px-4 py-2.5 text-sm hover:bg-accent">
-        <button className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => setEditing(doc.name)}>
+      <li
+        key={doc.name}
+        className="group flex items-center gap-3 rounded-lg border bg-background px-4 py-2.5 text-sm hover:bg-accent"
+      >
+        <button
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          onClick={() => setEditing(doc.name)}
+        >
           <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="truncate font-medium">{doc.name}</span>
         </button>
@@ -264,13 +288,18 @@ export default function DocsPage() {
         <div>
           <h1 className="text-sm font-semibold">Documents</h1>
           <p className="text-xs text-muted-foreground">
-            OnlyOffice on the coop — edited inline, stored in MinIO, one identity
+            OnlyOffice on the coop — edited inline, stored in MinIO, one
+            identity
           </p>
         </div>
         {editing === null ? (
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Button size="sm" onClick={() => setNewMenu((v) => !v)} disabled={creating !== null}>
+              <Button
+                size="sm"
+                onClick={() => setNewMenu((v) => !v)}
+                disabled={creating !== null}
+              >
                 <FilePlus2 className="me-2 h-4 w-4" />
                 {creating ? "Creating…" : "New"}
               </Button>
@@ -286,13 +315,15 @@ export default function DocsPage() {
                     className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
                     onClick={() => createDoc("xlsx")}
                   >
-                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Spreadsheet
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{" "}
+                    Spreadsheet
                   </button>
                   <button
                     className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
                     onClick={() => createDoc("pptx")}
                   >
-                    <Presentation className="h-4 w-4 text-orange-600" /> Presentation
+                    <Presentation className="h-4 w-4 text-orange-600" />{" "}
+                    Presentation
                   </button>
                 </div>
               )}
@@ -305,7 +336,12 @@ export default function DocsPage() {
               className="hidden"
               onChange={(e) => upload(e.target.files)}
             />
-            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
               <FileType2 className="me-2 h-4 w-4" />
               {uploading ? "Uploading…" : "Upload"}
             </Button>
@@ -347,7 +383,12 @@ export default function DocsPage() {
           >
             Copy
           </Button>
-          <Button size="sm" variant="ghost" className="h-7 shrink-0" onClick={() => setShareUrl(null)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 shrink-0"
+            onClick={() => setShareUrl(null)}
+          >
             Close
           </Button>
         </div>
@@ -361,13 +402,18 @@ export default function DocsPage() {
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
               <FolderOpen className="h-10 w-10 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
-                No documents yet — create a blank one or upload a .docx, .xlsx or .pptx.
+                No documents yet — create a blank one or upload a .docx, .xlsx
+                or .pptx.
               </p>
               <div className="flex items-center gap-2">
                 <Button size="sm" onClick={() => createDoc("docx")}>
                   <FilePlus2 className="me-2 h-4 w-4" /> New document
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fileRef.current?.click()}
+                >
                   Upload
                 </Button>
               </div>
@@ -401,7 +447,11 @@ export default function DocsPage() {
         </div>
       ) : (
         <div className="flex-1">
-          <div ref={editorHostRef} id="onlyoffice-editor" className="h-full w-full" />
+          <div
+            ref={editorHostRef}
+            id="onlyoffice-editor"
+            className="h-full w-full"
+          />
         </div>
       )}
     </div>

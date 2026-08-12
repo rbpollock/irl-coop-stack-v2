@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useSession } from "next-auth/react"
-
 import { ArrowRight, KeyRound } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
@@ -33,9 +32,10 @@ export function CoopGreeting() {
             <>Welcome back to the coop — one identity, every app.</>
           ) : (
             <>
-              You&apos;re signed in as <span className="font-medium">{email}</span>.
-              Claim your @irl.coop username to unlock your mailbox and a single
-              address across the coop.
+              You&apos;re signed in as{" "}
+              <span className="font-medium">{email}</span>. Claim your @irl.coop
+              username to unlock your mailbox and a single address across the
+              coop.
             </>
           )}
         </p>

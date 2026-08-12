@@ -12,7 +12,9 @@ type PlaneProject = { id: string; name: string; url: string }
 let cachedProjects: NavigationNestedItem[] | null = null
 
 export function useNavigationsData(): NavigationType[] {
-  const [projects, setProjects] = useState<NavigationNestedItem[]>(cachedProjects ?? [])
+  const [projects, setProjects] = useState<NavigationNestedItem[]>(
+    cachedProjects ?? []
+  )
 
   useEffect(() => {
     if (cachedProjects) return
@@ -40,7 +42,10 @@ export function useNavigationsData(): NavigationType[] {
         ? {
             title: item.title,
             iconName: "FolderKanban",
-            items: [{ title: "All projects", href: "/apps/projects" }, ...projects],
+            items: [
+              { title: "All projects", href: "/apps/projects" },
+              ...projects,
+            ],
           }
         : item
     ),

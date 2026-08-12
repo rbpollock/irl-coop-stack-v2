@@ -19,6 +19,7 @@ import {
   titleCaseToCamelCase,
 } from "@/lib/utils"
 
+import { useNavigationsData } from "@/hooks/use-navigations-data"
 import { useSettings } from "@/hooks/use-settings"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -42,8 +43,6 @@ import {
 } from "@/components/ui/sidebar"
 import { DynamicIcon } from "@/components/dynamic-icon"
 import { CommandMenu } from "./command-menu"
-
-import { useNavigationsData } from "@/hooks/use-navigations-data"
 
 export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
   const pathname = usePathname()

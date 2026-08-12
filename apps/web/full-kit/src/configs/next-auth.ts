@@ -111,7 +111,7 @@ export const authOptions: NextAuthOptions = {
 
       return session
     },
-    async signIn({ user }) {
+    async signIn({ user: _user }) {
       return true
     },
   },

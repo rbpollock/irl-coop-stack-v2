@@ -19,6 +19,7 @@ import {
   titleCaseToCamelCase,
 } from "@/lib/utils"
 
+import { useNavigationsData } from "@/hooks/use-navigations-data"
 import { Badge } from "@/components/ui/badge"
 import {
   Menubar,
@@ -31,10 +32,6 @@ import {
   MenubarTrigger,
 } from "@/components/ui/menubar"
 import { DynamicIcon } from "@/components/dynamic-icon"
-
-import { navigationsData } from "@/data/navigations"
-
-import { useNavigationsData } from "@/hooks/use-navigations-data"
 
 export function TopBarHeaderMenubar({
   dictionary,

@@ -3,9 +3,9 @@ import type { ReactNode } from "react"
 
 import { getDictionary } from "@/lib/get-dictionary"
 
+import { OnboardingGuard } from "@/components/auth/onboarding-guard"
 import { Layout } from "@/components/layout"
 import { ChatWidget } from "@/components/layout/chat-widget"
-import { OnboardingGuard } from "@/components/auth/onboarding-guard"
 
 export default async function DashboardLayout(props: {
   children: ReactNode

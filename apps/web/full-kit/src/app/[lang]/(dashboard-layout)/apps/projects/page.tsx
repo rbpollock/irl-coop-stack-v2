@@ -1,7 +1,6 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-
 import { ExternalLink } from "lucide-react"
 
 import { Button } from "@/components/ui/button"

@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 
-const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
+const COOP_API_URL =
+  process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
 
 /**
  * Redirects authenticated users who haven't completed coop onboarding to

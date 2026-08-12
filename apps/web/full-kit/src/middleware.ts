@@ -46,7 +46,10 @@ export async function middleware(request: NextRequest) {
 
     // Redirect authenticated users away from guest routes
     if (isAuthenticated && isGuest) {
-      return redirect(process.env.HOME_PATHNAME || "/dashboards/overview", request)
+      return redirect(
+        process.env.HOME_PATHNAME || "/dashboards/overview",
+        request
+      )
     }
 
     // Redirect unauthenticated users from protected routes to sign-in

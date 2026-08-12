@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-
 import { ExternalLink, Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,8 +10,10 @@ import { Label } from "@/components/ui/label"
 
 // Roundcube webmail — SSO via Keycloak (same realm as the shadboard; the
 // iframe relies on the browser's Keycloak session cookie for auto-login).
-const WEBMAIL_URL = process.env.NEXT_PUBLIC_WEBMAIL_URL ?? "https://webmail.irl.coop"
-const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
+const WEBMAIL_URL =
+  process.env.NEXT_PUBLIC_WEBMAIL_URL ?? "https://webmail.irl.coop"
+const COOP_API_URL =
+  process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
 
 // Canonical identity rule: every user's mailbox is <username>@irl.coop,
 // decoupled from the login method (Google, web3auth, passkeys, …). Users
@@ -28,7 +29,9 @@ export default function WebmailPage() {
   // session email is a login-time snapshot that lags a just-claimed
   // username (and a fresh login may not have happened yet), so the gate
   // must not rely on it. null = still loading.
-  const [canonicalEmail, setCanonicalEmail] = useState<string | null | undefined>(undefined)
+  const [canonicalEmail, setCanonicalEmail] = useState<
+    string | null | undefined
+  >(undefined)
 
   const email = session?.user?.email ?? ""
   const needsUsername =
@@ -78,7 +81,11 @@ export default function WebmailPage() {
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        setError(body?.error === "username_taken" ? "That username is taken." : `Failed (${res.status})`)
+        setError(
+          body?.error === "username_taken"
+            ? "That username is taken."
+            : `Failed (${res.status})`
+        )
         return
       }
       // The Keycloak email is set — reflect it immediately so the gate
@@ -102,7 +109,9 @@ export default function WebmailPage() {
               <Mail className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold">Claim your irl.coop username</h2>
+              <h2 className="text-sm font-semibold">
+                Claim your irl.coop username
+              </h2>
               <p className="text-xs text-muted-foreground">
                 One identity, any login method — your mailbox will be{" "}
                 <span className="font-mono">username@irl.coop</span>
@@ -122,10 +131,16 @@ export default function WebmailPage() {
                   autoFocus
                 />
               </div>
-              <span className="pb-2 font-mono text-xs text-muted-foreground">@irl.coop</span>
+              <span className="pb-2 font-mono text-xs text-muted-foreground">
+                @irl.coop
+              </span>
             </div>
             {error && <p className="text-xs text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={saving || !username.trim()}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={saving || !username.trim()}
+            >
               {saving ? "Claiming…" : "Claim username"}
             </Button>
           </form>

@@ -1,5 +1,4 @@
 import Link from "next/link"
-
 import {
   ArrowRight,
   Braces,
@@ -20,9 +19,10 @@ import {
   Workflow,
 } from "lucide-react"
 
+import { cn } from "@/lib/utils"
+
 import { buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
 
 const APPS = [
   {
@@ -70,14 +70,54 @@ const APPS = [
 ]
 
 const PILLARS = [
-  { icon: KeyRound, name: "Authentication", live: true, note: "one identity, every login method" },
-  { icon: ShieldCheck, name: "Authorization", live: true, note: "one session across every app" },
-  { icon: Server, name: "Storage", live: true, note: "Citus Postgres + S3-compatible object storage" },
-  { icon: MessagesSquare, name: "Communication", live: true, note: "mail, webmail and Matrix chat" },
-  { icon: Workflow, name: "Workflow", live: true, note: "projects and shared databases" },
-  { icon: Wallet, name: "Finance", live: false, note: "group treasury — planned" },
-  { icon: Scale, name: "Compliance", live: false, note: "governance tooling — planned" },
-  { icon: RefreshCw, name: "Lifecycle", live: false, note: "onboarding & offboarding — planned" },
+  {
+    icon: KeyRound,
+    name: "Authentication",
+    live: true,
+    note: "one identity, every login method",
+  },
+  {
+    icon: ShieldCheck,
+    name: "Authorization",
+    live: true,
+    note: "one session across every app",
+  },
+  {
+    icon: Server,
+    name: "Storage",
+    live: true,
+    note: "Citus Postgres + S3-compatible object storage",
+  },
+  {
+    icon: MessagesSquare,
+    name: "Communication",
+    live: true,
+    note: "mail, webmail and Matrix chat",
+  },
+  {
+    icon: Workflow,
+    name: "Workflow",
+    live: true,
+    note: "projects and shared databases",
+  },
+  {
+    icon: Wallet,
+    name: "Finance",
+    live: false,
+    note: "group treasury — planned",
+  },
+  {
+    icon: Scale,
+    name: "Compliance",
+    live: false,
+    note: "governance tooling — planned",
+  },
+  {
+    icon: RefreshCw,
+    name: "Lifecycle",
+    live: false,
+    note: "onboarding & offboarding — planned",
+  },
 ]
 
 export default async function LandingPage({
@@ -93,26 +133,37 @@ export default async function LandingPage({
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-black tracking-tight">
+          <Link
+            href="/"
+            className="flex items-center gap-2 font-black tracking-tight"
+          >
             <span className="grid size-8 place-items-center rounded-lg bg-foreground text-background">
               i
             </span>
             irl.coop
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="#apps" className="hover:text-foreground">Apps</a>
-            <a href="#identity" className="hover:text-foreground">One identity</a>
-            <a href="#network" className="hover:text-foreground">Groups</a>
-            <a href="#architecture" className="hover:text-foreground">Architecture</a>
+            <a href="#apps" className="hover:text-foreground">
+              Apps
+            </a>
+            <a href="#identity" className="hover:text-foreground">
+              One identity
+            </a>
+            <a href="#network" className="hover:text-foreground">
+              Groups
+            </a>
+            <a href="#architecture" className="hover:text-foreground">
+              Architecture
+            </a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href={signIn} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-              Sign in
-            </Link>
             <Link
               href={signIn}
-              className={buttonVariants({ size: "sm" })}
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
             >
+              Sign in
+            </Link>
+            <Link href={signIn} className={buttonVariants({ size: "sm" })}>
               Join the coop
             </Link>
           </div>
@@ -125,13 +176,12 @@ export default async function LandingPage({
           COMMUNITY OS · MEMBER-OWNED
         </span>
         <h1 className="max-w-3xl text-5xl font-black leading-[1.05] tracking-tight md:text-7xl">
-          We&apos;re here for{" "}
-          <span className="text-primary">cooperation.</span>
+          We&apos;re here for <span className="text-primary">cooperation.</span>
         </h1>
         <p className="max-w-2xl text-lg text-muted-foreground md:text-xl">
-          Share files, tools and spaces. Host events. Communicate securely. Run a
-          project, organize a club, build a network — with full control of your
-          data. This platform is owned and controlled by its members.
+          Share files, tools and spaces. Host events. Communicate securely. Run
+          a project, organize a club, build a network — with full control of
+          your data. This platform is owned and controlled by its members.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link href={signIn} className={buttonVariants({ size: "lg" })}>
@@ -179,7 +229,8 @@ export default async function LandingPage({
                 href={app.url}
                 className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-primary"
               >
-                Open <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                Open{" "}
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </a>
             </Card>
           ))}
@@ -224,8 +275,8 @@ export default async function LandingPage({
             </h2>
             <p className="mt-3 text-muted-foreground">
               Every person and every group is a node in one network. Every
-              connection is an explicit edge — decisions · space · trust ·
-              money — so groups can interlock deeply without losing themselves.
+              connection is an explicit edge — decisions · space · trust · money
+              — so groups can interlock deeply without losing themselves.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -249,15 +300,14 @@ export default async function LandingPage({
                   "Every group gets a treasury: shared savings, quorum-gated pools, funds with spending rules, automatic distributions. Balances stay private by default, with proofs available on demand.",
               },
             ].map((primitive) => (
-              <Card
-                key={primitive.title}
-                className="flex flex-col gap-3 p-6"
-              >
+              <Card key={primitive.title} className="flex flex-col gap-3 p-6">
                 <div className="grid size-11 place-items-center rounded-lg border bg-background">
                   <primitive.icon className="size-5 text-primary" />
                 </div>
                 <h3 className="text-lg font-bold">{primitive.title}</h3>
-                <p className="text-sm text-muted-foreground">{primitive.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {primitive.description}
+                </p>
               </Card>
             ))}
           </div>
@@ -270,8 +320,8 @@ export default async function LandingPage({
               switching hats. The group you&apos;re acting for is part of the
               action itself: &ldquo;approve as member of Cold Storage Co-op —
               2-of-3&rdquo;. One identity, many seats, one approval inbox — and
-              from these three primitives, new cooperation forms emerge on
-              their own: labor swaps between farms, joint regional purchasing,
+              from these three primitives, new cooperation forms emerge on their
+              own: labor swaps between farms, joint regional purchasing,
               data-sharing agreements, federated partners who keep their own
               trucks.
             </p>
@@ -299,7 +349,9 @@ export default async function LandingPage({
               key={pillar.name}
               className={cn(
                 "rounded-xl border p-5",
-                pillar.live ? "border-primary/40 bg-primary/5" : "border-dashed opacity-60"
+                pillar.live
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-dashed opacity-60"
               )}
             >
               <div className="mb-3 flex items-center justify-between">
@@ -311,7 +363,9 @@ export default async function LandingPage({
                 )}
               </div>
               <h3 className="font-bold">{pillar.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{pillar.note}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {pillar.note}
+              </p>
             </div>
           ))}
         </div>

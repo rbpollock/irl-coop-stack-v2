@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+
 import type { NextRequest } from "next/server"
 
 // Plane projects for the dashboard nav submenu — per-member, the fleet way:
@@ -17,7 +18,9 @@ type PlaneProject = { id: string; name: string; identifier: string }
 const sessionCache = new Map<string, { cookie: string; expires: number }>()
 
 function lastSetCookie(res: Response): string {
-  const all = (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.()
+  const all = (
+    res.headers as unknown as { getSetCookie?: () => string[] }
+  ).getSetCookie?.()
   if (all && all.length) return all[all.length - 1]
   return res.headers.get("set-cookie") ?? ""
 }
@@ -25,10 +28,13 @@ function lastSetCookie(res: Response): string {
 export const dynamic = "force-dynamic"
 
 async function fetchProjects(planeCookie: string) {
-  const res = await fetch(`${PLANE_BASE}/api/workspaces/${WORKSPACE}/projects/`, {
-    headers: { Cookie: planeCookie },
-    cache: "no-store",
-  })
+  const res = await fetch(
+    `${PLANE_BASE}/api/workspaces/${WORKSPACE}/projects/`,
+    {
+      headers: { Cookie: planeCookie },
+      cache: "no-store",
+    }
+  )
   if (!res.ok) return null
   const list = (await res.json()) as PlaneProject[]
   return list.map((p) => ({
@@ -58,7 +64,8 @@ export async function GET(request: NextRequest) {
     })
     const initLoc = init.headers.get("location") ?? ""
     const planeSession = lastSetCookie(init)
-    if (!initLoc || !planeSession) return NextResponse.json({ error: "initiate failed" }, { status: 502 })
+    if (!initLoc || !planeSession)
+      return NextResponse.json({ error: "initiate failed" }, { status: 502 })
 
     // 2. gateway authorize — the member's coop_session returns an instant code
     const authz = await fetch(initLoc, {
@@ -77,12 +84,18 @@ export async function GET(request: NextRequest) {
     })
     const loginCookie = lastSetCookie(cb) || planeSession
 
-    sessionCache.set(coop, { cookie: loginCookie, expires: Date.now() + TTL_MS })
+    sessionCache.set(coop, {
+      cookie: loginCookie,
+      expires: Date.now() + TTL_MS,
+    })
     const projects = await fetchProjects(loginCookie)
     return projects
       ? NextResponse.json({ projects })
       : NextResponse.json({ error: "plane projects failed" }, { status: 502 })
   } catch {
-    return NextResponse.json({ error: "plane exchange failed" }, { status: 502 })
+    return NextResponse.json(
+      { error: "plane exchange failed" },
+      { status: 502 }
+    )
   }
 }
