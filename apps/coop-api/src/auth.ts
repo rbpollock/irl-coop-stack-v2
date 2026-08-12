@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import * as crypto from "node:crypto";
 import * as jwt from "jsonwebtoken";
 import { getProfile, type CoopProfile } from "./profile-store";
+import { getUserProfile } from "./keycloak-admin";
 
 // ---------------------------------------------------------------------------
 // coop-api as the fleet's OIDC issuer (session-gateway auth)
@@ -134,13 +135,16 @@ async function verifyIdToken(idToken: string): Promise<any> {
 // The coop JWT — RS256, validated by the fleet via /jwks.
 function mintCoopJwt(
   claims: Record<string, any>,
-  profile?: CoopProfile,
+  profile?: Partial<CoopProfile>,
   ttl: jwt.SignOptions["expiresIn"] = "1h"
 ): string {
   return jwt.sign(
     {
       sub: claims.sub,
-      email: claims.email ?? null,
+      // Live Keycloak profile wins: the canonical @irl.coop email (claimed
+      // via /api/v1/me/username) must flow into every fresh JWT — the
+      // login-time claims snapshot can lag it (broker idp email).
+      email: profile?.email ?? claims.email ?? null,
       // Onboarded coop profile wins over the identity-provider name/avatar.
       name: profile?.displayName ?? claims.name ?? claims.preferred_username ?? null,
       avatar: profile?.avatar ?? claims.picture ?? null,
@@ -235,8 +239,15 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     const session = sessionFromRequest(request);
     if (session) {
       const code = crypto.randomUUID();
+      // Re-mint with the LIVE Keycloak email: the session cookie may predate
+      // the canonical-email claim, and its claims snapshot would leak the
+      // broker email into fleet apps (roundcube → stalwart IMAP). getProfile()
+      // is the local onboarding store (name/avatar) — the email authority is
+      // the Keycloak admin lookup.
+      const stored = getProfile(session.sub);
+      const live = await getUserProfile(session.sub);
       codes.set(code, {
-        jwt: mintCoopJwt(session),
+        jwt: mintCoopJwt(session, { ...stored, email: live.email ?? null }),
         clientId: client_id!,
         redirectUri: redirect_uri!,
         state,
