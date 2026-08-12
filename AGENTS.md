@@ -108,6 +108,17 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 - **ts-node-dev caches transpiles**: editing `apps/coop-api/src/status.ts`
   may serve stale code after the auto-restart — kill the `npm run dev`
   process and restart if the endpoint doesn't reflect edits.
+- **Keycloak service-account roles are not declared in the tree**: coop-api's
+  admin lookups (canonical identity: `/api/v1/me`, username claiming) rely on
+  the `coop-api` client's service account holding realm-management
+  `manage-users` + `view-users`. A realm export/import (or a re-created
+  client) silently drops them — the symptom is `/api/v1/me` 502
+  ("keycloak user lookup failed: 403") and roundcube SSO failures in the
+  same window. Restore via the admin API:
+  `POST /admin/realms/irl-coop/users/{sa-user}/role-mappings/clients/{realm-management}`
+  with the manage-users/view-users role objects. Verify through the edge
+  (`https://auth.irl.coop/admin/realms/irl-coop/users/...` — NOT localhost,
+  the issuer is the edge host).
 - `type: source` apps (plane) ship their own compose; the generator only emits their OIDC client, env block and data-scoping views.
 - Generated-vs-running drift: the edge (traefik) runs generated `out/` (dynamic.yml + instance-tree certs mounted); some containers (stalwart16) were bootstrapped from scratch compose at `/tmp/stalwart16` before the pipeline existed. When touching a drifted pillar, reconcile by applying its generated compose.
 - Stalwart-internal config (datastore, blob store, OIDC directory, accounts) is stored in its postgres DB and managed via the webadmin/admin API — the declarative layer only deploys the container/ports/env/edge.
