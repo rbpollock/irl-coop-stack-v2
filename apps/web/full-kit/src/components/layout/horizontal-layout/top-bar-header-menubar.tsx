@@ -11,8 +11,6 @@ import type {
   NavigationRootItem,
 } from "@/types"
 
-import { navigationsData } from "@/data/navigations"
-
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import {
   cn,
@@ -34,6 +32,10 @@ import {
 } from "@/components/ui/menubar"
 import { DynamicIcon } from "@/components/dynamic-icon"
 
+import { navigationsData } from "@/data/navigations"
+
+import { useNavigationsData } from "@/hooks/use-navigations-data"
+
 export function TopBarHeaderMenubar({
   dictionary,
 }: {
@@ -41,6 +43,7 @@ export function TopBarHeaderMenubar({
 }) {
   const pathname = usePathname()
   const params = useParams()
+  const navigationsData = useNavigationsData()
 
   const locale = params.lang as LocaleType
 

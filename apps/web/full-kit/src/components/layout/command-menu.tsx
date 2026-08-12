@@ -14,6 +14,8 @@ import type { DialogProps } from "@radix-ui/react-dialog"
 
 import { navigationsData } from "@/data/navigations"
 
+import { useNavigationsData } from "@/hooks/use-navigations-data"
+
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import {
   cn,
@@ -55,6 +57,7 @@ export function CommandMenu({
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const params = useParams()
+  const navigationsData = useNavigationsData()
   const router = useRouter()
 
   const locale = params.lang as LocaleType

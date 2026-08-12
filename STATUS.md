@@ -108,6 +108,14 @@ reconcile by applying its generated compose when touching it.
   (once per browser session; button remains as fallback, relabeled
   "with irl.coop") — an active dashboard session returns an instant code, so
   plane.irl.coop lands logged-in with no interaction. Verified E2E.
+  **Dashboard embed**: /apps/projects frames plane in the content panel
+  (?embed=1 hides plane's own top nav + app rail via the workspace wrapper);
+  the dashboard nav "Projects" parent lists the member's projects from
+  /api/plane/projects (server-side OIDC chain: initiate → gateway instant
+  code → plane callback → plane session → projects API; 10-min cache).
+  Framing unblocked via CSP frame-ancestors 'self' https://irl.coop on the
+  Caddy edge (+ Django middleware for /api+/auth routes); X-Frame-Options
+  DENY kept as the legacy fallback.
   E2E: plane.irl.coop → gateway → Keycloak → Google sign-in verified.
 - NocoDB (https://nocodb.irl.coop, oauth2-proxy gate → custom image):
   - Image `irlcoop/nocodb-gate-sso:2026.08.1` = 2026.08.0 base + rebuilt server

@@ -38,7 +38,7 @@ management/monitoring model (declared-vs-running, bring-up, status surfaces).
 |---|---|---|---|
 | full-kit | https://irl.coop | :3000 | host `npm run dev` |
 | coop-api | https://api.irl.coop | :3001 | host dev; canonical issuer + redirects |
-| Plane | https://plane.irl.coop | :3002 (Caddy) | OIDC client `plane`; zero-click SSO (sign-in auto-redirects to the fleet gateway); god-mode `/god-mode/` |
+| Plane | https://plane.irl.coop | :3002 (Caddy) | OIDC client `plane`; zero-click SSO (sign-in auto-redirects to the fleet gateway); dashboard embed (`/apps/projects` iframe, `?embed=1` hides plane chrome); nav submenu via `/api/plane/projects`; god-mode `/god-mode/` |
 | NocoDB | https://nocodb.irl.coop | gate→container | custom image (see below) |
 | Keycloak | https://auth.irl.coop | :8081 | realm irl-coop; admin console master |
 | Stalwart | :8083 | containers | mail; also 25/587/143/993 |

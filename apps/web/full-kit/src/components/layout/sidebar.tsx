@@ -11,8 +11,6 @@ import type {
   NavigationRootItem,
 } from "@/types"
 
-import { navigationsData } from "@/data/navigations"
-
 import { i18n } from "@/configs/i18n"
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import {
@@ -45,11 +43,14 @@ import {
 import { DynamicIcon } from "@/components/dynamic-icon"
 import { CommandMenu } from "./command-menu"
 
+import { useNavigationsData } from "@/hooks/use-navigations-data"
+
 export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
   const pathname = usePathname()
   const params = useParams()
   const { openMobile, setOpenMobile, isMobile } = useSidebar()
   const { settings } = useSettings()
+  const navigationsData = useNavigationsData()
 
   const locale = params.lang as LocaleType
   const direction = i18n.localeDirection[locale]

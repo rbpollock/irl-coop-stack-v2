@@ -18,8 +18,10 @@ export const navigationsData: NavigationType[] = [
       },
       {
         title: "Projects",
-        href: process.env.NEXT_PUBLIC_PLANE_URL ?? "https://plane.irl.coop",
         iconName: "FolderKanban",
+        // Children (the live plane project list, per member) are filled
+        // client-side by useNavigationsData via /api/plane/projects.
+        items: [],
       },
       {
         title: "Databases",

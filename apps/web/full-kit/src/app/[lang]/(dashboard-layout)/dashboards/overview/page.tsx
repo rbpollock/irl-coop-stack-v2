@@ -10,7 +10,6 @@ export const metadata: Metadata = {
 }
 
 // External services sign in with the same coop identity (zero per-service credentials).
-const PLANE_URL = process.env.NEXT_PUBLIC_PLANE_URL ?? "https://plane.irl.coop"
 const NOCODB_URL = process.env.NEXT_PUBLIC_NOCODB_URL ?? "https://nocodb.irl.coop"
 
 // Every important subject, one hop away.
@@ -19,8 +18,7 @@ const QUICK_LINKS = [
     title: "Projects",
     description: "Plan and run cooperative projects",
     icon: FolderKanban,
-    href: PLANE_URL,
-    external: true,
+    href: "/apps/projects",
   },
   {
     title: "Databases",
