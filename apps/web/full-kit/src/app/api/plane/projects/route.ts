@@ -40,7 +40,8 @@ async function fetchProjects(planeCookie: string) {
   return list.map((p) => ({
     id: p.id,
     name: p.name,
-    url: `/${WORKSPACE}/project/${p.id}/issues/`,
+    // plane's route is :workspaceSlug/projects/:projectId/issues (plural)
+    url: `/${WORKSPACE}/projects/${p.id}/issues`,
   }))
 }
 
