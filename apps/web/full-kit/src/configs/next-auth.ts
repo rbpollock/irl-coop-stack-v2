@@ -1,3 +1,4 @@
+import { cookies } from "next/headers"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 
 import type { NextAuthOptions } from "next-auth"
@@ -35,6 +36,59 @@ declare module "next-auth/jwt" {
     status: string
     accessToken?: string
   }
+}
+
+// The coop JWT is short-lived (1h); the coop_session cookie is the long-lived
+// anchor (30d). Near expiry the jwt callback re-runs the OIDC exchange
+// server-side (instant code) and swaps in a fresh token.
+const COOP_API_URL = process.env.COOP_API_URL ?? "http://localhost:3001"
+const COOP_CLIENT_ID = process.env.COOP_API_CLIENT_ID ?? ""
+const COOP_CLIENT_SECRET = process.env.COOP_API_CLIENT_SECRET ?? ""
+const COOP_CALLBACK_URL = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/api/auth/callback/coop-api`
+const REFRESH_BEFORE_MS = 10 * 60 * 1000
+
+function decodeJwtPayload(token: string): { exp?: number } | null {
+  try {
+    const part = token.split(".")[1]
+    return JSON.parse(Buffer.from(part, "base64url").toString()) as {
+      exp?: number
+    }
+  } catch {
+    return null
+  }
+}
+
+async function refreshCoopToken(): Promise<string | null> {
+  const cookieStore = await cookies()
+  const coopSession = cookieStore.get("coop_session")?.value
+  if (!coopSession) return null
+
+  // Gateway authorize with the session cookie -> instant code, no Keycloak.
+  const authorize = await fetch(
+    `${COOP_API_URL}/api/auth/authorize?client_id=${encodeURIComponent(COOP_CLIENT_ID)}` +
+      `&redirect_uri=${encodeURIComponent(COOP_CALLBACK_URL)}&response_type=code` +
+      `&scope=openid%20profile%20email&state=refresh`,
+    { headers: { Cookie: `coop_session=${coopSession}` }, redirect: "manual" }
+  )
+  const location = authorize.headers.get("location") ?? ""
+  const code = new URL(location).searchParams.get("code")
+  if (!code) return null
+
+  const tokenRes = await fetch(`${COOP_API_URL}/api/auth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      client_id: COOP_CLIENT_ID,
+      client_secret: COOP_CLIENT_SECRET,
+      redirect_uri: COOP_CALLBACK_URL,
+      state: "refresh",
+    }),
+  })
+  if (!tokenRes.ok) return null
+  const data = (await tokenRes.json()) as { access_token?: string }
+  return data.access_token ?? null
 }
 
 export const authOptions: NextAuthOptions = {
@@ -95,6 +149,21 @@ export const authOptions: NextAuthOptions = {
         const coopProfile = profile as { name?: string; avatar?: string } | null
         if (coopProfile?.name) token.name = coopProfile.name
         if (coopProfile?.avatar) token.avatar = coopProfile.avatar
+      }
+
+      // Refresh the coop JWT before it expires — the fleet pattern: session
+      // cookie as anchor, renewable short-lived access token.
+      if (token.accessToken) {
+        const payload = decodeJwtPayload(token.accessToken)
+        const expMs = payload?.exp ? payload.exp * 1000 : 0
+        if (expMs && expMs - Date.now() < REFRESH_BEFORE_MS) {
+          try {
+            const fresh = await refreshCoopToken()
+            if (fresh) token.accessToken = fresh
+          } catch {
+            // Keep the stale token — API calls 401 and the user re-logs in.
+          }
+        }
       }
 
       return token
