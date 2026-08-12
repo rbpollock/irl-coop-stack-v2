@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
 import { verifyBearer } from "./verify-jwt";
-import { getAdminToken, setUserCanonicalEmail } from "./keycloak-admin";
+import { getAdminToken, getUserProfile, setUserCanonicalEmail } from "./keycloak-admin";
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{1,31}$/;
 const RESERVED = new Set([
@@ -10,6 +10,23 @@ const RESERVED = new Set([
 ]);
 
 export default async function usernameRoutes(fastify: FastifyInstance): Promise<void> {
+  // The caller's live canonical identity from Keycloak (the server truth —
+  // the NextAuth session email is a login-time snapshot that can lag the
+  // claimed @irl.coop address; the webmail gate reads THIS to decide whether
+  // the username claim is still needed).
+  fastify.get("/api/v1/me", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+
+    try {
+      const profile = await getUserProfile(claims.sub);
+      return reply.send({ email: profile.email ?? null, sub: claims.sub });
+    } catch (err) {
+      fastify.log.error({ err: (err as Error).message }, "identity lookup failed");
+      return reply.code(502).send({ error: "identity_lookup_failed" });
+    }
+  });
+
   // Claim the caller's canonical irl.coop username → their email becomes
   // <username>@irl.coop (the stalwart mailbox self-provisions on first auth
   // via the OIDC directory — the domain irl.coop already exists).

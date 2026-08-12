@@ -66,10 +66,10 @@ const KC_CALLBACK = `${env.baseUrl}/api/auth/keycloak/callback`;
 
 const COOKIE_NAME = "coop_session";
 
-// One-time authorization codes: code -> { jwt, clientId, redirectUri, state, expiresAt }
+// One-time authorization codes: code -> { jwt, clientId, redirectUri, state, nonce, expiresAt }
 const codes = new Map<
   string,
-  { jwt: string; clientId: string; redirectUri: string; state: string; expiresAt: number }
+  { jwt: string; clientId: string; redirectUri: string; state: string; nonce?: string; expiresAt: number }
 >();
 const CODE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -144,7 +144,12 @@ function mintCoopJwt(
       // Onboarded coop profile wins over the identity-provider name/avatar.
       name: profile?.displayName ?? claims.name ?? claims.preferred_username ?? null,
       avatar: profile?.avatar ?? claims.picture ?? null,
+      // Keycloak asserts this at the broker; the fleet apps (plane) hard-require it.
+      email_verified: claims.email_verified ?? true,
       status: "ONLINE",
+      // Standard OIDC scope claim — stalwart's OIDC directory requireScopes
+      // validates against this; real providers always carry it.
+      scope: "openid profile email",
     },
     privateKeyPem,
     {
@@ -216,7 +221,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
   //     No session -> bounce to Keycloak once; the callback sets the cookie.
   fastify.get("/api/auth/authorize", async (request, reply) => {
     const q = request.query as Record<string, string | undefined>;
-    const { client_id, redirect_uri, response_type, state, scope } = q;
+    const { client_id, redirect_uri, response_type, state, scope, nonce } = q;
     const app = client(client_id ?? "");
 
     if (!app || !app.redirects.includes(redirect_uri ?? "")) {
@@ -235,19 +240,25 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
         clientId: client_id!,
         redirectUri: redirect_uri!,
         state,
+        nonce,
         expiresAt: Date.now() + CODE_TTL_MS,
       });
       return reply.redirect(`${redirect_uri}?code=${code}&state=${encodeURIComponent(state)}`);
     }
 
-    const kcState = b64url(JSON.stringify({ n: state, r: redirect_uri, c: client_id }));
+    const kcState = b64url(JSON.stringify({ n: state, r: redirect_uri, c: client_id, o: nonce }));
+    // kc_idp_hint=google: Keycloak skips its own sign-in page and bounces
+    // straight to the Google broker (the realm's only interactive login).
+    // The browser sees full-kit → Google → back; Keycloak stays invisible
+    // as the identity anchor (realm users, broker, canonical email).
     const authorizeUrl =
       `${KC_AUTH_URL}?client_id=${encodeURIComponent(env.kcClientId)}` +
       `&redirect_uri=${encodeURIComponent(KC_CALLBACK)}` +
       `&response_type=code` +
       `&scope=${encodeURIComponent(scope ?? "openid profile email")}` +
       `&state=${encodeURIComponent(kcState)}` +
-      `&nonce=${crypto.randomUUID()}`;
+      `&nonce=${crypto.randomUUID()}` +
+      `&kc_idp_hint=google`;
     return reply.redirect(authorizeUrl);
   });
 
@@ -258,11 +269,13 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     let nextState = "";
     let nextRedirect = "";
     let nextClient = "";
+    let nextNonce: string | undefined;
     try {
       const baked = JSON.parse(Buffer.from(q.state ?? "", "base64url").toString());
       nextState = baked.n ?? "";
       nextRedirect = baked.r ?? "";
       nextClient = baked.c ?? "";
+      nextNonce = baked.o ?? undefined;
     } catch {
       return reply.code(400).send({ error: "invalid_request", error_description: "bad state" });
     }
@@ -288,7 +301,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       setSessionCookie(reply, sessionJwt, request);
 
       const code = crypto.randomUUID();
-      codes.set(code, { jwt: coopJwt, clientId: nextClient, redirectUri: nextRedirect, state: nextState, expiresAt: Date.now() + CODE_TTL_MS });
+      codes.set(code, { jwt: coopJwt, clientId: nextClient, redirectUri: nextRedirect, state: nextState, nonce: nextNonce, expiresAt: Date.now() + CODE_TTL_MS });
       return reply.redirect(`${nextRedirect}?code=${code}&state=${encodeURIComponent(nextState)}`);
     } catch (err: any) {
       request.log.error({ err: err.message }, "keycloak callback failed");
@@ -342,22 +355,45 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     codes.delete(body.code ?? ""); // single use
     const access: any = jwt.verify(entry.jwt, publicKeyPem, { algorithms: ["RS256"] });
     const now = Math.floor(Date.now() / 1000);
-    // id_token for openid-client-style consumers (NextAuth): HS256 with the
-    // client secret, iss/aud matching the provider config in next-auth.ts.
-    const idToken = jwt.sign(
-      {
-        iss: "coop-api",
-        sub: access.sub,
-        aud: clientId,
-        email: access.email,
-        name: access.name,
-        avatar: access.avatar,
-        iat: now,
-        exp: now + 3600,
-      },
-      app.secret,
-      { algorithm: "HS256" }
-    );
+    // id_token: proper OIDC shape for strict consumers (oauth2-proxy, Synapse
+    // — they validate iss against the DISCOVERED issuer and the signature via
+    // /jwks), HS256/iss:coop-api only for the NextAuth leg (its provider
+    // config declares issuer "coop-api" + id_token_signed_response_alg HS256).
+    const isNextAuth = clientId === "nextauth";
+    const nonce = entry.nonce;
+    const idToken = isNextAuth
+      ? jwt.sign(
+          {
+            iss: "coop-api",
+            sub: access.sub,
+            aud: clientId,
+            email: access.email,
+            name: access.name,
+            avatar: access.avatar,
+            nonce,
+            iat: now,
+            exp: now + 3600,
+          },
+          app.secret,
+          { algorithm: "HS256" }
+        )
+      : jwt.sign(
+          {
+            iss: env.oidcIssuer,
+            sub: access.sub,
+            aud: clientId,
+            azp: clientId,
+            email: access.email,
+            email_verified: access.email_verified ?? true,
+            name: access.name,
+            avatar: access.avatar,
+            nonce,
+            iat: now,
+            exp: now + 3600,
+          },
+          privateKeyPem,
+          { algorithm: "RS256", keyid: kid }
+        );
     return reply.send({
       access_token: entry.jwt,
       id_token: idToken,
@@ -380,6 +416,9 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
         email: decoded.email,
         name: decoded.name,
         avatar: decoded.avatar,
+        // Plane reads `picture` for the avatar; coop emits `avatar` — expose both.
+        picture: decoded.avatar ?? null,
+        email_verified: decoded.email_verified ?? true,
         status: decoded.status ?? "ONLINE",
       });
     } catch {

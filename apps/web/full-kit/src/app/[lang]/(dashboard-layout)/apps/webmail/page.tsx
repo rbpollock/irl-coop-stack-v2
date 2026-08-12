@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 
 import { ExternalLink, Mail } from "lucide-react"
@@ -24,9 +24,40 @@ export default function WebmailPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [claimed, setClaimed] = useState(false)
+  // Live canonical email from coop-api — the server truth. The NextAuth
+  // session email is a login-time snapshot that lags a just-claimed
+  // username (and a fresh login may not have happened yet), so the gate
+  // must not rely on it. null = still loading.
+  const [canonicalEmail, setCanonicalEmail] = useState<string | null | undefined>(undefined)
 
   const email = session?.user?.email ?? ""
-  const needsUsername = !claimed && !!email && !email.endsWith("@irl.coop")
+  const needsUsername =
+    !claimed &&
+    canonicalEmail !== undefined &&
+    !!email &&
+    !canonicalEmail?.endsWith("@irl.coop")
+
+  // Resolve the canonical identity once the session is ready.
+  const accessToken = session?.accessToken
+  useEffect(() => {
+    if (!accessToken || canonicalEmail !== undefined) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`${COOP_API_URL}/api/v1/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+        if (!res.ok) return
+        const me = (await res.json()) as { email: string | null }
+        if (!cancelled) setCanonicalEmail(me.email)
+      } catch {
+        /* keep the gate closed on network errors — webmail is still reachable */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, canonicalEmail])
 
   if (status === "loading") return null
   if (status === "unauthenticated") return null
@@ -50,9 +81,9 @@ export default function WebmailPage() {
         setError(body?.error === "username_taken" ? "That username is taken." : `Failed (${res.status})`)
         return
       }
-      // The Keycloak email is set — the roundcube OAuth exchange will mint a
-      // token with it, so the iframe works immediately (no session reload
-      // needed; the full-kit session refreshes on the next login).
+      // The Keycloak email is set — reflect it immediately so the gate
+      // closes on this visit (and on every future one, via /api/v1/me).
+      setCanonicalEmail(`${username.trim()}@irl.coop`)
       setClaimed(true)
     } catch (err) {
       setError((err as Error).message ?? "Failed to claim username")

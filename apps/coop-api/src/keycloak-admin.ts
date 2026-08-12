@@ -51,6 +51,13 @@ export async function checkEmailAvailable(email: string): Promise<"available" | 
   return users.length > 0 ? "taken" : "available";
 }
 
+/** Fetch the user's Keycloak profile (live canonical email etc.). */
+export async function getUserProfile(sub: string): Promise<{ email?: string | null }> {
+  const resp = await admin(`/users/${sub}`);
+  if (!resp.ok) throw new Error(`keycloak user lookup failed: ${resp.status}`);
+  return (await resp.json()) as { email?: string | null };
+}
+
 /**
  * Set the canonical email for the user identified by `sub`.
  * Returns "taken" when the address is owned by another user, "updated" on
@@ -67,9 +74,7 @@ export async function setUserCanonicalEmail(
   const holders = (await existing.json()) as { id: string }[];
   if (holders.length > 0 && holders[0].id !== sub) return "taken";
 
-  const me = await admin(`/users/${sub}`);
-  if (!me.ok) throw new Error(`keycloak user lookup failed: ${me.status}`);
-  const profile = (await me.json()) as { email?: string | null };
+  const profile = await getUserProfile(sub);
   if (profile.email === email) return "unchanged";
 
   // Note: the previous provider address (gmail etc.) stays preserved via the

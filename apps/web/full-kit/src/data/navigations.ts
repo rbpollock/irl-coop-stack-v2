@@ -31,6 +31,11 @@ export const navigationsData: NavigationType[] = [
         href: "/apps/webmail",
         iconName: "Mail",
       },
+      {
+        title: "Documents",
+        href: "/apps/docs",
+        iconName: "FileText",
+      },
     ],
   },
   {
