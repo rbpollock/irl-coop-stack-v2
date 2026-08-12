@@ -3,7 +3,8 @@
 This file is the agent-facing context for working on the irl.coop v2 sovereign
 stack: Safe-as-everything accounts, one Keycloak identity realm, federated core
 services, declarative deployment. Read STATUS.md for the live status of each
-pillar.
+pillar, and `docs/design/infra-management-monitoring.md` for the full
+management/monitoring model (declared-vs-running, bring-up, status surfaces).
 
 ## Architecture in one screen
 
