@@ -136,12 +136,18 @@ reconcile by applying its generated compose when touching it.
 
 ## Mail pillar — LIVE (webmail deployed 2026-08-09)
 
-- Stalwart v0.16, container `stalwart16`, webadmin :8083; postgres store
-  (23 tables in citus); internal directory; permanent admin `admin@irl.coop`
-  (password auth dead since the OIDC default-directory switch — webadmin login
-  is the recovery admin `admin` + `/tmp/stalwart-recovery-admin-pw`, via the
-  `STALWART_RECOVERY_ADMIN` env; container must run `-p 8083:8080` +
-  `--add-host localhost:172.17.0.1`).
+- Stalwart v0.16, container `communication-stalwart-1` (GENERATED — old
+  `stalwart16` bootstrap removed 2026-08-12), webadmin :8083; postgres store
+  (23 tables in citus); internal directory; permanent admin `admin@irl.coop`.
+  Webadmin login = recovery admin `admin` + derived `stalwart.recovery-admin`
+  (secrets.env; container env `STALWART_RECOVERY_ADMIN`), via the
+  `STALWART_RECOVERY_ADMIN` env; container runs `-p 8083:8080` +
+  `--add-host localhost:172.17.0.1`.
+- **Store config reconstruction (2026-08-12)**: the old /tmp config.json was
+  wiped; the citus store survived, so only the connection file was rebuilt —
+  root `@type: PostgreSql` + tagged authSecret (schema from v0.16 source;
+  full recipe in the skill reference). `postgres.stalwart` now declared in
+  the spec so secrets.env carries POSTGRES_STALWART.
 - **Blob store: S3 → MinIO** (DONE 2026-08-08): bucket `stalwart`, endpoint
   http://172.17.0.1:9000, region us-east-1, access key stalwart-s3 (scoped
   bucket policy) — set via x:BlobStore/set (registry singleton).

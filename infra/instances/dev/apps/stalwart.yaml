@@ -15,6 +15,15 @@ ports:
   - "993:993"
 env:
   STALWART_PUBLIC_URL: https://mail.${DOMAIN}
+  # recovery admin (webadmin login that survives account rotations) — the
+  # value is derived; the compose carries it via out/ (gitignored)
+  STALWART_RECOVERY_ADMIN: admin:${SECRET:stalwart.recovery-admin}
+  # the data store (citus) password — referenced here so the generator emits
+  # POSTGRES_STALWART into secrets.env; the store config.json at
+  # infra/instances/dev/data/stalwart/etc/config.json uses this derived value
+  # (its @type: PostgreSql schema is read from the v0.16 source)
+  POSTGRES_STALWART: ${SECRET:postgres.stalwart}
+restart: unless-stopped
 extra_hosts:
   - "localhost:172.17.0.1"
 volumes:
