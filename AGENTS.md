@@ -119,6 +119,14 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
   with the manage-users/view-users role objects. Verify through the edge
   (`https://auth.irl.coop/admin/realms/irl-coop/users/...` — NOT localhost,
   the issuer is the edge host).
+- **Coop JWT email is minted from the LIVE Keycloak profile** at the
+  instant-code authorize (getUserProfile merged over the local onboarding
+  store) — login-time claims can lag the canonical-email claim, and the old
+  behavior leaked the broker idp email (gmail.com) into fleet JWTs, so
+  roundcube IMAP-authed to stalwart as `<gmail>` and got
+  `AUTHENTICATIONFAILED` (no such domain in the OIDC directory). Stale
+  sessions self-heal on the next authorize; the mailbox self-provisions on
+  first auth with the canonical address.
 - `type: source` apps (plane) ship their own compose; the generator only emits their OIDC client, env block and data-scoping views.
 - Generated-vs-running drift: the edge (traefik) runs generated `out/` (dynamic.yml + instance-tree certs mounted); some containers (stalwart16) were bootstrapped from scratch compose at `/tmp/stalwart16` before the pipeline existed. When touching a drifted pillar, reconcile by applying its generated compose.
 - Stalwart-internal config (datastore, blob store, OIDC directory, accounts) is stored in its postgres DB and managed via the webadmin/admin API — the declarative layer only deploys the container/ports/env/edge.
