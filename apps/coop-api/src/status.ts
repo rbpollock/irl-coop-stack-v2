@@ -35,6 +35,7 @@ type ContainerInfo = {
   project: string;
   service: string;
   configFiles: string[];
+  command: string;
 };
 
 function loadYaml(p: string): any {
@@ -144,6 +145,7 @@ function dockerContainers(): Promise<ContainerInfo[]> {
                 .split(",")
                 .map((s) => s.trim())
                 .filter(Boolean),
+              command: String(j.Command ?? ""),
             });
           } catch {
             /* skip malformed line */
@@ -227,6 +229,17 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
     const totalUp = pillars.reduce((n, p) => n + p.up, 0);
     const healthy = containers.filter((c) => c.health === "healthy").length;
 
+    // Ephemeral browser-runner instances (the fleet's execution units).
+    const runners = containers
+      .filter((c) => c.image.includes("browser-runner"))
+      .map((c) => ({
+        name: c.name,
+        state: c.state,
+        status: c.status,
+        scenario: (c.command.match(/e2e\/([a-z0-9-]+)\.mjs/) ?? [])[1] ?? null,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     return reply.send({
       generated_at: new Date().toISOString(),
       stack_root: STACK_ROOT,
@@ -237,6 +250,11 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
         down: totalDeclared - totalUp,
         healthy,
         orphans: orphans.length,
+      },
+      browser_runners: {
+        active: runners.filter((r) => r.state === "running").length,
+        total: runners.length,
+        instances: runners,
       },
       pillars,
       orphans,

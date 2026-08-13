@@ -77,6 +77,8 @@ try {
   console.log(`  (cookies: ${cookies.map((c) => c.name).join(",") || "none"} | url: ${page.url()})`)
   check("passkey login lands on the dashboard", page.url().startsWith(BASE) && !page.url().includes("sign-in"))
   check("session cookie set", cookies.some((c) => c.name.includes("session-token")))
+  await page.waitForSelector("text=Browser runners", { timeout: 20000 })
+  check("browser runners panel on the home page", true)
 
   // --- 2. the files flow ---
   await page.goto(`${BASE}/en/apps/docs`, { waitUntil: "domcontentloaded" })
