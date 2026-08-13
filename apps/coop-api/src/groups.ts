@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { randomBytes } from "node:crypto";
 import { ethers } from "ethers";
 import { verifyBearer } from "./verify-jwt";
 import { deploySafe } from "./safe";
@@ -21,13 +22,12 @@ function safeEnv(): { factory: string; singleton: string; backendKey: string } |
   return factory && singleton && backendKey ? { factory, singleton, backendKey } : null;
 }
 
-// Deterministic, uncorrelatable salt for the member when none is supplied:
-// the realm sub is a UUID — strip hyphens and read as hex (same rule the
-// dashboard Group Wallet uses to predict the address).
-function saltFor(sub: string): bigint {
-  const hex = sub.replace(/-/g, "");
-  const n = BigInt("0x" + hex);
-  return n > 0n ? n : 1n;
+// Groups get a UNIQUE salt (random), unlike the personal account Safe whose
+// salt is deterministic (sub-derived) so its address is predictable pre-deploy.
+// A deterministic default here would make every "create group" collide on the
+// same CREATE2 address after the first deploy.
+function freshSalt(): bigint {
+  return BigInt("0x" + randomBytes(32).toString("hex"));
 }
 
 async function isOwner(groupId: string, sub: string): Promise<boolean> {
@@ -64,7 +64,7 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
       saltNonce =
         typeof body.saltNonce === "string" && body.saltNonce
           ? BigInt(body.saltNonce)
-          : saltFor(claims.sub);
+          : freshSalt();
     } catch {
       return reply.code(400).send({ error: "saltNonce out of range" });
     }
