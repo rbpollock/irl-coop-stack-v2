@@ -1,6 +1,6 @@
 # Group Scoping & Privacy Tiers — Spec
 
-Status: design · Aug 2026. Companion to world-doc-and-contacts.md and
+Status: implemented (first slice) · Aug 2026. Companion to world-doc-and-contacts.md and
 world-doc-virtual-workspace.md. Builds on the on-chain Safe-as-everything model
 (account-and-key-model.md).
 
