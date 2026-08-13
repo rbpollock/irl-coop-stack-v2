@@ -1,6 +1,6 @@
 # STATUS.md — irl.coop v2 infrastructure status
 
-Last updated: 2026-08-10 (code-exchange round: per-client id_token iss/alg + nonce echo in coop-api; nocodb PWA behind the gate — skip-auth-route + image 2026.08.2; matrix + nocodb browser E2E green).
+Last updated: 2026-08-13 — passkey auth live (KC 25.0.6 + browser-passkey flow + sign-in button), browser-runner image + files-flow E2E 8/8, browser-runners summary on the home page. Session handoff: `docs/design/handoff-2026-08-13.md` (state, blockers, pending decisions, next steps).
 
 ## Configuration flow — how to add an app (START HERE)
 
