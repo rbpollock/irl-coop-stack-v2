@@ -24,6 +24,24 @@ warn() { printf '  \033[33mWARN\033[0m %s\n' "$*"; }
 
 command -v docker >/dev/null || { fail "docker not found"; exit 1; }
 
+# Check and build missing custom images before bringing up pillars
+missing_images=0
+for img in "irlcoop/element-web:v1.12.18" "irlcoop/synapse-s3:v1.118.0" "irlcoop/postgres-citus:12.1-vector" "irlcoop/browser-runner:latest"; do
+  if ! docker image inspect "$img" >/dev/null 2>&1; then
+    missing_images=1
+    break
+  fi
+done
+
+if [ "$missing_images" = "1" ]; then
+  say "Detected missing custom images. Building them first..."
+  if [ -f "$ROOT/infra/scripts/build-images.sh" ]; then
+    bash "$ROOT/infra/scripts/build-images.sh"
+  else
+    fail "build-images.sh not found under $ROOT/infra/scripts/"
+  fi
+fi
+
 # 1. Generated pillar composes (proxy, authentication, storage, cache, ...)
 for pillar_dir in "$OUT"/compose/*/; do
   [ -d "$pillar_dir" ] || continue
