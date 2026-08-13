@@ -267,6 +267,23 @@ def emit_secrets_env(instance, inst_dir, master_hex, out_dir):
     (out_dir / "secrets.env").write_text("\n".join(lines) + "\n")
 
 
+def emit_matrix_config(inst_dir, out_dir, master_hex, domain):
+    """Generate homeserver.yaml from homeserver.yaml.template substituting derived secrets."""
+    template_path = inst_dir / "config" / "matrix" / "homeserver.yaml.template"
+    if not template_path.exists():
+        return
+    content = template_path.read_text()
+    import re
+    def repl(m):
+        sec_name = m.group(1)
+        return derived_secrets.derive(sec_name, master_hex, domain)
+    content = re.sub(r"\$\{SECRET:([a-zA-Z0-9._-]+)\}", repl, content)
+    
+    dest_dir = out_dir / "config" / "matrix"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    (dest_dir / "homeserver.yaml").write_text(content)
+
+
 def main():
     if len(sys.argv) < 2:
         print("usage: generator.py <instance>"); sys.exit(1)
@@ -311,6 +328,7 @@ def main():
     emit_proxy(instance, apps, out)
     emit_ansible_edge(instance, inst_dir, out)
     emit_secrets_env(instance, inst_dir, master_hex, out)
+    emit_matrix_config(inst_dir, out, master_hex, instance["domain"])
 
     manifest = out / "MANIFEST.md"
     manifest.write_text(

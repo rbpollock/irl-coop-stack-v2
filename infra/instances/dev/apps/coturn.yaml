@@ -9,7 +9,7 @@ type: image
 image: coturn/coturn:latest
 # the image's entrypoint only searches the default config paths; pass the
 # mounted turnserver.conf explicitly
-command: ["-c", "/etc/coturn/turnserver.conf"]
+command: ["-c", "/etc/coturn/turnserver.conf", "--static-auth-secret=${SECRET:coturn.shared-secret}"]
 # host networking: the relay range (49152-65535/udp) is bound on-demand at
 # runtime — publishing the whole range through docker's port mapper collides
 # with host sockets. The TURN ports are direct (no edge proxy).

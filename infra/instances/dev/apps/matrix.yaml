@@ -25,15 +25,21 @@ env:
   SYNAPSE_POSTGRES_PORT: "5432"
   SYNAPSE_POSTGRES_DB: matrix
   SYNAPSE_POSTGRES_USER: matrix
+  SYNAPSE_POSTGRES_PASSWORD: ${SECRET:postgres.matrix}
   # shared MinIO media store — provisioned bucket `matrix-media`, user `matrix-s3`
   SYNAPSE_MEDIA_S3_BUCKET: matrix-media
   SYNAPSE_MEDIA_S3_ENDPOINT: http://172.17.0.1:9000
+  SYNAPSE_MEDIA_S3_SECRET: ${SECRET:minio.matrix-s3}
+  # OIDC client secret for Keycloak registration
+  SYNAPSE_OIDC_CLIENT_SECRET: ${SECRET:oidc.matrix}
+  # TURN shared secret for coturn REST auth
+  SYNAPSE_TURN_SHARED_SECRET: ${SECRET:coturn.shared-secret}
 volumes:
   - /opt/app/communication/data/matrix:/data
 dev:
   volumes:
     - ./data/matrix:/data
-    - ./config/matrix:/config:ro
+    - ./../../out/dev/config/matrix:/config:ro
 proxy:
   hostname: matrix.${DOMAIN}
   port: 8008

@@ -1,0 +1,76 @@
+# Synapse homeserver config — irl.coop private chat (federation disabled).
+# Generated for the dev instance; secrets live here (gitignored).
+server_name: "matrix.irl.coop"
+pid_file: /data/homeserver.pid
+report_stats: false
+# signing key generated at first start — /config is mounted read-only
+signing_key_path: /data/matrix.irl.coop.signing.key
+
+listeners:
+  - port: 8008
+    type: http
+    x_forwarded: true
+    bind_addresses: ["0.0.0.0"]
+    resources:
+      - names: [client]
+        compress: true
+# No federation listener: inbound federation is off by construction.
+
+database:
+  name: psycopg2
+  args:
+    user: matrix
+    password: "${SECRET:postgres.matrix}"
+    database: matrix
+    host: 172.17.0.1
+    port: 5432
+
+media_store_path: /data/media_store
+
+enable_registration: false
+enable_registration_without_verification: false
+enable_room_list_search: false
+trusted_key_servers: []
+federation_domain_whitelist: []
+url_preview_enabled: false
+
+# OIDC — the realm's `matrix` client. Localpart derives from the EMAIL claim
+# (the canonical @irl.coop), never the preferred_username — the Google broker
+# usernames contain '@' and would poison the localpart (the stalwart lesson).
+oidc_providers:
+  - idp_id: coop-gateway
+    idp_name: "irl.coop"
+    # the fleet session gateway — authorize answers instantly from the
+    # coop_session cookie (no Keycloak page when the dashboard session exists)
+    issuer: "https://api.irl.coop"
+    client_id: "matrix"
+    client_secret: "${SECRET:oidc.matrix}"
+    scopes: ["openid", "profile", "email"]
+    user_mapping_provider:
+      config:
+        subject_claim: "sub"
+        localpart_template: "{{ user.email.split('@')[0] }}"
+        display_name_template: "{{ user.name }}"
+        email_template: "{{ user.email }}"
+    discover: true
+
+# Media on the shared MinIO (bucket matrix-media, user matrix-s3).
+media_storage_providers:
+  - module: s3_storage_provider.S3StorageProviderBackend
+    store_local: true
+    store_synchronous: true
+    store_remote: true
+    config:
+      bucket: matrix-media
+      endpoint_url: http://172.17.0.1:9000
+      access_key_id: matrix-s3
+      secret_access_key: "${SECRET:minio.matrix-s3}"
+      region_name: us-east-1
+
+# TURN for Element Call (coturn, same pillar). REST-auth secret shared.
+turn_uris:
+  - "turn:64.135.141.73:3478?transport=udp"
+  - "turn:64.135.141.73:3478?transport=tcp"
+turn_shared_secret: "${SECRET:coturn.shared-secret}"
+turn_user_lifetime: 86400000
+turn_allow_guests: false
