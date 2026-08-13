@@ -142,6 +142,24 @@ export default function StackHealth() {
 
   const token = session?.accessToken as string | undefined
 
+  const runRunner = async (scenario: string) => {
+    if (!token) return
+    try {
+      const res = await fetch(`${COOP_API_URL}/api/v1/stack/browser/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ scenario }),
+      })
+      if (!res.ok) throw new Error(`Failed to start runner (${res.status})`)
+      refresh()
+    } catch (err) {
+      alert((err as Error).message)
+    }
+  }
+
   const refresh = useCallback(async () => {
     if (!token) return
     try {
@@ -173,13 +191,26 @@ export default function StackHealth() {
     <div className="grid grid-cols-1 gap-4 md:col-span-full">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Stack health</h3>
-        <button
-          onClick={refresh}
-          className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
-        >
-          <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="https://temporal.irl.coop"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent"
+          >
+            <Activity className="size-3.5 text-muted-foreground" />
+            Temporal Dashboard
+          </a>
+          <button
+            onClick={refresh}
+            className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent"
+          >
+            <RefreshCw
+              className={`size-3.5 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && !status && (
@@ -284,6 +315,20 @@ export default function StackHealth() {
                   No instances — the fleet spins them up on demand.
                 </p>
               )}
+              <div className="mt-3 flex gap-2 border-t pt-3">
+                <button
+                  onClick={() => runRunner("files-flow")}
+                  className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  Run files-flow
+                </button>
+                <button
+                  onClick={() => runRunner("linking-flow")}
+                  className="inline-flex items-center gap-1 rounded border bg-background px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                >
+                  Run linking-flow
+                </button>
+              </div>
             </div>
           )}
 

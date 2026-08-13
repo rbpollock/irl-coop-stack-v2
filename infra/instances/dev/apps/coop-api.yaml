@@ -24,3 +24,4 @@ env:
   DOCS_SIG: ${SECRET:docs.sig}
   # HMAC secret for the file-panel share tokens (variant B, files.sig).
   FILES_SIG: ${SECRET:files.sig}
+  E2E_PASSWORD: ${SECRET:keycloak.e2e-test}

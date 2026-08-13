@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { exec, execFile } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as yaml from "js-yaml";
@@ -236,7 +236,12 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
         name: c.name,
         state: c.state,
         status: c.status,
-        scenario: (c.command.match(/e2e\/([a-z0-9-]+)\.mjs/) ?? [])[1] ?? null,
+        scenario: (() => {
+          const m = c.command.match(/run\.js\s+([a-z0-9-]+)/) 
+            || c.command.match(/e2e\/([a-z0-9-]+)/) 
+            || c.command.match(/["']?([a-z0-9-]+-flow)["']?/i);
+          return m ? m[1] : null;
+        })(),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -259,5 +264,38 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
       pillars,
       orphans,
     });
+  });
+
+  // Trigger a browser runner execution
+  fastify.post("/api/v1/stack/browser/run", async (request, reply) => {
+    const session = verifyBearer(request, reply);
+    if (!session) return;
+    
+    const body = (request.body ?? {}) as { scenario?: string };
+    const scenario = body.scenario ?? "files-flow";
+    if (!["files-flow", "linking-flow"].includes(scenario)) {
+      return reply.code(400).send({ error: "invalid_request", error_description: "Unknown scenario" });
+    }
+
+    const containerName = `browser-runner-${scenario}-${Date.now()}`;
+    const e2eUser = "e2e-test@irl.coop";
+    const e2ePassword = process.env.E2E_PASSWORD ?? "";
+
+    // Launch the docker container in background (non-blocking)
+    const cmd = `docker run -d --rm --name "${containerName}" ` +
+                `-v /tmp:/tmp ` +
+                `-e "E2E_USER=${e2eUser}" ` +
+                `-e "E2E_PASSWORD=${e2ePassword}" ` +
+                `irlcoop/browser-runner node /app/runner/run.js ${scenario}`;
+
+    exec(cmd, (err, stdout, stderr) => {
+      if (err) {
+        request.log.error({ err: err.message, stderr }, "Failed to start browser-runner container");
+      } else {
+        request.log.info({ containerName, stdout: stdout.trim() }, "Started browser-runner container in background");
+      }
+    });
+
+    return reply.send({ success: true, container: containerName, scenario });
   });
 }
