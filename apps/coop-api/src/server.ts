@@ -1,11 +1,22 @@
-import 'dotenv/config'
+import * as dotenv from 'dotenv'
+import * as path from 'node:path'
 import Fastify from 'fastify'
+
+// .env first (hand-maintained local overrides), then the generator-emitted
+// derived secrets (declarative source of truth — coop-api is a host process,
+// so it sources out/<instance>/secrets.env itself, matching the coop-api.yaml
+// comment). dotenv.config() never overrides an already-set var, so .env wins
+// on collisions and secrets.env fills the gaps (e.g. POSTGRES_COOP).
+dotenv.config()
+dotenv.config({ path: path.resolve(process.cwd(), '../../infra/out/dev/secrets.env') })
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
 import formbody from '@fastify/formbody'
 import authRoutes from './auth'
 import onboardingRoutes from './onboarding'
 import safeRoutes from './safe'
+import groupRoutes from './groups'
+import { initDb } from './db'
 import usernameRoutes from './username'
 import docsRoutes from './docs'
 import filesRoutes from './files'
@@ -37,6 +48,7 @@ fastify.addContentTypeParser("application/octet-stream", (request, payload, done
 fastify.register(authRoutes)
 fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)
+fastify.register(groupRoutes)
 fastify.register(usernameRoutes)
 fastify.register(docsRoutes)
 fastify.register(filesRoutes)
@@ -44,6 +56,14 @@ fastify.register(statusRoutes)
 
 const start = async () => {
   try {
+    // Self-provision the group projection schema (non-fatal: the auth/status
+    // surface stays up even if the store is momentarily unreachable).
+    try {
+      await initDb()
+      fastify.log.info(`group store ready @ ${process.env.COOP_DB_HOST ?? '172.17.0.1'}/${process.env.COOP_DB_NAME ?? 'irlcoop'}`)
+    } catch (err) {
+      fastify.log.error({ err: (err as Error).message }, 'group store init failed — group endpoints will 500 until the DB is reachable')
+    }
     // Listen on all network interfaces (0.0.0.0) so localhost fetches work
     await fastify.listen({ port: Number(process.env.PORT ?? 3001), host: '0.0.0.0' })
     const issuer = process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8081/realms/irl-coop'
