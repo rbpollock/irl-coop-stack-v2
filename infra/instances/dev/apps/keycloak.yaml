@@ -2,7 +2,13 @@
 name: keycloak
 pillar: authentication
 type: image
-image: quay.io/keycloak/keycloak:24.0.4
+image: quay.io/keycloak/keycloak:25.0.6
+# 25.0.6 — REQUIRED for passkey login: the WebAuthn authenticator's
+# `authenticate()` gained the ID-less (null-user) guard in 25 (24.x NPEs on
+# the login-page GET; the conditional-user-configured condition still NPEs on
+# the webauthn's configuredFor in every version — the browser-passkey flow
+# therefore uses the FLAT webauthn execution, no condition; see
+# infra/scripts/kc-webauthn-config.py)
 command: start-dev
 ports:
   - "8081:8081"

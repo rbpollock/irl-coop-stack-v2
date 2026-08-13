@@ -258,10 +258,14 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     }
 
     const kcState = b64url(JSON.stringify({ n: state, r: redirect_uri, c: client_id, o: nonce }));
-    // kc_idp_hint=google: Keycloak skips its own sign-in page and bounces
-    // straight to the Google broker (the realm's only interactive login).
-    // The browser sees full-kit → Google → back; Keycloak stays invisible
-    // as the identity anchor (realm users, broker, canonical email).
+    // kc_idp_hint=google (default): Keycloak skips its own sign-in page and
+    // bounces straight to the Google broker (the realm's only interactive
+    // login). An EXPLICIT request param overrides the default: the passkey
+    // provider sends kc_idp_hint=passkey → no hint → the Keycloak
+    // WebAuthn passwordless form (username + the ceremony).
+    const hintParam = (request.query as Record<string, string | undefined>).kc_idp_hint;
+    // default = google; the explicit `passkey` value opts out
+    const kcHint = hintParam === "passkey" ? undefined : "google";
     const authorizeUrl =
       `${KC_AUTH_URL}?client_id=${encodeURIComponent(env.kcClientId)}` +
       `&redirect_uri=${encodeURIComponent(KC_CALLBACK)}` +
@@ -269,7 +273,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       `&scope=${encodeURIComponent(scope ?? "openid profile email")}` +
       `&state=${encodeURIComponent(kcState)}` +
       `&nonce=${crypto.randomUUID()}` +
-      `&kc_idp_hint=google`;
+      (kcHint ? `&kc_idp_hint=${kcHint}` : "");
     return reply.redirect(authorizeUrl);
   });
 

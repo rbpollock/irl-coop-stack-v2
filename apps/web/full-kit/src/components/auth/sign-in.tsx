@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
+import { Fingerprint } from "lucide-react"
 import { SiGoogle } from "react-icons/si"
 
 import type { DictionaryType } from "@/lib/get-dictionary"
@@ -67,13 +68,19 @@ export function SignIn({ dictionary }: { dictionary: DictionaryType }) {
             icon={SiGoogle}
           />
 
+          <SignInButton
+            provider="coop-api-passkey"
+            label="Sign in with a passkey"
+            icon={Fingerprint}
+          />
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                More options coming soon
+                No account? Sign in with Google to join
               </span>
             </div>
           </div>

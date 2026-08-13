@@ -124,6 +124,37 @@ export const authOptions: NextAuthOptions = {
         }
       },
     },
+    // Passkey login: the same coop-api client, but the authorize carries
+    // kc_idp_hint=passkey → the gateway omits the Google hint → Keycloak's
+    // WebAuthn passwordless form (username + the ceremony) instead of the
+    // Google broker.
+    {
+      id: "coop-api-passkey",
+      name: "irl.coop (passkey)",
+      type: "oauth",
+      issuer: "coop-api",
+      clientId: process.env.COOP_API_CLIENT_ID ?? "",
+      clientSecret: process.env.COOP_API_CLIENT_SECRET ?? "",
+      client: {
+        id_token_signed_response_alg: "HS256",
+      },
+      allowDangerousEmailAccountLinking: true,
+      authorization: {
+        url: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/authorize`,
+        params: { scope: "openid profile email", kc_idp_hint: "passkey" },
+      },
+      token: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/token`,
+      userinfo: `${process.env.COOP_API_URL ?? "http://localhost:3001"}/api/auth/userinfo`,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          avatar: profile.avatar,
+          status: "ONLINE",
+        }
+      },
+    },
   ],
   pages: {
     signIn: "/sign-in",

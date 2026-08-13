@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
-"""Configure Keycloak WebAuthn Passwordless for the irl-coop realm.
+"""Configure Keycloak WebAuthn passwordless for the irl-coop realm (25.0.6).
 
-Creates the WebAuthn Passwordless flow (username form -> WebAuthn passwordless
-authenticator), makes it the realm's browser flow, and sets the passwordless
-RP policy (rpId auth.irl.coop). The Google kc_idp_hint path is unaffected
-(the hint redirects before any form). Idempotent.
+Recipe (all the quirks learned the hard way — do not "simplify"):
+  1. The realm's browser flow = `browser-passkey`, a COPY of the built-in
+     browser flow (preserves the cookie/redirector/forms/OTP structure).
+  2. A FLAT `webauthn-authenticator-passwordless` execution (ALTERNATIVE)
+     raised to the top of the flow — NO conditional subflow, NO condition.
+     Why: the conditional-user-configured condition calls the webauthn's
+     configuredFor with a null user on the login-page GET and NPEs in EVERY
+     Keycloak version (24.0.4 → 26). The flat execution works because the
+     25+ authenticate() has the ID-less null-user guard: it sets the
+     challenge attributes and lets the form's challenge render the page.
+  3. The passwordless RP policy: rpId auth.irl.coop, ES256.
+  4. Enrollment: set the `webauthn-register-passwordless` required action on
+     a user; their first password login shows the registration ceremony.
+  The google kc_idp_hint path is preserved (the copied flow's redirector).
+Idempotent.
 """
-import hashlib
 import hmac as hm
 import json
 import urllib.error
 import urllib.parse
 import urllib.request
 
-FLOW_ALIAS = "webauthn-passwordless"
+NEW_FLOW = "browser-passkey"
 
 master = open("/home/service/development/irl-coop-stack-v2/infra/instances/dev/secrets/master.key").read().strip()
 
@@ -52,7 +62,7 @@ def api(method, url, tok, body=None):
         return resp.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as e:
         raw = e.read()
-        return e.code, (json.loads(raw) if raw else None)
+        return e.code, (json.loads(raw) if raw else {})
 
 
 def main():
@@ -62,55 +72,47 @@ def main():
     at = b["access_token"]
     AB = "http://localhost:8081/admin/realms/irl-coop"
 
-    # 1. the flow (idempotent: delete any stale one first)
+    # 1. fresh copy of the built-in browser flow
+    s, realm = api("GET", f"{AB}", at)
+    realm["browserFlow"] = "browser"
+    api("PUT", f"{AB}", at, realm)
     s, flows = api("GET", f"{AB}/authentication/flows", at)
     for f in flows:
-        if f.get("alias") == FLOW_ALIAS and not f.get("builtIn"):
+        if f.get("alias") == NEW_FLOW and not f.get("builtIn"):
             api("DELETE", f"{AB}/authentication/flows/{f['id']}", at)
-    s, _ = api("POST", f"{AB}/authentication/flows", at,
-               {"alias": FLOW_ALIAS, "providerId": "basic-flow",
-                "description": "irl.coop passkey login (WebAuthn passwordless)", "topLevel": True})
-    print("flow created:", s)
+    api("POST", f"{AB}/authentication/flows/browser/copy", at, {"newName": NEW_FLOW})
 
-    # 2. the executions: username form, then the WebAuthn passwordless step
-    for provider in ("auth-username-form", "webauthn-authenticator-passwordless"):
-        s, _ = api("POST", f"{AB}/authentication/flows/{FLOW_ALIAS}/executions/execution", at,
-                   {"provider": provider})
-        print(f"execution {provider}:", s)
-
-    # 3. set the webauthn execution to REQUIRED
-    s, execs = api("GET", f"{AB}/authentication/flows/{FLOW_ALIAS}/executions", at)
+    # 2. flat webauthn execution (ALTERNATIVE), raised to the top
+    api("POST", f"{AB}/authentication/flows/{NEW_FLOW}/executions/execution", at,
+        {"provider": "webauthn-authenticator-passwordless"})
+    s, execs = api("GET", f"{AB}/authentication/flows/{NEW_FLOW}/executions", at)
     for ex in execs:
-        if ex.get("providerId") == "webauthn-authenticator-passwordless":
-            s, _ = api("PUT", f"{AB}/authentication/flows/{FLOW_ALIAS}/executions", at,
-                       {"id": ex["id"], "requirement": "REQUIRED",
-                        "displayName": ex.get("displayName"), "alias": ex.get("alias"),
-                        "providerId": ex.get("providerId"), "authenticationFlow": ex.get("authenticationFlow")})
-            print("webauthn execution -> REQUIRED:", s)
+        if ex.get("providerId") == "webauthn-authenticator-passwordless" and not ex.get("authenticationFlow"):
+            api("PUT", f"{AB}/authentication/flows/{NEW_FLOW}/executions", at,
+                {"id": ex["id"], "requirement": "ALTERNATIVE", "displayName": ex.get("displayName"),
+                 "alias": ex.get("alias"), "providerId": ex.get("providerId"),
+                 "authenticationFlow": ex.get("authenticationFlow")})
+            for _ in range(4):
+                s2, _ = api("POST", f"{AB}/authentication/flows/{NEW_FLOW}/executions/{ex['id']}/raise", at)
+                if s2 == 404:
+                    break
 
-    # 4. make it the realm's browser flow
-    s, realm = api("GET", f"{AB}", at)
-    realm["browserFlow"] = FLOW_ALIAS
-    s, _ = api("PUT", f"{AB}", at, realm)
-    print("browserFlow set:", s)
-
-    # 5. the passwordless RP policy (rpId = the Keycloak host)
+    # 3. passwordless RP policy
     s, realm = api("GET", f"{AB}", at)
     realm["webAuthnPolicyPasswordlessRpEntityName"] = "irl.coop"
     realm["webAuthnPolicyPasswordlessRpId"] = "auth.irl.coop"
     realm["webAuthnPolicyPasswordlessSignatureAlgorithms"] = ["ES256"]
-    s, _ = api("PUT", f"{AB}", at, realm)
-    print("passwordless policy set:", s)
+    api("PUT", f"{AB}", at, realm)
 
-    # verify
+    # 4. wire it as the browser flow + report
     s, realm = api("GET", f"{AB}", at)
-    print("browserFlow now:", realm.get("browserFlow"))
-    print("rpId now:", realm.get("webAuthnPolicyPasswordlessRpId"))
-    s, flows = api("GET", f"{AB}/authentication/flows", at)
-    for f in flows:
-        if f.get("alias") == FLOW_ALIAS:
-            s, execs = api("GET", f"{AB}/authentication/flows/{FLOW_ALIAS}/executions", at)
-            print("executions:", [(e.get("providerId"), e.get("requirement")) for e in execs])
+    realm["browserFlow"] = NEW_FLOW
+    api("PUT", f"{AB}", at, realm)
+    print("browserFlow ->", NEW_FLOW)
+    s, execs = api("GET", f"{AB}/authentication/flows/{NEW_FLOW}/executions", at)
+    for e in execs:
+        pid = e.get("providerId") or e.get("displayName")
+        print("  ", pid, e.get("requirement"))
 
 
 if __name__ == "__main__":
