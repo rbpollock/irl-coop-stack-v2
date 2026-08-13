@@ -22,6 +22,7 @@ apps:
   - roundcube
   - cryptpad
   - temporal
+  - temporal-ui
   - formbricks
   - webstudio
   - postiz

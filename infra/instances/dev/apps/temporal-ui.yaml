@@ -1,0 +1,17 @@
+# Temporal Web UI — the workflow observability panel (workflow pillar).
+# Exposed at temporal.irl.coop via the edge; auth = the fleet gate (the UI
+# itself has none — it reads the Temporal API, which is internal-only).
+name: temporal-ui
+pillar: workflow
+type: image
+image: temporalio/ui:2.29.1
+ports:
+  - "8092:8080"
+env:
+  TEMPORAL_ADDRESS: temporal:7233
+  TEMPORAL_PUBLIC_PATH: /
+  TEMPORAL_CORS_ORIGINS: https://${DOMAIN}
+proxy:
+  - hostname: temporal.${DOMAIN}
+    port: 8092
+    description: Temporal Web UI (workflow observability)

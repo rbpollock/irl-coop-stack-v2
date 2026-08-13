@@ -1,10 +1,24 @@
-# Temporal — durable workflows (workflow pillar).
+# Temporal — durable workflows (workflow pillar). The auto-setup image IS the
+# server: its entrypoint applies the postgres schema, registers the default
+# namespace, then execs the server. Multi-tenant: the namespace is the tenant
+# boundary — `coop` is the fleet default; group Safes get their own namespace
+# (registered on group creation). State = the shared Citus on the docker
+# bridge (172.17.0.1), role/db `temporal` (CREATEDB so the setup can create
+# the temporal + temporal_visibility databases), password derived.
 name: temporal
 pillar: workflow
 type: image
-image: temporalio/server:1.24.0
+image: temporalio/auto-setup:1.24.0
 env:
-  DB: postgresql
-  POSTGRES_USER: ${POSTGRES_USER}
+  # 1.24-era driver name is postgres12 (the image's config template branches
+  # on `postgres12`/`postgres12_pgx` — `postgresql` renders no datastore)
+  DB: postgres12
+  POSTGRES_USER: temporal
   POSTGRES_PWD: ${SECRET:postgres.temporal}
-  POSTGRES_SEEDS: postgres   # connect to Citus (storage pillar, shared network)
+  POSTGRES_SEEDS: 172.17.0.1
+  DB_PORT: "5432"
+  # the fleet default namespace — registered as the DEFAULT namespace by the
+  # setup (DEFAULT_NAMESPACE, not TEMPORAL_NAMESPACE: the latter leaks into
+  # the CLI's -n flag and collides with the positional name). Per-group
+  # namespaces are registered on group creation (the tenant boundary).
+  DEFAULT_NAMESPACE: coop
