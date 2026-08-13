@@ -123,14 +123,21 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
     }
     try {
       const saltNonce = parseSaltNonce((request.body as any)?.saltNonce);
-      return reply.send({
-        safeAddress: predictSafeAddress({
-          factory: env.factory,
-          singleton: env.singleton,
-          initializer: defaultInitializer(),
-          saltNonce,
-        }),
+      const safeAddress = predictSafeAddress({
+        factory: env.factory,
+        singleton: env.singleton,
+        initializer: defaultInitializer(),
+        saltNonce,
       });
+      const provider = new ethers.JsonRpcProvider(env.rpcUrl);
+      let deployed = false;
+      try {
+        const code = await provider.getCode(safeAddress);
+        deployed = code !== "0x";
+      } catch {
+        /* fallback to false on provider/connection error */
+      }
+      return reply.send({ safeAddress, deployed });
     } catch (err: any) {
       return reply.code(400).send({ error: err.message });
     }
