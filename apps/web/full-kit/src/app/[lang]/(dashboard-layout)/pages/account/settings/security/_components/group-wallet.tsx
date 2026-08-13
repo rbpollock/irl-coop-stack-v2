@@ -23,7 +23,7 @@ import {
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 
-export function SafeWallet() {
+export function GroupWallet() {
   const { data: session } = useSession()
   const [safeAddress, setSafeAddress] = useState<string | null>(null)
   const [deployed, setDeployed] = useState<boolean | null>(null)
@@ -106,7 +106,7 @@ export function SafeWallet() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-4 w-4" />
-          Cooperative Safe Wallet
+          Cooperative Group Wallet
         </CardTitle>
         <CardDescription>
           Your sovereign smart contract account on the Base-native node.
@@ -116,7 +116,7 @@ export function SafeWallet() {
         {loading && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <RefreshCw className="h-3 w-3 animate-spin" />
-            Calculating predicted Safe address...
+            Calculating predicted Group address...
           </div>
         )}
 
@@ -124,7 +124,7 @@ export function SafeWallet() {
           <div className="space-y-4">
             <div>
               <div className="text-xs font-medium text-muted-foreground">
-                Safe Account Address
+                Group Account Address
               </div>
               <div className="mt-1.5 flex items-center gap-2">
                 <code className="rounded bg-muted px-2 py-1 text-xs font-mono">
@@ -173,10 +173,10 @@ export function SafeWallet() {
                   {deploying ? (
                     <>
                       <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" />
-                      Deploying Safe...
+                      Deploying Group Account...
                     </>
                   ) : (
-                    "Deploy Safe"
+                    "Deploy Group Account"
                   )}
                 </Button>
               </div>
@@ -184,7 +184,9 @@ export function SafeWallet() {
 
             {txHash && (
               <div className="rounded border border-emerald-300/30 bg-emerald-500/5 p-3 text-xs text-emerald-800">
-                <p className="font-semibold">Safe Deployed successfully!</p>
+                <p className="font-semibold">
+                  Group Account Deployed successfully!
+                </p>
                 <p className="mt-1 font-mono">Tx Hash: {txHash}</p>
               </div>
             )}

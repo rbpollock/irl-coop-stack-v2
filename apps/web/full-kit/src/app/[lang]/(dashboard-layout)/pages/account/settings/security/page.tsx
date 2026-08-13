@@ -4,9 +4,9 @@ import { userData } from "@/data/user"
 
 import { AccountRecoveryOptions } from "./_components/account-recovery-options"
 import { ChangePassword } from "./_components/change-password"
+import { GroupWallet } from "./_components/group-wallet"
 import { Passkeys } from "./_components/passkeys"
 import { RecentLogs } from "./_components/recent-logs"
-import { SafeWallet } from "./_components/safe-wallet"
 import { SecurityPreferences } from "./_components/security-preferences"
 
 // Define metadata for the page
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function SecurityPage() {
   return (
     <div className="grid gap-4">
-      <SafeWallet />
+      <GroupWallet />
       <Passkeys />
       <ChangePassword />
       <SecurityPreferences user={userData} />

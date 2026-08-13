@@ -30,7 +30,7 @@ const APPS = [
     title: "Dashboard",
     url: "https://irl.coop",
     description:
-      "Your coop's home. Members, safes, shard nodes, and every app in one place.",
+      "Your coop's home. Members, groups, shard nodes, and every app in one place.",
   },
   {
     icon: FolderKanban,
