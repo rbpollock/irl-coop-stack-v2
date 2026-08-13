@@ -179,6 +179,25 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
     return reply.code(201).send({ ok: true });
   });
 
+  // --- Remove an object from a folder (pointer only — the object stays put).
+  fastify.delete("/api/v1/files/folders/:id/members", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    const id = (request.params as any).id as string;
+    const q = request.query as Record<string, string>;
+    const key = typeof q.key === "string" ? q.key : "";
+    const source = typeof q.source === "string" ? q.source : "docs";
+    if (!key) return reply.code(400).send({ error: "key is required" });
+    const store = storeFor(claims.sub);
+    store.members = store.members.filter(
+      (m) => !(m.folderId === id && m.key === key && m.source === source),
+    );
+    const all = loadStore();
+    all[claims.sub] = store;
+    saveStore(all);
+    return reply.send({ ok: true });
+  });
+
   // --- Share: mint a variant-B relay token for one object.
   fastify.post("/api/v1/files/:source/:key/share", async (request, reply) => {
     const claims = verifyBearer(request, reply);

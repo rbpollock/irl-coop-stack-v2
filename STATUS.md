@@ -100,6 +100,17 @@ reconcile by applying its generated compose when touching it.
   NEXTAUTH_URL, COOP_API_URL, NEXT_PUBLIC_COOP_API_URL → api.irl.coop).
 - coop-api (https://api.irl.coop, :3001, host dev; canonical issuer +
   ALLOWED_REDIRECTS; edge route live).
+- **Docs / Files panel** (/apps/docs in the dashboard): MinIO-backed
+  OnlyOffice documents (create/upload/edit inline via the embedded editor,
+  share = variant-B relay tokens). Files-panel Phase 1 backend LIVE:
+  `/api/v1/files` (aggregated listing), virtual-folder registry
+  (folders/members — pointers only, objects stay put; create/delete/add/
+  remove), share mint + stream, content stream. Verified 15/15 live
+  2026-08-12. Design: docs/design/files-panel.md (Phases 2-4 = mail/chat/
+  plane joins, then group folders). NOTE: coop-api .env must carry the
+  derived MINIO_* + DOCS_SIG/FILES_SIG/ONLYOFFICE_JWT_SECRET vars (spec:
+  apps/coop-api.yaml) — they were missing 2026-08-12 and docs S3 ops fell
+  back to wrong creds (502 storage_unavailable / share 403).
 - Plane CE (https://plane.irl.coop, :3002 via Caddy — migrated from
   app.irl.coop 2026-08-12): web/admin/space/live images rebuilt with canonical
   VITE_* args; api runtime APP/ADMIN/SPACE/LIVE_BASE_URL + CORS canonical
