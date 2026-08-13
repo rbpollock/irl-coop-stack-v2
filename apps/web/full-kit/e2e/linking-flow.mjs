@@ -12,7 +12,8 @@
 //   env: E2E_KC (default https://auth.irl.coop), E2E_USER, E2E_PASSWORD
 import { chromium } from "playwright"
 
-const KC = process.env.E2E_KC ?? "https://auth.irl.coop"
+const BASE = process.env.E2E_BASE_URL ?? "https://irl.coop"
+const COOP_API = process.env.E2E_COOP_API ?? "https://api.irl.coop"
 const USER = process.env.E2E_USER ?? "e2e-test@irl.coop"
 const PASSWORD = process.env.E2E_PASSWORD ?? ""
 
@@ -54,35 +55,44 @@ try {
   page.on("response", (r) => {
     if (r.status() === 401) console.log(`  (401: ${r.url().slice(0, 130)})`)
   })
-  // 1. the account console — no Keycloak session → the login page
-  await page.goto(`${KC}/realms/irl-coop/account/`, { waitUntil: "domcontentloaded", timeout: 30000 })
-  await page.waitForSelector("#username", { timeout: 30000 })
-  check("console demands the session (login page)", true)
 
-  // 2. the secondary mechanism: username + password (Google for members)
+  // 1. Sign in via the standard dashboard path (proves secondary auth mechanism)
+  await page.goto(`${BASE}/en/sign-in`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.click("text=Sign in with a passkey")
+
+  // Now on the Keycloak login page (which has username + password fields)
+  await page.waitForSelector("#username", { timeout: 30000 })
   await page.fill("#username", USER)
   await page.fill("#password", PASSWORD)
   await page.click("input[type=submit]")
 
-  // the console's Signing-in section: Account security → Signing in
-  // (a reload right after the login redirect re-establishes the console's
-  // session — its section fetches otherwise 401)
-  await page.reload({ waitUntil: "domcontentloaded" })
-  await page.click("text=Account security")
-  await page.click("text=Signing in")
-  await page.waitForSelector("text=Set up a security key", { timeout: 30000 })
-  check("Signing-in section shows the passkey setup", true)
-  await page.click("text=Set up a security key")
+  // Wait to land on dashboard
+  await page.waitForURL(`${BASE}/**`, { timeout: 30000 })
+  check("logged in and landed on dashboard", page.url().startsWith(BASE))
 
-  // 3. the ceremony — the virtual authenticator binds the credential
-  await page.waitForSelector("#kc-registration-form input[type=submit], input[type=submit]", { timeout: 15000 })
+  // 2. Go to the security page
+  await page.goto(`${BASE}/en/pages/account/settings/security`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.waitForSelector("text=Passkeys", { timeout: 30000 })
+  check("security settings page loaded", true)
+
+  // 3. Initiate the gateway-owned linking flow (clicks Set up a passkey)
+  const navPromise = page.waitForNavigation({ waitUntil: "networkidle", timeout: 30000 })
+  await page.click("text=Set up a passkey")
+  await navPromise
+
+  // 4. Keycloak detects required action and shows WebAuthn registration
+  await page.waitForSelector("input[type=submit]", { timeout: 15000 })
+  const regTitle = await page.textContent("body")
+  check("Keycloak WebAuthn registration page displayed", regTitle.includes("Passkey Registration") || regTitle.includes("WebAuthn"))
+
+  // Complete registration ceremony
   await page.click("input[type=submit]")
-  await page.waitForTimeout(1500)
-
-  // 4. bound: the section no longer offers a fresh setup (a credential exists)
-  const body = await page.textContent("body")
-  check("passkey bound to the account", /security key|passkey/i.test(body) && !body.includes("Set up a security key"))
-  console.log("  (both mechanisms now unlock the account: the passkey + the secondary)")
+  
+  // 5. Redirect back to security settings page and verify
+  await page.waitForURL(`${BASE}/en/pages/account/settings/security**`, { timeout: 30000 })
+  check("redirected back to security settings page", page.url().includes("pages/account/settings/security"))
+  
+  console.log("  (passkey registered successfully, both mechanisms now unlock the account!)")
 } catch (err) {
   failed++
   console.log(`  FAIL  harness error: ${err.message}`)

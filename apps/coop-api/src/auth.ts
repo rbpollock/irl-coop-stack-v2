@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import * as crypto from "node:crypto";
 import * as jwt from "jsonwebtoken";
 import { getProfile, type CoopProfile } from "./profile-store";
-import { getUserProfile } from "./keycloak-admin";
+import { getUserProfile, addUserRequiredAction } from "./keycloak-admin";
 
 // ---------------------------------------------------------------------------
 // coop-api as the fleet's OIDC issuer (session-gateway auth)
@@ -498,4 +498,46 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     },
     clients: Object.fromEntries(Object.entries(clients).map(([id, c]) => [id, { redirects: c.redirects }])),
   }));
+
+  // Link a passkey: adds the webauthn required action and redirects to Keycloak
+  fastify.get("/api/v1/auth/passkey/link", async (request, reply) => {
+    const session = sessionFromRequest(request);
+    if (!session) {
+      const host = (request.headers.host ?? "").split(":")[0];
+      const base = host === "localhost" || host === "127.0.0.1" ? "http://localhost:3000" : "https://irl.coop";
+      return reply.redirect(`${base}/en/sign-in`);
+    }
+
+    try {
+      // 1. Add Keycloak required action directly
+      await addUserRequiredAction(session.sub, "webauthn-register-passwordless");
+      
+      // 2. Build direct redirect to Keycloak authorize URL bypassing silent authorize code-gen
+      const host = (request.headers.host ?? "").split(":")[0];
+      const base = host === "localhost" || host === "127.0.0.1" ? "http://localhost:3000" : "https://irl.coop";
+      const nextRedirect = `${base}/en/pages/account/settings/security`;
+      
+      const kcState = b64url(JSON.stringify({ 
+        n: "link_passkey", 
+        r: nextRedirect, 
+        c: "nextauth" 
+      }));
+
+      // Redirect directly to Keycloak authorize (bypassing Google hint so they can do passkey ceremony)
+      const authorizeUrl =
+        `${KC_AUTH_URL}?client_id=${encodeURIComponent(env.kcClientId)}` +
+        `&redirect_uri=${encodeURIComponent(KC_CALLBACK)}` +
+        `&response_type=code` +
+        `&scope=${encodeURIComponent("openid profile email")}` +
+        `&state=${encodeURIComponent(kcState)}` +
+        `&nonce=${crypto.randomUUID()}`;
+        
+      return reply.redirect(authorizeUrl);
+    } catch (err: any) {
+      request.log.error({ err: err.message }, "passkey linking initiation failed");
+      const host = (request.headers.host ?? "").split(":")[0];
+      const base = host === "localhost" || host === "127.0.0.1" ? "http://localhost:3000" : "https://irl.coop";
+      return reply.redirect(`${base}/en/pages/account/settings/security?error=linking_failed`);
+    }
+  });
 }

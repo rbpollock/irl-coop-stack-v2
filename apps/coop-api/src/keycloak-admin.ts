@@ -86,3 +86,18 @@ export async function setUserCanonicalEmail(
   if (!resp.ok) throw new Error(`keycloak email update failed: ${resp.status}`);
   return "updated";
 }
+
+/** Add a required action directly to the user (e.g., webauthn-register-passwordless). */
+export async function addUserRequiredAction(sub: string, action: string): Promise<void> {
+  const profileResp = await admin(`/users/${sub}`);
+  if (!profileResp.ok) throw new Error(`keycloak user lookup failed: ${profileResp.status}`);
+  const user = (await profileResp.json()) as any;
+  const actions = new Set<string>(user.requiredActions ?? []);
+  actions.add(action);
+  const resp = await admin(`/users/${sub}`, {
+    method: "PUT",
+    body: JSON.stringify({ ...user, requiredActions: Array.from(actions) }),
+  });
+  if (!resp.ok) throw new Error(`keycloak required action update failed: ${resp.status}`);
+}
+

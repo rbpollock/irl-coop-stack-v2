@@ -15,8 +15,9 @@ import {
 // secondary mechanism (Google) once — proving ownership — then the WebAuthn
 // ceremony binds the passkey to the SAME account. Afterwards both the
 // passkey and Google unlock it.
-const ACCOUNT_SIGNING_IN =
-  "https://auth.irl.coop/realms/irl-coop/account/#/security/signingin"
+const COOP_API_URL =
+  process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+const LINK_PASSKEY_URL = `${COOP_API_URL}/api/v1/auth/passkey/link`
 
 export function Passkeys() {
   return (
@@ -38,9 +39,7 @@ export function Passkeys() {
         </p>
         <div className="mt-4">
           <Button asChild size="sm" variant="outline">
-            <a href={ACCOUNT_SIGNING_IN} target="_blank" rel="noreferrer">
-              Set up a passkey
-            </a>
+            <a href={LINK_PASSKEY_URL}>Set up a passkey</a>
           </Button>
         </div>
       </CardContent>
