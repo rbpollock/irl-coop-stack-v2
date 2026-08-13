@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS groups (
   name        text NOT NULL,
   description text,
   privacy     text NOT NULL DEFAULT 'members' CHECK (privacy IN ('open','members','hidden')),
+  created_by  text,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );

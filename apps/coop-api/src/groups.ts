@@ -84,9 +84,9 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
 
       const result = await withIdentity(claims.sub, async (client) => {
         const group = await client.query(
-          `INSERT INTO groups (safe_address, name, privacy) VALUES ($1, $2, $3)
+          `INSERT INTO groups (safe_address, name, privacy, created_by) VALUES ($1, $2, $3, $4)
            RETURNING id, safe_address, name, description, privacy, created_at`,
-          [safeAddress, name, privacy],
+          [safeAddress, name, privacy, claims.sub],
         );
         const row = group.rows[0];
         await client.query(
