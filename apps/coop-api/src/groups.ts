@@ -1,15 +1,18 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { ethers } from "ethers";
+import type { PoolClient } from "pg";
 import { verifyBearer } from "./verify-jwt";
 import { deploySafe } from "./safe";
-import { pool } from "./db";
+import { withIdentity } from "./db";
 
 // ---------------------------------------------------------------------------
 // Groups = Safes (Layer-2 projection). A group IS a Safe: "create a group"
-// wraps the existing Safe deployment (safe.ts) and records a projection row
-// so apps can query members, seats and scoped resources without touching the
-// chain. Members are seats (sub + roles + alias + visibility).
+// wraps the existing Safe deployment (safe.ts) and records a projection row.
+// Row-level security lives in Postgres (infra/compose/storage/scripts/coop_rls.sql):
+// every request runs in a transaction with `app.sub` set (withIdentity), and RLS
+// filters groups/members/scopes to what that sub may see. Members are seats
+// (sub + roles + alias + visibility).
 // ---------------------------------------------------------------------------
 
 const PRIVACY = ["open", "members", "hidden"] as const;
@@ -24,22 +27,20 @@ function safeEnv(): { factory: string; singleton: string; backendKey: string } |
 
 // Groups get a UNIQUE salt (random), unlike the personal account Safe whose
 // salt is deterministic (sub-derived) so its address is predictable pre-deploy.
-// A deterministic default here would make every "create group" collide on the
-// same CREATE2 address after the first deploy.
 function freshSalt(): bigint {
   return BigInt("0x" + randomBytes(32).toString("hex"));
 }
 
-async function isOwner(groupId: string, sub: string): Promise<boolean> {
-  const r = await pool.query(
+async function isOwner(client: PoolClient, groupId: string, sub: string): Promise<boolean> {
+  const r = await client.query(
     `SELECT 1 FROM group_members WHERE group_id = $1 AND sub = $2 AND 'owner' = ANY(roles)`,
     [groupId, sub],
   );
   return (r.rowCount ?? 0) > 0;
 }
 
-async function isMember(groupId: string, sub: string): Promise<boolean> {
-  const r = await pool.query(
+async function isMember(client: PoolClient, groupId: string, sub: string): Promise<boolean> {
+  const r = await client.query(
     `SELECT 1 FROM group_members WHERE group_id = $1 AND sub = $2`,
     [groupId, sub],
   );
@@ -81,36 +82,41 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
         1,
       );
 
-      const group = await pool.query(
-        `INSERT INTO groups (safe_address, name, privacy) VALUES ($1, $2, $3)
-         RETURNING id, safe_address, name, description, privacy, created_at`,
-        [safeAddress, name, privacy],
-      );
-      const row = group.rows[0];
-      await pool.query(
-        `INSERT INTO group_members (group_id, sub, roles, visibility) VALUES ($1, $2, $3, 'canonical')`,
-        [row.id, claims.sub, ["owner"]],
-      );
-      return reply.code(201).send({ ...row, tx_hash: txHash, seat: { roles: ["owner"] } });
+      const result = await withIdentity(claims.sub, async (client) => {
+        const group = await client.query(
+          `INSERT INTO groups (safe_address, name, privacy) VALUES ($1, $2, $3)
+           RETURNING id, safe_address, name, description, privacy, created_at`,
+          [safeAddress, name, privacy],
+        );
+        const row = group.rows[0];
+        await client.query(
+          `INSERT INTO group_members (group_id, sub, roles, visibility) VALUES ($1, $2, $3, 'canonical')`,
+          [row.id, claims.sub, ["owner"]],
+        );
+        return row;
+      });
+
+      return reply.code(201).send({ ...result, tx_hash: txHash, seat: { roles: ["owner"] } });
     } catch (err: any) {
       request.log.error({ err: err.message }, "group deploy failed");
       return reply.code(500).send({ error: err.message });
     }
   });
 
-  // Groups I belong to, with my seat.
+  // Groups I can see (RLS filters them), with my seat.
   fastify.get("/api/v1/groups", async (request, reply) => {
     const claims = verifyBearer(request, reply);
     if (!claims) return;
-    const { rows } = await pool.query(
-      `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.created_at,
-              gm.roles, gm.alias, gm.visibility
-       FROM groups g
-       JOIN group_members gm ON gm.group_id = g.id
-       WHERE gm.sub = $1
-       ORDER BY g.created_at DESC`,
-      [claims.sub],
-    );
+    const rows = await withIdentity(claims.sub, async (client) => {
+      const { rows } = await client.query(
+        `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.created_at,
+                gm.roles, gm.alias, gm.visibility
+         FROM groups g
+         LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.sub = coop_current_sub()
+         ORDER BY g.created_at DESC`,
+      );
+      return rows;
+    });
     return reply.send(rows);
   });
 
@@ -119,9 +125,6 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     const claims = verifyBearer(request, reply);
     if (!claims) return;
     const groupId = (request.params as any).id;
-    if (!(await isOwner(groupId, claims.sub)))
-      return reply.code(403).send({ error: "not a group owner" });
-
     const body = (request.body ?? {}) as Record<string, any>;
     const sub = typeof body.sub === "string" ? body.sub.trim() : "";
     const roles = Array.isArray(body.roles) ? body.roles.map(String) : [];
@@ -129,13 +132,18 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     const visibility = VISIBILITY.includes(body.visibility) ? body.visibility : "canonical";
     if (!sub) return reply.code(400).send({ error: "sub is required" });
 
-    await pool.query(
-      `INSERT INTO group_members (group_id, sub, roles, alias, visibility)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (group_id, sub)
-       DO UPDATE SET roles = EXCLUDED.roles, alias = EXCLUDED.alias, visibility = EXCLUDED.visibility`,
-      [groupId, sub, roles, alias, visibility],
-    );
+    const ok = await withIdentity(claims.sub, async (client) => {
+      if (!(await isOwner(client, groupId, claims.sub))) return false;
+      await client.query(
+        `INSERT INTO group_members (group_id, sub, roles, alias, visibility)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (group_id, sub)
+         DO UPDATE SET roles = EXCLUDED.roles, alias = EXCLUDED.alias, visibility = EXCLUDED.visibility`,
+        [groupId, sub, roles, alias, visibility],
+      );
+      return true;
+    });
+    if (!ok) return reply.code(403).send({ error: "not a group owner" });
     return reply.code(201).send({ group_id: groupId, sub, roles, alias, visibility });
   });
 
@@ -144,37 +152,39 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     const claims = verifyBearer(request, reply);
     if (!claims) return;
     const groupId = (request.params as any).id;
-    if (!(await isMember(groupId, claims.sub)))
-      return reply.code(403).send({ error: "not a group member" });
-
     const body = (request.body ?? {}) as Record<string, any>;
     const app = typeof body.app === "string" ? body.app.trim() : "";
     const resourceKey = typeof body.resource_key === "string" ? body.resource_key.trim() : "";
     if (!app || !resourceKey) return reply.code(400).send({ error: "app and resource_key are required" });
 
-    await pool.query(
-      `INSERT INTO resource_scopes (group_id, app, resource_key, scoped_by)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (group_id, app, resource_key)
-       DO UPDATE SET scoped_by = EXCLUDED.scoped_by, scoped_at = now()`,
-      [groupId, app, resourceKey, claims.sub],
-    );
+    const ok = await withIdentity(claims.sub, async (client) => {
+      if (!(await isMember(client, groupId, claims.sub))) return false;
+      await client.query(
+        `INSERT INTO resource_scopes (group_id, app, resource_key, scoped_by)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (group_id, app, resource_key)
+         DO UPDATE SET scoped_by = EXCLUDED.scoped_by, scoped_at = now()`,
+        [groupId, app, resourceKey, claims.sub],
+      );
+      return true;
+    });
+    if (!ok) return reply.code(403).send({ error: "not a group member" });
     return reply.code(201).send({ group_id: groupId, app, resource_key: resourceKey });
   });
 
-  // Scoped resources, readable by any group member.
+  // Scoped resources (RLS filters to groups I can see).
   fastify.get("/api/v1/groups/:id/resources", async (request, reply) => {
     const claims = verifyBearer(request, reply);
     if (!claims) return;
     const groupId = (request.params as any).id;
-    if (!(await isMember(groupId, claims.sub)))
-      return reply.code(403).send({ error: "not a group member" });
-
-    const { rows } = await pool.query(
-      `SELECT app, resource_key, scoped_by, scoped_at
-       FROM resource_scopes WHERE group_id = $1 ORDER BY scoped_at DESC`,
-      [groupId],
-    );
+    const rows = await withIdentity(claims.sub, async (client) => {
+      const { rows } = await client.query(
+        `SELECT app, resource_key, scoped_by, scoped_at
+         FROM resource_scopes WHERE group_id = $1 ORDER BY scoped_at DESC`,
+        [groupId],
+      );
+      return rows;
+    });
     return reply.send(rows);
   });
 
@@ -183,9 +193,6 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     const claims = verifyBearer(request, reply);
     if (!claims) return;
     const groupId = (request.params as any).id;
-    if (!(await isOwner(groupId, claims.sub)))
-      return reply.code(403).send({ error: "not a group owner" });
-
     const body = (request.body ?? {}) as Record<string, any>;
     const sets: string[] = [];
     const vals: any[] = [];
@@ -203,12 +210,20 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     }
     if (sets.length === 0) return reply.code(400).send({ error: "nothing to update" });
 
-    vals.push(groupId);
-    await pool.query(`UPDATE groups SET ${sets.join(", ")}, updated_at = now() WHERE id = $${vals.length}`, vals);
-    const { rows } = await pool.query(
-      `SELECT id, safe_address, name, description, privacy FROM groups WHERE id = $1`,
-      [groupId],
-    );
-    return reply.send(rows[0]);
+    const row = await withIdentity(claims.sub, async (client) => {
+      if (!(await isOwner(client, groupId, claims.sub))) return null;
+      vals.push(groupId);
+      await client.query(
+        `UPDATE groups SET ${sets.join(", ")}, updated_at = now() WHERE id = $${vals.length}`,
+        vals,
+      );
+      const { rows } = await client.query(
+        `SELECT id, safe_address, name, description, privacy FROM groups WHERE id = $1`,
+        [groupId],
+      );
+      return rows[0] ?? null;
+    });
+    if (!row) return reply.code(403).send({ error: "not a group owner" });
+    return reply.send(row);
   });
 }

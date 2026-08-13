@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 
 // coop-api ↔ Citus `irlcoop` — the group projection store (Layer 2). The
 // on-chain Safe (Layer 1) holds the truth; these tables are a rebuildable
@@ -51,6 +51,32 @@ CREATE TABLE IF NOT EXISTS resource_scopes (
 
 export async function initDb(): Promise<void> {
   await pool.query(DDL);
+}
+
+// Run a request's queries inside a transaction with the caller's identity set
+// as `app.sub` — Postgres row-level security then filters every table the
+// transaction touches. `SET LOCAL` is transaction-scoped, so the pooled
+// connection reverts cleanly on commit/rollback and no identity leaks between
+// requests.
+export async function withIdentity<T>(
+  sub: string,
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // set_config(..., is_local=true) == SET LOCAL, but parameterizable (SET
+    // does not accept $1). Transaction-scoped, so the pooled connection reverts.
+    await client.query("SELECT set_config('app.sub', $1, true)", [sub]);
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export { pool };
