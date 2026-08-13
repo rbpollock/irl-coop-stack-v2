@@ -9,10 +9,13 @@ import {
   FileSpreadsheet,
   FileText,
   FileType2,
+  Folder,
   FolderOpen,
+  FolderPlus,
   Presentation,
   RefreshCw,
   Share2,
+  X,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -27,6 +30,16 @@ const ONLYOFFICE_PUBLIC_URL =
   process.env.NEXT_PUBLIC_ONLYOFFICE_URL ?? "https://office.irl.coop"
 
 type DocMeta = { name: string; size: number; modified: string }
+
+// Virtual folders — pointers only; the objects stay in the source buckets.
+type Folder = {
+  id: string
+  name: string
+  parent: string | null
+  createdAt: string
+}
+type FolderMember = { folderId: string; source: string; key: string }
+type FilesListing = { folders: Folder[]; members: FolderMember[] }
 
 type EditorConfig = {
   type: string
@@ -86,6 +99,12 @@ export default function DocsPage() {
   const [creating, setCreating] = useState<string | null>(null)
   const [newMenu, setNewMenu] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [folders, setFolders] = useState<Folder[]>([])
+  const [members, setMembers] = useState<FolderMember[]>([])
+  const [newFolderOpen, setNewFolderOpen] = useState(false)
+  const [newFolderName, setNewFolderName] = useState("")
+  const [moveMenu, setMoveMenu] = useState<string | null>(null)
+  const [folderBusy, setFolderBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const editorHostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<unknown>(null)
@@ -102,6 +121,14 @@ export default function DocsPage() {
       if (!res.ok) throw new Error(`list failed (${res.status})`)
       const body = (await res.json()) as { documents: DocMeta[] }
       setDocs(body.documents)
+      const filesRes = await fetch(`${COOP_API_URL}/api/v1/files`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (filesRes.ok) {
+        const files = (await filesRes.json()) as FilesListing
+        setFolders(files.folders)
+        setMembers(files.members)
+      }
       setError(null)
     } catch (err) {
       setError((err as Error).message)
@@ -153,6 +180,69 @@ export default function DocsPage() {
       if (!res.ok) throw new Error(`share failed (${res.status})`)
       const { url } = (await res.json()) as { url: string }
       setShareUrl(url)
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  async function createFolder() {
+    if (!token || !newFolderName.trim()) return
+    setFolderBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`${COOP_API_URL}/api/v1/files/folders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newFolderName.trim() }),
+      })
+      if (!res.ok) throw new Error(`folder create failed (${res.status})`)
+      setNewFolderName("")
+      setNewFolderOpen(false)
+      await refresh()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setFolderBusy(false)
+    }
+  }
+
+  // Virtual move: a pointer into the folder — the object stays in MinIO.
+  async function addToFolder(docName: string, folderId: string) {
+    if (!token) return
+    setMoveMenu(null)
+    setError(null)
+    try {
+      const res = await fetch(
+        `${COOP_API_URL}/api/v1/files/folders/${folderId}/members`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ source: "docs", key: docName }),
+        }
+      )
+      if (!res.ok) throw new Error(`move failed (${res.status})`)
+      await refresh()
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  async function removeFromFolder(folderId: string, key: string) {
+    if (!token) return
+    setError(null)
+    try {
+      const res = await fetch(
+        `${COOP_API_URL}/api/v1/files/folders/${folderId}/members?key=${encodeURIComponent(key)}&source=docs`,
+        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
+      )
+      if (!res.ok) throw new Error(`remove failed (${res.status})`)
+      await refresh()
     } catch (err) {
       setError((err as Error).message)
     }
@@ -278,6 +368,35 @@ export default function DocsPage() {
             <Share2 className="h-3.5 w-3.5" />
           </Button>
         )}
+        {folders.length > 0 && (
+          <div className="relative">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+              onClick={() =>
+                setMoveMenu(moveMenu === doc.name ? null : doc.name)
+              }
+              title="Move to folder"
+            >
+              <FolderPlus className="h-3.5 w-3.5" />
+            </Button>
+            {moveMenu === doc.name && (
+              <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-lg border bg-background p-1 shadow-md">
+                {folders.map((f) => (
+                  <button
+                    key={f.id}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs hover:bg-accent"
+                    onClick={() => addToFolder(doc.name, f.id)}
+                  >
+                    <Folder className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="truncate">{f.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </li>
     )
   }
@@ -398,50 +517,181 @@ export default function DocsPage() {
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : docs.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-              <FolderOpen className="h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">
-                No documents yet — create a blank one or upload a .docx, .xlsx
-                or .pptx.
-              </p>
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={() => createDoc("docx")}>
-                  <FilePlus2 className="me-2 h-4 w-4" /> New document
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => fileRef.current?.click()}
-                >
-                  Upload
-                </Button>
-              </div>
-            </div>
           ) : (
             <div className="mx-auto flex max-w-3xl flex-col gap-6">
-              {recent.length > 0 && (
-                <section>
-                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Recent
-                  </h2>
-                  <ul className="flex flex-col gap-1.5">
-                    {recent.map((doc) => (
-                      <DocRow key={doc.name} doc={doc} showShare />
-                    ))}
-                  </ul>
-                </section>
-              )}
               <section>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  All documents
-                </h2>
-                <ul className="flex flex-col gap-1.5">
-                  {rest.map((doc) => (
-                    <DocRow key={doc.name} doc={doc} showShare />
-                  ))}
-                </ul>
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    My folders
+                  </h2>
+                  {!newFolderOpen && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-xs"
+                      onClick={() => setNewFolderOpen(true)}
+                      disabled={folderBusy}
+                    >
+                      <FolderPlus className="me-1 h-3.5 w-3.5" /> New folder
+                    </Button>
+                  )}
+                </div>
+                {newFolderOpen && (
+                  <form
+                    className="mb-2 flex items-center gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      createFolder()
+                    }}
+                  >
+                    <Input
+                      autoFocus
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="Folder name"
+                      className="h-8 text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      type="submit"
+                      disabled={folderBusy || !newFolderName.trim()}
+                    >
+                      Create
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      type="button"
+                      onClick={() => {
+                        setNewFolderOpen(false)
+                        setNewFolderName("")
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </form>
+                )}
+                {folders.length === 0 ? (
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    Folders are virtual — drop documents into them without
+                    moving the stored files.
+                  </p>
+                ) : (
+                  <div className="mb-4 grid gap-2 sm:grid-cols-2">
+                    {folders.map((f) => {
+                      const fMembers = members.filter(
+                        (m) => m.folderId === f.id
+                      )
+                      return (
+                        <div
+                          key={f.id}
+                          className="rounded-lg border bg-background p-3"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Folder className="h-4 w-4 shrink-0 text-amber-600" />
+                            <span className="truncate text-sm font-medium">
+                              {f.name}
+                            </span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {fMembers.length}
+                            </span>
+                          </div>
+                          {fMembers.length === 0 ? (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Empty — hover a document and use the folder
+                              button.
+                            </p>
+                          ) : (
+                            <ul className="mt-2 flex flex-col gap-1">
+                              {fMembers.map((m) => (
+                                <li
+                                  key={`${f.id}/${m.source}/${m.key}`}
+                                  className="group flex items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-accent"
+                                >
+                                  {m.source === "docs" ? (
+                                    <button
+                                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                      onClick={() => setEditing(m.key)}
+                                      title="Open in OnlyOffice"
+                                    >
+                                      <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                      <span className="truncate">{m.key}</span>
+                                    </button>
+                                  ) : (
+                                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                                      <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                      <span className="truncate">{m.key}</span>
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {m.source}
+                                      </span>
+                                    </span>
+                                  )}
+                                  <button
+                                    className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                                    title="Remove from folder"
+                                    onClick={() =>
+                                      removeFromFolder(f.id, m.key)
+                                    }
+                                  >
+                                    <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </section>
+
+              {docs.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center">
+                  <FolderOpen className="h-10 w-10 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">
+                    No documents yet — create a blank one or upload a .docx,
+                    .xlsx or .pptx.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" onClick={() => createDoc("docx")}>
+                      <FilePlus2 className="me-2 h-4 w-4" /> New document
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      Upload
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {recent.length > 0 && (
+                    <section>
+                      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Recent
+                      </h2>
+                      <ul className="flex flex-col gap-1.5">
+                        {recent.map((doc) => (
+                          <DocRow key={doc.name} doc={doc} showShare />
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  <section>
+                    <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      All documents
+                    </h2>
+                    <ul className="flex flex-col gap-1.5">
+                      {rest.map((doc) => (
+                        <DocRow key={doc.name} doc={doc} showShare />
+                      ))}
+                    </ul>
+                  </section>
+                </>
+              )}
             </div>
           )}
         </div>

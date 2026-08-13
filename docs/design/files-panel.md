@@ -1,7 +1,7 @@
 # The Files Panel — unified file viewer + virtual folder manager
 
-Status: Phase 1 built (backend verified 15/15 live, 2026-08-12; panel UI =
-the /apps/docs page — folders UI is the next slice) · Aug 2026 · Extends
+Status: Phase 1 built — backend verified 15/15 live + panel UI (folders,
+share, editor) shipped 2026-08-12 · Aug 2026 · Extends
 world-doc-and-contacts.md (projection rule, seats), irl-coop-group.md (group
 file sharing), and the docs host (docs-host-onlyoffice.md). Builds on the
 single-storage backbone: all four sources now live on the coop MinIO
