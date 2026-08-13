@@ -2,7 +2,7 @@
 name: nocodb
 pillar: storage
 type: image
-image: irlcoop/nocodb-gate-sso:2026.08.3
+image: irlcoop/nocodb-gate-sso:2026.08.4
 env:
   # query-string format (maintainer-confirmed); alphanumeric password —
   # NocoDB's URL parser is fragile with special chars in the standard form
@@ -11,6 +11,9 @@ env:
   # build). v7 passes the identity as X-Forwarded-Email/User (NOT
   # X-Auth-Request-Email — that's the response-side auth_request header).
   NC_GATE_SSO_EMAIL_HEADER: x-forwarded-email
+  # allow external sources to connect to the local projection (Citus on the
+  # docker network) — otherwise SSRF protection blocks internal hosts.
+  NC_ALLOW_LOCAL_EXTERNAL_DBS: "true"
 depends_on:
   - postgres
 sidecars:
