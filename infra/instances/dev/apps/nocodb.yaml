@@ -2,7 +2,7 @@
 name: nocodb
 pillar: storage
 type: image
-image: irlcoop/nocodb-gate-sso:2026.08.5
+image: irlcoop/nocodb-gate-sso:2026.08.6
 env:
   # query-string format (maintainer-confirmed); alphanumeric password —
   # NocoDB's URL parser is fragile with special chars in the standard form
@@ -14,6 +14,10 @@ env:
   # allow external sources to connect to the local projection (Citus on the
   # docker network) — otherwise SSRF protection blocks internal hosts.
   NC_ALLOW_LOCAL_EXTERNAL_DBS: "true"
+  # disable the in-app support chat (Chatwoot) widget — we don't run Chatwoot,
+  # and the empty CHATWOOT_IDENTITY_KEY otherwise produces an "iframe refusal"
+  # console error on every page load.
+  NC_DISABLE_SUPPORT_CHAT: "true"
 depends_on:
   - postgres
 sidecars:
