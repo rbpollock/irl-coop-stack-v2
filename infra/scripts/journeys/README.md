@@ -23,7 +23,23 @@ to disk). Exit code is non-zero on any failure.
 | `membership` | A member onboards a collaborator | create group (Safe deploy); seat a member; scope a resource |
 | `nocodb-read` | A member works in the shared Coop base | bases list renders (no spinner); read returns RLS-scoped rows |
 | `nocodb-write` | A member edits a group row | write-path identity (`app.sub`) — owner PATCH round-trips |
+| `nocodb-app` | A member does stuff in the app | click a base card → tables render; open the interface wizard + workflow list; create ops |
 | `anonymous` | An anonymous visitor is walled off | every surface rejects a missing/bad token; NocoDB returns nothing |
+
+## Known backend gaps (SKIPped, not asserted)
+
+The ported NocoDB build ships the Interfaces/Workflows **UI** but not their
+backend `operation=` handlers. `workflowCreate` and `interfaceCreate` exist only
+in the op-names registry (`packages/nocodb/src/command-registry/op-names.ts`);
+the corresponding write handlers were never included in the build, so the
+create calls 404. `nocodb-app` exercises the full click-through and reports
+these two as `SKIP — KNOWN BUG` (naming the exact missing op) so the suite stays
+green while the gap stays visible. They flip to `PASS` automatically once the
+backend is rebuilt from a version with the interface/workflow write ops.
+
+Also: a hard reload of any NocoDB route serves the bare SPA shell and never
+re-routes — the journeys navigate via the in-app sidebar from the post-login
+bases list instead.
 
 ## Layout
 

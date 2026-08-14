@@ -12,10 +12,11 @@ import * as membership from "./journeys/membership.mjs"
 import * as anonymous from "./journeys/anonymous.mjs"
 import * as nocodbRead from "./journeys/nocodb-read.mjs"
 import * as nocodbWrite from "./journeys/nocodb-write.mjs"
+import * as nocodbApp from "./journeys/nocodb-app.mjs"
 
 // Order matters: sign-in first (establishes identity), browser last.
 const apiJourneys = [signIn, groupsScope, membership, anonymous]
-const browserJourneys = [nocodbRead, nocodbWrite]
+const browserJourneys = [nocodbRead, nocodbWrite, nocodbApp]
 
 const runs = [] // [{ journey, ctx }]
 let browser = null
