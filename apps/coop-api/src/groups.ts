@@ -111,7 +111,7 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
       // "the user is their own group" — ensure the caller's personal group exists
       await client.query("SELECT coop_ensure_personal_group()");
       const { rows } = await client.query(
-        `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.created_at,
+        `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.kind, g.created_at,
                 gm.roles, gm.alias, gm.visibility
          FROM groups g
          LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.sub = coop_current_sub()
