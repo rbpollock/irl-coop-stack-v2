@@ -2,7 +2,7 @@
 name: nocodb
 pillar: storage
 type: image
-image: irlcoop/nocodb-gate-sso:2026.08.6
+image: irlcoop/nocodb-gate-sso:2026.08.8
 env:
   # query-string format (maintainer-confirmed); alphanumeric password —
   # NocoDB's URL parser is fragile with special chars in the standard form
