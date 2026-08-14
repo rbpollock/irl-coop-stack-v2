@@ -108,6 +108,8 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     const claims = verifyBearer(request, reply);
     if (!claims) return;
     const rows = await withIdentity(claims.sub, async (client) => {
+      // "the user is their own group" — ensure the caller's personal group exists
+      await client.query("SELECT coop_ensure_personal_group()");
       const { rows } = await client.query(
         `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.created_at,
                 gm.roles, gm.alias, gm.visibility

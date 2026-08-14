@@ -21,7 +21,7 @@ BEGIN
 END
 $rls$;
 ALTER ROLE coop_rls BYPASSRLS;
-GRANT SELECT ON groups, group_members, resource_scopes TO coop_rls;
+GRANT SELECT, INSERT, UPDATE, DELETE ON groups, group_members, resource_scopes TO coop_rls;
 
 -- ownership column (one-time backfill from the existing owner seat)
 ALTER TABLE groups ADD COLUMN IF NOT EXISTS created_by text;
@@ -29,6 +29,10 @@ UPDATE groups g SET created_by = (
   SELECT gm.sub FROM group_members gm
   WHERE gm.group_id = g.id AND 'owner' = ANY(gm.roles) LIMIT 1
 ) WHERE g.created_by IS NULL;
+
+-- personal groups ("the user is their own group") — kind marker + nullable Safe
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'coop';
+ALTER TABLE groups ALTER COLUMN safe_address DROP NOT NULL;
 
 -- identity
 CREATE OR REPLACE FUNCTION coop_current_sub() RETURNS text AS $$
@@ -73,6 +77,30 @@ SECURITY DEFINER SET search_path = public AS $$
   )
 $$ LANGUAGE sql STABLE;
 ALTER FUNCTION coop_can_view_group(uuid) OWNER TO coop_rls;
+
+-- "the user is their own group": idempotently provision a personal group for the
+-- current sub (no Safe yet — the personal account Safe is deployed separately,
+-- deterministic sub-derived salt). SECURITY DEFINER + BYPASSRLS so it can write
+-- the row regardless of the write RLS policies.
+CREATE OR REPLACE FUNCTION coop_ensure_personal_group() RETURNS uuid
+SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  sub text := coop_current_sub();
+  gid uuid;
+BEGIN
+  IF sub IS NULL THEN RETURN NULL; END IF;
+  SELECT id INTO gid FROM groups WHERE kind = 'personal' AND created_by = sub LIMIT 1;
+  IF gid IS NULL THEN
+    INSERT INTO groups (safe_address, name, privacy, kind, created_by)
+    VALUES (NULL, 'Personal', 'members', 'personal', sub)
+    RETURNING id INTO gid;
+    INSERT INTO group_members (group_id, sub, roles, visibility)
+    VALUES (gid, sub, ARRAY['owner'], 'canonical');
+  END IF;
+  RETURN gid;
+END;
+$$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_ensure_personal_group() OWNER TO coop_rls;
 
 -- groups
 ALTER TABLE groups FORCE ROW LEVEL SECURITY;

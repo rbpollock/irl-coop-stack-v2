@@ -21,10 +21,11 @@ const pool = new Pool({
 const DDL = `
 CREATE TABLE IF NOT EXISTS groups (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  safe_address text NOT NULL,
+  safe_address text,
   name        text NOT NULL,
   description text,
   privacy     text NOT NULL DEFAULT 'members' CHECK (privacy IN ('open','members','hidden')),
+  kind        text NOT NULL DEFAULT 'coop' CHECK (kind IN ('coop','personal')),
   created_by  text,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
