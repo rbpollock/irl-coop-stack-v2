@@ -1,0 +1,224 @@
+/* Theme @cubone/react-file-manager to the dashboard (theme-aware via the
+ * shadcn CSS variables — respects light AND dark mode). Loaded after the
+ * package's own style.css so these win the cascade.
+ */
+
+.file-explorer {
+  /* Blend into the dashboard's <main> (bg-muted/40) — the component's own
+   * white card background + border is what clashed against it. */
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  color: hsl(var(--foreground));
+}
+
+/* Toolbar + breadcrumb chrome */
+.toolbar {
+  border-bottom-color: hsl(var(--border));
+}
+.toolbar .item-separator {
+  background-color: hsl(var(--border));
+}
+.bread-crumb-container .breadcrumb {
+  border-bottom-color: hsl(var(--border));
+}
+.bread-crumb-container .breadcrumb .divider {
+  background-color: hsl(var(--border));
+}
+
+/* Sticky list header */
+.files.list .files-header {
+  background-color: hsl(var(--muted));
+  border-bottom-color: hsl(var(--border));
+}
+
+/* Popover surfaces: context menu, submenu, view toggle, modal */
+.fm-context-menu,
+.fm-context-menu .file-context-menu-list .sub-menu,
+.toolbar .fm-toolbar .toggle-view,
+.fm-modal {
+  background-color: hsl(var(--popover));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+.fm-context-menu .file-context-menu-list .divider {
+  border-bottom-color: hsl(var(--border));
+}
+
+/* Main content pane (the file list) — blend with <main>, not a popover */
+.file-explorer .files-container .folders-preview {
+  background-color: transparent;
+}
+
+/* Modal header */
+.fm-modal-header {
+  border-bottom-color: hsl(var(--border));
+}
+.fm-modal-header .fm-modal-heading {
+  color: hsl(var(--foreground));
+}
+
+/* Secondary button */
+.fm-button-secondary {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+/* Upload dropzone */
+.fm-upload-file .select-files .draggable-file-input {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+/* Delete-confirm divider */
+.file-delete-confirm .file-delete-confirm-text {
+  border-bottom-color: hsl(var(--border));
+}
+
+/* --- remaining hardcoded surfaces / text (completing the theme match) --- */
+
+/* Toolbar dropdown menu items */
+.toolbar .item-action {
+  background-color: transparent;
+}
+
+/* Drag-move tooltip */
+.files .drag-move-tooltip {
+  background-color: hsl(var(--popover));
+  border-color: hsl(var(--border));
+}
+.files .drag-move-tooltip .drop-zone-file-name {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Preview-error chip + icon */
+.file-previewer .preview-error .file-info .file-name {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+.file-previewer .preview-error .error-icon {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Breadcrumb "hidden folders" dropdown (was hardcoded dark gray) */
+.hidden-folders-container {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--foreground));
+}
+
+/* Breadcrumb folder-name hover */
+.bread-crumb-container .breadcrumb .folder-name-btn:hover,
+.bread-crumb-container .breadcrumb .folder-name-btn:focus {
+  background-color: hsl(var(--muted));
+}
+
+/* Progress bar track */
+.fm-progress .fm-progress-bar {
+  background-color: hsl(var(--muted));
+}
+
+/* Upload-progress dividers + rename-input border */
+.fm-upload-file .files-progress ul li {
+  border-bottom-color: hsl(var(--border));
+}
+.fm-rename-folder-container .fm-rename-folder-input {
+  border-bottom-color: hsl(var(--border));
+}
+
+/* Navigation-pane resize handle */
+.file-explorer .files-container .navigation-pane .sidebar-resize {
+  border-right-color: hsl(var(--border));
+}
+
+/* Context-menu muted icons */
+.fm-context-menu .file-context-menu-list .list-expand-icon,
+.fm-context-menu .file-context-menu-list .sub-menu .item-selected {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Disabled toolbar action + dropzone hint text */
+.toolbar .file-action-container .file-action:hover:disabled {
+  color: hsl(var(--muted-foreground));
+}
+.fm-upload-file .select-files .draggable-file-input {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Sort-active columns (was hardcoded #007bff blue) */
+.files.list .files-header .file-name.active,
+.files.list .files-header .file-date.active,
+.files.list .files-header .file-size.active {
+  background-color: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+}
+
+/* --- final pass: remaining hardcoded grays/blue/red + hover overlays --- */
+
+/* Navigation-pane resize handle (was hardcoded dark blue #1e3a8a) */
+.file-explorer .files-container .navigation-pane .sidebar-resize:hover,
+.file-explorer .files-container .navigation-pane .sidebar-dragging {
+  border-right-color: hsl(var(--primary));
+}
+
+/* Danger button (was Material red #f44336) → theme destructive */
+.fm-button-danger {
+  background-color: hsl(var(--destructive));
+}
+
+/* Rename-error tooltip (was hardcoded dark gray #696969) */
+.error-tooltip {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+}
+.error-tooltip:before {
+  border-color: transparent hsl(var(--popover)) transparent transparent;
+}
+.error-tooltip.top:after {
+  border-color: transparent transparent hsl(var(--popover)) transparent;
+}
+
+/* Hidden-folders dropdown item hover (was #757575) */
+.hidden-folders-container li:hover {
+  background-color: hsl(var(--muted));
+}
+
+/* Hover/selected/drag overlays: black-alpha → foreground-alpha so they read
+ * correctly on both light and dark themes. */
+.toolbar .fm-toolbar .toggle-view ul li:hover {
+  background-color: hsl(var(--foreground) / 0.075);
+}
+.toolbar .item-action:hover {
+  background-color: hsl(var(--foreground) / 0.12) !important;
+}
+.toolbar .icon-only:focus {
+  background-color: hsl(var(--foreground) / 0.12);
+}
+.sb-folders-list .sb-folders-list-item:hover {
+  background-color: hsl(var(--foreground) / 0.05);
+}
+.fm-context-menu .file-context-menu-list ul li:hover,
+.fm-context-menu .file-context-menu-list ul li.active {
+  background-color: hsl(var(--foreground) / 0.07);
+}
+.fm-context-menu .file-context-menu-list .sub-menu li:hover {
+  background-color: hsl(var(--foreground) / 0.07) !important;
+}
+.files .file-item-container.file-drop-zone {
+  background-color: hsl(var(--foreground) / 0.08) !important;
+}
+.files .file-item:hover {
+  background-color: hsl(var(--foreground) / 0.05);
+}
+.files.list .file-item-container:hover {
+  background-color: hsl(var(--foreground) / 0.04);
+}
+.files.list .files-header .file-name:hover,
+.files.list .files-header .file-date:hover,
+.files.list .files-header .file-size:hover {
+  background-color: hsl(var(--foreground) / 0.1);
+}
+.fm-upload-file .files-progress ul li .file .file-details .retry-upload:hover,
+.close-icon:hover {
+  background-color: hsl(var(--foreground) / 0.07);
+}

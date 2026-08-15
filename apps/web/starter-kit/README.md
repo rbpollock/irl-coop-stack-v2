@@ -41,4 +41,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
 
 This is the earlier **starter-kit** experiment. It authenticates with **NextAuth KeycloakProvider** directly (client `web-app` in the `irl-coop` realm, issuer `http://localhost:8081/realms/irl-coop`).
 
-It has been superseded by the **full-kit** dashboard, which uses the decoupled chain `NextAuth → coop-api (:3001) → Keycloak → Google` — see [`apps/coop-api/README.md`](../../coop-api/README.md) and [`apps/web/full-kit/README.md`](../full-kit/README.md).
+It has been superseded by the **irl-dashboard** dashboard, which uses the decoupled chain `NextAuth → coop-api (:3001) → Keycloak → Google` — see [`apps/coop-api/README.md`](../../coop-api/README.md) and [`apps/web/irl-dashboard/README.md`](../irl-dashboard/README.md).

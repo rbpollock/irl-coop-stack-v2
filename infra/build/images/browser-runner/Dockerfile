@@ -6,7 +6,7 @@
 #     this image to run automations (the browser-management pillar);
 #     the runner's spec contract (JSON inputs, evidence output) lands with
 #     the Temporal activity slice.
-# Build: ./build.sh  (stages the harnesses from apps/web/full-kit/e2e)
+# Build: ./build.sh  (stages the harnesses from apps/web/irl-dashboard/e2e)
 FROM mcr.microsoft.com/playwright:v1.46.0
 WORKDIR /app
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1

@@ -19,7 +19,7 @@ __pycache__/
 contracts/artifacts/
 contracts/cache/
 contracts/typechain-types/
-apps/web/full-kit/.next/
+apps/web/irl-dashboard/.next/
 apps/web/starter-kit/.next/
 dist/
 build/

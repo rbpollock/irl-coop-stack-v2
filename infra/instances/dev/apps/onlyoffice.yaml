@@ -1,5 +1,5 @@
 # OnlyOffice DocumentServer — collaborative document editing (workflow pillar).
-# The editor is EMBEDDED by a host app (full-kit docs page); the server is not
+# The editor is EMBEDDED by a host app (irl-dashboard docs page); the server is not
 # an OIDC client itself — document access is JWT-signed fetch/callback URLs
 # (JWT_ENABLED). Documents live in MinIO (docs bucket); this container only
 # holds its own config + logs + cache.

@@ -56,21 +56,54 @@ function storeFor(sub: string): FolderStore {
   return store[sub];
 }
 
-// --- List the user's objects in the docs bucket (docs/<sub>/ prefix).
-async function listDocsObjects(sub: string): Promise<string[]> {
+interface DocObject {
+  name: string;
+  size: number;
+  modified: string;
+}
+
+// --- Sanitize an object key for the docs source. Preserves spaces + unicode
+// (MinIO keys allow them; the docs editor's stricter [a-zA-Z0-9._-] whitelist
+// is an OnlyOffice constraint, not the panel's). Strips control chars and "|"
+// (the share-token delimiter) and drops "." / ".." segments so a hostile name
+// can't escape the docs/<sub>/ prefix.
+function safeKey(raw: string): string {
+  return raw
+    .split("/")
+    .map((seg) => seg.replace(/[\u0000-\u001f\u007f|]/g, "").trim())
+    .filter((seg) => seg !== "" && seg !== "." && seg !== "..")
+    .join("/")
+    .slice(0, 1024);
+}
+
+// --- List the user's objects in the docs bucket (docs/<sub>/ prefix) with
+// real size + modified (ListObjectsV2 triple-walk, same as docs.ts).
+async function listDocsObjects(sub: string): Promise<DocObject[]> {
   const resp = await s3.list(DOCS_BUCKET, `docs/${sub}/`);
   if (!resp.ok) return [];
   const xml = await resp.text();
-  // Minimal ListObjectsV2 XML parse: <Key>...</Key> entries.
-  const keys: string[] = [];
-  const re = /<Key>([^<]+)<\/Key>/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(xml)) !== null) keys.push(m[1]);
   const prefix = `docs/${sub}/`;
-  return keys
-    .filter((k) => k.startsWith(prefix) && !k.endsWith("/"))
-    .map((k) => k.slice(prefix.length))
-    .sort();
+  const keyRe = /<Key>([^<]+)<\/Key>/g;
+  const sizeRe = /<Size>(\d+)<\/Size>/g;
+  const modRe = /<LastModified>([^<]+)<\/LastModified>/g;
+  const keys: string[] = [];
+  const sizes: string[] = [];
+  const mods: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = keyRe.exec(xml)) !== null) keys.push(m[1]);
+  while ((m = sizeRe.exec(xml)) !== null) sizes.push(m[1]);
+  while ((m = modRe.exec(xml)) !== null) mods.push(m[1]);
+  const out: DocObject[] = [];
+  keys.forEach((k, i) => {
+    if (!k.startsWith(prefix) || k.endsWith("/")) return;
+    out.push({
+      name: k.slice(prefix.length),
+      size: Number(sizes[i] ?? 0),
+      modified: mods[i] ?? "",
+    });
+  });
+  out.sort((a, b) => (b.modified > a.modified ? 1 : -1));
+  return out;
 }
 
 // --- Share tokens (variant B generalized): payload = source|key|expiry.
@@ -110,7 +143,7 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
       folders: store.folders,
       members: store.members,
       sources: {
-        docs: docs.map((name) => ({ name, size: 0 })),
+        docs: docs.map((o) => ({ name: o.name, size: o.size, modified: o.modified })),
         // Phase 2+: stalwart attachments, matrix media, plane (metadata joins)
       },
     });
@@ -144,6 +177,35 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
     const store = storeFor(claims.sub);
     store.folders = store.folders.filter((f) => f.id !== id);
     store.members = store.members.filter((m) => m.folderId !== id);
+    const all = loadStore();
+    all[claims.sub] = store;
+    saveStore(all);
+    return reply.send({ ok: true });
+  });
+
+  // --- Move a folder (change its parent) — nesting support. Guarded against
+  // self-nesting and cycles so a folder can't become its own ancestor.
+  fastify.patch("/api/v1/files/folders/:id", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    const id = (request.params as any).id as string;
+    const body = (request.body ?? {}) as Record<string, any>;
+    const store = storeFor(claims.sub);
+    const folder = store.folders.find((f) => f.id === id);
+    if (!folder) return reply.code(404).send({ error: "folder_not_found" });
+    const parent = typeof body.parent === "string" ? body.parent : null;
+    if (parent === id) return reply.code(400).send({ error: "cannot_nest_in_self" });
+    if (parent && !store.folders.some((f) => f.id === parent)) {
+      return reply.code(404).send({ error: "parent_not_found" });
+    }
+    // Reject if `parent` is a descendant of the folder being moved.
+    let cur = parent ? store.folders.find((f) => f.id === parent) : undefined;
+    while (cur && cur.parent) {
+      if (cur.parent === id) return reply.code(400).send({ error: "cannot_nest_in_descendant" });
+      const next = store.folders.find((f) => f.id === cur!.parent);
+      cur = next;
+    }
+    folder.parent = parent;
     const all = loadStore();
     all[claims.sub] = store;
     saveStore(all);
@@ -198,18 +260,143 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
     return reply.send({ ok: true });
   });
 
+  // --- Upload via multipart FormData (the FileManager's fileUploadConfig
+  // sends the file under the "file" field to a fixed URL). Filename comes
+  // from the file part, not the URL.
+  fastify.post("/api/v1/files/docs", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    const file = await request.file();
+    if (!file) return reply.code(400).send({ error: "no_file" });
+    const name = safeKey(file.filename);
+    if (!name) return reply.code(400).send({ error: "invalid_key" });
+    const buf = await file.toBuffer();
+    if (!buf || buf.length === 0) return reply.code(400).send({ error: "empty_body" });
+    const objectKey = `docs/${claims.sub}/${name}`;
+    const resp = await s3.putObject(DOCS_BUCKET, objectKey, Buffer.from(buf));
+    if (!resp.ok) return reply.code(502).send({ error: "storage_unavailable" });
+    return reply.send({ name, size: buf.length });
+  });
+
+  // --- Upload an object (raw body) to the caller's docs prefix. Names keep
+  // their spaces/unicode; only traversal + control chars are stripped.
+  fastify.put("/api/v1/files/docs/:key", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    const key = safeKey((request.params as any).key as string);
+    if (!key) return reply.code(400).send({ error: "invalid_key" });
+    const raw = request.body as any;
+    const buf = Buffer.isBuffer(raw) ? raw : raw?.buffer ? Buffer.from(raw.buffer) : null;
+    if (!buf || buf.length === 0) return reply.code(400).send({ error: "empty_body" });
+    const objectKey = `docs/${claims.sub}/${key}`;
+    const resp = await s3.putObject(DOCS_BUCKET, objectKey, Buffer.from(buf));
+    if (!resp.ok) return reply.code(502).send({ error: "storage_unavailable" });
+    return reply.send({ ok: true, name: key });
+  });
+
+  // --- Delete an object (docs source). Object truth goes away and any folder
+  // pointers to it are dropped, so folders never show a dangling key.
+  fastify.delete("/api/v1/files/docs/:key", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    const key = safeKey((request.params as any).key as string);
+    if (!key) return reply.code(400).send({ error: "invalid_key" });
+    const objectKey = `docs/${claims.sub}/${key}`;
+    const resp = await s3.deleteObject(DOCS_BUCKET, objectKey);
+    if (!resp.ok) return reply.code(404).send({ error: "not_found" });
+    const store = storeFor(claims.sub);
+    store.members = store.members.filter((m) => !(m.source === "docs" && m.key === key));
+    const all = loadStore();
+    all[claims.sub] = store;
+    saveStore(all);
+    return reply.send({ ok: true });
+  });
+
+  // --- Rename an object (docs source). S3 has no rename — server-side copy
+  // to the new key, then delete the old one. Folder pointers to the old name
+  // are rewritten so virtual folders follow the rename.
+  fastify.post("/api/v1/files/docs/:key/rename", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    const key = safeKey((request.params as any).key as string);
+    if (!key) return reply.code(400).send({ error: "invalid_key" });
+    const body = (request.body ?? {}) as Record<string, any>;
+    const to = safeKey(typeof body.to === "string" ? body.to : "");
+    if (!to) return reply.code(400).send({ error: "to is required" });
+    const srcKey = `docs/${claims.sub}/${key}`;
+    const dstKey = `docs/${claims.sub}/${to}`;
+    if (srcKey === dstKey) return reply.send({ ok: true, name: to });
+    // Don't clobber an existing object at the destination.
+    const dstHead = await s3.raw(
+      "HEAD",
+      `/${DOCS_BUCKET}/${dstKey.split("/").map(encodeURIComponent).join("/")}`
+    );
+    if (dstHead.ok) return reply.code(409).send({ error: "target_exists" });
+    const copied = await s3.copyObject(DOCS_BUCKET, srcKey, dstKey);
+    if (!copied.ok) return reply.code(404).send({ error: "not_found" });
+    const del = await s3.deleteObject(DOCS_BUCKET, srcKey);
+    if (!del.ok) {
+      // Copy succeeded but source delete failed — the rename is half-applied.
+      // Surface it loudly rather than silently leaving a duplicate.
+      console.error(`[files] rename: copied to ${dstKey} but failed to delete ${srcKey} (${del.status})`);
+      return reply.code(502).send({ error: "rename_partial" });
+    }
+    // Rewrite folder pointers so virtual folders follow the rename.
+    const store = storeFor(claims.sub);
+    let changed = false;
+    for (const m of store.members) {
+      if (m.source === "docs" && m.key === key) {
+        m.key = to;
+        changed = true;
+      }
+    }
+    if (changed) {
+      const all = loadStore();
+      all[claims.sub] = store;
+      saveStore(all);
+    }
+    return reply.send({ ok: true, name: to });
+  });
+
+  // --- Download an object (docs source) with an attachment disposition.
+  // Bearer or relay token, same auth as /content — but "download", not inline.
+  fastify.get("/api/v1/files/docs/:key/download", async (request, reply) => {
+    const key = safeKey((request.params as any).key as string);
+    if (!key) return reply.code(400).send({ error: "invalid_key" });
+    const q = request.query as Record<string, string>;
+    let objectKey = "";
+    if (q.token) {
+      const authed = verifyShareToken(q.token);
+      if (!authed || authed.source !== "docs" || !authed.key.endsWith(key)) {
+        return reply.code(403).send({ error: "invalid_or_expired_token" });
+      }
+      objectKey = authed.key;
+    } else {
+      const claims = verifyBearer(request, reply);
+      if (!claims) return;
+      objectKey = `docs/${claims.sub}/${key}`;
+    }
+    const resp = await s3.getObject(DOCS_BUCKET, objectKey);
+    if (!resp.ok) return reply.code(404).send({ error: "not_found" });
+    const buf = Buffer.from(await resp.arrayBuffer());
+    const name = objectKey.split("/").pop() ?? key;
+    reply.header("content-type", resp.headers.get("content-type") ?? "application/octet-stream");
+    reply.header("content-disposition", `attachment; filename="${name}"`);
+    return reply.send(buf);
+  });
+
   // --- Share: mint a variant-B relay token for one object.
   fastify.post("/api/v1/files/:source/:key/share", async (request, reply) => {
     const claims = verifyBearer(request, reply);
     if (!claims) return;
     const source = (request.params as any).source as string;
     const keyParam = (request.params as any).key as string;
-    const key = keyParam.replace(/[^a-zA-Z0-9._/-]/g, "");
+    const key = safeKey(keyParam);
     if (!key) return reply.code(400).send({ error: "invalid_key" });
     if (source !== "docs") {
       return reply.code(501).send({ error: "source_not_joined" }); // Phase 2+
     }
-    // Authorization: the object must be the caller's (docs/<sub>/ prefix).
+    // Authorization: the *** must be the caller's (docs/<sub>/ prefix).
     const objectKey = `docs/${claims.sub}/${key}`;
     // HEAD via the client's key encoding (slashes stay as separators —
     // encodeURIComponent on the whole key would break the path).
@@ -241,7 +428,7 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
   fastify.get("/api/v1/files/:source/:key/content", async (request, reply) => {
     const source = (request.params as any).source as string;
     const keyParam = (request.params as any).key as string;
-    const key = keyParam.replace(/[^a-zA-Z0-9._/-]/g, "");
+    const key = safeKey(keyParam);
     if (!key) return reply.code(400).send({ error: "invalid_key" });
     if (source !== "docs") return reply.code(404).send({ error: "not_found" });
     // token in query (editor-style) OR bearer (dashboard-style)

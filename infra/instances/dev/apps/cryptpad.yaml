@@ -1,6 +1,7 @@
 # CryptPad — collaborative pads (storage pillar).
 name: cryptpad
 pillar: storage
+enabled: false
 type: image
 image: cryptpad/cryptpad:latest
 volumes:

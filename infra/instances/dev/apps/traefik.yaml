@@ -32,8 +32,8 @@ dev:
   volumes:
     - ./certs:/etc/traefik/certs:ro
 # Extra file-provider routes beyond the app `proxy:` sections: the apex
-# hostname serves the v4 dashboard (full-kit on the host's :3000).
+# hostname serves the v4 dashboard (irl-dashboard on the host's :3000).
 routes:
   - hostname: ${DOMAIN}
     port: 3000
-    description: apex → v4 dashboard (full-kit)
+    description: apex → v4 dashboard (irl-dashboard)

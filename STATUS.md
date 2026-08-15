@@ -31,8 +31,7 @@ wildcard (Gandi → 64.135.141.73), (8) verify through the edge.
 
 **Bring the WHOLE stack up (boot / after a reboot / after edits):**
 `bash infra/scripts/stack-up.sh` — idempotent `docker compose up -d` for every
-generated pillar + source apps (plane) + drifted bootstraps (stalwart16 if its
-compose still exists); exits nonzero if any project fails. This is what the
+generated pillar + source apps (plane); exits nonzero if any project fails. This is what the
 enabled systemd unit `irl-coop-stack.service` runs at boot
 (After=docker.service, oneshot, RemainAfterExit; a failed bring-up lands the
 unit in a visible `failed` state).
@@ -50,16 +49,16 @@ unit in a visible `failed` state).
   to `/var/lib/irl-coop/stack-status.json` during bring-up.
 
 `enabled: false` on an app spec = declared-but-not-wired: the generator skips
-its compose service, edge route, OIDC registry entry and inventory (webstudio,
-formbricks, postiz are parked this way — their images aren't deployable).
+its compose service, edge route, OIDC registry entry and inventory (cryptpad,
+formbricks, webstudio, postiz are parked this way — their images aren't
+deployable yet).
 
-Current declared apps (14): traefik, keycloak, citus, irl-redis, minio, nocodb,
-stalwart, cryptpad, temporal, formbricks, webstudio, postiz, plane, coop-api.
-`enabled_pillars`: proxy, authentication, cache, storage, communication.
-Webstudio/postiz are declared with OIDC clients but no redirect URIs yet (not
-wired). Known drift: the edge runs generated `out/`; stalwart16 was
-bootstrapped from scratch compose (`/tmp/stalwart16`) before the pipeline —
-reconcile by applying its generated compose when touching it.
+Current declared apps (21): traefik, keycloak, citus, irl-redis, minio, nocodb,
+stalwart, roundcube, cryptpad, temporal, temporal-ui, formbricks, webstudio,
+postiz, plane, coop-api, matrix, element-web, element-call, coturn, onlyoffice.
+`enabled_pillars`: proxy, authentication, cache, storage, communication, workflow.
+The edge runs the generated `out/` (dynamic.yml + instance-tree certs); drift
+reconciles by regenerating and re-applying the generated compose.
 
 ## Identity pillar — LIVE
 
@@ -80,7 +79,7 @@ reconcile by applying its generated compose when touching it.
 - Traefik v3 (`proxy-traefik-1`), generated file-provider config.
 - Routes: auth→keycloak, app→plane (Caddy :3002), mail→stalwart,
   api→coop-api (host :3001), nocodb→oauth2-proxy gate, s3/s3api→minio,
-  apex→full-kit (host :3000).
+  apex→irl-dashboard (host :3000).
 - Wildcard cert `*.irl.coop` renewed 2026-08-08 (notBefore Aug 8, notAfter
   **Nov 6 2026**). Renewal: acme.sh (neilpang/acme.sh) + custom Gandi LiveDNS
   v5 hook (`infra/scripts/dns_gandi_livedns.sh` — the image's built-in hook is
@@ -96,7 +95,7 @@ reconcile by applying its generated compose when touching it.
 
 ## Apps pillar — LIVE
 
-- full-kit (https://irl.coop, host :3000, `npm run dev`, canonical env:
+- irl-dashboard (https://irl.coop, host :3000, `npm run dev`, canonical env:
   NEXTAUTH_URL, COOP_API_URL, NEXT_PUBLIC_COOP_API_URL → api.irl.coop).
 - coop-api (https://api.irl.coop, :3001, host dev; canonical issuer +
   ALLOWED_REDIRECTS; edge route live).
@@ -154,8 +153,8 @@ reconcile by applying its generated compose when touching it.
 - Citus `172.17.0.1:5432` (0.0.0.0): roles/dbs `irlcoop`, `nocodb`, `stalwart`.
 - Shared Redis `:6379` — prefix all keys (`KEY_PREFIX=plane` for plane cache);
   pub/sub `irl:notify:{sub}`.
-- MinIO `:9000/:9001` (root minioadmin/minioadmin123, bucket `stalwart`, user
-  `stalwart-s3`) — blob store wiring for Stalwart PENDING.
+- MinIO `:9000/:9001` (bucket `stalwart`, user `stalwart-s3`) — Stalwart blob
+  store (S3) wired via `x:BlobStore/set` (see Mail pillar).
 - plane-db `:5434`; keycloak-db `:5433`.
 
 ## Mail pillar — LIVE (webmail deployed 2026-08-09)
@@ -212,14 +211,14 @@ reconcile by applying its generated compose when touching it.
   no scope. Fix: `scope: "openid profile email"` added to mintCoopJwt
   (auth.ts). The stdout tracer (`@type: Stdout`, level debug → docker logs)
   is what surfaced these — the file tracer wrote nothing.
-- **full-kit embed** (DONE 2026-08-09): nav item "Webmail" (Apps section) →
+- **irl-dashboard embed** (DONE 2026-08-09): nav item "Webmail" (Apps section) →
   /apps/webmail — full-height iframe of webmail.irl.coop + "Open full screen"
   button; roundcube `x_frame_options = false` to allow framing; auto-login in
   the iframe works via the shared Keycloak realm session (verified in browser).
 - **Canonical-identity provisioning** (DONE 2026-08-09): accounts are
   decoupled from login method (Google/web3auth/passkeys/… all map to one
   canonical user). The mailbox is `<username>@irl.coop`, claimed on first
-  webmail use: the full-kit webmail page gates on the session email — if it
+  webmail use: the irl-dashboard webmail page gates on the session email — if it
   isn't @irl.coop it shows the claim panel → coop-api `POST /api/v1/me/username`
   (coop JWT auth, service account + manage-users) sets the Keycloak email →
   stalwart self-provisions the mailbox on first auth (the OIDC directory
@@ -305,9 +304,9 @@ reconcile by applying its generated compose when touching it.
   existing secrets + redirect URIs); `coop_session` cookie (HttpOnly, Secure,
   SameSite=Lax, .irl.coop, 30d) — authorize issues a code directly from the
   session (no Keycloak redirect); `POST /api/auth/login` = password
-  direct-grant (zero redirect). Verified: 12/12 ad-hoc + full-kit login green.
+  direct-grant (zero redirect). Verified: 12/12 ad-hoc + irl-dashboard login green.
   SLICE 2 DONE 2026-08-09 (see below): roundcube → plane → nocodb-gate →
-  matrix → stalwart all on the gateway. Remaining: the full-kit sign-in page
+  matrix → stalwart all on the gateway. Remaining: the irl-dashboard sign-in page
   switching to the password-login endpoint, and (later) the coop-owned
   interactive ceremony for Google/passkey/QR (one flow, then cookie-everywhere).
 - Root cause of the "mail refused" mystery: stalwart was stuck in bootstrap mode

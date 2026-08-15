@@ -21,7 +21,13 @@ function sha256(data: string | Buffer): string {
 export function makeS3Client(opts: S3ClientOpts) {
   const scheme = opts.endpoint.startsWith("localhost") || opts.endpoint.startsWith("172.") ? "http" : "https";
 
-  function sign(method: string, path: string, query = "", body?: Buffer | string): Record<string, string> {
+  function sign(
+    method: string,
+    path: string,
+    query = "",
+    body?: Buffer | string,
+    signedExtra: Record<string, string> = {}
+  ): Record<string, string> {
     const now = new Date();
     const amz = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
     const date = amz.slice(0, 8);
@@ -32,6 +38,7 @@ export function makeS3Client(opts: S3ClientOpts) {
       host: opts.endpoint,
       "x-amz-content-sha256": payloadHash,
       "x-amz-date": amz,
+      ...signedExtra,
     };
     const signed = Object.keys(headers).sort().join(";");
     const canonicalQuery = query.replace(/^[?]/, "");
@@ -56,9 +63,10 @@ export function makeS3Client(opts: S3ClientOpts) {
     path: string,
     query = "",
     body?: Buffer,
-    extraHeaders?: Record<string, string>
+    extraHeaders?: Record<string, string>,
+    signedExtra?: Record<string, string>
   ): Promise<Response> {
-    const hdrs = sign(method, path, query, body);
+    const hdrs = sign(method, path, query, body, signedExtra);
     const url = `${scheme}://${opts.endpoint}${path}${query}`;
     const resp = await fetch(url, {
       method,
@@ -83,6 +91,18 @@ export function makeS3Client(opts: S3ClientOpts) {
     },
     deleteObject(bucket: string, key: string): Promise<Response> {
       return request("DELETE", `/${bucket}/${encodeKey(key)}`);
+    },
+    /** Server-side copy: PUT to dst with x-amz-copy-source (S3 has no rename). */
+    copyObject(bucket: string, srcKey: string, dstKey: string): Promise<Response> {
+      const src = `/${bucket}/${encodeKey(srcKey)}`;
+      return request(
+        "PUT",
+        `/${bucket}/${encodeKey(dstKey)}`,
+        "",
+        undefined,
+        {},
+        { "x-amz-copy-source": src }
+      );
     },
     /** List keys under a prefix. Returns the raw XML (caller parses). */
     list(bucket: string, prefix: string): Promise<Response> {

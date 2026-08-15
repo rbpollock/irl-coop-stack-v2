@@ -21,7 +21,7 @@ Before submitting your first pull request, please review this document to help e
 ### 3. Navigate to project directory
 
 ```bash
-cd full-kit
+cd irl-dashboard
 ```
 
 ### 4. Create a new Branch
@@ -53,12 +53,12 @@ pnpm install
 pnpm run dev
 ```
 
-## Keep `starter-kit` and `full-kit` in Sync
+## Keep `starter-kit` and `irl-dashboard` in Sync
 
-If your contribution involves code that exists in both the `full-kit` and `starter-kit` directories (e.g., shared components, layout structure, configuration), **please make sure to reflect any applicable changes in both directories**.
+If your contribution involves code that exists in both the `irl-dashboard` and `starter-kit` directories (e.g., shared components, layout structure, configuration), **please make sure to reflect any applicable changes in both directories**.
 
-- The `full-kit` contains the complete feature set, while the `starter-kit` is a minimal version designed for quick starts.
-- When updating or adding features in `full-kit`, check if the same component or logic also exists in `starter-kit`.
+- The `irl-dashboard` contains the complete feature set, while the `starter-kit` is a minimal version designed for quick starts.
+- When updating or adding features in `irl-dashboard`, check if the same component or logic also exists in `starter-kit`.
 - **If the feature involves Internationalization (I18n), Authentication, or Customizer**, these features are **not included in `starter-kit`**, so **you must remove these features** before adding the code to `starter-kit`.
 
 This ensures that the `starter-kit` remains lean and free from dependencies that may not be required by all users.

@@ -196,22 +196,32 @@ export default async function docsRoutes(fastify: FastifyInstance): Promise<void
           : ["pptx", "odp"].includes(ext)
             ? "presentation"
             : "text";
+    // One relay token per editor-open: bound to (sub, name), 15-min TTL.
+    // Both the content URL (the editor fetches server-side) and the save
+    // callback (OnlyOffice POSTs server-side carrying NO coop JWT) auth via
+    // this token — the callbackUrl query string is the only credential the
+    // DocumentServer can present, so it must be self-authing.
+    const relayToken = mintContentToken(claims.sub, safe);
     const config: Record<string, unknown> = {
       type: "desktop",
       documentType,
       document: {
         // Short-lived relay token (variant B): bound to this user + file,
         // expires in 15 min. The editor fetches this server-side.
-        url: `${process.env.COOP_API_BASE_URL ?? "https://api.irl.coop"}/api/v1/docs/${encodeURIComponent(safe)}/content?token=${encodeURIComponent(mintContentToken(claims.sub, safe))}`,
+        url: `${process.env.COOP_API_BASE_URL ?? "https://api.irl.coop"}/api/v1/docs/${encodeURIComponent(safe)}/content?token=${encodeURIComponent(relayToken)}`,
         title: safe,
         fileType: safe.split(".").pop() ?? "docx",
         key: crypto.createHash("md5").update(key).digest("hex"),
         permissions: { edit: true, download: true, print: true },
       },
       editorConfig: {
-        callbackUrl: `${process.env.COOP_API_BASE_URL ?? "https://api.irl.coop"}/api/v1/docs/${encodeURIComponent(safe)}/save`,
+        callbackUrl: `${process.env.COOP_API_BASE_URL ?? "https://api.irl.coop"}/api/v1/docs/${encodeURIComponent(safe)}/save?token=${encodeURIComponent(relayToken)}`,
         user: { id: claims.sub, name: claims.email ?? claims.sub },
-        customization: { autosave: true, compactHeader: false },
+        // autosave:false → Strict co-editing mode: the manual Save button and
+        // Save-as menu item appear. forcesave:true → clicking Save fires a
+        // forcesave callback immediately (else the file only compiles when
+        // every user closes the doc + ~10s).
+        customization: { autosave: false, compactHeader: false, forcesave: true },
       },
     };
     // The full config is signed as an HS256 JWT — the DocumentServer
@@ -239,20 +249,27 @@ export default async function docsRoutes(fastify: FastifyInstance): Promise<void
     return reply.send(buf);
   });
 
-  // Editor save callback (OnlyOffice POSTs the edited file here).
+  // Editor save callback (OnlyOffice POSTs the edited file here). OnlyOffice
+  // is server-to-server — it carries NO coop JWT, only its own JWT in the
+  // body `token` field. Auth is the relay token minted into the callbackUrl
+  // query string (same variant-B pattern as the content endpoint): it encodes
+  // sub|name and expires, so a captured callback URL is inert.
   fastify.post("/api/v1/docs/:name/save", async (request, reply) => {
-    const claims = verifyBearer(request, reply);
-    if (!claims) return;
+    const q = request.query as Record<string, string>;
     const name = (request.params as any).name as string;
     const safe = name.replace(/[^a-zA-Z0-9._-]/g, "");
     if (!safe) return reply.code(400).send({ error: "invalid_name" });
+    const authed = verifyContentToken(q.token ?? "");
+    // The token must be bound to THIS filename (no cross-file save).
+    if (!authed || authed.name !== safe) return reply.code(403).send({ error: "invalid_or_expired_token" });
     const body = request.body as any;
     const url = body?.url as string | undefined;
+    // Status notifications (open/close) carry no url — just acknowledge.
     if (!url) return reply.send({ error: 0 });
     const file = await fetch(url);
     if (!file.ok) return reply.send({ error: 1 });
     const buf = Buffer.from(await file.arrayBuffer());
-    const resp = await s3("PUT", `/${MINIO_BUCKET}/docs/${claims.sub}/${safe}`, "", buf);
+    const resp = await s3("PUT", `/${MINIO_BUCKET}/docs/${authed.sub}/${safe}`, "", buf);
     if (!resp.ok) return reply.send({ error: 1 });
     return reply.send({ error: 0 });
   });

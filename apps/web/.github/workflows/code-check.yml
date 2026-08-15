@@ -20,8 +20,8 @@ jobs:
           node-version: "lts/*"
           cache: "pnpm"
 
-      - name: Install dependencies and lint full-kit
-        working-directory: full-kit
+      - name: Install dependencies and lint irl-dashboard
+        working-directory: irl-dashboard
         run: |
           pnpm install
           pnpm run lint
@@ -49,8 +49,8 @@ jobs:
           node-version: "lts/*"
           cache: "pnpm"
 
-      - name: Install dependencies and check format for full-kit
-        working-directory: full-kit
+      - name: Install dependencies and check format for irl-dashboard
+        working-directory: irl-dashboard
         run: |
           pnpm install
           pnpm run format
@@ -78,8 +78,8 @@ jobs:
           node-version: "lts/*"
           cache: "pnpm"
 
-      - name: Install dependencies and type-check full-kit
-        working-directory: full-kit
+      - name: Install dependencies and type-check irl-dashboard
+        working-directory: irl-dashboard
         run: |
           pnpm install
           pnpm exec tsc --noEmit

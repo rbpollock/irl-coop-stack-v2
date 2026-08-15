@@ -12,7 +12,7 @@ const publicKey = keyB64
   : null;
 
 // Verify the Bearer coop JWT; replies 401 and returns null on failure.
-// The full-kit holds this JWT (minted at the OAuth token exchange) in its
+// The irl-dashboard holds this JWT (minted at the OAuth token exchange) in its
 // NextAuth session — sub is the Keycloak user id.
 export function verifyBearer(request: any, reply: any): any | null {
   const auth = request.headers.authorization ?? "";

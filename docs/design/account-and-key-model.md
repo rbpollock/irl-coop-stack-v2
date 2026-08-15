@@ -205,7 +205,7 @@ Constraints (settled): badges prove contribution, never worth — no class syste
   (`apps/coop-api/src/safe.ts`), verified end-to-end Aug 2026
 - Modules deployed on local node (singleton 0x5FbD…, factory 0xe7f1…,
   PasskeyValidator 0x9fE4…, SovereignEvolutionModule 0xCf7E…, SessionKeyModule 0xDc64…)
-- Onboarding + account linking (coop-api authority), OAuth bridge (full-kit ↔
+- Onboarding + account linking (coop-api authority), OAuth bridge (irl-dashboard ↔
   coop-api ↔ Keycloak ↔ Google) — all E2E-verified
 
 ## Gaps to build (when knobs are decided)

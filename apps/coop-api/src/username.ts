@@ -32,7 +32,7 @@ export default async function usernameRoutes(fastify: FastifyInstance): Promise<
   // via the OIDC directory — the domain irl.coop already exists).
   fastify.post("/api/v1/me/username", async (request, reply) => {
     // The caller authenticates with the coop-api-issued JWT (what the
-    // full-kit holds in its NextAuth session); sub is the Keycloak user id.
+    // irl-dashboard holds in its NextAuth session); sub is the Keycloak user id.
     const claims = verifyBearer(request, reply);
     if (!claims) return;
 

@@ -15,8 +15,8 @@ management/monitoring model (declared-vs-running, bring-up, status surfaces).
 - **Edge**: Traefik v3 (`proxy-traefik-1`) on the host, generated file-provider
   config (`infra/out/dev/`). Routes: `auth`→keycloak, `app`→plane (Caddy),
   `mail`→stalwart, `api`→coop-api (host :3001), `nocodb`→oauth2-proxy gate,
-  `s3`/`s3api`→minio, apex `irl.coop`→full-kit (host :3000).
-- **Apps**: full-kit (Next.js), coop-api (Fastify), Plane CE, NocoDB (custom
+  `s3`/`s3api`→minio, apex `irl.coop`→irl-dashboard (host :3000).
+- **Apps**: irl-dashboard (Next.js), coop-api (Fastify), Plane CE, NocoDB (custom
   Gate-SSO image), each an OIDC client of the realm.
 - **Data**: shared Citus Postgres `172.17.0.1:5432` (roles/dbs: `irlcoop`,
   `nocodb`, `stalwart`), shared Redis `:6379` (prefix all keys; plane uses
@@ -36,7 +36,7 @@ management/monitoring model (declared-vs-running, bring-up, status surfaces).
 
 | Service | URL | Port | Notes |
 |---|---|---|---|
-| full-kit | https://irl.coop | :3000 | host `npm run dev` |
+| irl-dashboard | https://irl.coop | :3000 | host `npm run dev` |
 | coop-api | https://api.irl.coop | :3001 | host dev; canonical issuer + redirects |
 | Plane | https://plane.irl.coop | :3002 (Caddy) | OIDC client `plane`; zero-click SSO (sign-in auto-redirects to the fleet gateway); dashboard embed (`/apps/projects` iframe, `?embed=1` hides plane chrome); nav submenu via `/api/plane/projects`; god-mode `/god-mode/` |
 | NocoDB | https://nocodb.irl.coop | gate→container | custom image (see below) |
@@ -83,7 +83,7 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 | `oidc` | `{client_id, redirect \| redirects, public}` → keycloak/clients.yaml registry entry |
 | `web` | base URL combined with `oidc.redirect` to form the redirect URI |
 | `data` | `{scoped_by: sub, views: [...]}` → plane data-scoping view scripts |
-| `routes` | traefik app only — extra file-provider routes (e.g. the apex → full-kit :3000) |
+| `routes` | traefik app only — extra file-provider routes (e.g. the apex → irl-dashboard :3000) |
 
 `${DOMAIN}` is substituted with the instance domain at generation time.
 
@@ -128,7 +128,7 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
   sessions self-heal on the next authorize; the mailbox self-provisions on
   first auth with the canonical address.
 - `type: source` apps (plane) ship their own compose; the generator only emits their OIDC client, env block and data-scoping views.
-- Generated-vs-running drift: the edge (traefik) runs generated `out/` (dynamic.yml + instance-tree certs mounted); some containers (stalwart16) were bootstrapped from scratch compose at `/tmp/stalwart16` before the pipeline existed. When touching a drifted pillar, reconcile by applying its generated compose.
+- Generated-vs-running drift: the edge (traefik) runs generated `out/` (dynamic.yml + instance-tree certs mounted). When touching a drifted pillar, reconcile by applying its generated compose (the old `stalwart16` scratch bootstrap was folded into the generated `communication` pillar 2026-08-12).
 - Stalwart-internal config (datastore, blob store, OIDC directory, accounts) is stored in its postgres DB and managed via the webadmin/admin API — the declarative layer only deploys the container/ports/env/edge.
 - Secrets never enter the tree in plaintext: `.env*` files and `infra/instances/dev/certs/` (wildcard privkey + ACME state) are gitignored. The EXCEPTION is the ansible vault (`infra/ansible/inventory/group_vars/all/vault.yml`) — ciphertext, deliberately committed (see the two-tier model under Key operational facts). Renewed certs land under `infra/instances/dev/certs/` (privkey 0600); renewal is acme.sh + Gandi DNS-01 (daily cron, renewal-window guarded).
 

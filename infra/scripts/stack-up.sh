@@ -3,7 +3,6 @@
 #
 #  1. Every pillar compose in the generated tree (infra/out/dev/compose/*/)
 #  2. Every `type: source` app (its own compose, e.g. plane)
-#  3. Drifted bootstrapped containers whose compose still exists (stalwart16)
 #
 # Each project is `docker compose up -d` (restart policies then hold it).
 # Writes a declared-vs-running snapshot to $STACK_REPORT and prints it.
@@ -78,19 +77,7 @@ for spec in "$ROOT"/infra/instances/dev/apps/*.yaml; do
   fi
 done
 
-# 3. Drifted bootstrap (stalwart16) — compose lived in /tmp before the pipeline
-say "drifted containers"
-if [ -f /tmp/stalwart16/docker-compose.yml ]; then
-  if docker compose -f /tmp/stalwart16/docker-compose.yml up -d >/dev/null 2>&1; then
-    ok "stalwart16 up"
-  else
-    fail "stalwart16 up failed"
-  fi
-else
-  warn "stalwart16 compose not found (/tmp/stalwart16) — mail will stay down; reconcile it into the tree"
-fi
-
-# 4. Snapshot for motd / operators
+# 3. Snapshot for motd / operators
 say "snapshot"
 if python3 "$ROOT/infra/scripts/stack-report.py" --json "$REPORT"; then
   ok "report -> $REPORT"

@@ -7,7 +7,7 @@ at run time from the Safe-anchored vault (see `private-treasury-guards-ledgers.m
 
 ## Layers
 
-1. **Automations panel** (full-kit, mirrors the Files panel) — list, create,
+1. **Automations panel** (irl-dashboard, mirrors the Files panel) — list, create,
    schedule, and inspect automations and their evidence.
 2. **browser-farm** — ephemeral `irlcoop/browser-runner` containers. Each run
    is one container: deterministic Chromium (Playwright's base image), the
@@ -22,7 +22,7 @@ at run time from the Safe-anchored vault (see `private-treasury-guards-ledgers.m
 
 - `FROM mcr.microsoft.com/playwright:v1.46.0` — node + chromium + deps
   pre-baked, no browser download, no npm dance.
-- Harnesses staged from `apps/web/full-kit/e2e/` (the full-kit workspace owns
+- Harnesses staged from `apps/web/irl-dashboard/e2e/` (the irl-dashboard workspace owns
   them; the image context does not).
 - `build.sh` stages into `infra/out/browser-runner` (gitignored) and builds
   `irlcoop/browser-runner:latest`.

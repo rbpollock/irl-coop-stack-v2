@@ -82,7 +82,7 @@ Get your hands on **Shadboard** today and start building scalable, user-friendly
 
 ## irl.coop customizations
 
-This workspace contains the irl.coop dashboard (`full-kit`), an older experiment (`starter-kit`), and the backend services in `apps/coop-api` (auth bridge + relayer).
+This workspace contains the irl.coop dashboard (`irl-dashboard`), an older experiment (`starter-kit`), and the backend services in `apps/coop-api` (auth bridge + relayer).
 
 ### Authentication is decoupled
 
@@ -96,4 +96,4 @@ NextAuth (frontend) → coop-api (:3001) → Keycloak (:8081, realm irl-coop) �
 - `apps/coop-api` implements `authorize` / `token` / `userinfo` and owns the Keycloak client secret; its JWT is also the Bearer credential for the auth-to-EVM bridge (`POST /api/onboard`).
 - Keycloak (`infra/compose/authentication`) brokers Google via an identity-provider alias.
 
-Relevant docs: [`apps/coop-api/README.md`](../coop-api/README.md), [`apps/web/full-kit/README.md`](./full-kit/README.md), and the in-app docs page (full-kit → `/docs/development/authentication`).
+Relevant docs: [`apps/coop-api/README.md`](../coop-api/README.md), [`apps/web/irl-dashboard/README.md`](./irl-dashboard/README.md), and the in-app docs page (irl-dashboard → `/docs/development/authentication`).

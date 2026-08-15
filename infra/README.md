@@ -35,7 +35,7 @@ The TLS edge is **Traefik** (file provider — the "dynamic generated configurat
 - **Renewal (automated)**: `infra/scripts/renew-cert.sh` issues/renews via acme.sh (Gandi LiveDNS DNS-01, `dns_gandi_livedns` hook — the image's built-in hook and lego's gandi provider are both broken against Gandi's 40-char v5 keys). A daily cron (`30 3 * * *`, service user) runs it, but the script no-ops outside the **3-day window** (day before / day of / day after) around the next renewal date (expiry − 30 days, matching the CA's ARI window) plus a 10-day emergency catch-up; the edge is restarted only when the cert files actually change. Log: `instances/dev/certs/renew.log`.
 - The generated `out/<name>/ansible/playbooks/edge.yml` syncs the proxy compose + dynamic config and copies the cert to `/opt/app/proxy/certs/` on the target host.
 
-Current hostname map (dev instance, domain `irl.coop`): `auth` → keycloak:8081, `mail` → stalwart:8083, `app` → plane:3002, `nocodb` → nocodb-gate:8082, `s3` → minio console:9001, `s3api` → minio API:9000, apex → full-kit:3000.
+Current hostname map (dev instance, domain `irl.coop`): `auth` → keycloak:8081, `mail` → stalwart:8083, `app` → plane:3002, `nocodb` → nocodb-gate:8082, `s3` → minio console:9001, `s3api` → minio API:9000, apex → irl-dashboard:3000.
 
 > ⚠️ Router: 80/443 + mail (25/587/143/993) forward to this host (192.168.18.20) — verified externally (surfy 192.168.18.11 is the retired edge).
 

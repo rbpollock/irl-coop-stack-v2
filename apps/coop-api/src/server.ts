@@ -12,6 +12,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '../../infra/out/dev/secrets.e
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
 import formbody from '@fastify/formbody'
+import multipart from '@fastify/multipart'
 import authRoutes from './auth'
 import onboardingRoutes from './onboarding'
 import safeRoutes from './safe'
@@ -39,6 +40,11 @@ fastify.register(cors, {
 
 fastify.register(formbody)
 fastify.register(cookie)
+// Multipart uploads (the FileManager's fileUploadConfig sends FormData).
+// @fastify/multipart v9's FastifyInstance augmentation expects the default
+// type provider; this build resolves a generic one, so register()'s overload
+// rejects it. Cast is the standard workaround — runtime registration is fine.
+fastify.register(multipart as any)
 // Raw binary uploads (docs PUT) — Fastify has no octet-stream parser by default.
 fastify.addContentTypeParser("application/octet-stream", (request, payload, done) => {
   const chunks: Buffer[] = []

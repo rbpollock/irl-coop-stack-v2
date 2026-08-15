@@ -25,7 +25,7 @@ $config['oauth_verify_host'] = true;
 
 // --- behind the traefik edge (https) ---
 $config['use_https'] = true;
-// Allow embedding inside the full-kit shadboard (iframe). The default
+// Allow embedding inside the irl-dashboard shadboard (iframe). The default
 // 'sameorigin' would refuse framing from irl.coop (different origin).
 $config['x_frame_options'] = false;
 
