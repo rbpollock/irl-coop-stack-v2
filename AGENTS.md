@@ -5,6 +5,9 @@ stack: Safe-as-everything accounts, one Keycloak identity realm, federated core
 services, declarative deployment. Read STATUS.md for the live status of each
 pillar, and `docs/design/infra-management-monitoring.md` for the full
 management/monitoring model (declared-vs-running, bring-up, status surfaces).
+The forward-looking group model — event/notification bus, group shapes,
+provisioning, proofs, and the commons economy — is designed in
+`docs/design/event-bus-and-group-shapes.md` (not yet built).
 
 ## Architecture in one screen
 

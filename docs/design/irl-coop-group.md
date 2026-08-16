@@ -1,6 +1,6 @@
 # The irl.coop Group — Safe-as-the-Co-op, Invite-on-First-Signin, Roles, Voting, Auto Matrix Channels
 
-Status: design · Aug 2026 · Builds on world-doc-and-contacts.md (seats), account-and-key-model.md (Safe), private-treasury-guards-ledgers.md (treasury), and the live Matrix stack (matrix-synapse-stack.md). Companion docs: world-doc-and-contacts.md, world-doc-architecture.html.
+Status: design · Aug 2026 · Builds on world-doc-and-contacts.md (seats), account-and-key-model.md (Safe), private-treasury-guards-ledgers.md (treasury), and the live Matrix stack (matrix-synapse-stack.md). Companion docs: world-doc-and-contacts.md, world-doc-architecture.html, event-bus-and-group-shapes.md (shapes, provisioning, proofs, commons economy).
 
 ## 0. The shape in one paragraph
 

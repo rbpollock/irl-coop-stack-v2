@@ -449,6 +449,9 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
   until Robbie raises it). Fragility points to weigh then: single Gandi account,
   single router WAN IP, one wildcard cert, surfy/this-host split.
 - Not in final form: Temporal, Formbricks, Webstudio, Postiz, CryptPad.
+- Group model (event bus + shapes + provisioning + proofs + commons economy) —
+  design: `docs/design/event-bus-and-group-shapes.md`. Not started; builds on
+  irl-coop-group.md / regenerative-vision-note.md / private-treasury.
 - NocoDB cosmetic console noise (not errors, no toasts): `maintenance_staging`
   config probe 404 (OSS baseline), chatwoot iframe refusal, browser-extension
   content-script chatter. (The workbox precache /404 + /200 warnings are FIXED
