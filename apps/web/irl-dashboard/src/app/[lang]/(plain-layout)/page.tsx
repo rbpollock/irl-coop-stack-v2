@@ -155,6 +155,9 @@ export default async function LandingPage({
             <a href="#architecture" className="hover:text-foreground">
               Architecture
             </a>
+            <Link href="/design" className="hover:text-foreground">
+              Design docs
+            </Link>
           </nav>
           <div className="flex items-center gap-2">
             <Link
@@ -401,6 +404,12 @@ export default async function LandingPage({
             tools for the secure coordination of informal and formal
             organizations.
           </p>
+          <Link
+            href="/design"
+            className="text-sm font-semibold text-muted-foreground hover:text-foreground"
+          >
+            Design docs
+          </Link>
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-emerald-500" />
             All systems operational
