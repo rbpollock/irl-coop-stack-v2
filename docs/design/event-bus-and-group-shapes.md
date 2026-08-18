@@ -164,6 +164,70 @@ architecture: the traefik edge restart on `dynamic.yml` change (known quirk), an
 OIDC client provisioning. Deep app-to-app integrations are the coupling tax — those
 still force coordinated deploys.
 
+### 5.1 The reconciler (declared vs actual)
+
+"Adding an app" is solved (§5); adopting it into existing groups is not. The
+reconciler closes declared-vs-actual drift — the same "declared vs running" model
+as infra-management-monitoring.md, applied to groups instead of containers:
+
+```
+declared  = catalog features × this group's activation    (what it should have)
+actual    = resource_scopes + per-app state               (what it got)
+drift     = declared − actual                             (missing → provision it)
+reconciler runs the missing hooks (idempotent Temporal activities)
+```
+
+- **declared** — the catalog's feature set, filtered by the group's activation rows
+  (`app_activations`, §5.2).
+- **actual** — `resource_scopes` (group-scoping.md §2) plus each app's state rows.
+- **drift** — the diff, and only gaps get filled. A group that removed an app stays
+  removed; a renamed role stays renamed. The reconciler never rewrites customization
+  (composition, not inheritance — §3.2).
+- The sweep is one Temporal workflow fanning out per group (or a periodic job); each
+  activity is idempotent and compensable (§4).
+
+### 5.2 Adoption policy (who adopts a new feature)
+
+A new feature is NOT written into every existing group's record — that would turn the
+shape into a cage. The policy decides who adopts it, by kind:
+
+| feature kind | prod default | trigger |
+|---|---|---|
+| core (identity, common room, event bus, root membership) | opt-out | batch-reconcile all groups on ship |
+| optional (any new app) | opt-in | lazy — hook fires on first use |
+| platform (irl.coop root group) | always | declarative build |
+
+- **Activation rows** live in a dedicated `app_activations(group_id, app, enabled,
+  adopted_at)` table — the "activation" layer from §5, kept separate from the shape so
+  the shape stays read-only (§3.1) and the sweep can index by app.
+- **"Core" is narrow and rarely grows** — only what a group can't be live without, and
+  the sole case that gets an eager opt-out sweep. Everything else is lazy.
+- **Dev phase is non-lazy.** With only a handful of groups, eager adoption is cheap and
+  exercises every feature immediately: in dev all kinds sweep on ship (opt-out) regardless
+  of the prod default. Prod flips optional back to lazy/opt-in.
+
+Concretely, "we add a feature" is:
+
+1. Catalog entry (git): the hook + its `kind` (core/optional) + default activation.
+2. core → enqueue a reconcile sweep (fan-out per group). optional → no sweep; the hook
+   fires on first use.
+3. The hook runs idempotently, writes `resource_scopes`/state, compensates on failure.
+
+### 5.3 Updates to existing apps
+
+Two different things hide under "updates" — split them by owner:
+
+| change | auto? | mechanism |
+|---|---|---|
+| runtime (image bump) | yes | declarative layer bumps the tag, the container re-creates, the app runs its own startup migrations — deploy-level, never a per-user migration |
+| data/schema — additive + idempotent | yes | `ADD COLUMN IF NOT EXISTS` / `CREATE IF NOT EXISTS` — the platform's existing `initDb` / `coop_rls.sql` pattern |
+| data/schema — transformative / breaking | no | versioned migration (schema watermark), run once explicitly, with rollback/compensation — never silently rewritten |
+
+The rule: migrations auto-apply only when additive and idempotent (safe to run twice,
+never rewrite existing data). A breaking change is a versioned, one-shot, reversible
+migration — declared-vs-actual again, but with a human (or a gated deploy) in the loop
+instead of a sweep.
+
 ## 6. Proofs (ZK)
 
 ### 6.1 Generic core + shape-specific add-ons

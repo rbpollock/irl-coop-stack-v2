@@ -90,3 +90,56 @@ that database. Minimal vertical slice:
 
 Out of scope for this slice: zk-badges for hidden groups, on-chain membership
 registry sync, UI polish, the full world-doc builder service.
+
+## 7. Group ↔ Matrix rooms (design)
+
+A Matrix room is a group resource — the same primitive as a Plane project or a
+NocoDB base. The mapping is a `resource_scopes` row:
+
+    app = 'matrix', resource_key = room_id
+
+The appservice resolves `room_id → group_id` through this row, so events in the
+room are scoped to the *room's* group (RLS) instead of the sender's personal
+group.
+
+### 7.1 Two ways a room gets scoped
+
+- **Provisioned** — declared in the group template; the provisioning workflow
+  creates the room AND writes the scope row in one event.
+- **Adopted** — a member creates a room ad-hoc, then
+  `POST /groups/:id/resources {app:'matrix', resource_key:room_id}` scopes it.
+
+### 7.2 Privacy → room access
+
+The group's `privacy` tier maps to Matrix room access at provisioning:
+
+| privacy | visibility | join_rule | directory |
+|---|---|---|---|
+| open    | public     | public    | listed    |
+| members | private    | invite    | unlisted  |
+| hidden  | private    | invite    | unlisted  |
+
+Federation is OFF on this homeserver, so "public" today means "any irl.coop
+account" (itself open to join), not the wider Matrix federation. Enabling
+federation later widens "public" with no room-config change.
+
+### 7.3 Room creation keeps the appservice invisible
+
+The appservice never joins or sends. To create a room without making
+`@coop-api` the creator, the provisioning workflow uses the AS API with
+`?user_id=<group-owner>` — impersonating the owner via `as_token` (the AS→HS
+direction) — so the owner is the room's creator.
+
+### 7.4 The irl.coop root group
+
+`irl.coop` is the platform's root group — the "group of the whole." It is a
+group like any other (same provisioning path), with one exception:
+
+- **Deterministic Safe.** User-created groups use a random `saltNonce`
+  (`freshSalt()`); the personal account uses a sub-derived deterministic salt.
+  The root group uses a **fixed well-known salt** (`keccak256("irl.coop")`),
+  so its Safe address is a stable platform constant that configs and contracts
+  can reference — and it survives a `master.key` rotation (the salt is not
+  derived from the secret).
+- **Open by default** → its room is `visibility: public` + `join_rule: public`
+  (visible and joinable by any irl.coop account).
