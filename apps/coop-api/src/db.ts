@@ -184,7 +184,8 @@ INSERT INTO grants (name, description) VALUES
   ('telephony.admin', 'Provision and manage the group telephony; read all call records'),
   ('telephony.agent', 'Serve as a queue agent'),
   ('telephony.caller', 'Make and receive calls on group/personal extensions'),
-  ('telephony.records.read', 'Read the group call records and voicemail')
+  ('telephony.records.read', 'Read the group call records and voicemail'),
+  ('telephony.device.provision', 'Provision/rotate a member device; the secret never passes through the grant-holder')
 ON CONFLICT (name) DO NOTHING;
 
 -- Builtin roles.

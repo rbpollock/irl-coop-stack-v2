@@ -1,16 +1,15 @@
 # Traefik — the TLS edge for the instance (proxy pillar).
 # Terminates *.irl.coop with the wildcard cert (file provider) and routes the
-# public hostnames to the app containers. The router rules themselves are NOT
-# docker labels here: the generator emits a dynamic.yml (file provider) from
-# each app's `proxy:` section, so the edge works against the current running
-# stack (host-published ports) AND the future fully-generated deployment.
+# public hostnames to the app containers. Router rules come ONLY from the file
+# provider: the generator emits a dynamic.yml from each app's `proxy:` section.
+# The docker provider is intentionally disabled — docker-socket discovery broke
+# against the Docker 29 daemon (client API 1.24 < required 1.44) and is
+# redundant here anyway (routes are not docker labels).
 name: traefik
 pillar: proxy
 type: image
 image: traefik:v3.5
 command:
-  - --providers.docker=true
-  - --providers.docker.exposedbydefault=false
   - --providers.file.filename=/etc/traefik/dynamic.yml
   - --entrypoints.web.address=:80
   - --entrypoints.websecure.address=:443
@@ -22,7 +21,6 @@ ports:
   - "80:80"
   - "443:443"
 volumes:
-  - /var/run/docker.sock:/var/run/docker.sock:ro
   - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
   - ./certs:/etc/traefik/certs:ro
 restart: always

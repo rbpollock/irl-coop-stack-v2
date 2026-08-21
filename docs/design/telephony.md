@@ -66,12 +66,92 @@ their group through the *existing* event/digest fan-out, unchanged.
 
 ## Provisioning + events
 
-A Temporal activity (`coop-telephony` queue) provisions via the FusionPBX
-API/DB and records `telephony_resources` + `resource_scopes`, flipping
-`group_telephony.status`. A mod_event_socket listener → coop-api →
-`coop_ingest_event(source='freeswitch', …)` + Redis `irl:notify:{sub}`;
-Temporal workflows for multi-step events (missed → voicemail → transcribe →
-notify → callback).
+**Worker shape.** Request-driven, not a sweep: an owner/`telephony-admin` calls
+`POST /api/v1/groups/:id/telephony {template_id}`; coop-api inserts a
+`group_telephony` row (`status='provisioning'`) and starts a Temporal workflow
+`provisionGroupTelephony` (workflow id `telephony-<id>`) on a **second task queue
+`coop-telephony`** — separate from `coop-delivery` so a provisioning backlog never
+blocks notification delivery.
+
+**Two databases, two roles.** The workflow touches both:
+
+| DB | Role | Holds |
+|---|---|---|
+| `irlcoop` (Citus) | `coop` (RLS-scoped) | projection: `group_telephony`, `telephony_resources`, `resource_scopes` |
+| `fusionpbx` (Citus) | `fusionpbx` | concrete objects: `v_extensions`, `v_voicemails`, `v_conferences`, … |
+
+`provisionResource` (one per template resource) writes the concrete object to the
+`fusionpbx` DB, then stamps the identity bridge in the projection via a
+SECURITY DEFINER function (owned by `coop_rls`, like `coop_ingest_event`):
+
+```sql
+coop_provision_telephony_resource(group_id, group_telephony_id, resource_type, external_ref, config)
+-- → upsert telephony_resources (ON CONFLICT group_id+resource_type+external_ref)
+-- → insert resource_scopes (group_id, 'freeswitch', external_ref, 'system')
+```
+
+That `resource_scopes` row is what makes call events group-aware with **no new
+event plumbing** — CDRs resolve to their group through the existing
+`coop_ingest_event` fan-out unchanged. The final activity runs ESL
+`api reloadxml` and flips `status → active` (`→ error` on hard failure; Temporal
+retries transient ones first).
+
+**Event ingress.** A `mod_event_socket` listener → coop-api →
+`coop_ingest_event(source='freeswitch', …)` + Redis `irl:notify:{sub}`; Temporal
+workflows for multi-step events (missed → voicemail → transcribe → notify →
+callback).
+
+### Device credentials live in the user Vault
+
+Extension/SIP passwords are **user secrets**, not platform secrets. The
+provisioning activity *fetches* them through a scoped Vault read — it never
+generates or owns them (delegation, not custody — see
+`delegation-and-session-keys.md`). Three copies, three different contents:
+
+| Copy | Holds | Why |
+|---|---|---|
+| user Vault | the raw credential | source of truth, member-owned |
+| `v_extensions.password` | a **hash** | enforcement copy for SIP digest |
+| `telephony_resources.config` | a **`vaultRef` pointer only** | keeps the secret out of the projection |
+
+The projection, the event store, and the bus therefore carry **no credential
+material** — only `external_ref` + a pointer. The Vault is not built yet, so the
+activity is written against a `vaultClient` interface (stub now), sealing that
+contract before the store exists.
+
+### Blind provisioning — set up a softphone without seeing the password
+
+A member may grant an admin (or support role) the right to *set up their
+softphone* without the admin ever seeing the unhashed credential. This is a new,
+selectively-grantable, revocable grant:
+
+- **`telephony.device.provision`** — "provision/rotate a member's device; the
+  secret never passes through the grant-holder." (Not yet seeded — an 8th grant
+  to add beside the existing 7.)
+
+The flow splits into **authorize** (the grant check) and **enroll** (the device
+fetches its own secret), so the secret moves *device ↔ Vault* directly:
+
+1. **One-time enrollment token / QR.** The admin triggers provisioning and gets a
+   short-lived token/QR — not the password. The member scans it; the device
+   exchanges the token for its credential over TLS.
+2. **Auto-provisioning URL.** The softphone fetches its config + credential from
+   an HTTPS provisioning endpoint (reads the Vault server-side); the admin only
+   hands over a URL.
+3. **Dashboard SIP.js self-fetch.** The member's own authenticated session reads
+   the credential from the Vault and registers — no human sees the raw password
+   at all.
+
+Invariant: the raw secret exists in exactly two places — the member's Vault and
+the member's device. Authorizers, logs, the projection, and the event store see
+only handles/tokens. (FreeSWITCH keeps a hash for digest; the softphone needs the
+raw value to *compute* the digest at REGISTER, which is precisely why only the
+device and the Vault ever hold it.)
+
+**Open items before implementation:** the exact FusionPBX `v_*` column map beyond
+`v_extensions`; the hash scheme for `v_extensions.password`; and the Vault's
+grant model for its two distinct consumers (the provisioning activity vs the
+member's register-time self-fetch).
 
 ## Feasibility spike (first build step)
 

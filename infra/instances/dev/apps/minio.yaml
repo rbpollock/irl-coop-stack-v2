@@ -24,9 +24,6 @@ env:
   MINIO_CONFIG_ENV_FILE: ""
 volumes:
   - /opt/app/storage/data/minio:/data
-labels:
-  traefik.enable: "true"
-  traefik.http.routers.minio.rule: Host(`s3.${DOMAIN}`)
 proxy:
   - hostname: s3.${DOMAIN}
     port: 9001
