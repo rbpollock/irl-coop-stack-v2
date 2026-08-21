@@ -20,7 +20,7 @@ env:
   ROUNDCUBEMAIL_SMTP_SERVER: "tls://172.17.0.1"
   ROUNDCUBEMAIL_SMTP_PORT: "587"
   ROUNDCUBEMAIL_DES_KEY: ${SECRET:roundcube.des}
-  ROUNDCUBEMAIL_SKIN: "elastic"
+  ROUNDCUBEMAIL_SKIN: "shadcn-mail"
 proxy:
   hostname: webmail.${DOMAIN}
   port: 8084
