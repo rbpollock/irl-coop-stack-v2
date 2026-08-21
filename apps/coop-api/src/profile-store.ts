@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { withIdentity } from "./db";
 
 export interface CoopProfile {
   sub: string;
@@ -12,35 +13,51 @@ export interface CoopProfile {
   updatedAt: string;
 }
 
-// JSON-file-backed store for coop member profiles. Dev-grade: swap for
-// Postgres when coop-api gets a real database (see README).
-const STORE_PATH =
-  process.env.COOP_PROFILE_STORE ?? path.join(process.cwd(), "data", "profiles.json");
+// Postgres-backed coop member profile. Identity (sub/email) lives in Keycloak;
+// this table is the coop-side projection (display name, avatar, onboarded flags).
+// RLS (profiles_all in infra/compose/storage/scripts/coop_rls.sql) scopes each
+// row to its sub — enforcement in Postgres, not the app. Reads/writes go through
+// withIdentity() so `app.sub` is set and the policy passes.
 
-function load(): Record<string, CoopProfile> {
-  try {
-    return JSON.parse(fs.readFileSync(STORE_PATH, "utf8")) as Record<string, CoopProfile>;
-  } catch {
-    return {};
-  }
+interface ProfileRow {
+  sub: string;
+  email: string | null;
+  display_name: string | null;
+  avatar: string | null;
+  onboarded: boolean;
+  onboarded_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
-function save(store: Record<string, CoopProfile>): void {
-  fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2));
+function toProfile(r: ProfileRow): CoopProfile {
+  return {
+    sub: r.sub,
+    email: r.email,
+    displayName: r.display_name,
+    avatar: r.avatar,
+    onboarded: r.onboarded,
+    onboardedAt: r.onboarded_at ? r.onboarded_at.toISOString() : null,
+    createdAt: r.created_at.toISOString(),
+    updatedAt: r.updated_at.toISOString(),
+  };
 }
 
-export function getProfile(sub: string): CoopProfile | undefined {
-  return load()[sub];
+export async function getProfile(sub: string): Promise<CoopProfile | undefined> {
+  return withIdentity(sub, async (client) => {
+    const r = await client.query("SELECT * FROM profiles WHERE sub = $1", [sub]);
+    return r.rows[0] ? toProfile(r.rows[0] as ProfileRow) : undefined;
+  });
 }
 
-export function upsertProfile(
+export async function upsertProfile(
   sub: string,
-  patch: { email?: string | null; displayName?: string | null; avatar?: string | null }
-): CoopProfile {
-  const store = load();
+  patch: { email?: string | null; displayName?: string | null; avatar?: string | null },
+): Promise<CoopProfile> {
   const now = new Date().toISOString();
-  const existing = store[sub];
+  // Merge semantics mirror the retired JSON store: a field is only overwritten
+  // when the patch provides it (undefined = keep existing; explicit null = clear).
+  const existing = await getProfile(sub);
   const next: CoopProfile = {
     sub,
     email: patch.email !== undefined ? patch.email : existing?.email ?? null,
@@ -51,7 +68,41 @@ export function upsertProfile(
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   };
-  store[sub] = next;
-  save(store);
+  await withIdentity(sub, async (client) => {
+    await client.query(
+      `INSERT INTO profiles (sub, email, display_name, avatar, onboarded, onboarded_at, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, true, $5, $6, $7)
+       ON CONFLICT (sub) DO UPDATE SET
+         email = EXCLUDED.email,
+         display_name = EXCLUDED.display_name,
+         avatar = EXCLUDED.avatar,
+         onboarded = true,
+         onboarded_at = EXCLUDED.onboarded_at,
+         updated_at = EXCLUDED.updated_at`,
+      [next.sub, next.email, next.displayName, next.avatar, next.onboardedAt, next.createdAt, next.updatedAt],
+    );
+  });
   return next;
+}
+
+// One-time migration from the retired JSON-file store (data/profiles.json).
+// Idempotent: subs already present in Postgres are left untouched. Runs
+// best-effort on boot; once migrated the JSON file is inert. Legacy
+// created_at/onboarded_at are re-stamped at migration time (dev-grade).
+export async function migrateProfilesFromJson(): Promise<number> {
+  const storePath = process.env.COOP_PROFILE_STORE ?? path.join(process.cwd(), "data", "profiles.json");
+  let legacy: Record<string, CoopProfile> = {};
+  try {
+    legacy = JSON.parse(fs.readFileSync(storePath, "utf8")) as Record<string, CoopProfile>;
+  } catch {
+    return 0; // no legacy file — nothing to migrate
+  }
+  let migrated = 0;
+  for (const [sub, p] of Object.entries(legacy)) {
+    const existing = await getProfile(sub);
+    if (existing) continue;
+    await upsertProfile(sub, { email: p.email, displayName: p.displayName, avatar: p.avatar });
+    migrated += 1;
+  }
+  return migrated;
 }

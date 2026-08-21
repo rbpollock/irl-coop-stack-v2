@@ -17,11 +17,18 @@ import authRoutes from './auth'
 import onboardingRoutes from './onboarding'
 import safeRoutes from './safe'
 import groupRoutes from './groups'
+import profileRoutes from './profile'
 import { initDb } from './db'
+import { migrateProfilesFromJson } from './profile-store'
 import usernameRoutes from './username'
 import docsRoutes from './docs'
 import filesRoutes from './files'
 import statusRoutes from './status'
+import matrixAppserviceRoutes from './matrix'
+import chatRoutes from './chat'
+import eventRoutes from './events'
+import notificationRoutes from './notifications'
+import mailWebhookRoutes from './mail'
 
 const fastify = Fastify({
   logger: true,
@@ -55,10 +62,16 @@ fastify.register(authRoutes)
 fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)
 fastify.register(groupRoutes)
+fastify.register(profileRoutes)
 fastify.register(usernameRoutes)
 fastify.register(docsRoutes)
 fastify.register(filesRoutes)
 fastify.register(statusRoutes)
+fastify.register(matrixAppserviceRoutes)
+fastify.register(chatRoutes)
+fastify.register(eventRoutes)
+fastify.register(notificationRoutes)
+fastify.register(mailWebhookRoutes)
 
 const start = async () => {
   try {
@@ -67,6 +80,8 @@ const start = async () => {
     try {
       await initDb()
       fastify.log.info(`group store ready @ ${process.env.COOP_DB_HOST ?? '172.17.0.1'}/${process.env.COOP_DB_NAME ?? 'irlcoop'}`)
+      const migrated = await migrateProfilesFromJson()
+      if (migrated > 0) fastify.log.info(`migrated ${migrated} legacy profile(s) from profiles.json`)
     } catch (err) {
       fastify.log.error({ err: (err as Error).message }, 'group store init failed — group endpoints will 500 until the DB is reachable')
     }

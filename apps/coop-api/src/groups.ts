@@ -149,6 +149,25 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     return reply.code(201).send({ group_id: groupId, sub, roles, alias, visibility });
   });
 
+  // Seat roster — members can see who else is seated. The group management
+  // page reads this for the members table (membership is the gate).
+  fastify.get("/api/v1/groups/:id/members", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    const groupId = (request.params as any).id;
+    const rows = await withIdentity(claims.sub, async (client) => {
+      if (!(await isMember(client, groupId, claims.sub))) return null;
+      const { rows } = await client.query(
+        `SELECT sub, roles, alias, visibility, created_at
+         FROM group_members WHERE group_id = $1 ORDER BY created_at ASC`,
+        [groupId],
+      );
+      return rows;
+    });
+    if (rows === null) return reply.code(403).send({ error: "not a group member" });
+    return reply.send(rows);
+  });
+
   // Scope a resource (an app's item) to a group.
   fastify.post("/api/v1/groups/:id/resources", async (request, reply) => {
     const claims = verifyBearer(request, reply);

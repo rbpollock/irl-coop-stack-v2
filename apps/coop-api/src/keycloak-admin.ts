@@ -58,6 +58,21 @@ export async function getUserProfile(sub: string): Promise<{ email?: string | nu
   return (await resp.json()) as { email?: string | null };
 }
 
+// localpart -> sub resolution for the event bus (Matrix sender `@localpart`
+// -> canonical email `localpart@irl.coop` -> realm sub). Cached: events are
+// high-volume, and the sub never changes for a given email.
+const emailSubCache = new Map<string, { sub: string; expiresAt: number }>();
+export async function getUserByEmail(email: string): Promise<string | null> {
+  const hit = emailSubCache.get(email);
+  if (hit && hit.expiresAt > Date.now()) return hit.sub;
+  const resp = await admin(`/users?email=${encodeURIComponent(email)}&exact=true`);
+  if (!resp.ok) throw new Error(`keycloak user search failed: ${resp.status}`);
+  const users = (await resp.json()) as { id: string }[];
+  if (users.length === 0) return null;
+  emailSubCache.set(email, { sub: users[0].id, expiresAt: Date.now() + 10 * 60_000 });
+  return users[0].id;
+}
+
 /**
  * Set the canonical email for the user identified by `sub`.
  * Returns "taken" when the address is owned by another user, "updated" on

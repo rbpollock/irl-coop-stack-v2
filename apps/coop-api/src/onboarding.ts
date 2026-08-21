@@ -7,7 +7,7 @@ export default async function onboardingRoutes(fastify: FastifyInstance): Promis
   fastify.get("/api/auth/onboarding/status", async (request, reply) => {
     const claims = verifyBearer(request, reply);
     if (!claims) return;
-    const profile = getProfile(claims.sub);
+    const profile = await getProfile(claims.sub);
     return reply.send({ onboarded: profile?.onboarded ?? false, profile: profile ?? null });
   });
 
@@ -29,7 +29,7 @@ export default async function onboardingRoutes(fastify: FastifyInstance): Promis
       return reply.code(400).send({ error: "displayName is required" });
     }
 
-    const profile = upsertProfile(claims.sub, {
+    const profile = await upsertProfile(claims.sub, {
       email: claims.email ?? null,
       displayName,
       avatar,

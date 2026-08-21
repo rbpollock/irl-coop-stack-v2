@@ -3,6 +3,7 @@ import * as crypto from "node:crypto";
 import * as jwt from "jsonwebtoken";
 import { getProfile, type CoopProfile } from "./profile-store";
 import { getUserProfile, addUserRequiredAction } from "./keycloak-admin";
+import { provisionOnSignIn } from "./provisioning";
 
 // ---------------------------------------------------------------------------
 // coop-api as the fleet's OIDC issuer (session-gateway auth)
@@ -54,7 +55,17 @@ const kid = crypto
 type OidcClient = { secret: string; redirects: string[] };
 const clients: Record<string, OidcClient> = (() => {
   try {
-    return JSON.parse(process.env.OIDC_CLIENTS ?? "{}") as Record<string, OidcClient>;
+    const raw = JSON.parse(process.env.OIDC_CLIENTS ?? "{}") as Record<string, OidcClient>;
+    // A client secret may be an ${ENV_VAR} reference — resolve it against
+    // process.env (the generator emits derived secrets into secrets.env,
+    // sourced by server.ts) so no secret is hardcoded in .env either.
+    for (const c of Object.values(raw)) {
+      const m = /^\$\{([A-Z0-9_]+)\}$/.exec(c.secret);
+      if (m && process.env[m[1]]) {
+        c.secret = process.env[m[1]]!;
+      }
+    }
+    return raw;
   } catch {
     return {};
   }
@@ -170,6 +181,31 @@ function verifyCoopJwt(token: string): any {
   return jwt.verify(token, publicKeyPem, { algorithms: ["RS256"], issuer: env.oidcIssuer });
 }
 
+// Server-side OIDC code issuance (no browser). The chat gateway drives the
+// Synapse SSO flow programmatically for an already-authed member — `sub` and
+// `email` come from the bearer coop JWT, so we mint the code directly instead
+// of bouncing through the /authorize redirect.
+export async function issueCodeForUser(
+  sub: string,
+  email: string,
+  clientId: string,
+  redirectUri: string,
+  state: string,
+  nonce?: string
+): Promise<string> {
+  const stored = await getProfile(sub);
+  const code = crypto.randomUUID();
+  codes.set(code, {
+    jwt: mintCoopJwt({ sub }, { ...stored, email }),
+    clientId,
+    redirectUri,
+    state,
+    nonce,
+    expiresAt: Date.now() + CODE_TTL_MS,
+  });
+  return code;
+}
+
 function setSessionCookie(reply: FastifyReply, token: string, request: FastifyRequest): void {
   const host = (request.headers.host ?? "").split(":")[0];
   (reply as any).setCookie(COOKIE_NAME, token, {
@@ -180,6 +216,19 @@ function setSessionCookie(reply: FastifyReply, token: string, request: FastifyRe
     // Local dev has no parent domain to share; the fleet shares .irl.coop.
     domain: host === "localhost" || host === "127.0.0.1" ? undefined : env.cookieDomain,
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  });
+}
+
+function clearSessionCookie(reply: FastifyReply, request: FastifyRequest): void {
+  const host = (request.headers.host ?? "").split(":")[0];
+  (reply as any).clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: host !== "localhost" && host !== "127.0.0.1",
+    sameSite: "lax",
+    path: "/",
+    // Mirror setSessionCookie exactly: the browser only drops the cookie when
+    // name + domain + path match what was set (secure context included).
+    domain: host === "localhost" || host === "127.0.0.1" ? undefined : env.cookieDomain,
   });
 }
 
@@ -238,23 +287,36 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     // Already authenticated with the coop-api? Issue the code directly.
     const session = sessionFromRequest(request);
     if (session) {
-      const code = crypto.randomUUID();
-      // Re-mint with the LIVE Keycloak email: the session cookie may predate
-      // the canonical-email claim, and its claims snapshot would leak the
-      // broker email into fleet apps (roundcube → stalwart IMAP). getProfile()
-      // is the local onboarding store (name/avatar) — the email authority is
-      // the Keycloak admin lookup.
-      const stored = getProfile(session.sub);
-      const live = await getUserProfile(session.sub);
-      codes.set(code, {
-        jwt: mintCoopJwt(session, { ...stored, email: live.email ?? null }),
-        clientId: client_id!,
-        redirectUri: redirect_uri!,
-        state,
-        nonce,
-        expiresAt: Date.now() + CODE_TTL_MS,
-      });
-      return reply.redirect(`${redirect_uri}?code=${code}&state=${encodeURIComponent(state)}`);
+      // A session cookie can outlive its Keycloak user (deletion or a realm
+      // wipe/rotation). Treat a stale sub as "not authenticated": drop the
+      // cookie and fall through to the Keycloak bounce so sign-in self-heals
+      // instead of 500ing every fleet app that re-authorizes.
+      try {
+        const live = await getUserProfile(session.sub);
+        const code = crypto.randomUUID();
+        // Re-mint with the LIVE Keycloak email: the session cookie may predate
+        // the canonical-email claim, and its claims snapshot would leak the
+        // broker email into fleet apps (roundcube → stalwart IMAP). getProfile()
+        // is the local onboarding store (name/avatar) — the email authority is
+        // the Keycloak admin lookup.
+        const stored = await getProfile(session.sub);
+        codes.set(code, {
+          jwt: mintCoopJwt(session, { ...stored, email: live.email ?? null }),
+          clientId: client_id!,
+          redirectUri: redirect_uri!,
+          state,
+          nonce,
+          expiresAt: Date.now() + CODE_TTL_MS,
+        });
+        return reply.redirect(`${redirect_uri}?code=${code}&state=${encodeURIComponent(state)}`);
+      } catch (err) {
+        request.log.warn(
+          { sub: session.sub, err: (err as Error).message },
+          "stale session (sub not in Keycloak); clearing cookie and re-authenticating"
+        );
+        clearSessionCookie(reply, request);
+        // fall through to the Keycloak bounce below
+      }
     }
 
     const kcState = b64url(JSON.stringify({ n: state, r: redirect_uri, c: client_id, o: nonce }));
@@ -309,10 +371,14 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     try {
       const tokens = await exchangeCodeWithKeycloak(q.code);
       const claims = await verifyIdToken(tokens.id_token);
-      const coopJwt = mintCoopJwt(claims, getProfile(claims.sub));
+      // Invite-on-first-signin: deploy the personal Safe + provision Matrix.
+      // Best-effort, idempotent — never blocks the sign-in redirect.
+      await provisionOnSignIn(claims.sub, claims.email);
+      const stored = await getProfile(claims.sub);
+      const coopJwt = mintCoopJwt(claims, stored);
 
       // The coop session: subsequent authorize calls skip the Keycloak page.
-      const sessionJwt = mintCoopJwt(claims, getProfile(claims.sub), sessionTtl);
+      const sessionJwt = mintCoopJwt(claims, stored, sessionTtl);
       setSessionCookie(reply, sessionJwt, request);
 
       const code = crypto.randomUUID();
@@ -469,8 +535,11 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       }
       const tokens = await resp.json();
       const claims = await verifyIdToken(tokens.id_token);
-      const coopJwt = mintCoopJwt(claims, getProfile(claims.sub));
-      setSessionCookie(reply, mintCoopJwt(claims, getProfile(claims.sub), sessionTtl), request);
+      // Same invite-on-first-signin provisioning as the OAuth callback.
+      await provisionOnSignIn(claims.sub, claims.email);
+      const stored = await getProfile(claims.sub);
+      const coopJwt = mintCoopJwt(claims, stored);
+      setSessionCookie(reply, mintCoopJwt(claims, stored, sessionTtl), request);
       return reply.send({ access_token: coopJwt, token_type: "Bearer", expires_in: 3600 });
     } catch (err: any) {
       request.log.error({ err: err.message }, "login failed");
