@@ -20,7 +20,7 @@ database:
   name: psycopg2
   args:
     user: matrix
-    password: "${SECRET:postgres.matrix}"
+    password: "${SYNAPSE_POSTGRES_PASSWORD}"
     database: matrix
     host: 172.17.0.1
     port: 5432
@@ -34,6 +34,11 @@ trusted_key_servers: []
 federation_domain_whitelist: []
 url_preview_enabled: false
 
+# coop-api appservice: metadata observer feeding the notification bus
+# (docs/design/matrix-chat-and-notifications.md). Rendered at runtime.
+app_service_config_files:
+  - /data/coop-api-registration.yaml
+
 # OIDC — the realm's `matrix` client. Localpart derives from the EMAIL claim
 # (the canonical @irl.coop), never the preferred_username — the Google broker
 # usernames contain '@' and would poison the localpart (the stalwart lesson).
@@ -44,7 +49,7 @@ oidc_providers:
     # coop_session cookie (no Keycloak page when the dashboard session exists)
     issuer: "https://api.irl.coop"
     client_id: "matrix"
-    client_secret: "${SECRET:oidc.matrix}"
+    client_secret: "${SYNAPSE_OIDC_CLIENT_SECRET}"
     scopes: ["openid", "profile", "email"]
     user_mapping_provider:
       config:
@@ -64,13 +69,13 @@ media_storage_providers:
       bucket: matrix-media
       endpoint_url: http://172.17.0.1:9000
       access_key_id: matrix-s3
-      secret_access_key: "${SECRET:minio.matrix-s3}"
+      secret_access_key: "${SYNAPSE_MEDIA_S3_SECRET}"
       region_name: us-east-1
 
 # TURN for Element Call (coturn, same pillar). REST-auth secret shared.
 turn_uris:
   - "turn:64.135.141.73:3478?transport=udp"
   - "turn:64.135.141.73:3478?transport=tcp"
-turn_shared_secret: "${SECRET:coturn.shared-secret}"
+turn_shared_secret: "${SYNAPSE_TURN_SHARED_SECRET}"
 turn_user_lifetime: 86400000
 turn_allow_guests: false
