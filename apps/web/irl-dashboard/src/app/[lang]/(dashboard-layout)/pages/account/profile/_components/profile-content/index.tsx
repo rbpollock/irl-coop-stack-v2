@@ -1,11 +1,13 @@
-import { ProfileContentInfo } from "./profile-content-info"
-import { ProfileContentMainFeed } from "./profile-content-main-feed"
+import type { Profile } from "../../_lib/profile"
 
-export function ProfileContent() {
+import { ProfileContentGroups } from "./profile-content-groups"
+import { ProfileContentInfo } from "./profile-content-info"
+
+export function ProfileContent({ profile }: { profile: Profile }) {
   return (
     <section className="flex flex-col gap-4 p-4 md:flex-row">
-      <ProfileContentInfo />
-      <ProfileContentMainFeed />
+      <ProfileContentInfo profile={profile} />
+      <ProfileContentGroups profile={profile} />
     </section>
   )
 }

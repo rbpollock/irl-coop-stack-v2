@@ -1,46 +1,42 @@
-import { userData } from "@/data/user"
+import type { Profile } from "../../_lib/profile"
 
 import { ProfileContentIntroItem } from "./profile-content-info-intro-item"
 
-export function ProfileContentIntroList() {
-  const userInfo = userData
-  const location = userInfo.state
-    ? userInfo.state + ", " + userInfo.country
-    : userInfo.country
+function shortId(sub: string) {
+  return sub.length > 18 ? `${sub.slice(0, 8)}…${sub.slice(-6)}` : sub
+}
 
+function formatDate(iso: string | null) {
+  if (!iso) return "—"
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+}
+
+export function ProfileContentIntroList({ profile }: { profile: Profile }) {
   return (
     <ul className="grid gap-y-3">
       <ProfileContentIntroItem
-        title="Works as a"
-        value={
-          <>
-            {userInfo.role} <span className="text-foreground"> at </span>{" "}
-            {userInfo.organization}
-          </>
-        }
-        iconName="BriefcaseBusiness"
-      />
-      <ProfileContentIntroItem
-        title="Lives in"
-        value={location}
-        iconName="House"
-      />
-
-      <ProfileContentIntroItem
         title="Email"
-        value={userInfo.email}
+        value={profile.email ?? "—"}
         iconName="Mail"
       />
-
       <ProfileContentIntroItem
-        title="Phone Number"
-        value={userInfo.phoneNumber}
-        iconName="Phone"
+        title="Account ID"
+        value={shortId(profile.sub)}
+        iconName="Fingerprint"
       />
       <ProfileContentIntroItem
-        title="Language"
-        value={userInfo.language}
-        iconName="Languages"
+        title="Member since"
+        value={formatDate(profile.createdAt)}
+        iconName="CalendarDays"
+      />
+      <ProfileContentIntroItem
+        title="Email verified"
+        value={profile.emailVerified ? "Verified" : "Not verified"}
+        iconName="BadgeCheck"
       />
     </ul>
   )

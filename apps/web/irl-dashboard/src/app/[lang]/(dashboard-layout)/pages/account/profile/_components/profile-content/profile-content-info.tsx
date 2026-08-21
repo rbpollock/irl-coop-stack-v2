@@ -1,11 +1,13 @@
-import { ProfileContentConnection } from "./profile-content-info-connection"
-import { ProfileContentIntro } from "./profile-content-info-intro"
+import type { Profile } from "../../_lib/profile"
 
-export function ProfileContentInfo() {
+import { ProfileContentIntro } from "./profile-content-info-intro"
+import { ProfileContentMembership } from "./profile-content-membership"
+
+export function ProfileContentInfo({ profile }: { profile: Profile }) {
   return (
     <div className="flex-1 space-y-4 md:flex-none md:w-2/5">
-      <ProfileContentIntro />
-      <ProfileContentConnection />
+      <ProfileContentIntro profile={profile} />
+      <ProfileContentMembership profile={profile} />
     </div>
   )
 }
