@@ -1,0 +1,31 @@
+# freeswitch — the coop's softswitch (group-aware telephony core).
+#
+# Signaling is NOT behind the HTTP edge: mod_sofia terminates SIP (5060),
+# WS (5066) and WSS (7443) directly on the host, and RTP flows on the 16384–32768
+# range. Host networking (the coturn pattern) keeps the real source IP for SIP
+# (NAT) and avoids publishing the whole RTP range through docker's port mapper.
+#
+# WSS reuses the SAME *.irl.coop wildcard cert as the edge: the entrypoint
+# combines the mounted fullchain+privkey into wss.pem, so `wss://sip.irl.coop:7443`
+# validates in the browser (a self-signed WSS cert would hard-fail the WebSocket
+# handshake). See also the renewal hook in infra/scripts/renew-cert.sh.
+name: freeswitch
+pillar: communication
+type: image
+image: irlcoop/freeswitch:spike
+network_mode: host
+env:
+  # recorded facts; the event-socket + DB secrets are ${SECRET:...} later
+  SIP_DOMAIN: ${DOMAIN}
+volumes:
+  - /opt/app/communication/etc/freeswitch:/usr/local/freeswitch/conf
+  - /opt/app/communication/data/freeswitch:/var/lib/freeswitch
+dev:
+  volumes:
+    - ./etc/freeswitch:/usr/local/freeswitch/conf
+    - ./data/freeswitch:/var/lib/freeswitch
+    - ./certs/irl.coop:/etc/freeswitch/tls:ro
+# NOTE: host-published SIP/WS/WSS/RTP + the event-socket (8021) are bound by
+# mod_sofia directly on the host — no `ports:` block (same as coturn). The router
+# must forward 5060/5066/7443 (+ RTP range) like the existing mail/TURN ports.
+# FusionPBX reaches the event socket at 172.17.0.1:8021 and shares ./etc/freeswitch.

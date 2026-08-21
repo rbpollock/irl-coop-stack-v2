@@ -72,6 +72,11 @@ after="$(sha256sum "$CERTDIR/fullchain.pem" "$CERTDIR/privkey.pem" 2>/dev/null)"
 if [ "$before" != "$after" ]; then
   echo "cert files changed — restarting the edge"
   docker restart proxy-traefik-1 >/dev/null 2>&1 || true
+  # FreeSWITCH serves WSS from the SAME wildcard: restart it so its entrypoint
+  # re-combines fullchain+privkey into wss.pem and mod_sofia re-reads the cert.
+  # (A surgical `sofia profile internal restart` is possible but drops the
+  # profile's active calls anyway; renewal is ~60d so a full restart is fine.)
+  docker restart communication-freeswitch-1 >/dev/null 2>&1 || true
 else
   echo "cert unchanged — no edge restart needed"
 fi

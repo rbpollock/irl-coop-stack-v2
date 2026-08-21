@@ -1,0 +1,33 @@
+# fusionpbx — the ops/admin web UI over FreeSWITCH (telephony provisioning).
+#
+# Members do NOT use this UI (Robbie dislikes it); they get the dashboard
+# "Calls" app over WSS. This is the provisioning/ops surface only. It drives
+# FreeSWITCH over mod_event_socket (172.17.0.1:8021), shares the FreeSWITCH
+# conf dir (read for now), and stores its config in a `fusionpbx` DB on the
+# shared Citus. Exposed as https://pbx.irl.coop via the edge (wildcard cert).
+name: fusionpbx
+pillar: communication
+type: image
+image: irlcoop/fusionpbx:spike   # to be built: php-fpm + nginx + fusionpbx app
+ports:
+  - "8087:80"                     # nginx inside; edge routes to 172.17.0.1:8087
+env:
+  FS_EVENT_SOCKET_HOST: 172.17.0.1
+  FS_EVENT_SOCKET_PORT: 8021
+  DB_HOST: 172.17.0.1
+  DB_NAME: fusionpbx
+  DB_USER: fusionpbx
+  # DB_PASSWORD: ${SECRET:fusionpbx.db-password}
+volumes:
+  - /opt/app/communication/etc/freeswitch:/etc/freeswitch:ro
+  - /opt/app/communication/etc/fusionpbx:/etc/fusionpbx
+  - /opt/app/communication/data/fusionpbx:/var/lib/fusionpbx
+dev:
+  volumes:
+    - ./etc/freeswitch:/etc/freeswitch:ro
+    - ./etc/fusionpbx:/etc/fusionpbx
+    - ./data/fusionpbx:/var/lib/fusionpbx
+proxy:
+  hostname: pbx.${DOMAIN}
+  port: 8087
+  description: FusionPBX ops/admin UI (telephony provisioning)
