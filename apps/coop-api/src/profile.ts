@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { getProfile } from "./profile-store";
+import { getProfile, upsertProfile } from "./profile-store";
 import { verifyBearer } from "./verify-jwt";
 import { withIdentity } from "./db";
 
@@ -37,6 +37,7 @@ export default async function profileRoutes(fastify: FastifyInstance): Promise<v
       // mirroring the merge in auth.ts mintCoopJwt().
       name: profile?.displayName ?? claims.name ?? null,
       avatar: profile?.avatar ?? claims.avatar ?? null,
+      preferences: profile?.preferences ?? {},
       emailVerified: claims.email_verified ?? true,
       status: claims.status ?? "ONLINE",
       onboarded: profile?.onboarded ?? false,
@@ -62,5 +63,23 @@ export default async function profileRoutes(fastify: FastifyInstance): Promise<v
         })),
       },
     });
+  });
+
+  // Appearance preferences (theme/mode/radius) — the shared accent store both
+  // the dashboard and webmail read, so "one identity, every app" includes the
+  // user's chosen accent color. Partial-merge semantics over the stored object.
+  fastify.put("/api/v1/profile/preferences", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+
+    const body = (request.body ?? {}) as { theme?: string; mode?: string; radius?: number };
+    const existing = (await getProfile(claims.sub))?.preferences ?? {};
+    const patch: Record<string, unknown> = {};
+    if (typeof body.theme === "string") patch.theme = body.theme;
+    if (typeof body.mode === "string") patch.mode = body.mode;
+    if (typeof body.radius === "number") patch.radius = body.radius;
+
+    const profile = await upsertProfile(claims.sub, { preferences: { ...existing, ...patch } });
+    return reply.send({ preferences: profile.preferences });
   });
 }

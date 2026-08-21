@@ -107,11 +107,14 @@ CREATE TABLE IF NOT EXISTS profiles (
   email        text,
   display_name text,
   avatar       text,
+  preferences  jsonb NOT NULL DEFAULT '{}',
   onboarded    boolean NOT NULL DEFAULT false,
   onboarded_at timestamptz,
   created_at   timestamptz NOT NULL DEFAULT now(),
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
+-- Additive column for profiles created before preferences existed.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferences jsonb NOT NULL DEFAULT '{}';
 
 -- Roles as bundles of grants (the delegation model made concrete). A role is a
 -- named set of grants (capabilities); group_members.roles holds role NAMES that

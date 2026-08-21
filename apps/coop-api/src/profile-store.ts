@@ -9,6 +9,7 @@ export interface CoopProfile {
   avatar: string | null;
   onboarded: boolean;
   onboardedAt: string | null;
+  preferences: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +27,7 @@ interface ProfileRow {
   avatar: string | null;
   onboarded: boolean;
   onboarded_at: Date | null;
+  preferences: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
 }
@@ -38,6 +40,7 @@ function toProfile(r: ProfileRow): CoopProfile {
     avatar: r.avatar,
     onboarded: r.onboarded,
     onboardedAt: r.onboarded_at ? r.onboarded_at.toISOString() : null,
+    preferences: r.preferences ?? {},
     createdAt: r.created_at.toISOString(),
     updatedAt: r.updated_at.toISOString(),
   };
@@ -52,7 +55,7 @@ export async function getProfile(sub: string): Promise<CoopProfile | undefined> 
 
 export async function upsertProfile(
   sub: string,
-  patch: { email?: string | null; displayName?: string | null; avatar?: string | null },
+  patch: { email?: string | null; displayName?: string | null; avatar?: string | null; preferences?: Record<string, unknown> },
 ): Promise<CoopProfile> {
   const now = new Date().toISOString();
   // Merge semantics mirror the retired JSON store: a field is only overwritten
@@ -63,6 +66,7 @@ export async function upsertProfile(
     email: patch.email !== undefined ? patch.email : existing?.email ?? null,
     displayName: patch.displayName !== undefined ? patch.displayName : existing?.displayName ?? null,
     avatar: patch.avatar !== undefined ? patch.avatar : existing?.avatar ?? null,
+    preferences: patch.preferences !== undefined ? patch.preferences : existing?.preferences ?? {},
     onboarded: true,
     onboardedAt: existing?.onboardedAt ?? now,
     createdAt: existing?.createdAt ?? now,
@@ -70,16 +74,17 @@ export async function upsertProfile(
   };
   await withIdentity(sub, async (client) => {
     await client.query(
-      `INSERT INTO profiles (sub, email, display_name, avatar, onboarded, onboarded_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, true, $5, $6, $7)
+      `INSERT INTO profiles (sub, email, display_name, avatar, preferences, onboarded, onboarded_at, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5::jsonb, true, $6, $7, $8)
        ON CONFLICT (sub) DO UPDATE SET
          email = EXCLUDED.email,
          display_name = EXCLUDED.display_name,
          avatar = EXCLUDED.avatar,
+         preferences = EXCLUDED.preferences,
          onboarded = true,
          onboarded_at = EXCLUDED.onboarded_at,
          updated_at = EXCLUDED.updated_at`,
-      [next.sub, next.email, next.displayName, next.avatar, next.onboardedAt, next.createdAt, next.updatedAt],
+      [next.sub, next.email, next.displayName, next.avatar, JSON.stringify(next.preferences), next.onboardedAt, next.createdAt, next.updatedAt],
     );
   });
   return next;
