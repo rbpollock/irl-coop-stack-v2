@@ -66,6 +66,24 @@ const DOCS: DesignDoc[] = [
     file: "account-and-key-model.md",
   },
   {
+    slug: "delegation-and-session-keys",
+    title: "Delegation, Session Keys & Temporal",
+    category: "Identity & accounts",
+    status: "design",
+    description:
+      "ERC-4337/7715 delegation: scoped revocable session keys for Temporal automation and agents — no bypass, user secrets only.",
+    file: "delegation-and-session-keys.md",
+  },
+  {
+    slug: "onboarding-flow",
+    title: "Onboarding Flow",
+    category: "Identity & accounts",
+    status: "design",
+    description:
+      "First-run onboarding: what a member needs to know and set up — the flow, voice, and visual system.",
+    file: "onboarding-flow.md",
+  },
+  {
     slug: "private-treasury-guards-ledgers",
     title: "Private ZK Treasury, Guards & Ledgers",
     category: "Economy & treasury",
