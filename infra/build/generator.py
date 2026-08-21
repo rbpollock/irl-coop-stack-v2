@@ -267,21 +267,17 @@ def emit_secrets_env(instance, inst_dir, master_hex, out_dir):
     (out_dir / "secrets.env").write_text("\n".join(lines) + "\n")
 
 
-def emit_matrix_config(inst_dir, out_dir, master_hex, domain):
-    """Generate homeserver.yaml from homeserver.yaml.template substituting derived secrets."""
-    template_path = inst_dir / "config" / "matrix" / "homeserver.yaml.template"
-    if not template_path.exists():
+def emit_matrix_config(inst_dir, out_dir):
+    """Copy config/matrix/*.template to out/ — secrets stay as ${SYNAPSE_*} env
+    placeholders, rendered by the synapse-s3 entrypoint at runtime (no secret
+    ever baked into a generated file)."""
+    src_dir = inst_dir / "config" / "matrix"
+    if not src_dir.exists():
         return
-    content = template_path.read_text()
-    import re
-    def repl(m):
-        sec_name = m.group(1)
-        return derived_secrets.derive(sec_name, master_hex, domain)
-    content = re.sub(r"\$\{SECRET:([a-zA-Z0-9._-]+)\}", repl, content)
-    
     dest_dir = out_dir / "config" / "matrix"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    (dest_dir / "homeserver.yaml").write_text(content)
+    for tmpl in src_dir.glob("*.template"):
+        shutil.copy(tmpl, dest_dir / tmpl.name[: -len(".template")])
 
 
 def main():
@@ -328,7 +324,7 @@ def main():
     emit_proxy(instance, apps, out)
     emit_ansible_edge(instance, inst_dir, out)
     emit_secrets_env(instance, inst_dir, master_hex, out)
-    emit_matrix_config(inst_dir, out, master_hex, instance["domain"])
+    emit_matrix_config(inst_dir, out)
 
     manifest = out / "MANIFEST.md"
     manifest.write_text(

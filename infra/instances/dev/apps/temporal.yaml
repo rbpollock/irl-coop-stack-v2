@@ -9,6 +9,8 @@ name: temporal
 pillar: workflow
 type: image
 image: temporalio/auto-setup:1.24.0
+ports:
+  - "7233:7233"
 env:
   # 1.24-era driver name is postgres12 (the image's config template branches
   # on `postgres12`/`postgres12_pgx` — `postgresql` renders no datastore)

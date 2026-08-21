@@ -25,6 +25,11 @@ env:
   # HMAC secret for the file-panel share tokens (variant B, files.sig).
   FILES_SIG: ${SECRET:files.sig}
   E2E_PASSWORD: ${SECRET:keycloak.e2e-test}
+  # Stalwart webhook bearer token (mail.received events -> event bus).
+  STALWART_WEBHOOK: ${SECRET:stalwart.webhook}
+  # Digest sender account (notifications@irl.coop) — password for the SMTP
+  # XOAUTH2 submission the Temporal digest workflow uses to mail digests.
+  KEYCLOAK_NOTIFICATIONS: ${SECRET:keycloak.notifications}
   SAFE_SINGLETON_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
   SAFE_PROXY_FACTORY_ADDRESS: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
   SAFE_BACKEND_SIGNER_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"

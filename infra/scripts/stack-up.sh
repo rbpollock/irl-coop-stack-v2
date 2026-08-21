@@ -77,7 +77,16 @@ for spec in "$ROOT"/infra/instances/dev/apps/*.yaml; do
   fi
 done
 
-# 3. Snapshot for motd / operators
+# 3. Host source apps (web, coop-api, hardhat) — the SKIPped no-compose apps,
+# launched directly by stack-up-hosts.sh (idempotent + health-checked).
+say "host source apps"
+if bash "$ROOT/infra/scripts/stack-up-hosts.sh"; then
+  ok "host apps handled"
+else
+  warn "host apps bring-up reported an issue"
+fi
+
+# 4. Snapshot for motd / operators
 say "snapshot"
 if python3 "$ROOT/infra/scripts/stack-report.py" --json "$REPORT"; then
   ok "report -> $REPORT"

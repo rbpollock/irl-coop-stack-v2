@@ -14,7 +14,11 @@ ports:
   - "8081:8081"
 env:
   KC_DB: postgres
-  KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+  # Shared Citus coordinator (storage pillar) — the canonical identity store
+  # lives on the same Postgres 16 instance as irlcoop/nocodb/matrix/stalwart,
+  # in its own `keycloak` database + `keycloak` role. Reachable via the docker
+  # bridge gateway (172.17.0.1:5432), same as the edge proxy + other fleet apps.
+  KC_DB_URL: jdbc:postgresql://172.17.0.1:5432/keycloak
   KC_DB_USERNAME: keycloak
   KC_DB_PASSWORD: ${SECRET:keycloak.db}
   KEYCLOAK_ADMIN: admin
@@ -32,16 +36,3 @@ proxy:
   hostname: auth.${DOMAIN}
   port: 8081
   description: the irl-coop realm + admin console
-depends_on:
-  - keycloak-db
-sidecars:
-  keycloak-db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: ${SECRET:keycloak.db}
-    ports:
-      - "5433:5432"
-named_volumes:
-  keycloak_db_data: {}

@@ -62,3 +62,12 @@ data:
   # reads per-user views over plane-db (infra/compose/storage/scripts/plane_user_view.sql)
   consumes_views: true
   oidc: gate            # Tier 2: Keycloak forward-auth (native OIDC is paid)
+dev:
+  volumes:
+    # Replace NocoDB's workbox PWA service worker with a neutralized no-op one.
+    # The stock SW's NavigationRoute can serve a stale/corrupted cached "ok" for
+    # "/", permanently hijacking the app (the app never loads, so the SW never
+    # updates itself — the "just 'ok'" bug). This no-op SW clears every cache on
+    # activation and declares no fetch listener, so the browser never routes
+    # through a SW again. No NocoDB rebuild required; survives regeneration.
+    - ./assets/nocodb/sw.js:/usr/src/app/docker/nc-gui/sw.js
