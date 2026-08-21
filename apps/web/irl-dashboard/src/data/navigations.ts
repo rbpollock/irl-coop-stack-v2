@@ -22,6 +22,11 @@ export const navigationsData: NavigationType[] = [
         iconName: "FolderKanban",
       },
       {
+        title: "Groups",
+        href: "/apps/groups",
+        iconName: "Network",
+      },
+      {
         title: "Databases",
         href: process.env.NEXT_PUBLIC_NOCODB_URL ?? "https://nocodb.irl.coop",
         iconName: "Database",
