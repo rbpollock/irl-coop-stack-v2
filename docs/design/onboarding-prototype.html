@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>irl.coop — welcome</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #7C3AED;
+    --primary-soft: #EDE9FE;
+    --secondary: #A78BFA;
+    --accent: #16A34A;
+    --accent-soft: #DCFCE7;
+    --bg: #FAF5FF;
+    --ink: #4C1D95;
+    --ink-deep: #2E1065;
+    --muted: #475569;
+    --muted-2: #64748B;
+    --card: #FFFFFF;
+    --border: #DDD6FE;
+    --ring: #7C3AED;
+    --serif: "Cormorant Garamond", "Crimson Pro", Georgia, serif;
+    --sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: var(--sans);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #EDE9FE 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #DCFCE7 0%, transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .stage {
+    width: min(960px, 100%);
+    min-height: 600px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    box-shadow: 0 30px 80px -30px rgba(76, 29, 149, 0.35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--ink-deep);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .brand .dot { color: var(--accent); }
+  .progress {
+    flex: 1;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    overflow: hidden;
+    margin-left: 8px;
+  }
+  .progress > i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 999px;
+    transition: width 400ms cubic-bezier(.4,0,.2,1);
+  }
+  .step-count {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    white-space: nowrap;
+  }
+  .skip {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: color 200ms, background 200ms;
+    white-space: nowrap;
+  }
+  .skip:hover { color: var(--ink); background: var(--primary-soft); }
+
+  /* ---------- body ---------- */
+  .body {
+    flex: 1;
+    padding: 40px 48px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .step { display: none; animation: rise 500ms cubic-bezier(.22,.61,.36,1) both; }
+  .step.active { display: block; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.08;
+    color: var(--ink-deep);
+    letter-spacing: -0.015em;
+    margin-bottom: 18px;
+  }
+  h1 em { font-style: italic; color: var(--primary); }
+  .lead {
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--muted);
+    max-width: 58ch;
+  }
+  .lead strong { color: var(--ink); font-weight: 600; }
+  .micro {
+    margin-top: 18px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted-2);
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .micro svg { flex: none; margin-top: 1px; color: var(--secondary); }
+  .micro em { font-style: italic; color: var(--muted-2); }
+
+  /* ---------- controls ---------- */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 28px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .btn {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 12px 22px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 180ms, box-shadow 180ms, background 180ms, color 180ms;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 10px 24px -10px rgba(124,58,237,.6); }
+  .btn-primary:hover { background: #6D28D9; }
+  .btn-accent { background: var(--accent); color: #fff; box-shadow: 0 10px 24px -10px rgba(22,163,74,.55); }
+  .btn-accent:hover { background: #15803D; }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { color: var(--ink); background: var(--primary-soft); }
+  .btn:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+  /* ---------- forms ---------- */
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin: 16px 0 6px; }
+  input[type="text"], input[type="email"] {
+    width: 100%;
+    max-width: 460px;
+    font-family: var(--sans);
+    font-size: 16px;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 15px;
+    transition: border 180ms, box-shadow 180ms;
+  }
+  input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+  .hint { font-size: 12.5px; color: var(--muted-2); margin-top: 6px; }
+
+  .avatar-row { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+  .avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 24px; font-weight: 600;
+  }
+
+  /* ---------- card grids ---------- */
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 22px; }
+  .grid.four { grid-template-columns: repeat(4, 1fr); }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    cursor: pointer;
+    background: #fff;
+    transition: border 180ms, box-shadow 180ms, transform 180ms;
+    text-align: left;
+  }
+  .card:hover { border-color: var(--secondary); box-shadow: 0 10px 30px -18px rgba(76,29,149,.35); transform: translateY(-2px); }
+  .card.selected { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 0 0 3px var(--primary-soft); }
+  .card .ic {
+    width: 40px; height: 40px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--primary-soft); color: var(--primary);
+    margin-bottom: 12px;
+  }
+  .card h3 { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--ink-deep); margin-bottom: 6px; }
+  .card p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+  .card .fund { display: block; margin-top: 10px; font-size: 12.5px; color: var(--accent); font-weight: 600; }
+  .card.plain h3 { font-family: var(--sans); font-size: 16px; font-weight: 600; }
+
+  /* ---------- diagram ---------- */
+  .diagram { margin: 26px 0 8px; }
+  .diagram svg { width: 100%; height: auto; }
+
+  /* ---------- footer ---------- */
+  .tagline {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--muted-2);
+    text-align: center;
+    padding: 0 28px 20px;
+  }
+
+  @media (max-width: 720px) {
+    .body { padding: 28px 22px 20px; }
+    .controls { padding: 16px 22px 20px; }
+    .grid.four { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+    .skip { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <div class="topbar">
+      <div class="brand">irl<span class="dot">.</span>coop</div>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="step-count" id="count">1 / 8</div>
+      <button class="skip" id="skipBtn">Skip to your world →</button>
+    </div>
+
+    <div class="body" id="body"></div>
+
+    <div class="controls">
+      <button class="btn btn-ghost" id="prevBtn">← Back</button>
+      <button class="btn btn-primary" id="nextBtn">Continue →</button>
+    </div>
+    <div class="tagline" id="tagline"></div>
+  </main>
+
+<script>
+const ICONS = {
+  seed: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>',
+  people: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  repair: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+  design: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="12" r="2"/><circle cx="20" cy="12" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="12" cy="20" r="2"/></svg>',
+  eye: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  key: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
+  spark: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9L12 3z"/></svg>',
+};
+
+const STEPS = [
+  {
+    eyebrow: "Welcome",
+    title: 'We were never more connected. <em>We were never more alone.</em>',
+    lead: `irl.coop is for people who want to build something together — a circle, a co-op, a fund, a team — and keep it theirs. Your rules, your money, your people, nobody in the middle. And a library of blueprints, so you don't have to start from scratch.`,
+    tagline: "One account. Then a world.",
+  },
+  {
+    eyebrow: "You",
+    title: 'You are a <em>group of one.</em>',
+    lead: `Before you join anyone else, you're already a group of your own — one seat, one voice, fully yours. Every group you join or start after this is just another connection to it.`,
+    html: `
+      <div class="avatar-row">
+        <div class="avatar">R</div>
+        <div style="flex:1">
+          <label for="name">What should we call you?</label>
+          <input id="name" type="text" placeholder="Your name" autocomplete="name" />
+        </div>
+      </div>
+      <div class="micro">${ICONS.key} <span><em>This quietly sets up your own account underneath. You'll never have to think about keys or wallets.</em></span></div>`,
+    tagline: "",
+  },
+  {
+    eyebrow: "The one idea",
+    title: 'Your world is a <em>graph,</em> not a feed.',
+    lead: `You're a point. Every group is a line between points. And a group can live inside another group — a working group inside a co-op, a co-op inside a bigger network. That's what <strong>composable</strong> means: what you build can join what others build, and it stays yours.`,
+    html: `<div class="diagram">${diagram()}</div>`,
+    tagline: "",
+  },
+  {
+    eyebrow: "What you'll build",
+    title: 'The hard things, made <em>startable.</em>',
+    lead: `Some of the most important work — running a room where everyone's heard, mending a rift, shaping a group that doesn't fall apart, noticing what's going on under the surface — is exactly the work that's hardest to coordinate and hardest to fund. Here, it's where we start.`,
+    html: `
+      <div class="grid four">
+        ${vertical("people", "Facilitation", "Run a room where power isn't hidden.", "Funded by the room's own pool.")}
+        ${vertical("repair", "Conflict & repair", "Mediate a rift and restore trust.", "An arbiter named up front, a fund for repair.")}
+        ${vertical("design", "Group & org design", "Shape a group that doesn't bottleneck.", "Blueprints set before the crisis, not during.")}
+        ${vertical("eye", "Psychodynamics", "Read what's beneath the agenda.", "Practitioner circles — paid, because attention is work.")}
+      </div>
+      <div class="micro">${ICONS.spark} <span><em>Healing and cooperation are different muscles — both built by practice, not reading.</em></span></div>`,
+    tagline: "",
+  },
+  {
+    eyebrow: "Your first shape",
+    title: 'Start from a <em>seed,</em> not a cage.',
+    lead: `Pick something close to what you have in mind. It's just a starting place — you'll change it as you go, and nothing is locked in.`,
+    html: `
+      <div class="grid four" id="shapeGrid">
+        ${shape("seed", "Circle", "A gathering with rhythm and roles.")}
+        ${shape("people", "Co-op", "Shared ownership, shared work.")}
+        ${shape("design", "Working group", "A team on a mission.")}
+        ${shape("repair", "Mutual-aid fund", "Pool money for hard times.")}
+      </div>
+      <label for="slug">What's one word for it?</label>
+      <input id="slug" type="text" placeholder="e.g. riverside" style="max-width:260px" />
+      <div class="hint">One name drives your group's home, its inbox, and its shared spaces.</div>`,
+    tagline: "",
+  },
+  {
+    eyebrow: "Three warm questions",
+    title: `Asked early, because it's <em>kinder</em> early.`,
+    lead: `These are easier to answer on a calm day than in the middle of something hard.`,
+    html: `
+      <label for="people">Who are your people?</label>
+      <input id="people" type="text" placeholder="Invite 1–3 emails (or skip)" />
+      <label for="recovery">If something happens to you, who carries this forward?</label>
+      <input id="recovery" type="text" placeholder="A person you trust" />
+      <div class="hint">You can skip this — we'll ask again later, gently. We only ask because every group should have a will, and it's kinder to name someone before you need to.</div>
+      <label for="fund">What do you want to fund first? <span style="color:var(--muted-2);font-weight:400">(optional)</span></label>
+      <input id="fund" type="text" placeholder="e.g. a roof, a stipend, a retreat" />`,
+    tagline: "",
+  },
+  {
+    eyebrow: "Consent & trust",
+    title: `Your rules are yours. <em>Here's how we keep them.</em>`,
+    lead: `What's yours stays yours — your group, your money, your people. If an app or a person helps out, they're borrowing a narrow permission, never owning anything, and you can take it back whenever you like.`,
+    html: `
+      <div class="card plain" style="cursor:default;max-width:560px;margin-top:22px">
+        <h3>Lend, don't give.</h3>
+        <p>Letting an app post a message or make a scheduled payment means lending it one narrow permission — scoped, revocable, and yours to take back anytime.</p>
+      </div>
+      <div class="micro">${ICONS.spark} <span><em>Agreeing records a cryptographic receipt of your consent — on the record, never a secret.</em></span></div>`,
+    tagline: "",
+  },
+  {
+    eyebrow: "Your world",
+    title: 'This is your <em>world.</em>',
+    lead: `Not a feed, not a profile — a living picture of the people and groups around you, and what needs your attention.`,
+    html: `
+      <div class="grid">
+        <div class="card plain" style="cursor:default"><h3>Your group</h3><p>riverside — with its shared spaces ready.</p></div>
+        <div class="card plain" style="cursor:default"><h3>Treasury</h3><p>Private until you choose to show it. Proofs, not balances.</p></div>
+        <div class="card plain" style="cursor:default"><h3>Needs your signature</h3><p>Nothing yet. It'll find you.</p></div>
+        <div class="card plain" style="cursor:default"><h3>Your people</h3><p>Ready to invite — one link, one sign-in.</p></div>
+      </div>`,
+    tagline: "You're in. Now go find your people.",
+  },
+];
+
+function vertical(icon, name, desc, fund) {
+  return `<div class="card" data-v="${name}">
+    <div class="ic">${ICONS[icon]}</div>
+    <h3>${name}</h3>
+    <p>${desc}</p>
+    <span class="fund">${fund}</span>
+  </div>`;
+}
+function shape(icon, name, desc) {
+  return `<div class="card plain" data-shape="${name}">
+    <div class="ic">${ICONS[icon]}</div>
+    <h3>${name}</h3>
+    <p>${desc}</p>
+  </div>`;
+}
+function diagram() {
+  return `<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A diagram of nodes and edges: you connect to groups, and one group contains a smaller group.">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="#A78BFA"/>
+      </marker>
+    </defs>
+    <!-- edges -->
+    <g stroke="#A78BFA" stroke-width="1.6" marker-end="url(#arrow)">
+      <line x1="300" y1="130" x2="150" y2="60"/>
+      <line x1="300" y1="130" x2="450" y2="60"/>
+      <line x1="300" y1="130" x2="420" y2="200"/>
+    </g>
+    <!-- group nodes -->
+    <g font-family="Inter,sans-serif" font-size="13" fill="#4C1D95">
+      <circle cx="150" cy="60" r="26" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+      <text x="150" y="65" text-anchor="middle" font-size="11">co-op</text>
+      <circle cx="450" cy="60" r="26" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+      <text x="450" y="65" text-anchor="middle" font-size="11">circle</text>
+      <!-- nested group -->
+      <circle cx="420" cy="200" r="34" fill="#fff" stroke="#A78BFA" stroke-width="2"/>
+      <text x="420" y="196" text-anchor="middle" font-size="11">working</text>
+      <text x="420" y="210" text-anchor="middle" font-size="11">group</text>
+      <circle cx="420" cy="200" r="16" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+    </g>
+    <!-- you -->
+    <g>
+      <circle cx="300" cy="130" r="30" fill="#7C3AED"/>
+      <text x="300" y="136" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" fill="#fff" font-weight="600">you</text>
+    </g>
+  </svg>`;
+}
+
+let step = 0;
+const body = document.getElementById("body");
+const bar = document.getElementById("bar");
+const count = document.getElementById("count");
+const tagline = document.getElementById("tagline");
+const nextBtn = document.getElementById("nextBtn");
+const prevBtn = document.getElementById("prevBtn");
+const skipBtn = document.getElementById("skipBtn");
+
+function render() {
+  const s = STEPS[step];
+  body.innerHTML = `
+    <div class="step active">
+      <div class="eyebrow">${s.eyebrow}</div>
+      <h1>${s.title}</h1>
+      <p class="lead">${s.lead}</p>
+      ${s.html || ""}
+    </div>`;
+  tagline.textContent = s.tagline || "";
+  count.textContent = `${step + 1} / ${STEPS.length}`;
+  bar.style.width = `${((step + 1) / STEPS.length) * 100}%`;
+
+  const isLast = step === STEPS.length - 1;
+  prevBtn.style.visibility = step === 0 ? "hidden" : "visible";
+  nextBtn.innerHTML = isLast ? "Invite your people ✦" : "Continue →";
+  nextBtn.className = "btn " + (isLast ? "btn-accent" : "btn-primary");
+
+  // wire pickers
+  body.querySelectorAll(".card[data-v], .card[data-shape]").forEach((el) => {
+    el.addEventListener("click", () => {
+      el.parentElement.querySelectorAll(".card").forEach((c) => c.classList.remove("selected"));
+      el.classList.add("selected");
+    });
+  });
+}
+
+function go(n) {
+  step = Math.max(0, Math.min(STEPS.length - 1, n));
+  render();
+}
+nextBtn.addEventListener("click", () => (step === STEPS.length - 1 ? alert("Demo — in the real flow this sends invitations.") : go(step + 1)));
+prevBtn.addEventListener("click", () => go(step - 1));
+skipBtn.addEventListener("click", () => go(STEPS.length - 1));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") go(step + 1);
+  if (e.key === "ArrowLeft") go(step - 1);
+});
+render();
+</script>
+</body>
+</html>

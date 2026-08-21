@@ -9,4 +9,5 @@ export const routeMap = new Map<string, RouteType>([
   ["/", { type: "public" }],
   ["", { type: "public" }],
   ["/docs", { type: "public" }],
+  ["/onboarding", { type: "public" }],
 ])
