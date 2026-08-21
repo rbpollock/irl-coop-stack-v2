@@ -13,10 +13,11 @@ import * as anonymous from "./journeys/anonymous.mjs"
 import * as nocodbRead from "./journeys/nocodb-read.mjs"
 import * as nocodbWrite from "./journeys/nocodb-write.mjs"
 import * as nocodbApp from "./journeys/nocodb-app.mjs"
+import * as roundcubeMail from "./journeys/roundcube-mail.mjs"
 
 // Order matters: sign-in first (establishes identity), browser last.
 const apiJourneys = [signIn, groupsScope, membership, anonymous]
-const browserJourneys = [nocodbRead, nocodbWrite, nocodbApp]
+const browserJourneys = [nocodbRead, nocodbWrite, nocodbApp, roundcubeMail]
 
 const runs = [] // [{ journey, ctx }]
 let browser = null

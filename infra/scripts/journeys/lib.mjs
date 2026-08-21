@@ -9,6 +9,7 @@ export const env = {
   api: process.env.COOP_API_URL ?? "https://api.irl.coop",
   nocodb: process.env.NOCODB_URL ?? "https://nocodb.irl.coop",
   web: process.env.WEB_URL ?? "https://irl.coop",
+  webmail: process.env.WEBMAIL_URL ?? "https://webmail.irl.coop",
   user: process.env.E2E_USER ?? "e2e-test@irl.coop",
   password: process.env.E2E_PASSWORD ?? "",
 }
