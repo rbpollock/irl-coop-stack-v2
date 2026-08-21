@@ -124,7 +124,7 @@
                 color: @color-font;
 
                 &:focus {
-                    background-color: fade(@color-btn-primary-background, 50%);
+                    background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
                 }
 
                 &.options {
@@ -278,7 +278,7 @@
 
     .ui-slider-range {
         border-radius: .3rem;
-        background: lighten(@color-main, 30%);
+        background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 70%, #fff);
     }
 
     .ui-slider-handle {

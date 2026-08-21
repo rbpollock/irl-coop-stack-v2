@@ -12,11 +12,15 @@
  */
 
 // --- semantic bases (light) — from globals.css :root ----------------------
-@color-main:                hsl(240, 5.9%, 10%);   // --primary
-@color-main-dark:           darken(@color-main, 15%);
+// The accent (@color-main) is a runtime CSS variable so the skin can follow the
+// dashboard's theme picker (a .theme-* class on <body> redefines --primary).
+// Derived colors use color-mix() (runtime) instead of LESS darken/lighten/
+// fadeout, which cannot operate on var().
+@color-main:                var(--primary, hsl(240, 5.9%, 10%));   // --primary
+@color-main-dark:           color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 85%, #000);
 @color-black:               hsl(240, 10%, 3.9%);   // --foreground
 @color-font:                hsl(240, 10%, 3.9%);   // --foreground
-@color-link:                hsl(240, 5.9%, 10%);   // --primary
+@color-link:                var(--primary, hsl(240, 5.9%, 10%));   // --primary
 @color-link-hover:          hsl(240, 3.8%, 46.1%); // --muted-foreground
 @color-border:              hsl(240, 5.9%, 90%);   // --border
 @color-error:               hsl(0, 84.2%, 60.2%);  // --destructive
@@ -122,7 +126,7 @@
 @color-message-success-box:         @color-message;
 @color-message-warning-box:         @color-message;
 @color-message-error-box-background:        fadeout(@color-message-error, 80%);
-@color-message-information-box-background:  fadeout(@color-message-information, 80%);
+@color-message-information-box-background:  color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 20%, transparent);
 @color-message-success-box-background:      fadeout(@color-message-success, 80%);
 @color-message-warning-box-background:      fadeout(@color-message-warning, 80%);
 
@@ -149,7 +153,7 @@
 @color-input:                       @color-font;
 @color-input-border:                hsl(240, 5.9%, 90%); // --input
 @color-input-border-focus:          @color-main;
-@color-input-border-focus-shadow:   fadeout(@color-main, 75);
+@color-input-border-focus-shadow:   color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 @color-input-border-invalid:        @color-error;
 @color-input-border-invalid-shadow: fadeout(@color-error, 75);
 @color-input-addon-background:      @color-black-shade-bg;
@@ -159,7 +163,7 @@
 
 @color-checkbox:                    @color-main;
 @color-checkbox-checked:            @color-main;
-@color-checkbox-checked-disabled:   lighten(@color-main, 15%);
+@color-checkbox-checked-disabled:   color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 85%, #fff);
 @color-checkbox-focus:              @color-input-border-focus;
 @color-checkbox-focus-shadow:       @color-input-border-focus-shadow;
 
@@ -215,8 +219,8 @@
 
 // Image tools
 @color-image-tools:                     hsl(0, 0%, 98%);
-@color-image-tools-background:          fadeout(@color-main, 60%);
-@color-image-tools-hover:               fadeout(@color-main, 50%);
+@color-image-tools-background:          color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 40%, transparent);
+@color-image-tools-hover:               color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
 
 
 // Scrollbars

@@ -74,18 +74,18 @@
         background: @color-btn-primary-background;
 
         &:focus {
-            box-shadow: 0 0 0 .2rem fade(@color-btn-primary-background, 50%);
+            box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
         }
 
         &:hover {
-            background: darken(@color-btn-primary-background, 8%);
-            border-color: darken(@color-btn-primary-background, 10%);
+            background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 92%, #000);
+            border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 90%, #000);
         }
 
         &:not([disabled]):not(.disabled):active {
-            background: darken(@color-btn-primary-background, 11%);
-            border-color: darken(@color-btn-primary-background, 13%);
-            box-shadow: 0 0 0 .2rem fade(@color-btn-primary-background, 53%);
+            background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 89%, #000);
+            border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 87%, #000);
+            box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 53%, transparent);
         }
     }
 }

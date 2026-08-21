@@ -41,6 +41,7 @@
   --chart-5: 340 75% 55%;
 }
 
+.dark-mode,
 .dark {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;

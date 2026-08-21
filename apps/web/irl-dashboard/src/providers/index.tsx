@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 
 import { SettingsProvider } from "@/contexts/settings-context"
 import { SidebarProvider } from "@/components/ui/sidebar"
+import { AppearanceSync } from "./appearance-sync"
 import { DirectionProvider } from "./direction-provider"
 import { ModeProvider } from "./mode-provider"
 import { NextAuthProvider } from "./next-auth-provider"
@@ -26,6 +27,7 @@ export function Providers({
         <ThemeProvider>
           <DirectionProvider direction={direction}>
             <NextAuthProvider session={session}>
+              <AppearanceSync />
               <SidebarProvider>{children}</SidebarProvider>
             </NextAuthProvider>
           </DirectionProvider>

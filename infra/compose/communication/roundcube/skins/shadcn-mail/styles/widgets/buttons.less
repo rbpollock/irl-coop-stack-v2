@@ -208,7 +208,7 @@ html.touch {
         background: @color-main;
         color: white;
         opacity: .95;
-        box-shadow: 0 0 5px 5px lighten(@color-main, 35%);
+        box-shadow: 0 0 5px 5px color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 65%, #fff);
         margin: 0 1rem 1rem 0;
 
         &:before {
@@ -235,7 +235,7 @@ html.touch {
 
 .btn {
     &:focus {
-        box-shadow: 0 0 0 .2rem fade(@color-btn-primary-background, 30%);
+        box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 30%, transparent);
     }
 }
 
@@ -284,14 +284,14 @@ html.touch {
     border-color: @color-btn-primary-background;
 
     &:focus {
-        background: darken(@color-btn-primary-background, 5%);
-        border-color: darken(@color-btn-primary-background, 7%);
-        box-shadow: 0 0 0 .2rem fade(@color-btn-primary-background, 50%);
+        background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 95%, #000);
+        border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 93%, #000);
+        box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
     }
 
     &:hover {
-        background: darken(@color-btn-primary-background, 5%);
-        border-color: darken(@color-btn-primary-background, 7%);
+        background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 95%, #000);
+        border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 93%, #000);
     }
 
     &.disabled,
@@ -303,11 +303,11 @@ html.touch {
     &:not(:disabled):not(.disabled) {
         &:active,
         &.active {
-            background: darken(@color-btn-primary-background, 10%);
-            border-color: darken(@color-btn-primary-background, 12%);
+            background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 90%, #000);
+            border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 88%, #000);
 
             &:focus {
-                box-shadow: 0 0 0 .2rem fade(@color-btn-primary-background, 53%);
+                box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 53%, transparent);
             }
         }
     }

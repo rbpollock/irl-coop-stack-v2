@@ -5,7 +5,7 @@
 // env (roundcube.yaml), OAuth stays here. NOTE: never mention that docker config
 // filename in comments — the entrypoint greps for it to decide whether to append
 // the include. Dev secrets inline (stack convention); prod should ARG-inject.
-$config['plugins'] = array();   // keep the entrypoint's array_merge happy
+$config['plugins'] = array('coop_theme');   // keep the entrypoint's array_merge happy
 
 // --- OAuth2: the fleet session gateway (coop-api issuer at api.irl.coop),
 //     client `roundcube` (confidential, S256 PKCE) — the coop_session cookie

@@ -1,0 +1,22 @@
+/*
+ * shadcn-mail — accent themes.
+ *
+ * Mirrors apps/web/irl-dashboard/src/app/themes.css: each `.theme-*` class is
+ * what the dashboard's theme picker adds to <body>. Only the accent tokens
+ * (--primary / --primary-foreground / --ring) change — the neutral base stays
+ * in tokens.css `:root`. The skin's `@color-main` (and everything derived from
+ * it) reads `var(--primary)`, so switching the class recolors buttons, badges,
+ * links and selected states to the member's chosen accent.
+ */
+.theme-zinc { --primary: 240 5.9% 10%; --primary-foreground: 0 0% 98%; --ring: 240 5.9% 10%; }
+.theme-slate { --primary: 222.2 47.4% 11.2%; --primary-foreground: 210 40% 98%; --ring: 222.2 84% 4.9%; }
+.theme-stone { --primary: 24 9.8% 10%; --primary-foreground: 60 9.1% 97.8%; --ring: 20 14.3% 4.1%; }
+.theme-gray { --primary: 220.9 39.3% 11%; --primary-foreground: 210 20% 98%; --ring: 224 71.4% 4.1%; }
+.theme-neutral { --primary: 0 0% 9%; --primary-foreground: 0 0% 98%; --ring: 0 0% 3.9%; }
+.theme-red { --primary: 0 72.2% 50.6%; --primary-foreground: 0 85.7% 97.3%; --ring: 0 72.2% 50.6%; }
+.theme-rose { --primary: 346.8 77.2% 49.8%; --primary-foreground: 355.7 100% 97.3%; --ring: 346.8 77.2% 49.8%; }
+.theme-orange { --primary: 24.6 95% 53.1%; --primary-foreground: 60 9.1% 97.8%; --ring: 24.6 95% 53.1%; }
+.theme-green { --primary: 142.1 76.2% 36.3%; --primary-foreground: 355.7 100% 97.3%; --ring: 142.1 76.2% 36.3%; }
+.theme-blue { --primary: 221.2 83.2% 53.3%; --primary-foreground: 210 40% 98%; --ring: 221.2 83.2% 53.3%; }
+.theme-yellow { --primary: 47.9 95.8% 53.1%; --primary-foreground: 26 83.3% 14.1%; --ring: 20 14.3% 4.1%; }
+.theme-violet { --primary: 262.1 83.3% 57.8%; --primary-foreground: 210 20% 98%; --ring: 262.1 83.3% 57.8%; }

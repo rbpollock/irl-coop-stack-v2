@@ -135,7 +135,7 @@ input {
   vertical-align: middle;
 }
 a {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
 }
 a:hover {
   color: hsl(240, 3.8%, 46.1%);
@@ -734,7 +734,7 @@ fieldset.image-attachment img {
 }
 .quota-widget .value {
   display: block;
-  background-color: hsl(240, 5.9%, 10%);
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
   height: 1rem;
   opacity: 0.75;
 }
@@ -749,7 +749,7 @@ fieldset.image-attachment img {
   overflow: hidden;
   transform: translateX(-87%);
   transition: transform 0.3s ease-in-out;
-  background-color: hsla(240, 5.9%, 10%, 0.4);
+  background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 40%, transparent);
   border-radius: 0 0.3rem 0.3rem 0;
 }
 .image-tools .menu {
@@ -778,7 +778,7 @@ fieldset.image-attachment img {
 }
 .image-tools a:focus,
 .image-tools a:hover {
-  background-color: hsla(240, 5.9%, 10%, 0.5) !important;
+  background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent) !important;
   outline: 0;
 }
 .quota-info {
@@ -1184,10 +1184,10 @@ html.touch .btn:focus {
   width: 4rem;
   height: 4rem;
   border-radius: 50%;
-  background: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
   color: white;
   opacity: 0.95;
-  box-shadow: 0 0 5px 5px hsl(240, 5.9%, 45%);
+  box-shadow: 0 0 5px 5px color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 65%, #fff);
   margin: 0 1rem 1rem 0;
 }
 .floating-action-buttons a.button:before {
@@ -1204,10 +1204,10 @@ html.touch .btn:focus {
 }
 /*** Bootstrap button style overrides ***/
 .btn:focus {
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.3);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 30%, transparent);
 }
 .btn-link {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .btn-secondary {
   color: hsl(240, 5.9%, 10%);
@@ -1239,31 +1239,31 @@ html.touch .btn:focus {
 }
 .btn-primary {
   color: hsl(0, 0%, 98%);
-  background: hsl(240, 5.9%, 10%);
-  border-color: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .btn-primary:focus {
-  background: hsl(240, 5.9%, 5%);
-  border-color: hsl(240, 5.9%, 3%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.5);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 95%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 93%, #000);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
 }
 .btn-primary:hover {
-  background: hsl(240, 5.9%, 5%);
-  border-color: hsl(240, 5.9%, 3%);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 95%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 93%, #000);
 }
 .btn-primary.disabled,
 .btn-primary:disabled {
-  background: hsl(240, 5.9%, 10%);
-  border-color: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .btn-primary:not(:disabled):not(.disabled):active,
 .btn-primary:not(:disabled):not(.disabled).active {
-  background: hsl(0, 0%, 0%);
-  border-color: hsl(0, 0%, 0%);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 90%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 88%, #000);
 }
 .btn-primary:not(:disabled):not(.disabled):active:focus,
 .btn-primary:not(:disabled):not(.disabled).active:focus {
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.53);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 53%, transparent);
 }
 .btn-danger {
   color: hsl(0, 0%, 98%);
@@ -1326,7 +1326,7 @@ html.touch .btn:focus {
 }
 .ui-menu .ui-state-active {
   border: 0 !important;
-  background-color: hsl(240, 5.9%, 10%) !important;
+  background-color: var(--primary, hsl(240, 5.9%, 10%)) !important;
 }
 .ui-menu .ui-menu-item {
   white-space: nowrap;
@@ -1395,7 +1395,7 @@ html.touch .btn:focus {
   color: hsl(240, 10%, 3.9%);
 }
 .ui-dialog .ui-dialog-buttonpane .ui-dialog-buttonset a.btn-link:focus {
-  background-color: hsla(240, 5.9%, 10%, 0.5);
+  background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
 }
 .ui-dialog .ui-dialog-buttonpane .ui-dialog-buttonset a.btn-link.options {
   order: -1;
@@ -1517,14 +1517,14 @@ html.touch .btn:focus {
 }
 .ui-slider .ui-slider-range {
   border-radius: 0.3rem;
-  background: hsl(240, 5.9%, 40%);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 70%, #fff);
 }
 .ui-slider .ui-slider-handle {
   border-radius: 0.3rem;
 }
 .ui-slider .ui-slider-handle.ui-state-active {
-  background: hsl(240, 5.9%, 10%);
-  border-color: hsl(0, 0%, 0%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 85%, #000);
 }
 /* Datepicker widget */
 .ui-datepicker {
@@ -1592,10 +1592,10 @@ html.touch .btn:focus {
 .ui-datepicker .ui-state-highlight,
 .ui-datepicker.ui-widget-content .ui-state-highlight {
   background: hsl(240, 4.8%, 95.9%);
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .ui-datepicker a.ui-state-active {
-  background: hsl(240, 5.9%, 10%) !important;
+  background: var(--primary, hsl(240, 5.9%, 10%)) !important;
   color: hsl(0, 0%, 98%) !important;
   font-weight: bold;
 }
@@ -1736,7 +1736,7 @@ html.layout-phone .popover-header {
   line-height: 58px;
   font-size: 16px;
   color: hsl(0, 0%, 100%);
-  background-color: hsl(0, 0%, 0%);
+  background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 85%, #000);
 }
 html.layout-small .popover-header:before,
 html.layout-phone .popover-header:before {
@@ -2062,7 +2062,7 @@ html.layout-phone .menu.pagenav input {
 }
 .popover .menu li a:not(.disabled):hover {
   color: hsl(0, 0%, 98%);
-  background-color: hsl(240, 5.9%, 10%);
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .popover .menu li a[aria-haspopup] {
   display: flex;
@@ -2109,7 +2109,7 @@ html.layout-small .popover .menu li a[aria-haspopup]:after {
   background-color: hsl(240, 4.8%, 95.9%);
 }
 .popover .menu .dropbutton a.dropdown:hover {
-  background-color: hsl(240, 5.9%, 10%);
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .popover .menu .dropbutton a.dropdown:before,
 .popover .menu .dropbutton a.dropdown span.inner {
@@ -2764,7 +2764,7 @@ a.toolbar-button {
   flex: 1;
 }
 .ui.alert a:not(.btn) {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
   font-weight: normal;
 }
 .ui.alert h3 {
@@ -2791,7 +2791,7 @@ a.toolbar-button {
   background-color: hsla(0, 84.2%, 60.2%, 0.2);
 }
 .ui.alert.boxinformation {
-  background-color: hsla(240, 5.9%, 10%, 0.2);
+  background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 20%, transparent);
 }
 .ui.alert.boxconfirmation {
   background-color: hsla(142.1, 76.2%, 36.3%, 0.2);
@@ -2847,7 +2847,7 @@ a.toolbar-button {
   background-color: hsl(240, 3.8%, 46.1%);
 }
 #messagestack .alert-info.information {
-  background-color: hsl(240, 5.9%, 10%);
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 #messagestack .alert-success {
   background-color: hsl(142.1, 76.2%, 36.3%);
@@ -3223,11 +3223,11 @@ html.ie11 .listing.iconized li a:before {
 }
 .popupmenu .listing li > a:not(.disabled):hover {
   color: hsl(0, 0%, 98%);
-  background-color: hsl(240, 5.9%, 10%);
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .popupmenu .listing li.selected {
   color: hsl(0, 0%, 98%);
-  background-color: hsl(240, 5.9%, 10%);
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .popupmenu .listing td {
   overflow: hidden;
@@ -3319,7 +3319,7 @@ ul.treelist.notree li > a {
   margin: 7.7px;
   padding: 0 0.3em;
   border-radius: 0.4em;
-  background: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
   color: hsl(0, 0%, 98%);
   text-align: center;
   font-weight: bold;
@@ -3332,7 +3332,7 @@ html.touch .folderlist li.mailbox .unreadcount {
   color: hsl(240, 3.8%, 46.1%);
 }
 .folderlist li.mailbox.recent > a > .unreadcount {
-  background: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
   color: hsl(0, 0%, 98%);
 }
 .folderlist li.mailbox.root {
@@ -4197,8 +4197,8 @@ html.layout-phone .formcontainer .formbuttons {
   color: hsl(240, 10%, 3.9%);
 }
 .formcontent.raweditor .CodeMirror-focused {
-  border-color: hsl(240, 5.9%, 10%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 .formcontent.raweditor .CodeMirror-linebackground.line-error {
   background-color: hsl(0, 84.2%, 60.2%);
@@ -4272,7 +4272,7 @@ html.layout-phone .formcontainer .formbuttons {
   display: none;
 }
 .input-group a:focus {
-  background-color: hsla(240, 5.9%, 10%, 0.25);
+  background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
   outline: 0;
 }
 .proplist {
@@ -4374,8 +4374,8 @@ html.layout-phone .formcontainer .formbuttons {
   border: 1px solid hsl(240, 5.9%, 90%);
 }
 .multi-input > .content.focused {
-  border-color: hsl(240, 5.9%, 10%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 .multi-input a.icon.reset:before {
   content: "\f2ed";
@@ -4493,8 +4493,8 @@ fieldset .file-upload {
   height: auto;
 }
 .recipient-input.focus {
-  border-color: hsl(240, 5.9%, 10%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 .recipient-input li {
   max-width: 100%;
@@ -4589,8 +4589,8 @@ body > li.recipient.ui-sortable-helper.ui-sortable-helper {
   display: none;
 }
 .tagedit-list[tabindex="-1"] {
-  border-color: hsl(240, 5.9%, 10%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 .tagedit-list li.tagedit-listelement-new {
   margin-top: 4px;
@@ -4751,8 +4751,8 @@ body > li.recipient.ui-sortable-helper.ui-sortable-helper {
 }
 .form-control:focus {
   color: hsl(240, 10%, 3.9%);
-  border-color: hsl(240, 5.9%, 10%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 .form-control.is-invalid {
   border-color: hsl(0, 84.2%, 60.2%);
@@ -4785,7 +4785,7 @@ body > li.recipient.ui-sortable-helper.ui-sortable-helper {
 }
 .input-group-text input:focus {
   z-index: 1;
-  border-color: hsl(240, 5.9%, 10%) !important;
+  border-color: var(--primary, hsl(240, 5.9%, 10%)) !important;
 }
 .custom-switch {
   padding-left: 0;
@@ -4796,18 +4796,18 @@ body > li.recipient.ui-sortable-helper.ui-sortable-helper {
   opacity: 0 !important;
 }
 .custom-switch .custom-control-input:focus ~ .custom-control-label:before {
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 .custom-switch .custom-control-input:focus:not(:checked) ~ .custom-control-label::before {
-  border-color: hsl(240, 5.9%, 10%);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .custom-switch .custom-control-input:checked ~ .custom-control-label::before {
-  border-color: hsl(240, 5.9%, 10%);
-  background-color: hsl(240, 5.9%, 10%);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .custom-switch .custom-control-input:checked:disabled ~ .custom-control-label::before {
-  border-color: hsl(240, 5.9%, 25%);
-  background-color: hsl(240, 5.9%, 25%);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 85%, #fff);
+  background-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 85%, #fff);
 }
 .custom-switch .custom-control-label {
   padding-left: 2.5rem;
@@ -4873,8 +4873,8 @@ html.touch .custom-switch .custom-control-input:checked ~ .custom-control-label:
   margin-top: 3px;
 }
 .custom-file-input:focus ~ .custom-file-label {
-  border-color: hsl(240, 5.9%, 10%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 /**
  * Roundcube Webmail styles for the Elastic skin
@@ -4900,8 +4900,8 @@ div.tox.tox-tinymce {
   border: 1px solid hsl(240, 5.9%, 90%);
 }
 div.tox.focused {
-  border-color: hsl(240, 5.9%, 10%) !important;
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25) !important;
+  border-color: var(--primary, hsl(240, 5.9%, 10%)) !important;
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent) !important;
 }
 div.tox .tox-toolbar-overlord {
   z-index: 1;
@@ -4930,7 +4930,7 @@ div.tox .tox-dialog .tox-form__group {
   margin-bottom: 0.75rem;
 }
 div.tox .tox-dialog .tox-dialog__body-nav-item--active {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
   border-color: transparent;
 }
 div.tox .tox-dialog .tox-dialog__body-nav-item--active:hover {
@@ -4990,34 +4990,34 @@ div.tox .tox-dialog__footer > div button:first-child {
 }
 div.tox .tox-dialog__footer .tox-button {
   color: hsl(0, 0%, 98%);
-  background: hsl(240, 5.9%, 10%);
-  border-color: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
   border-radius: var(--radius-md);
   font-weight: normal;
   padding: 0.5rem 0.75rem;
 }
 div.tox .tox-dialog__footer .tox-button:focus {
-  background: hsl(240, 5.9%, 5%);
-  border-color: hsl(240, 5.9%, 3%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.5);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 95%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 93%, #000);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
 }
 div.tox .tox-dialog__footer .tox-button:hover {
-  background: hsl(240, 5.9%, 5%);
-  border-color: hsl(240, 5.9%, 3%);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 95%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 93%, #000);
 }
 div.tox .tox-dialog__footer .tox-button.disabled,
 div.tox .tox-dialog__footer .tox-button:disabled {
-  background: hsl(240, 5.9%, 10%);
-  border-color: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 div.tox .tox-dialog__footer .tox-button:not(:disabled):not(.disabled):active,
 div.tox .tox-dialog__footer .tox-button:not(:disabled):not(.disabled).active {
-  background: hsl(0, 0%, 0%);
-  border-color: hsl(0, 0%, 0%);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 90%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 88%, #000);
 }
 div.tox .tox-dialog__footer .tox-button:not(:disabled):not(.disabled):active:focus,
 div.tox .tox-dialog__footer .tox-button:not(:disabled):not(.disabled).active:focus {
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.53);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 53%, transparent);
 }
 div.tox .tox-dialog__footer .tox-button:before {
   width: 1em;
@@ -5025,8 +5025,8 @@ div.tox .tox-dialog__footer .tox-button:before {
   line-height: 1;
 }
 div.tox .tox-dialog__footer .tox-button:focus:not(:disabled) {
-  background: hsl(240, 5.9%, 10%);
-  border-color: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 div.tox .tox-dialog__footer .tox-button.tox-button--secondary {
   background: hsl(240, 4.8%, 95.9%);
@@ -5114,8 +5114,8 @@ div.tox .tox-color-input > input:focus,
 div.tox .tox-listboxfield .tox-listbox--select:focus,
 div.tox .tox-textarea:focus,
 div.tox .tox-textfield:focus {
-  border-color: hsl(240, 5.9%, 10%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  border-color: var(--primary, hsl(240, 5.9%, 10%));
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
 }
 div.tox .tox-listbox__select-label {
   margin: 0;
@@ -5361,7 +5361,7 @@ html.layout-phone .image-selector .attachmentslist {
 }
 .googie_list li.googie_list_onhover {
   color: hsl(0, 0%, 98%);
-  background-color: hsl(240, 5.9%, 10%);
+  background-color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .googie_list li .googie_list_revert:before {
   content: "\f0e2";
@@ -5624,9 +5624,9 @@ body.status-flagged #message-header > .subject:before {
 .message-htmlpart blockquote {
   overflow: hidden;
   text-overflow: ellipsis;
-  color: hsl(240, 5.9%, 10%);
-  border-left: 2px solid hsl(240, 5.9%, 10%);
-  border-right: 2px solid hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
+  border-left: 2px solid var(--primary, hsl(240, 5.9%, 10%));
+  border-right: 2px solid var(--primary, hsl(240, 5.9%, 10%));
   background-color: hsla(240, 4.8%, 95.9%, 0.5);
   margin: 2px 0;
   padding: 0 0.4em;
@@ -5888,7 +5888,7 @@ html.dark-mode .menu.pagenav a {
   color: unset;
 }
 html.dark-mode #taskmenu .action-buttons a {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
 }
 @media screen and (max-width: 480px) {
   html.dark-mode #taskmenu a {
@@ -6122,7 +6122,7 @@ html.dark-mode .input-group-text {
 }
 html.dark-mode .input-group a:focus {
   border-color: hsl(0, 0%, 98%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.25);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 25%, transparent);
   z-index: 1;
 }
 html.dark-mode .form-control-plaintext {
@@ -6315,7 +6315,7 @@ html.dark-mode .tox .tox-dialog__footer .tox-button.tox-button--secondary:hover:
   background-color: hsl(240, 3.7%, 20.9%);
 }
 html.dark-mode .tox .tox-dialog__body-nav-item--active {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
 }
 html.dark-mode .tox .tox-dialog-wrap__backdrop {
   background-color: rgba(0, 0, 0, 0.7);
@@ -6453,7 +6453,7 @@ html.dark-mode .ui-datepicker.ui-widget-content .ui-state-default {
 }
 html.dark-mode .ui-datepicker .ui-state-highlight,
 html.dark-mode .ui-datepicker.ui-widget-content .ui-state-highlight {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
   background-color: hsl(240, 3.7%, 15.9%);
 }
 html.dark-mode .ui-datepicker .ui-datepicker-days-cell-over a {

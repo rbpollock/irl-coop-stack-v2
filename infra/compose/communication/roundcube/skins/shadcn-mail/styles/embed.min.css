@@ -76,7 +76,7 @@ input {
   vertical-align: middle;
 }
 a {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
 }
 a:hover {
   color: hsl(240, 3.8%, 46.1%);
@@ -150,7 +150,7 @@ html:not(.touch) ::-webkit-scrollbar-thumb {
   line-height: 1.5;
 }
 .rcmail-inline-message a {
-  color: hsl(240, 5.9%, 10%);
+  color: var(--primary, hsl(240, 5.9%, 10%));
 }
 .rcmail-inline-message a:hover {
   color: hsl(240, 3.8%, 46.1%);
@@ -165,19 +165,19 @@ html:not(.touch) ::-webkit-scrollbar-thumb {
   border-radius: 0.25em;
   border: 1px solid transparent;
   color: hsl(0, 0%, 98%);
-  background: hsl(240, 5.9%, 10%);
+  background: var(--primary, hsl(240, 5.9%, 10%));
 }
 .rcmail-inline-message button:focus {
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.5);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 50%, transparent);
 }
 .rcmail-inline-message button:hover {
-  background: hsl(240, 5.9%, 2%);
-  border-color: hsl(0, 0%, 0%);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 92%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 90%, #000);
 }
 .rcmail-inline-message button:not([disabled]):not(.disabled):active {
-  background: hsl(0, 0%, 0%);
-  border-color: hsl(0, 0%, 0%);
-  box-shadow: 0 0 0 0.2rem hsla(240, 5.9%, 10%, 0.53);
+  background: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 89%, #000);
+  border-color: color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 87%, #000);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary, hsl(240, 5.9%, 10%)) 53%, transparent);
 }
 .rcmail-inline-buttons {
   margin: 0;
