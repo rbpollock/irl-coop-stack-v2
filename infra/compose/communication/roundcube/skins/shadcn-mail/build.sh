@@ -10,4 +10,6 @@ cd "$SKIN/styles"
 npx --yes --package=less lessc styles.less styles.min.css
 npx --yes --package=less lessc embed.less embed.min.css
 npx --yes --package=less lessc print.less print.min.css
-echo "compiled styles.min.css, embed.min.css, print.min.css"
+# Scoped Tailwind utilities (preflight off) — tokens from tokens.css.
+npx tailwindcss -i utilities.input.css -o utilities.css --minify
+echo "compiled styles.min.css, embed.min.css, print.min.css, utilities.css"

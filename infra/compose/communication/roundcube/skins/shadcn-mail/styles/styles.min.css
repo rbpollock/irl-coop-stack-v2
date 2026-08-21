@@ -4992,6 +4992,7 @@ div.tox .tox-dialog__footer .tox-button {
   color: hsl(0, 0%, 98%);
   background: hsl(240, 5.9%, 10%);
   border-color: hsl(240, 5.9%, 10%);
+  border-radius: var(--radius-md);
   font-weight: normal;
   padding: 0.5rem 0.75rem;
 }
@@ -5030,6 +5031,7 @@ div.tox .tox-dialog__footer .tox-button:focus:not(:disabled) {
 div.tox .tox-dialog__footer .tox-button.tox-button--secondary {
   background: hsl(240, 4.8%, 95.9%);
   border-color: hsl(240, 4.8%, 95.9%);
+  border-radius: var(--radius-md);
   color: hsl(240, 5.9%, 10%);
 }
 div.tox .tox-dialog__footer .tox-button.tox-button--secondary:focus {
@@ -5139,6 +5141,7 @@ div.tox .image-selector button {
   color: hsl(240, 5.9%, 10%);
   background: hsl(240, 4.8%, 95.9%);
   border-color: hsl(240, 4.8%, 95.9%);
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.75rem;
   line-height: 1.5;
 }
@@ -6630,4 +6633,33 @@ html.dark-mode .pgpkeyimport li.uid::before {
   font-weight: 900;
   font-display: swap;
   src: url('../fonts/lato-900.woff2') format('woff2');
+}
+/**
+ * shadcn-mail — radius/spacing polish.
+ *
+ * Normalizes Elastic's scattered border-radius values (`.25rem`/`.3rem`/
+ * `.5rem`/`.6rem`) to the shadcn scale from tokens.css (`--radius` 0.5rem,
+ * `--radius-md` 6px, `--radius-sm` 4px) so the skin reads as the dashboard's
+ * rounded look. Additive overrides only — no markup or Elastic behavior is
+ * touched. Imported last in styles.less so these rules win over Elastic's.
+ */
+.btn,
+.btn-secondary,
+.btn-primary,
+.btn-danger,
+a.button,
+button.btn,
+a.btn {
+  border-radius: var(--radius-md);
+}
+.form-control,
+input.form-control,
+textarea.form-control,
+select.form-control {
+  border-radius: var(--radius-md);
+}
+#searchbar,
+.searchbar,
+.quicksearch .form-control {
+  border-radius: var(--radius-lg);
 }

@@ -1,0 +1,35 @@
+/**
+ * shadcn-mail — radius/spacing polish.
+ *
+ * Normalizes Elastic's scattered border-radius values (`.25rem`/`.3rem`/
+ * `.5rem`/`.6rem`) to the shadcn scale from tokens.css (`--radius` 0.5rem,
+ * `--radius-md` 6px, `--radius-sm` 4px) so the skin reads as the dashboard's
+ * rounded look. Additive overrides only — no markup or Elastic behavior is
+ * touched. Imported last in styles.less so these rules win over Elastic's.
+ */
+
+// Buttons → shadcn "rounded-md" (6px)
+.btn,
+.btn-secondary,
+.btn-primary,
+.btn-danger,
+a.button,
+button.btn,
+a.btn {
+    border-radius: var(--radius-md);
+}
+
+// Form inputs → shadcn "rounded-md" (6px)
+.form-control,
+input.form-control,
+textarea.form-control,
+select.form-control {
+    border-radius: var(--radius-md);
+}
+
+// Toolbar search / quick-search pills → shadcn "rounded-lg" (8px)
+#searchbar,
+.searchbar,
+.quicksearch .form-control {
+    border-radius: var(--radius-lg);
+}
