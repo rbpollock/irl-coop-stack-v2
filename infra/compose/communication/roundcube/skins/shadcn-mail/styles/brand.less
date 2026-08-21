@@ -1,0 +1,43 @@
+/**
+ * shadcn-mail skin — irl.coop brand layer.
+ *
+ * Replaces Elastic's Roboto stack with Lato, the dashboard's brand font
+ * (apps/web/irl-dashboard/src/app/globals.css: --font-lato). Font files are
+ * self-hosted here (same woff2 that next/font/google bundles for the
+ * dashboard) so the skin has no external font dependency.
+ *
+ * The wordmark itself is an image asset (images/logo.svg): the "i" badge —
+ * a green rounded square (--success, the "regenerative" hue) with a white
+ * lowercase "i" — the compact form of the dashboard's "i + irl.coop" mark,
+ * sized for Roundcube's narrow taskbar logo slot.
+ */
+
+@font-face {
+    font-family: 'Lato';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/lato-400.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Lato';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/lato-700.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Lato';
+    font-style: normal;
+    font-weight: 900;
+    font-display: swap;
+    src: url('../fonts/lato-900.woff2') format('woff2');
+}
+
+// Override Elastic's Roboto stack (mixins.less) with Lato. LESS resolves
+// mixins last-definition-wins, and this file is imported last in styles.less.
+.font-family() {
+    font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+}

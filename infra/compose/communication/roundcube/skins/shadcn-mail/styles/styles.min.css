@@ -123,6 +123,7 @@ select,
 textarea,
 .popover {
   font-family: Roboto, sans-serif;
+  font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
 }
 button,
 input,
@@ -4892,6 +4893,7 @@ div.tox {
 div.tox,
 div.tox :not(.svg) {
   font-family: Roboto, sans-serif;
+  font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
 }
 div.tox.tox-tinymce {
   border-radius: 0.25rem;
@@ -5098,6 +5100,7 @@ div.tox .tox-listboxfield .tox-listbox--select,
 div.tox .tox-textarea,
 div.tox .tox-textfield {
   font-family: Roboto, sans-serif !important;
+  font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif !important;
   font-size: 14px;
   line-height: 1.5;
   color: hsl(240, 10%, 3.9%);
@@ -5652,6 +5655,7 @@ body.status-flagged #message-header > .subject:before {
   border-radius: 0.3rem;
   line-height: 1;
   font-family: Roboto, sans-serif;
+  font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
 }
 .message-part blockquote span.blockquote-link:after,
 .message-htmlpart blockquote span.blockquote-link:after {
@@ -6592,4 +6596,38 @@ html.dark-mode .pgpkeyimport div.key.disabled {
 }
 html.dark-mode .pgpkeyimport li.uid::before {
   opacity: 1;
+}
+/**
+ * shadcn-mail skin — irl.coop brand layer.
+ *
+ * Replaces Elastic's Roboto stack with Lato, the dashboard's brand font
+ * (apps/web/irl-dashboard/src/app/globals.css: --font-lato). Font files are
+ * self-hosted here (same woff2 that next/font/google bundles for the
+ * dashboard) so the skin has no external font dependency.
+ *
+ * The wordmark itself is an image asset (images/logo.svg): the "i" badge —
+ * a green rounded square (--success, the "regenerative" hue) with a white
+ * lowercase "i" — the compact form of the dashboard's "i + irl.coop" mark,
+ * sized for Roundcube's narrow taskbar logo slot.
+ */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/lato-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/lato-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('../fonts/lato-900.woff2') format('woff2');
 }
