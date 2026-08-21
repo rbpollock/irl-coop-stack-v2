@@ -52,6 +52,9 @@ Thumbs.db
 *.swo
 *~
 
+# ── Agent / tooling ─────────────────────────────────────────────
+.jspace/
+
 # Matrix stack runtime configs (homeserver.yaml, coturn secret, client configs)
 infra/instances/dev/config/matrix/
 infra/instances/dev/config/element-web/

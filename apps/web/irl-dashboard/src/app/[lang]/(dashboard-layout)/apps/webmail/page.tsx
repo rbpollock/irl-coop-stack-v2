@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-// Roundcube webmail — SSO via Keycloak (same realm as the shadboard; the
+// Roundcube webmail — SSO via Keycloak (same realm as the dashboard; the
 // iframe relies on the browser's Keycloak session cookie for auto-login).
 const WEBMAIL_URL =
   process.env.NEXT_PUBLIC_WEBMAIL_URL ?? "https://webmail.irl.coop"

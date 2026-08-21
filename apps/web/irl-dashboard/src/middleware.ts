@@ -93,6 +93,6 @@ export const config = {
      * - images folder
      * - docs
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|images|docs).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|images|docs|design).*)",
   ],
 }

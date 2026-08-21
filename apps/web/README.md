@@ -1,99 +1,72 @@
-# Shadboard - Next.js 15 & Shadcn/UI Admin Dashboard Template
+# irl.coop — web
 
-**Shadboard** is an open-source admin dashboard template built with Next.js 15 and Shadcn/ui components for scalable, user-friendly web apps. It's free for the community to use, learn from, and contribute to.
+The web frontend of the irl.coop sovereign stack: a Next.js 15 (App Router)
+dashboard (`irl-dashboard`) plus the sibling backend services that make it a
+platform.
 
-## Core Features
+## What irl.coop is
 
-- **React 19:** Built using React 19 for enhanced performance, concurrency, and an exceptional developer experience.
-- **Next.js 15:** Powered by Next.js 15, ensuring server-side rendering, SEO optimization, and app router support for smooth navigation.
-- **Tailwind CSS:** Styled with Tailwind CSS, offering a utility-first approach for fast and responsive UI design that’s easy to customize.
-- **Radix UI:** Utilizes Radix UI for high-quality, accessible, and unstyled components that ensure seamless interaction.
-- **Internationalization (I18n):** Built-in support for multiple languages, making it easy to expand your app globally and serve diverse user bases.
-- **Authentication:** Integrated user authentication and session management for secure user logins and data protection.
-- **Customizer:** A tool for dynamically changing the style and colors of the dashboard, perfect for previewing and selecting your preferred theme.
-- **Content Rich:** Includes pre-built apps and pages, along with reusable components, to speed up your development process.
-- **Accessible:** Designed with accessibility in mind, ensuring usability for all users, including those with disabilities.
-- **Pre-Made Layouts:** Offers ready-to-use layouts for dashboards, profiles, and other essential pages, enabling quick setups.
-- **Responsive:** Fully responsive design, adapting seamlessly to different screen sizes for an optimal user experience across all devices.
-- **Learning Resource:** Explore advanced web development approaches to build scalable, maintainable applications through included learning resources.
-- **Well-Documented:** Comprehensive documentation for easy integration and customization, ensuring a smooth setup process for developers of all skill levels.
+irl.coop is a sovereign, member-owned platform for cooperation. Every account
+is a Safe, one Keycloak identity spans every app, and groups coordinate through
+seats, roles, quorum-gated voting, a shared event bus, and zero-knowledge
+proofs.
 
-## Tools & Technologies
+## Architecture in one screen
 
-- **React 19** 
-- **Next.js 15**
-- **Radix UI + shadcn/ui**
-- **Tailwind CSS 4** 
-- **NextAuth.js**
-- **Zod**
-- **React Hook Form** 
-- **Lucide** 
-- **React Icons**
-- **Recharts** 
-- **TanStack Table** 
-- **Embla Carousel** 
-- **FullCalendar**
+- **Identity**: Keycloak on this host (`auth.irl.coop`, realm `irl-coop`) is the
+  single OIDC issuer for every app (`web-app`, `coop-api`, `plane`,
+  `nocodb-gate`). Google is brokered through Keycloak — no app holds its own
+  Google credentials.
+- **Edge**: Traefik v3 routes `auth` → Keycloak, `app` → Plane, `mail` →
+  Stalwart, `api` → coop-api (host `:3001`), `nocodb` → oauth2-proxy gate,
+  `s3`/`s3api` → MinIO, and the apex `irl.coop` → irl-dashboard (host `:3000`).
+- **Apps**: irl-dashboard (Next.js), coop-api (Fastify auth bridge + relayer),
+  Plane CE, NocoDB (custom Gate-SSO image) — each an OIDC client of the realm.
+- **Data**: shared Citus Postgres (`172.17.0.1:5432`), Redis (`:6379`), MinIO
+  (`:9000/:9001`).
+- **Mail**: Stalwart (SMTP/IMAP 25/587/143/993) with DKIM/SPF/DMARC live at
+  Gandi behind the `*.irl.coop` wildcard.
 
-> For more details on the sources and credits used in Shadboard, visit the [sources & credits page](https://shadboard.vercel.app/docs/miscellaneous/sources-and-credits).
+## This workspace
 
-## Apps & Pages
+- `irl-dashboard/` — the main web frontend (Next.js 15, Shadcn/ui, Tailwind 4).
+- `starter-kit/` — the upstream template's starter kit (kept for reference).
+- `apps/coop-api` — auth bridge + relayer (sibling workspace).
 
-- **Email**
-- **Chat**
-- **Calendar**
-- **Kanban**
-- **Pricing**
-- **Payment**
-- **General Settings**
-- **Security Settings**
-- **Plan & Billing Settings**
-- **Notifications Settings**
-- **Coming Soon**
-- **Not Found 404**
-- **Unauthorized 401**
-- **Maintenance**
-- **Forgot Password**
-- **New Password**
-- **Verify Email**
-- **Register**
-- **Sign In**
+## Authentication
 
-## Theme Customization
-
-**Shadboard** offers easy theme customization, allowing you to choose from pre-defined colors, border radii, and modes to match your brand’s identity effortlessly. Whether you're building a light or dark theme, Shadboard provides the flexibility to quickly adjust the look and feel of your dashboard. Tailor the dashboard's appearance to your project's unique needs with just a few clicks!
-
-## Documentation
-
-Get started with detailed instructions and guides to help you integrate and customize **Shadboard** into your projects. Visit the full documentation here: [Docs](https://shadboard.vercel.app/docs)
-
-## Contributing
-
-We welcome contributions from the community! If you’d like to report bugs, suggest features, or contribute code, please check out our [contributing guidelines](https://github.com/Qualiora/shadboard/blob/main/CONTRIBUTING.md) for everything you need to get started.
-
-## Live Demo
-
-See Shadboard in action by visiting the [live demo](https://shadboard.vercel.app/) now!
-
-## Get Started
-
-Get your hands on **Shadboard** today and start building scalable, user-friendly applications with ease!
-
----
-
-## irl.coop customizations
-
-This workspace contains the irl.coop dashboard (`irl-dashboard`), an older experiment (`starter-kit`), and the backend services in `apps/coop-api` (auth bridge + relayer).
-
-### Authentication is decoupled
-
-The default Shadboard auth has been replaced by a three-tier chain:
+Auth is a three-tier chain:
 
 ```
 NextAuth (frontend) → coop-api (:3001) → Keycloak (:8081, realm irl-coop) → Google
 ```
 
-- The Next.js app uses a custom OAuth provider (`coop-api`) — it holds **no** Keycloak or Google credentials.
-- `apps/coop-api` implements `authorize` / `token` / `userinfo` and owns the Keycloak client secret; its JWT is also the Bearer credential for the auth-to-EVM bridge (`POST /api/onboard`).
-- Keycloak (`infra/compose/authentication`) brokers Google via an identity-provider alias.
+- The Next.js app uses a custom OAuth provider (`coop-api`) — it holds **no**
+  Keycloak or Google credentials.
+- `apps/coop-api` implements `authorize` / `token` / `userinfo` and owns the
+  Keycloak client secret; its JWT is also the Bearer credential for the
+  auth-to-EVM bridge (`POST /api/onboard`).
+- Keycloak (`infra/compose/authentication`) brokers Google via an
+  identity-provider alias.
 
-Relevant docs: [`apps/coop-api/README.md`](../coop-api/README.md), [`apps/web/irl-dashboard/README.md`](./irl-dashboard/README.md), and the in-app docs page (irl-dashboard → `/docs/development/authentication`).
+## Getting started
+
+```sh
+cd apps/web/irl-dashboard
+pnpm install
+pnpm dev
+```
+
+## Documentation
+
+- **Design docs**: `docs/design/` in the repo root, presented publicly at
+  `/design` on the dashboard — groups, identity, treasury, the event bus, group
+  shapes, and the commons economy.
+- **Operational context**: `AGENTS.md` and `STATUS.md` in the repo root.
+- **API**: [`apps/coop-api/README.md`](../coop-api/README.md).
+
+## Attribution
+
+The dashboard UI was built on an open-source Shadcn/ui admin template (Qualiora's
+Shadboard). Attribution is kept in the docs' Sources & Credits page; the product
+itself is irl.coop.

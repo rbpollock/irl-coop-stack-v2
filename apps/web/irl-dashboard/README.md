@@ -1,6 +1,6 @@
 # irl.coop irl-dashboard (web dashboard)
 
-Next.js 15 (App Router) dashboard for irl.coop, built on the Shadboard template (Shadcn/ui, Tailwind 4, i18n). This is the main web frontend of the monorepo.
+Next.js 15 (App Router) dashboard for irl.coop, built on Shadcn/ui, Tailwind 4, and i18n. This is the main web frontend of the monorepo.
 
 ## Authentication
 

@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -37,17 +36,13 @@ export function DocsSidebar() {
       <SidebarHeader className={openMobile && isMobile ? "" : "hidden"}>
         <Link
           href="/"
-          className="w-fit flex text-foreground font-black p-2 pb-0 mb-2"
+          className="w-fit flex items-center gap-2 text-foreground font-black p-2 pb-0 mb-2"
           onClick={() => isMobile && setOpenMobile(!openMobile)}
         >
-          <Image
-            src="/images/icons/shadboard.svg"
-            alt=""
-            height={24}
-            width={24}
-            className="dark:invert"
-          />
-          <span>Shadboard</span>
+          <span className="grid size-6 place-items-center rounded-md bg-foreground text-background">
+            i
+          </span>
+          <span>irl.coop</span>
         </Link>
       </SidebarHeader>
       <ScrollArea className="h-[calc(100svh-4.25rem)]">

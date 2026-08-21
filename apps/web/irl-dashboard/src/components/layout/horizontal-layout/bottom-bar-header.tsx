@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 
@@ -29,16 +28,12 @@ export function BottomBarHeader({
       <ToggleMobileSidebar />
       <Link
         href={ensureLocalizedPathname("/", locale)}
-        className="hidden text-foreground font-black lg:flex"
+        className="hidden text-foreground font-black lg:flex items-center gap-2"
       >
-        <Image
-          src="/images/icons/shadboard.svg"
-          alt=""
-          height={24}
-          width={24}
-          className="dark:invert"
-        />
-        <span>Shadboard</span>
+        <span className="grid size-6 place-items-center rounded-md bg-foreground text-background">
+          i
+        </span>
+        <span>irl.coop</span>
       </Link>
       <div className="flex gap-2">
         <NotificationDropdown dictionary={dictionary} />

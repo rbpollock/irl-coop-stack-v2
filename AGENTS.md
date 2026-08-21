@@ -8,6 +8,9 @@ management/monitoring model (declared-vs-running, bring-up, status surfaces).
 The forward-looking group model — event/notification bus, group shapes,
 provisioning, proofs, and the commons economy — is designed in
 `docs/design/event-bus-and-group-shapes.md` (not yet built).
+The Matrix chat surface — Element embedded per-room + coop-api as a Matrix
+appservice fanning metadata into that bus — is in
+`docs/design/matrix-chat-and-notifications.md` (built).
 
 ## Architecture in one screen
 
@@ -111,6 +114,11 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 - **ts-node-dev caches transpiles**: editing `apps/coop-api/src/status.ts`
   may serve stale code after the auto-restart — kill the `npm run dev`
   process and restart if the endpoint doesn't reflect edits.
+- **Synapse OIDC metadata load has no retry**: on startup Synapse fetches the
+  coop-api `/.well-known/openid-configuration` (issuer `https://api.irl.coop`);
+  if coop-api is mid-restart it gets a 502 and Synapse *crashes* (not retried).
+  Restarting coop-api and matrix in the same window bites this — bring coop-api
+  up and healthy first, then `--force-recreate matrix`.
 - **Keycloak service-account roles are not declared in the tree**: coop-api's
   admin lookups (canonical identity: `/api/v1/me`, username claiming) rely on
   the `coop-api` client's service account holding realm-management

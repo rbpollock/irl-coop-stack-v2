@@ -452,6 +452,9 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
 - Group model (event bus + shapes + provisioning + proofs + commons economy) —
   design: `docs/design/event-bus-and-group-shapes.md`. Not started; builds on
   irl-coop-group.md / regenerative-vision-note.md / private-treasury.
+- Matrix chat + notifications: Element embedded per-room + coop-api as a Matrix
+  appservice (metadata → Redis bus). Built; design:
+  `docs/design/matrix-chat-and-notifications.md`.
 - NocoDB cosmetic console noise (not errors, no toasts): `maintenance_staging`
   config probe 404 (OSS baseline), chatwoot iframe refusal, browser-extension
   content-script chatter. (The workbox precache /404 + /200 warnings are FIXED
