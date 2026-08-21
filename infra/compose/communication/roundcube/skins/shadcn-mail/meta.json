@@ -1,0 +1,7 @@
+{
+    "name": "shadcn-mail",
+    "author": "irl.coop",
+    "license": "MIT",
+    "license-url": "https://opensource.org/licenses/MIT",
+    "extends": "elastic"
+}
