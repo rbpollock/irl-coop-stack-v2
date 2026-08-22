@@ -48,10 +48,16 @@ class coop_theme extends rcube_plugin
             return $args;
         }
 
-        $rcmail->output->add_script(
-            'document.documentElement.classList.add(' . json_encode('theme-' . $theme) . ');',
-            'head_top'
-        );
+        // Inject the theme class on <html>. Only on HTML output: AJAX requests
+        // (refresh/list/getunread) use rcmail_output_json, which has no
+        // add_script method — and the class only needs setting once per page
+        // render, not on every polling request.
+        if (method_exists($rcmail->output, 'add_script')) {
+            $rcmail->output->add_script(
+                'document.documentElement.classList.add(' . json_encode('theme-' . $theme) . ');',
+                'head_top'
+            );
+        }
 
         return $args;
     }
