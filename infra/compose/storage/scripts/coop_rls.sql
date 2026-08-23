@@ -260,6 +260,34 @@ SECURITY DEFINER SET search_path = public AS $$
 $$ LANGUAGE sql;
 ALTER FUNCTION coop_mark_digested(text, uuid) OWNER TO coop_rls;
 
+-- Postiz sync (system-level, BYPASSRLS as coop_rls): projects groups into
+-- Postiz's Organization/UserOrganization tables. Opt-in = a resource_scopes row
+-- with app='postiz'; the group's UUID IS the Postiz Organization id (deterministic
+-- link — no placeholder→org transition), so the resource_scopes row is stable.
+CREATE OR REPLACE FUNCTION coop_postiz_opted_groups()
+RETURNS TABLE(group_id uuid, name text)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT g.id, g.name
+  FROM groups g
+  WHERE EXISTS (
+    SELECT 1 FROM resource_scopes rs WHERE rs.group_id = g.id AND rs.app = 'postiz'
+  )
+  ORDER BY g.created_at
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_postiz_opted_groups() OWNER TO coop_rls;
+
+-- Seats for one group, with the coop profile email (may be NULL — the sync
+-- falls back to the Keycloak admin lookup for the canonical address).
+CREATE OR REPLACE FUNCTION coop_postiz_seats(p_group uuid)
+RETURNS TABLE(sub text, roles text[], email text)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT gm.sub, gm.roles, p.email
+  FROM group_members gm
+  LEFT JOIN profiles p ON p.sub = gm.sub
+  WHERE gm.group_id = p_group
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_postiz_seats(uuid) OWNER TO coop_rls;
+
 -- User profile (display name / avatar / onboarded) — user-scoped like read-state:
 -- a user may read/write only their own row, enforced here in Postgres.
 ALTER TABLE profiles FORCE ROW LEVEL SECURITY;

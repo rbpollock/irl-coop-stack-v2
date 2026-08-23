@@ -17,6 +17,8 @@ import authRoutes from './auth'
 import onboardingRoutes from './onboarding'
 import safeRoutes from './safe'
 import groupRoutes from './groups'
+import decisionRoutes from './decisions'
+import socialRoutes from './social'
 import profileRoutes from './profile'
 import { initDb } from './db'
 import { migrateProfilesFromJson } from './profile-store'
@@ -39,7 +41,16 @@ const fastify = Fastify({
 })
 
 fastify.register(cors, {
-  origin: ['http://localhost:3000', 'https://irl.coop', 'https://api.irl.coop'],
+  // Reflect any *.irl.coop origin (the published group sites) plus the fixed
+  // dashboard/api origins. coop_session is .irl.coop-scoped and SameSite=Lax,
+  // so a credentialed fetch from a group site is same-site; the wildcard only
+  // unblocks the cross-ORIGIN (subdomain) RESPONSE read, never the cookie.
+  origin: (origin, cb) => {
+    const fixed = ["http://localhost:3000", "https://irl.coop", "https://api.irl.coop"];
+    const isIrlcoop = /^https:\/\/([a-z0-9-]+\.)*irl\.coop$/.test(origin ?? "");
+    if (!origin || fixed.includes(origin) || isIrlcoop) return cb(null, true);
+    return cb(null, false);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Allow cookies and authorization headers
@@ -62,6 +73,8 @@ fastify.register(authRoutes)
 fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)
 fastify.register(groupRoutes)
+fastify.register(decisionRoutes)
+fastify.register(socialRoutes)
 fastify.register(profileRoutes)
 fastify.register(usernameRoutes)
 fastify.register(docsRoutes)
@@ -72,6 +85,27 @@ fastify.register(chatRoutes)
 fastify.register(eventRoutes)
 fastify.register(notificationRoutes)
 fastify.register(mailWebhookRoutes)
+
+// Graceful shutdown — releases :3001 deterministically so ts-node-dev's
+// `--respawn` (and any external restart) can rebind immediately. Without this,
+// the old child survives the SIGTERM and the respawn wedges on EADDRINUSE.
+const shutdown = (signal: string) => () => {
+  fastify.log.info({ signal }, 'shutting down — closing server + releasing port')
+  // Hard-stop fallback: if close() hangs on an in-flight request, still exit
+  // (a wedged respawn is worse than a dropped request during dev).
+  const force = setTimeout(() => process.exit(1), 3000)
+  force.unref()
+  fastify
+    .close()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      fastify.log.error((err as Error).message)
+      process.exit(1)
+    })
+}
+for (const sig of ['SIGTERM', 'SIGINT', 'SIGUSR2'] as const) {
+  process.on(sig, shutdown(sig))
+}
 
 const start = async () => {
   try {

@@ -13,6 +13,10 @@ proxy:
   hostname: api.${DOMAIN}
   port: 3001
   description: coop-api auth bridge (host process)
+nav:
+  label: API
+  icon: Braces
+  section: Build
 # Derived-key secrets consumed by the host process (docs module): the
 # generator resolves these into out/<instance>/secrets.env, which the
 # coop-api dev process sources at start. Keys match docs.ts env reads.
@@ -38,3 +42,9 @@ env:
   COOP_DB_USER: coop
   COOP_DB_PASSWORD: ${SECRET:postgres.coop}
   COOP_DB_NAME: irlcoop
+  # Postiz DB (the group→org projection target) — derived postiz role/password.
+  POSTIZ_DB_HOST: 172.17.0.1
+  POSTIZ_DB_PORT: "5432"
+  POSTIZ_DB_USER: postiz
+  POSTIZ_DB_PASSWORD: ${SECRET:postgres.postiz}
+  POSTIZ_DB_NAME: postiz

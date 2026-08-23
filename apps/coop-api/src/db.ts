@@ -140,6 +140,37 @@ CREATE TABLE IF NOT EXISTS role_grants (
   PRIMARY KEY (role_id, grant_name)
 );
 
+-- Decisions (proposals + votes) — the off-chain layer of Safe-governed voting
+-- (irl-coop-group.md §6). A proposal carries a title, options, a quorum %, a
+-- deadline and an optional Safe transaction payload; members vote (EIP-1271
+-- signature captured here), coop-api aggregates + tallies. On-chain execution +
+-- ConfidentialVoting.sol (Semaphore) private tallying are the next layer.
+CREATE TABLE IF NOT EXISTS proposals (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id     uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  nonce        int NOT NULL,
+  title        text NOT NULL,
+  description  text,
+  options      jsonb NOT NULL DEFAULT '[]',
+  quorum_pct   int NOT NULL DEFAULT 50,
+  deadline     timestamptz,
+  payload      jsonb,
+  proposer_sub text NOT NULL,
+  status       text NOT NULL DEFAULT 'open' CHECK (status IN ('open','passed','failed','executed')),
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS proposals_nonce_idx ON proposals (group_id, nonce);
+
+CREATE TABLE IF NOT EXISTS votes (
+  proposal_id uuid NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+  sub         text NOT NULL,
+  choice      text NOT NULL,
+  signature   text,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (proposal_id, sub)
+);
+CREATE INDEX IF NOT EXISTS votes_proposal_idx ON votes (proposal_id);
+
 -- Telephony: reusable templates (platform catalog), per-group instances, and
 -- the concrete FreeSWITCH objects. RLS (in coop_rls.sql) scopes the two
 -- group-scoped tables; templates are operator-written catalog.

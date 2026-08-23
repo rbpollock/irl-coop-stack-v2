@@ -20,6 +20,7 @@ import {
 } from "@/lib/utils"
 
 import { navigationsData } from "@/data/navigations"
+import { Logo } from "./logo"
 import { useSettings } from "@/hooks/use-settings"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -136,10 +137,7 @@ export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
           className="w-fit flex text-foreground font-black p-2 pb-0 mb-2"
           onClick={() => isMobile && setOpenMobile(!openMobile)}
         >
-          <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-            i
-          </span>
-          <span>irl.coop</span>
+          <Logo className="h-6 text-primary" />
         </Link>
         <CommandMenu dictionary={dictionary} buttonClassName="max-w-full" />
       </SidebarHeader>

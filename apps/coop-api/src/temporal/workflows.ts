@@ -20,6 +20,14 @@ const {
   retry: { maximumAttempts: 3, initialInterval: "1 second", backoffCoefficient: 2 },
 });
 
+const {
+  postizListGroups,
+  postizReconcileGroup,
+} = proxyActivities<typeof activities>({
+  startToCloseTimeout: "60 seconds",
+  retry: { maximumAttempts: 3, initialInterval: "1 second", backoffCoefficient: 2 },
+});
+
 // Deliver one event. The retry policy above is the durable-delivery guarantee:
 // at-least-once execution + an idempotent activity = effectively exactly-once.
 // For now the activity is a stub (stamps delivered_at); the real delivery
@@ -169,6 +177,24 @@ export async function digestSweep(olderThan: string, intervalSeconds = 3600): Pr
     await sleep(intervalSeconds);
     if (++iterations >= 100) {
       await continueAsNew<typeof digestSweep>(olderThan, intervalSeconds);
+    }
+  }
+}
+
+// Postiz sync sweep (convergent): reconcile every opted-in group's Postiz org +
+// membership on an interval. Self-scheduling like deliverySweep — the sweep is
+// the authority, so a missed event self-heals on the next pass. Each group's
+// reconcile is idempotent (upsert org/user/seat, disable stale seats).
+export async function postizSyncSweep(intervalSeconds = 30): Promise<void> {
+  let iterations = 0;
+  for (;;) {
+    const groups = await postizListGroups();
+    for (const g of groups) {
+      await postizReconcileGroup(g.groupId, g.name);
+    }
+    await sleep(intervalSeconds);
+    if (++iterations >= 100) {
+      await continueAsNew<typeof postizSyncSweep>(intervalSeconds);
     }
   }
 }

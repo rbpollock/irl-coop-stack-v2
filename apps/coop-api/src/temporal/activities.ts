@@ -1,6 +1,7 @@
 import { pool } from "../db";
 import { getUserProfile } from "../keycloak-admin";
 import { sendMail } from "../mailer";
+import { reconcileGroupPostiz, type PostizSeat } from "../postiz";
 
 // System-level outbox operations. These call SECURITY DEFINER functions owned
 // by coop_rls (BYPASSRLS), so the sweep sees ALL rows regardless of the coop
@@ -65,4 +66,18 @@ export async function sendDigestEmail(
   html: string,
 ): Promise<void> {
   await sendMail({ to, subject, text, html });
+}
+
+// --- Postiz sync lane (groups → Postiz org projection) ---
+
+export type PostizGroup = { groupId: string; name: string };
+
+export async function postizListGroups(): Promise<PostizGroup[]> {
+  const { rows } = await pool.query(`SELECT group_id, name FROM coop_postiz_opted_groups()`);
+  return rows.map((r) => ({ groupId: r.group_id, name: r.name }));
+}
+
+export async function postizReconcileGroup(groupId: string, name: string): Promise<void> {
+  const seats = await pool.query(`SELECT sub, roles, email FROM coop_postiz_seats($1)`, [groupId]);
+  await reconcileGroupPostiz(groupId, name, seats.rows as PostizSeat[]);
 }

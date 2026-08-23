@@ -75,5 +75,15 @@ else
   fi
 fi
 
+# temporal worker — the durable lane (delivery/digest/postiz-sync sweeps). Not an
+# HTTP server, so no port health check; pgrep for the ts-node worker process.
+if pgrep -f 'ts-node src/temporal/worker.ts' >/dev/null 2>&1; then
+  ok "temporal worker already up"
+else
+  say "starting temporal worker"
+  ( cd "$ROOT/apps/coop-api" && eval "$NVM" && nohup npm run worker </dev/null >>"$LOGDIR/temporal-worker.log" 2>&1 & )
+  ok "temporal worker started"
+fi
+
 echo
-printf 'logs: %s/{web,coop-api,hardhat}.log\n' "$LOGDIR"
+printf 'logs: %s/{web,coop-api,hardhat,temporal-worker}.log\n' "$LOGDIR"

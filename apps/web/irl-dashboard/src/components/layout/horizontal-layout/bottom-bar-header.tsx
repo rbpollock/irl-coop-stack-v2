@@ -14,6 +14,7 @@ import { NotificationDropdown } from "@/components/layout/notification-dropdown"
 import { UserDropdown } from "@/components/layout/user-dropdown"
 import { ModeDropdown } from "@/components/mode-dropdown"
 import { ToggleMobileSidebar } from "../toggle-mobile-sidebar"
+import { Logo } from "../logo"
 
 export function BottomBarHeader({
   dictionary,
@@ -30,10 +31,7 @@ export function BottomBarHeader({
         href={ensureLocalizedPathname("/", locale)}
         className="hidden text-foreground font-black lg:flex items-center gap-2"
       >
-        <span className="grid size-6 place-items-center rounded-md bg-foreground text-background">
-          i
-        </span>
-        <span>irl.coop</span>
+        <Logo className="h-6 text-primary" />
       </Link>
       <div className="flex gap-2">
         <NotificationDropdown dictionary={dictionary} />

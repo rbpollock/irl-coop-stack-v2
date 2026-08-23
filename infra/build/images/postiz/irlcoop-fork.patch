@@ -1,0 +1,207 @@
+diff --git a/apps/backend/src/api/routes/auth.controller.ts b/apps/backend/src/api/routes/auth.controller.ts
+index 2ed4482..1378727 100644
+--- a/apps/backend/src/api/routes/auth.controller.ts
++++ b/apps/backend/src/api/routes/auth.controller.ts
+@@ -105,7 +105,14 @@ export class AuthController {
+       }
+ 
+       Sentry.metrics.count('new_user', 1);
+-      response.header('onboarding', 'true');
++      // irl.coop fork: SSO (GENERIC) users skip the onboarding wizard — their
++      // group org + seat are provisioned by the coop-api sync, so land them
++      // straight in the app instead of the /launches onboarding flow.
++      if (body.provider === Provider.GENERIC) {
++        response.header('reload', 'true');
++      } else {
++        response.header('onboarding', 'true');
++      }
+       response.status(200).json({
+         register: true,
+       });
+@@ -217,7 +224,7 @@ export class AuthController {
+   async oauthLink(
+     @Param('provider') provider: string,
+     @Query() query: any,
+-    @Res({ passthrough: true }) response: Response
++    @Res({ passthrough: false }) response: Response
+   ) {
+     const state = `login-${makeId(16)}`;
+     response.cookie('oauth_state', state, {
+@@ -232,7 +239,17 @@ export class AuthController {
+       expires: new Date(Date.now() + 1000 * 60 * 10),
+     });
+ 
+-    return this._authService.oauthLink(provider, { ...query, state });
++    const url = await this._authService.oauthLink(provider, { ...query, state });
++
++    // irl.coop fork: `?redirect=1` → 302 straight to the IdP so the login page
++    // never renders (kills the client-side auto-redirect flicker). The default
++    // path still returns the URL as text for the manual "Sign in with OAuth"
++    // button.
++    if (query.redirect) {
++      return response.redirect(302, url);
++    }
++
++    return response.status(200).send(url);
+   }
+ 
+   @Post('/activate')
+diff --git a/apps/frontend/src/app/(app)/auth/login/page.tsx b/apps/frontend/src/app/(app)/auth/login/page.tsx
+index 2a29d09..6b7378d 100644
+--- a/apps/frontend/src/app/(app)/auth/login/page.tsx
++++ b/apps/frontend/src/app/(app)/auth/login/page.tsx
+@@ -1,4 +1,5 @@
+ export const dynamic = 'force-dynamic';
++import { redirect } from 'next/navigation';
+ import { Login } from '@gitroom/frontend/components/auth/login';
+ import { Metadata } from 'next';
+ import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
+@@ -7,5 +8,10 @@ export const metadata: Metadata = {
+   description: '',
+ };
+ export default async function Auth() {
++  // irl.coop fork: zero-click SSO — bounce to the IdP server-side so the login
++  // form never renders (no client-side auto-redirect flicker).
++  if (isGeneralServerSide() && process.env.POSTIZ_GENERIC_OAUTH) {
++    redirect('/api/auth/oauth/GENERIC?redirect=1');
++  }
+   return <Login />;
+ }
+diff --git a/apps/frontend/src/app/(app)/auth/page.tsx b/apps/frontend/src/app/(app)/auth/page.tsx
+index d5e6847..6df4013 100644
+--- a/apps/frontend/src/app/(app)/auth/page.tsx
++++ b/apps/frontend/src/app/(app)/auth/page.tsx
+@@ -1,5 +1,6 @@
+ import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
+ export const dynamic = 'force-dynamic';
++import { redirect } from 'next/navigation';
+ import { Register } from '@gitroom/frontend/components/auth/register';
+ import { Metadata } from 'next';
+ import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
+@@ -11,12 +12,18 @@ export const metadata: Metadata = {
+   description: '',
+ };
+ export default async function Auth(params: {searchParams: Promise<{provider: string}>}) {
++  const provider = (await params?.searchParams)?.provider;
++  // irl.coop fork: zero-click SSO — bounce to the IdP server-side (no flash).
++  // Never hijack an in-flight OIDC callback (?provider=… is the register-with-provider path).
++  if (isGeneralServerSide() && process.env.POSTIZ_GENERIC_OAUTH && !provider) {
++    redirect('/api/auth/oauth/GENERIC?redirect=1');
++  }
+   const t = await getT();
+   if (process.env.DISABLE_REGISTRATION === 'true') {
+     const canRegister = (
+       await (await internalFetch('/auth/can-register')).json()
+     ).register;
+-    if (!canRegister && !(await params?.searchParams)?.provider) {
++    if (!canRegister && !provider) {
+       return (
+         <>
+           <LoginWithOidc />
+diff --git a/libraries/nestjs-libraries/src/database/prisma/organizations/organization.repository.ts b/libraries/nestjs-libraries/src/database/prisma/organizations/organization.repository.ts
+index 947d5e9..579131f 100644
+--- a/libraries/nestjs-libraries/src/database/prisma/organizations/organization.repository.ts
++++ b/libraries/nestjs-libraries/src/database/prisma/organizations/organization.repository.ts
+@@ -239,7 +239,7 @@ export class OrganizationRepository {
+     userId: string,
+     id: string,
+     orgId: string,
+-    role: 'USER' | 'ADMIN'
++    role: 'USER' | 'ADMIN' | 'INVITER' | 'OBSERVER'
+   ) {
+     const checkIfInviteExists = await this._user.model.user.findFirst({
+       where: {
+diff --git a/libraries/nestjs-libraries/src/database/prisma/organizations/organization.service.ts b/libraries/nestjs-libraries/src/database/prisma/organizations/organization.service.ts
+index 4823380..1b989ba 100644
+--- a/libraries/nestjs-libraries/src/database/prisma/organizations/organization.service.ts
++++ b/libraries/nestjs-libraries/src/database/prisma/organizations/organization.service.ts
+@@ -42,7 +42,7 @@ export class OrganizationService {
+     userId: string,
+     id: string,
+     orgId: string,
+-    role: 'USER' | 'ADMIN'
++    role: 'USER' | 'ADMIN' | 'INVITER' | 'OBSERVER'
+   ) {
+     return this._organizationRepository.addUserToOrg(userId, id, orgId, role);
+   }
+@@ -145,7 +145,7 @@ export class OrganizationService {
+       user.id,
+       makeId(5),
+       org.id,
+-      body.role as 'USER' | 'ADMIN'
++      body.role as 'USER' | 'ADMIN' | 'INVITER' | 'OBSERVER'
+     );
+ 
+     if (!added) {
+@@ -168,8 +168,12 @@ export class OrganizationService {
+     // @ts-ignore
+     const myRole = org.users[0].role;
+     const userRole = findOrgToDelete.users[0].role;
+-    const myLevel = myRole === 'USER' ? 0 : myRole === 'ADMIN' ? 1 : 2;
+-    const userLevel = userRole === 'USER' ? 0 : userRole === 'ADMIN' ? 1 : 2;
++    // irl.coop fork: granular roles — INVITER manages members like ADMIN,
++    // OBSERVER sits at the USER tier (read-only enforcement is a follow-on).
++    const levelOf = (role: string) =>
++      role === 'SUPERADMIN' ? 2 : role === 'ADMIN' || role === 'INVITER' ? 1 : 0;
++    const myLevel = levelOf(myRole);
++    const userLevel = levelOf(userRole);
+ 
+     if (myLevel < userLevel) {
+       throw new Error('You do not have permission to delete this user');
+diff --git a/libraries/nestjs-libraries/src/database/prisma/schema.prisma b/libraries/nestjs-libraries/src/database/prisma/schema.prisma
+index a0c7ca1..7388637 100644
+--- a/libraries/nestjs-libraries/src/database/prisma/schema.prisma
++++ b/libraries/nestjs-libraries/src/database/prisma/schema.prisma
+@@ -943,7 +943,9 @@ enum Provider {
+ enum Role {
+   SUPERADMIN
+   ADMIN
++  INVITER
+   USER
++  OBSERVER
+ }
+ 
+ enum APPROVED_SUBMIT_FOR_ORDER {
+diff --git a/libraries/nestjs-libraries/src/upload/cloudflare.storage.ts b/libraries/nestjs-libraries/src/upload/cloudflare.storage.ts
+index e01438a..f118224 100644
+--- a/libraries/nestjs-libraries/src/upload/cloudflare.storage.ts
++++ b/libraries/nestjs-libraries/src/upload/cloudflare.storage.ts
+@@ -39,8 +39,13 @@ class CloudflareStorage implements IUploadProvider {
+     private _uploadUrl: string
+   ) {
+     this._client = new S3Client({
+-      endpoint: `https://${accountID}.r2.cloudflarestorage.com`,
++      // irl.coop fork: STORAGE_ENDPOINT overrides the R2 endpoint to any
++      // S3-compatible store (MinIO) with path-style addressing.
++      endpoint:
++        process.env.STORAGE_ENDPOINT ||
++        `https://${accountID}.r2.cloudflarestorage.com`,
+       region,
++      forcePathStyle: !!process.env.STORAGE_ENDPOINT,
+       credentials: {
+         accessKeyId: accessKey,
+         secretAccessKey: secretKey,
+diff --git a/libraries/nestjs-libraries/src/upload/r2.uploader.ts b/libraries/nestjs-libraries/src/upload/r2.uploader.ts
+index ef2ed4f..a6cb451 100644
+--- a/libraries/nestjs-libraries/src/upload/r2.uploader.ts
++++ b/libraries/nestjs-libraries/src/upload/r2.uploader.ts
+@@ -43,9 +43,17 @@ const {
+   CLOUDFLARE_BUCKET_URL,
+ } = process.env;
+ 
++// irl.coop fork: STORAGE_ENDPOINT overrides the R2 endpoint to any
++// S3-compatible store (MinIO) with path-style addressing; R2's `region: auto`
++// is invalid for MinIO, so fall back to the configured region there.
+ const R2 = new S3Client({
+-  region: 'auto',
+-  endpoint: `https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
++  region: process.env.STORAGE_ENDPOINT
++    ? process.env.CLOUDFLARE_REGION || 'us-east-1'
++    : 'auto',
++  endpoint:
++    process.env.STORAGE_ENDPOINT ||
++    `https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
++  forcePathStyle: !!process.env.STORAGE_ENDPOINT,
+   credentials: {
+     accessKeyId: CLOUDFLARE_ACCESS_KEY!,
+     secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY!,

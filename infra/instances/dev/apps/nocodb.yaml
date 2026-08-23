@@ -58,6 +58,10 @@ proxy:
   hostname: nocodb.${DOMAIN}
   port: 8082
   description: the oauth2-proxy gate (identity-gated)
+nav:
+  label: Databases
+  icon: Database
+  section: Coop
 data:
   # reads per-user views over plane-db (infra/compose/storage/scripts/plane_user_view.sql)
   consumes_views: true

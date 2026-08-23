@@ -1,14 +1,173 @@
 # Postiz — social media scheduling (workflow pillar).
+#
+# Custom image irlcoop/postiz (fork of gitroomhq/postiz-app): S3/MinIO storage
+# backend (STORAGE_ENDPOINT override) + granular roles (INVITER/OBSERVER). One
+# image runs frontend (Next.js :5000) + backend (NestJS :3000, container-internal;
+# the frontend proxies /api to it). Uses the shared Citus (db `postiz`), shared
+# Redis (DB index 2), the fleet Temporal (:7233) with a dedicated `postiz`
+# namespace, and the shared MinIO (bucket `postiz`, user `postiz-s3`) for media.
+# Auth is generic OIDC -> Keycloak (irl-coop realm, confidential `postiz`
+# client, redirect https://postiz.${DOMAIN}/settings) with native email/password
+# still available as a fallback.
 name: postiz
-enabled: false
+enabled: true
 pillar: workflow
 type: image
-image: ghcr.io/gitroomhq/postiz-app:latest
+image: irlcoop/postiz:2026.08.3
+ports:
+  - "3005:5000"
 env:
-  # Postiz runs on its own DB by default; wire to the main postgres when
-  # adopted (POSTIZ_DATABASE_URL). OIDC client + webhook (push notifications)
-  # TODO on adoption.
-  MAIN_API_URL: https://${DOMAIN}
+  MAIN_URL: https://postiz.${DOMAIN}
+  FRONTEND_URL: https://postiz.${DOMAIN}
+  NEXT_PUBLIC_BACKEND_URL: https://postiz.${DOMAIN}/api
+  BACKEND_INTERNAL_URL: http://localhost:3000
+  JWT_SECRET: ${SECRET:postiz.jwt}
+  DATABASE_URL: postgresql://postiz:${SECRET:postgres.postiz}@172.17.0.1:5432/postiz
+  REDIS_URL: redis://172.17.0.1:6379/2
+  TEMPORAL_ADDRESS: 172.17.0.1:7233
+  # dedicated namespace on the fleet Temporal (registered by postiz-temporal-ns).
+  # `coop`/`default` either don't exist or trip the search-attribute limit
+  # ("cannot have more than 3 search attribute of type Text"); a fresh tenant
+  # namespace gives Postiz a clean slate, matching the "namespace = tenant"
+  # model in temporal.yaml.
+  TEMPORAL_NAMESPACE: postiz
+  IS_GENERAL: "true"
+  DISABLE_REGISTRATION: "false"
+  # Media on the shared MinIO (bucket `postiz`, user `postiz-s3`, derived keys).
+  # The fork's STORAGE_ENDPOINT overrides the hardcoded Cloudflare R2 endpoint
+  # to MinIO with path-style addressing; internal endpoint for S3 ops, public
+  # edge URL for media links.
+  STORAGE_PROVIDER: cloudflare
+  STORAGE_ENDPOINT: http://172.17.0.1:9000
+  CLOUDFLARE_ACCOUNT_ID: irlcoop
+  CLOUDFLARE_ACCESS_KEY: postiz-s3
+  CLOUDFLARE_SECRET_ACCESS_KEY: ${SECRET:minio.postiz-s3}
+  CLOUDFLARE_REGION: us-east-1
+  CLOUDFLARE_BUCKETNAME: postiz
+  CLOUDFLARE_BUCKET_URL: https://s3api.${DOMAIN}/postiz
+  POSTIZ_GENERIC_OAUTH: "true"
+  # Generic OIDC -> Keycloak (irl-coop realm). Postiz's OauthProvider throws
+  # "POSTIZ_OAUTH environment variables are not set" unless ALL of these are
+  # present; its redirect_uri is hardcoded to ${FRONTEND_URL}/settings, so the
+  # Keycloak client must register https://postiz.${DOMAIN}/settings exactly.
+  POSTIZ_OAUTH_AUTH_URL: https://auth.${DOMAIN}/realms/irl-coop/protocol/openid-connect/auth
+  POSTIZ_OAUTH_TOKEN_URL: https://auth.${DOMAIN}/realms/irl-coop/protocol/openid-connect/token
+  POSTIZ_OAUTH_USERINFO_URL: https://auth.${DOMAIN}/realms/irl-coop/protocol/openid-connect/userinfo
+  POSTIZ_OAUTH_CLIENT_ID: postiz
+  POSTIZ_OAUTH_CLIENT_SECRET: ${SECRET:postiz.oauth-secret}
+  # --- Social integrations (external OAuth keys → ansible vault) ---
+  # Each channel needs an OAuth app on that platform with redirect URI
+  #   https://postiz.${DOMAIN}/integrations/social/<identifier>
+  # (identifier = x, linkedin, linkedin-page, facebook, instagram, threads,
+  # youtube, gmb, tiktok, tiktok-business, pinterest, reddit, discord, slack,
+  # mastodon, twitch, tumblr, dribbble, kick, telegram, farcaster, …).
+  # The client ids/secrets are EXTERNAL — they cannot be HKDF-derived — so store
+  # them in the ansible vault and reference them here as ${VAULT:<name>}
+  # (the generator decrypts + substitutes at emit time). Uncomment + fill the
+  # vault for each channel you enable, e.g.:
+  #   LINKEDIN_CLIENT_ID:      ${VAULT:postiz.linkedin_client_id}
+  #   LINKEDIN_CLIENT_SECRET:  ${VAULT:postiz.linkedin_client_secret}
+  #   FACEBOOK_APP_ID:         ${VAULT:postiz.facebook_app_id}
+  #   FACEBOOK_APP_SECRET:     ${VAULT:postiz.facebook_app_secret}
+  #   INSTAGRAM_APP_ID:        ${VAULT:postiz.instagram_app_id}
+  #   INSTAGRAM_APP_SECRET:    ${VAULT:postiz.instagram_app_secret}
+  #   THREADS_APP_ID:          ${VAULT:postiz.threads_app_id}
+  #   THREADS_APP_SECRET:      ${VAULT:postiz.threads_app_secret}
+  #   YOUTUBE_CLIENT_ID:       ${VAULT:postiz.youtube_client_id}
+  #   YOUTUBE_CLIENT_SECRET:   ${VAULT:postiz.youtube_client_secret}
+  #   TIKTOK_CLIENT_ID:        ${VAULT:postiz.tiktok_client_id}
+  #   TIKTOK_CLIENT_SECRET:    ${VAULT:postiz.tiktok_client_secret}
+  #   PINTEREST_CLIENT_ID:     ${VAULT:postiz.pinterest_client_id}
+  #   PINTEREST_CLIENT_SECRET: ${VAULT:postiz.pinterest_client_secret}
+  #   REDDIT_CLIENT_ID:        ${VAULT:postiz.reddit_client_id}
+  #   REDDIT_CLIENT_SECRET:    ${VAULT:postiz.reddit_client_secret}
+  #   DISCORD_CLIENT_ID:       ${VAULT:postiz.discord_client_id}
+  #   DISCORD_CLIENT_SECRET:   ${VAULT:postiz.discord_client_secret}
+  #   SLACK_ID:                ${VAULT:postiz.slack_id}
+  #   SLACK_SECRET:            ${VAULT:postiz.slack_secret}
+  #   X_API_KEY:               ${VAULT:postiz.x_api_key}
+  #   X_API_SECRET:            ${VAULT:postiz.x_api_secret}
+  #   X_URL:                   https://postiz.${DOMAIN}/integrations/social/x
+  #   TELEGRAM_TOKEN:          ${VAULT:postiz.telegram_token}
+  #   MASTODON_CLIENT_ID:      ${VAULT:postiz.mastodon_client_id}
+  #   MASTODON_CLIENT_SECRET:  ${VAULT:postiz.mastodon_client_secret}
+  #   TWITCH_CLIENT_ID:        ${VAULT:postiz.twitch_client_id}
+  #   TWITCH_CLIENT_SECRET:    ${VAULT:postiz.twitch_client_secret}
+  #   TUMBLR_CLIENT_ID:        ${VAULT:postiz.tumblr_client_id}
+  #   TUMBLR_CLIENT_SECRET:    ${VAULT:postiz.tumblr_client_secret}
+  #   DRIBBBLE_CLIENT_ID:      ${VAULT:postiz.dribbble_client_id}
+  #   DRIBBBLE_CLIENT_SECRET:  ${VAULT:postiz.dribbble_client_secret}
+  #   KICK_CLIENT_ID:          ${VAULT:postiz.kick_client_id}
+  #   KICK_SECRET:             ${VAULT:postiz.kick_secret}
+  #   NEYNAR_CLIENT_ID:        ${VAULT:postiz.neynar_client_id}
+  #   NEYNAR_SECRET_KEY:       ${VAULT:postiz.neynar_secret_key}
+  # Unconfigured providers clutter the add-channel screen — hide them via
+  # HIDDEN_PROVIDERS: "tiktok,tumblr,kick,dribbble" (comma-separated identifiers).
+volumes:
+  - postiz-config:/config
+restart: always
+depends_on:
+  postiz-db-setup:
+    condition: service_completed_successfully
+  postiz-temporal-ns:
+    condition: service_completed_successfully
+  postiz-minio-init:
+    condition: service_completed_successfully
+sidecars:
+  postiz-db-setup:
+    image: postgres:16-alpine
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_roles WHERE rolname='postiz'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE ROLE postiz LOGIN PASSWORD '${SECRET:postgres.postiz}'"
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='postiz'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE DATABASE postiz OWNER postiz"
+  postiz-temporal-ns:
+    image: temporalio/auto-setup:1.24.0
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Register Postiz's dedicated namespace on the fleet Temporal — idempotent
+        # and tolerant of Temporal still booting on a fresh whole-stack bring-up.
+        for i in $(seq 1 30); do
+          if /usr/local/bin/tctl --address 172.17.0.1:7233 --ns postiz namespace describe >/dev/null 2>&1; then
+            echo "postiz namespace already exists"; exit 0
+          fi
+          if /usr/local/bin/tctl --address 172.17.0.1:7233 --ns postiz namespace register --retention 30 >/dev/null 2>&1; then
+            echo "postiz namespace registered"; exit 0
+          fi
+          sleep 2
+        done
+        # Temporal never became reachable — exit 0 anyway; the app's pm2 retries.
+        echo "temporal unreachable; skipping namespace registration"; exit 0
+  postiz-minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://172.17.0.1:9000 minioadmin "${SECRET:minio.root}"
+        mc mb --ignore-existing local/postiz
+        mc anonymous set download local/postiz
+        mc admin user info local postiz-s3 >/dev/null 2>&1 || mc admin user add local postiz-s3 "${SECRET:minio.postiz-s3}"
+        mc admin policy attach local readwrite --user postiz-s3
+        echo 'postiz MinIO bucket ready.'
+proxy:
+  hostname: postiz.${DOMAIN}
+  port: 3005
+  description: Postiz social media scheduling
+nav:
+  label: Social Media
+  icon: Megaphone
+  section: Coop
+  # Internal dashboard page (not the external postiz.irl.coop proxy) — the
+  # summary + "connect Postiz" surface lives in the dashboard.
+  href: /apps/social-media
 oidc:
   client_id: postiz
-  webhook: /api/webhooks/postiz
+  redirects:
+    - https://postiz.${DOMAIN}/settings
+named_volumes:
+  postiz-config: {}

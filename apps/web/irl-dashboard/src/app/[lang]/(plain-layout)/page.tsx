@@ -6,9 +6,11 @@ import {
   FolderKanban,
   HardDrive,
   KeyRound,
-  LayoutDashboard,
   Mail,
+  Megaphone,
   MessagesSquare,
+  Palette,
+  Radio,
   RefreshCw,
   Scale,
   Server,
@@ -23,47 +25,87 @@ import { cn } from "@/lib/utils"
 
 import { buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Logo } from "@/components/layout/logo"
 
 const APPS = [
   {
-    icon: LayoutDashboard,
-    title: "Dashboard",
-    url: "https://irl.coop",
-    description:
-      "Your coop's home. Members, groups, shard nodes, and every app in one place.",
-  },
-  {
     icon: FolderKanban,
     title: "Projects",
+    brand: "Plane",
     url: "https://plane.irl.coop",
+    color: "#7C3AED",
     description:
       "Plan and run cooperative projects — tasks, cycles, docs — on your own instance.",
   },
   {
     icon: Database,
     title: "Databases",
+    brand: "NocoDB",
     url: "https://nocodb.irl.coop",
+    color: "#14B8A6",
     description:
       "Shared tables and records for anything your group tracks. No spreadsheets in the group chat.",
   },
   {
+    icon: Megaphone,
+    title: "Social Media",
+    brand: "Postiz",
+    url: "/apps/social-media",
+    color: "#EC4899",
+    description:
+      "Schedule and publish posts across your group's social channels — a dashboard view of every account.",
+  },
+  {
     icon: Mail,
     title: "Webmail",
+    brand: "Roundcube",
     url: "https://webmail.irl.coop",
+    color: "#3B82F6",
     description:
       "A secure @irl.coop mailbox. One sign-in, no separate passwords, your mail on your servers.",
   },
   {
-    icon: HardDrive,
-    title: "Mail & Storage",
-    url: "https://s3.irl.coop",
+    icon: MessagesSquare,
+    title: "Chat",
+    brand: "Matrix · Element",
+    url: "https://element.irl.coop",
+    color: "#22C55E",
     description:
-      "Self-hosted mail and S3-compatible file storage — the backbone your group controls.",
+      "Federated chat in every room, embedded right in the dashboard. Your messages stay yours.",
+  },
+  {
+    icon: Radio,
+    title: "Live Video",
+    brand: "Owncast",
+    url: "https://owncast.irl.coop",
+    color: "#EF4444",
+    description:
+      "Self-hosted livestreaming for talks, gatherings and events — no platform in the middle.",
+  },
+  {
+    icon: HardDrive,
+    title: "Storage",
+    brand: "MinIO",
+    url: "https://s3.irl.coop",
+    color: "#F59E0B",
+    description:
+      "S3-compatible object storage — the file backbone every group controls.",
+  },
+  {
+    icon: Palette,
+    title: "Studio",
+    brand: "Webstudio",
+    url: "https://studio.irl.coop",
+    color: "#6366F1",
+    description:
+      "Build and publish coop websites visually, without leaving your stack.",
   },
   {
     icon: Braces,
     title: "API",
+    brand: "Fastify",
     url: "https://api.irl.coop",
+    color: "#94A3B8",
     description:
       "One API for identity and data. Every app connects through it — yours can too.",
   },
@@ -133,14 +175,8 @@ export default async function LandingPage({
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-black tracking-tight"
-          >
-            <span className="grid size-8 place-items-center rounded-lg bg-foreground text-background">
-              i
-            </span>
-            irl.coop
+          <Link href="/" className="flex items-center" aria-label="irl.coop home">
+            <Logo className="h-7 text-primary" />
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#apps" className="hover:text-foreground">
@@ -213,30 +249,60 @@ export default async function LandingPage({
             The tools your group actually needs
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Every app runs on infrastructure you control and signs in with the
-            same identity — no separate accounts, no per-service passwords.
+            Best-in-class open-source apps, running on infrastructure you
+            control and signing in with the same identity — no separate
+            accounts, no per-service passwords.
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {APPS.map((app) => (
-            <Card
-              key={app.title}
-              className="group flex flex-col gap-3 p-6 transition-colors hover:border-primary/50"
-            >
-              <div className="grid size-11 place-items-center rounded-lg border bg-muted/50">
-                <app.icon className="size-5" />
-              </div>
-              <h3 className="text-lg font-bold">{app.title}</h3>
-              <p className="text-sm text-muted-foreground">{app.description}</p>
-              <a
-                href={app.url}
-                className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-primary"
+          {APPS.map((app) => {
+            const isInternal = app.url.startsWith("/")
+            const href = isInternal ? `/${lang}${app.url}` : app.url
+            const linkClass =
+              "mt-auto inline-flex items-center gap-1 text-sm font-semibold"
+            return (
+              <Card
+                key={app.title}
+                className="group relative flex flex-col gap-3 overflow-hidden p-6 transition-all hover:-translate-y-0.5 hover:shadow-lg"
               >
-                Open{" "}
-                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-              </a>
-            </Card>
-          ))}
+                <span
+                  className="absolute inset-x-0 top-0 h-1"
+                  style={{ background: app.color }}
+                />
+                <div className="flex items-center justify-between">
+                  <div
+                    className="grid size-11 place-items-center rounded-xl"
+                    style={{ backgroundColor: `${app.color}1a`, color: app.color }}
+                  >
+                    <app.icon className="size-5" />
+                  </div>
+                  <span
+                    className="rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide"
+                    style={{
+                      color: app.color,
+                      borderColor: `${app.color}40`,
+                      backgroundColor: `${app.color}14`,
+                    }}
+                  >
+                    {app.brand}
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold">{app.title}</h3>
+                <p className="text-sm text-muted-foreground">{app.description}</p>
+                {isInternal ? (
+                  <Link href={href} className={linkClass} style={{ color: app.color }}>
+                    Open{" "}
+                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                ) : (
+                  <a href={href} className={linkClass} style={{ color: app.color }}>
+                    Open{" "}
+                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </a>
+                )}
+              </Card>
+            )
+          })}
         </div>
       </section>
 
@@ -393,11 +459,8 @@ export default async function LandingPage({
       {/* Footer */}
       <footer className="border-t bg-muted/40">
         <div className="container flex flex-col items-center gap-4 py-12 text-center">
-          <div className="flex items-center gap-2 font-black tracking-tight">
-            <span className="grid size-8 place-items-center rounded-lg bg-foreground text-background">
-              i
-            </span>
-            irl.coop
+          <div className="flex items-center">
+            <Logo className="h-6 text-primary" />
           </div>
           <p className="max-w-md text-sm text-muted-foreground">
             irl.coop is a member-owned digital platform cooperative — a suite of

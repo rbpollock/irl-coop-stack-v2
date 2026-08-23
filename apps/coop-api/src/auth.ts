@@ -242,6 +242,20 @@ function sessionFromRequest(request: FastifyRequest): any | null {
   }
 }
 
+// Session-cookie authentication for browser-served surfaces (the published
+// group sites at {groupname}.irl.coop): the coop_session cookie IS a coop JWT
+// (same RS256 key, sub + email), so we verify it directly instead of requiring
+// a Bearer header a static site can't hold. Read-only surfaces use this; write
+// endpoints stay Bearer-only (short-lived token).
+export function verifySessionRequest(request: FastifyRequest, reply: FastifyReply): any | null {
+  const session = sessionFromRequest(request);
+  if (!session) {
+    reply.code(401).send({ error: "invalid_session" });
+    return null;
+  }
+  return session;
+}
+
 export default async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // ---- OIDC discovery + JWKS (the fleet's issuer surface) ----
   fastify.get("/.well-known/openid-configuration", async () => ({

@@ -91,6 +91,9 @@ async function main(): Promise<void> {
   const digestWindow = process.env.DIGEST_WINDOW ?? "1 hour";
   await ensureSweep(client, "digestSweep", "digest-sweep", [digestWindow, digestInterval]);
 
+  // Postiz sync: project opted-in groups into Postiz orgs + membership.
+  await ensureSweep(client, "postizSyncSweep", "postiz-sync-sweep", [30]);
+
   await worker.run();
 }
 

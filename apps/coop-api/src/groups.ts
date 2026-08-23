@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { ethers } from "ethers";
 import type { PoolClient } from "pg";
 import { verifyBearer } from "./verify-jwt";
+import { verifySessionRequest } from "./auth";
 import { deploySafe } from "./safe";
 import { withIdentity } from "./db";
 
@@ -109,6 +110,27 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     if (!claims) return;
     const rows = await withIdentity(claims.sub, async (client) => {
       // "the user is their own group" — ensure the caller's personal group exists
+      await client.query("SELECT coop_ensure_personal_group()");
+      const { rows } = await client.query(
+        `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.kind, g.created_at,
+                gm.roles, gm.alias, gm.visibility
+         FROM groups g
+         LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.sub = coop_current_sub()
+         ORDER BY g.created_at DESC`,
+      );
+      return rows;
+    });
+    return reply.send(rows);
+  });
+
+  // Session-authenticated group read for browser-served surfaces (the published
+  // group sites at {groupname}.irl.coop). Same RLS-scoped query as the bearer
+  // endpoint, but authenticated by the coop_session cookie instead of a Bearer
+  // header (a static site has the cookie, not a token).
+  fastify.get("/api/v1/site/groups", async (request, reply) => {
+    const claims = verifySessionRequest(request, reply);
+    if (!claims) return;
+    const rows = await withIdentity(claims.sub, async (client) => {
       await client.query("SELECT coop_ensure_personal_group()");
       const { rows } = await client.query(
         `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.kind, g.created_at,

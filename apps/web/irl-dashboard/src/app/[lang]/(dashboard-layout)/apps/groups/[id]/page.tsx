@@ -9,6 +9,7 @@ import {
   Boxes,
   Check,
   Copy,
+  Megaphone,
   Pencil,
   Plus,
   RefreshCw,
@@ -128,9 +129,11 @@ export default function GroupDetailPage() {
   const [scopeApp, setScopeApp] = useState("")
   const [scopeKey, setScopeKey] = useState("")
   const [scoping, setScoping] = useState(false)
+  const [connectingPostiz, setConnectingPostiz] = useState(false)
 
   const token = session?.accessToken as string | undefined
   const isOwner = !!group?.roles?.includes("owner")
+  const postizConnected = resources.some((r) => r.app === "postiz")
 
   const load = useCallback(() => {
     if (!token) return
@@ -248,6 +251,23 @@ export default function GroupDetailPage() {
     navigator.clipboard.writeText(group.safe_address)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Connect Postiz to this group: scope app='postiz' with resource_key = the
+  // group id (the deterministic Postiz Organization id). The postizSyncSweep
+  // then provisions the org + seats within ~30s.
+  async function handleConnectPostiz() {
+    if (!token) return
+    setConnectingPostiz(true)
+    setError(null)
+    try {
+      await scopeResource(token, id, { app: "postiz", resource_key: id })
+      load()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setConnectingPostiz(false)
+    }
   }
 
   if (!token) return null
@@ -441,6 +461,50 @@ export default function GroupDetailPage() {
                 )}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Megaphone className="h-4 w-4" />
+              Group apps
+            </CardTitle>
+            <CardDescription>
+              Connected services. Connect Postiz to give this group a social
+              media workspace — its own org, synced to the membership.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between rounded border p-3">
+              <div className="flex items-center gap-3">
+                <Megaphone className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <div className="text-sm font-medium">Social Media</div>
+                  <div className="text-xs text-muted-foreground">
+                    Schedule + analytics across social channels (Postiz)
+                  </div>
+                </div>
+              </div>
+              {postizConnected ? (
+                <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                  Connected
+                </Badge>
+              ) : isOwner ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleConnectPostiz}
+                  disabled={connectingPostiz}
+                >
+                  {connectingPostiz ? "Connecting…" : "Connect"}
+                </Button>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Owner can connect
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
 

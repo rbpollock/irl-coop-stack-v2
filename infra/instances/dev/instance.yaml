@@ -32,6 +32,7 @@ apps:
   - element-web
   - element-call
   - coturn
+  - owncast
   - onlyoffice
 
 # which pillars actually run on the dev box today (deployment concern — the

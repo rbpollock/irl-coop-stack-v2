@@ -11,6 +11,7 @@ import { ensureLocalizedPathname } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 import { LanguageDropdown } from "../language-dropdown"
+import { Logo } from "@/components/layout/logo"
 
 interface AuthProps extends ComponentProps<"div"> {
   imgSrc?: string
@@ -43,10 +44,7 @@ export function Auth({
             href={ensureLocalizedPathname("/", locale)}
             className="flex text-foreground font-black z-50"
           >
-            <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-              i
-            </span>
-            <span>irl.coop</span>
+            <Logo className="h-6 text-primary" />
           </Link>
           <LanguageDropdown dictionary={dictionary} />
         </div>

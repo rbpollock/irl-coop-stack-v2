@@ -37,4 +37,11 @@ if [ -f "$ROOT/infra/build/images/browser-runner/build.sh" ]; then
   ok "browser-runner built"
 fi
 
+# 5. postiz (irl.coop fork — S3/MinIO + granular roles)
+if [ -f "$ROOT/infra/build/images/postiz/build.sh" ]; then
+  say "building postiz (irl.coop fork)..."
+  bash "$ROOT/infra/build/images/postiz/build.sh"
+  ok "postiz built"
+fi
+
 say "All custom images built and ready!"

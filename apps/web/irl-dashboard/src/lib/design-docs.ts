@@ -75,6 +75,15 @@ const DOCS: DesignDoc[] = [
     file: "delegation-and-session-keys.md",
   },
   {
+    slug: "group-secret-vault",
+    title: "Group Secret Vault",
+    category: "Identity & accounts",
+    status: "design",
+    description:
+      "The threshold-encrypted, Safe-anchored store for per-group env secrets and salt backups — quorum-gated, member-held shares.",
+    file: "group-secret-vault.md",
+  },
+  {
     slug: "onboarding-flow",
     title: "Onboarding Flow",
     category: "Identity & accounts",

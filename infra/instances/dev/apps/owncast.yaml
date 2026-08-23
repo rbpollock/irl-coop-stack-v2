@@ -1,0 +1,28 @@
+# Owncast — self-hosted live streaming (communication pillar).
+#
+# Single binary: web player + admin UI on :8080, RTMP ingest on :1935 (the
+# broadcaster pushes to rtmp://owncast.irl.coop:1935/live). Config + SQLite +
+# HLS segments live in /app/data. No external DB, no OIDC — the admin password
+# is set via the admin UI on first run; the public stream is open by default.
+name: owncast
+enabled: true
+pillar: communication
+type: image
+image: gabekangas/owncast:latest
+ports:
+  - "8080:8080"     # web player + admin UI (edge routes here)
+  - "1935:1935"     # RTMP ingest — router must forward like the mail/TURN ports
+volumes:
+  - /opt/app/communication/data/owncast:/app/data
+restart: unless-stopped
+dev:
+  volumes:
+    - ./data/owncast:/app/data
+proxy:
+  hostname: owncast.${DOMAIN}
+  port: 8080
+  description: Owncast live streaming (web player + admin)
+nav:
+  label: Owncast
+  icon: Radio
+  section: Coop

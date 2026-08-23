@@ -1,15 +1,168 @@
-# Webstudio — visual web builder (workflow pillar).
-# Self-hosted builder; auth is Webstudio's own (GitHub/dashboard), the OIDC
-# client below is for the future when the builder supports external SSO.
+# Webstudio — open-source visual builder (workflow pillar).
+#
+# Self-hosted builder + publisher + PostgREST-backed CMS. Two coop constraints:
+#   1. GROUP IDENTITY-AWARE — the builder sits behind an oauth2-proxy gate that
+#      authenticates against coop-api (the fleet OIDC issuer: coop_session →
+#      instant code, no Keycloak page) — same pattern as nocodb. Webstudio's own
+#      session (dev-login for now) sits behind it. Per-group data scoping on
+#      published pages (app.sub injection into Resources) is the follow-on.
+#   2. USES THE IRL COOP POSTGRES — no dedicated DB. The builder + PostgREST use
+#      the shared Citus (db `webstudio`, provisioned by webstudio-db-setup) and
+#      the shared MinIO (bucket `webstudio-assets`). Cross-pillar access goes via
+#      the docker bridge gateway 172.17.0.1 (host-published ports), since the
+#      workflow pillar is a separate compose network from storage.
 name: webstudio
-enabled: false
 pillar: workflow
 type: image
-image: webstudio/webstudio:latest
-oidc:
-  client_id: webstudio
-  # TODO: redirect URIs once Webstudio is up (studio.${DOMAIN}/...)
+service_name: webstudio
+image: ghcr.io/webstudio-community/builder:latest
+env:
+  NODE_ENV: production
+  PORT: "3000"
+  POSTGREST_URL: http://webstudio-postgrest:3000
+  DATABASE_URL: postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/webstudio
+  DIRECT_URL: postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/webstudio
+  AUTH_SECRET: ${SECRET:webstudio.auth}
+  AUTH_WS_CLIENT_ID: self-hosted
+  AUTH_WS_CLIENT_SECRET: ${SECRET:webstudio.authws}
+  # dev login (password = AUTH_SECRET) until Webstudio supports generic OIDC
+  DEV_LOGIN: "true"
+  DEV_LOGIN_EMAIL: admin@${DOMAIN}
+  DEPLOYMENT_ENVIRONMENT: production
+  DEPLOYMENT_URL: https://studio.${DOMAIN}
+  PGRST_JWT_SECRET: ${SECRET:webstudio.pgrst}
+  PUBLISHER_HOST: ${DOMAIN}
+  FEATURES: "*"
+  USER_PLAN: Pro
+  MAX_ASSETS_PER_PROJECT: "50"
+  S3_ENDPOINT: http://172.17.0.1:9000
+  S3_REGION: us-east-1
+  S3_ACCESS_KEY_ID: minioadmin
+  S3_SECRET_ACCESS_KEY: ${SECRET:minio.root}
+  S3_BUCKET: webstudio-assets
+  TRPC_SERVER_API_TOKEN: ${SECRET:webstudio.trpc}
+  SELF_HOSTED_PUBLISHER_URL: http://webstudio-publisher:4000
+volumes:
+  - webstudio-uploads:/app/public/s/uploads
+restart: always
+depends_on:
+  - webstudio-migrate
+  - webstudio-minio-init
+healthcheck:
+  test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 40s
 proxy:
   - hostname: studio.${DOMAIN}
-    port: 3000
-    description: Webstudio builder
+    port: 3003
+    description: Webstudio builder (coop-identity gated)
+  - hostname: "*.${DOMAIN}"
+    port: 3004
+    priority: 1
+    description: Published group sites (fallback; specific app routes win)
+nav:
+  label: Studio
+  icon: Palette
+  section: Build
+sidecars:
+  webstudio-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    restart: always
+    command:
+      - --provider=oidc
+      - --oidc-issuer-url=https://api.${DOMAIN}
+      - --client-id=webstudio-gate
+      - --client-secret=webstudio-gate-secret
+      - --redirect-url=https://studio.${DOMAIN}/oauth2/callback
+      - --email-domain=*
+      - --upstream=http://webstudio:3000
+      - --http-address=0.0.0.0:4180
+      - --cookie-secret=irlcoop-studio-gate-dev-sec-1234
+      - --cookie-secure=false
+      - --skip-provider-button=true
+    ports:
+      - "3003:4180"
+    depends_on:
+      - webstudio
+  webstudio-postgrest:
+    image: postgrest/postgrest:v12.2.0
+    restart: always
+    environment:
+      PGRST_DB_URI: postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/webstudio
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${SECRET:webstudio.pgrst}
+      PGRST_DB_SCHEMAS: public
+    depends_on:
+      webstudio-migrate:
+        condition: service_completed_successfully
+  webstudio-db-setup:
+    image: postgres:15-alpine
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='webstudio'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE DATABASE webstudio"
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/webstudio" \
+          -c "CREATE SCHEMA IF NOT EXISTS extensions;" \
+          -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\" SCHEMA extensions;" \
+          -c "ALTER DATABASE webstudio SET search_path TO public, extensions;" \
+          -c "CREATE ROLE anon NOLOGIN" 2>/dev/null || true
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/webstudio" \
+          -c "GRANT USAGE ON SCHEMA public TO anon;" \
+          -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;" \
+          -c "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;" \
+          -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon;" \
+          -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;"
+  webstudio-migrate:
+    image: ghcr.io/webstudio-community/builder:latest
+    restart: "no"
+    entrypoint:
+      - /prisma/node_modules/.bin/prisma
+      - migrate
+      - deploy
+      - --schema=/app/prisma/schema.prisma
+    environment:
+      DATABASE_URL: postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/webstudio
+      DIRECT_URL: postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/webstudio
+    depends_on:
+      webstudio-db-setup:
+        condition: service_completed_successfully
+  webstudio-minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mc alias set local http://172.17.0.1:9000 minioadmin "${SECRET:minio.root}"
+        mc mb --ignore-existing local/webstudio-assets
+        mc anonymous set download local/webstudio-assets
+        echo 'Bucket ready.'
+  webstudio-publisher:
+    image: ghcr.io/webstudio-community/webstudio-publisher:latest
+    restart: always
+    environment:
+      TRPC_SERVER_API_TOKEN: ${SECRET:webstudio.trpc}
+      PUBLISHER_HOST: ${DOMAIN}
+      BUILDER_INTERNAL_URL: http://webstudio:3000
+      PROXY_PORT: "4001"
+    ports:
+      - "3004:4001"
+    volumes:
+      - webstudio-published:/var/publish
+      - webstudio-publisher-work:/var/work
+    depends_on:
+      webstudio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+named_volumes:
+  webstudio-uploads: {}
+  webstudio-published: {}
+  webstudio-publisher-work: {}

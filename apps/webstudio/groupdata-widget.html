@@ -1,0 +1,76 @@
+<!--
+  GroupData widget — Webstudio HtmlEmbed snippet (irl.coop).
+
+  Drop this into an HtmlEmbed component on a published group site. It fetches
+  the visitor's RLS-scoped groups from coop-api using the coop_session cookie
+  (credentials: include; same-site because the cookie is .irl.coop-scoped) and
+  renders them. No build, no token store — the browser's session cookie IS the
+  credential (coop-api /api/v1/site/groups verifies it directly).
+
+  Usage:
+    - Paste into Webstudio's HtmlEmbed `code` field.
+    - Optionally set the group slug explicitly by adding data-group="<slug>" to
+      the <div>; otherwise it derives the slug from the subdomain
+      ({groupname}.irl.coop -> "groupname").
+-->
+<div id="coop-group-data" data-group="" style="font-family: system-ui, sans-serif; padding: 1rem; color: #1a1a1a;">
+  <span id="coop-group-state">Loading…</span>
+</div>
+<script>
+(function () {
+  var API = "https://api.irl.coop/api/v1/site/groups";
+  var host = location.hostname;                 // e.g. "mygroup.irl.coop"
+  var slug = host.split(".")[0];                // "mygroup"
+  var container = document.getElementById("coop-group-data");
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  fetch(API, { credentials: "include" })
+    .then(function (r) {
+      if (r.status === 401) {
+        // No coop_session (or expired): route the visitor through the fleet
+        // sign-in, then back here.
+        container.innerHTML =
+          '<p><a href="https://irl.coop/?next=' + encodeURIComponent(location.href) +
+          '" style="color:#2563eb">Sign in to see this group</a></p>';
+        throw new Error("unauthenticated");
+      }
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    })
+    .then(function (groups) {
+      if (!Array.isArray(groups) || groups.length === 0) {
+        container.innerHTML = "<p>You are not a member of any groups yet.</p>";
+        return;
+      }
+      // Prefer the group whose slug matches this subdomain; else list all.
+      var match = groups.find(function (g) {
+        var s = String(g.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        return s === slug.toLowerCase();
+      });
+      var items = match ? [match] : groups;
+      var html = "";
+      items.forEach(function (g) {
+        var roles = Array.isArray(g.roles) ? g.roles.join(", ") : "";
+        html +=
+          '<div style="margin-bottom:1rem;">' +
+          '<h2 style="margin:0 0 .25rem;">' + esc(g.name) + "</h2>" +
+          (g.description ? '<p style="margin:0 0 .25rem;color:#666;">' + esc(g.description) + "</p>" : "") +
+          '<p style="margin:0;font-size:.8rem;color:#999;">' +
+          (g.safe_address ? "safe " + esc(g.safe_address) + " · " : "") +
+          (roles ? "your roles: " + esc(roles) : "") +
+          "</p></div>";
+      });
+      container.innerHTML = html;
+    })
+    .catch(function (err) {
+      if (err.message !== "unauthenticated") {
+        container.innerHTML = "<p>Could not load group data (" + esc(err.message) + ").</p>";
+      }
+    });
+})();
+</script>
