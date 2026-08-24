@@ -57,6 +57,8 @@ Thumbs.db
 
 # Matrix stack runtime configs (homeserver.yaml, coturn secret, client configs)
 infra/instances/dev/config/matrix/
-infra/instances/dev/config/element-web/
+# element-web config.json is a tracked declarative default (theme/SSO — no secrets)
+infra/instances/dev/config/element-web/*
+!infra/instances/dev/config/element-web/config.json
 infra/instances/dev/config/element-call/
 infra/instances/dev/etc/coturn/

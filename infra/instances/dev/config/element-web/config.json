@@ -1,0 +1,22 @@
+{
+  "default_server_config": {
+    "m.homeserver": {
+      "base_url": "https://matrix.irl.coop",
+      "server_name": "matrix.irl.coop"
+    },
+    "m.identity_server": {
+      "base_url": "https://vector.im"
+    }
+  },
+  "disable_custom_urls": true,
+  "default_theme": "dark",
+  "brand": "irl.coop",
+  "show_labs_settings": false,
+  "sso_redirect_options": {
+    "immediate": true,
+    "on_welcome_page": true
+  },
+  "features": {
+    "element_call": true
+  }
+}
