@@ -1,164 +1,155 @@
 import Link from "next/link"
-import {
-  ArrowRight,
-  Braces,
-  Database,
-  FolderKanban,
-  HardDrive,
-  KeyRound,
-  Mail,
-  Megaphone,
-  MessagesSquare,
-  Palette,
-  Radio,
-  RefreshCw,
-  Scale,
-  Server,
-  ShieldCheck,
-  Users,
-  Vote,
-  Wallet,
-  Workflow,
-} from "lucide-react"
+import { ArrowRight, KeyRound, Users, Wallet } from "lucide-react"
 
-import { cn } from "@/lib/utils"
-
-import { buttonVariants } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Logo } from "@/components/layout/logo"
 
-const APPS = [
+const PILL = {
+  light: "inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-neutral-950 transition hover:bg-white/90",
+  dark: "inline-flex items-center justify-center gap-2 rounded-full bg-neutral-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800",
+  ghost:
+    "inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10",
+}
+
+const RECIPES = [
   {
-    icon: FolderKanban,
-    title: "Projects",
-    brand: "Plane",
-    url: "https://plane.irl.coop",
-    color: "#7C3AED",
-    description:
-      "Plan and run cooperative projects — tasks, cycles, docs — on your own instance.",
+    emoji: "🌱",
+    name: "Neighborhood growing team",
+    line: "Five households share plots, produce, and a season's plan.",
+    tools: ["Project management", "Visual database", "Storage"],
   },
   {
-    icon: Database,
-    title: "Databases",
-    brand: "NocoDB",
-    url: "https://nocodb.irl.coop",
-    color: "#14B8A6",
-    description:
-      "Shared tables and records for anything your group tracks. No spreadsheets in the group chat.",
+    emoji: "🎭",
+    name: "Local theater",
+    line: "A closed company casts outside actors and runs the show.",
+    tools: ["Project management", "Visual database", "Chat"],
   },
   {
-    icon: Megaphone,
-    title: "Social Media",
-    brand: "Postiz",
-    url: "/apps/social-media",
-    color: "#EC4899",
-    description:
-      "Schedule and publish posts across your group's social channels — a dashboard view of every account.",
+    emoji: "🔧",
+    name: "Tool library",
+    line: "Neighbors share a lawnmower and a nail gun — not each buy one.",
+    tools: ["Visual database", "Project management", "Chat"],
   },
   {
-    icon: Mail,
-    title: "Webmail",
-    brand: "Roundcube",
-    url: "https://webmail.irl.coop",
-    color: "#3B82F6",
-    description:
-      "A secure @irl.coop mailbox. One sign-in, no separate passwords, your mail on your servers.",
+    emoji: "🧒",
+    name: "Childcare co-op",
+    line: "Twenty parents, fourteen kids, three on watch. Everyone gets a turn.",
+    tools: ["Project management", "Visual database", "Chat"],
   },
   {
-    icon: MessagesSquare,
-    title: "Chat",
-    brand: "Matrix · Element",
-    url: "https://element.irl.coop",
-    color: "#22C55E",
-    description:
-      "Federated chat in every room, embedded right in the dashboard. Your messages stay yours.",
+    emoji: "🧶",
+    name: "Craft circle",
+    line: "Knitters teach, trade, and pool money for materials.",
+    tools: ["Visual database", "Website builder", "Chat"],
   },
   {
-    icon: Radio,
-    title: "Live Video",
-    brand: "MediaMTX",
-    url: "https://stream.irl.coop",
-    color: "#EF4444",
-    description:
-      "Self-hosted live video — broadcast and watch streams across the coop, no platform in the middle.",
+    emoji: "🔪",
+    name: "Food skills",
+    line: "Knife skills to tallow. Teach, learn, and keep it fair.",
+    tools: ["Visual database", "Chat", "Storage"],
   },
   {
-    icon: HardDrive,
-    title: "Storage",
-    brand: "MinIO",
-    url: "https://s3.irl.coop",
-    color: "#F59E0B",
-    description:
-      "S3-compatible object storage — the file backbone every group controls.",
+    emoji: "🚜",
+    name: "Farmer exchange",
+    line: "Manure for hay. Twenty hands to harvest, paid in food.",
+    tools: ["Visual database", "Project management", "Chat"],
   },
   {
-    icon: Palette,
-    title: "Studio",
-    brand: "Webstudio",
-    url: "https://studio.irl.coop",
-    color: "#6366F1",
-    description:
-      "Build and publish coop websites visually, without leaving your stack.",
+    emoji: "👕",
+    name: "Hand-me-downs",
+    line: "Kids a year apart pass along the clothes they've outgrown.",
+    tools: ["Visual database", "Chat", "Storage"],
   },
   {
-    icon: Braces,
-    title: "API",
-    brand: "Fastify",
-    url: "https://api.irl.coop",
-    color: "#94A3B8",
-    description:
-      "One API for identity and data. Every app connects through it — yours can too.",
+    emoji: "📖",
+    name: "Solutions library",
+    line: "Anonymized stories of how a need got met, together.",
+    tools: ["Visual database", "Chat"],
+  },
+  {
+    emoji: "🎉",
+    name: "Gatherings",
+    line: "Symposiums and coffee hour — find out what people need.",
+    tools: ["Chat", "Live video", "Project management"],
   },
 ]
 
-const PILLARS = [
+const TOOLS = [
+  {
+    role: "Project management",
+    brand: "Plane",
+    used: "Run a production, a season, a harvest.",
+  },
+  {
+    role: "Visual database",
+    brand: "NocoDB",
+    used: "Tools, kids' clothes, offers and needs.",
+  },
+  {
+    role: "Website builder",
+    brand: "Webstudio",
+    used: "Your group's home — and its store.",
+  },
+  {
+    role: "Chat",
+    brand: "Matrix · Element",
+    used: "Every room, federated, yours.",
+  },
+  {
+    role: "Email",
+    brand: "Roundcube",
+    used: "A real @irl.coop mailbox.",
+  },
+  {
+    role: "Storage",
+    brand: "MinIO",
+    used: "Files, photos, media — on your servers.",
+  },
+  {
+    role: "Social scheduling",
+    brand: "Postiz",
+    used: "One dashboard for every account.",
+  },
+  {
+    role: "Live video",
+    brand: "MediaMTX",
+    used: "Broadcast and watch, self-hosted.",
+  },
+]
+
+const PRINCIPLES = [
   {
     icon: KeyRound,
-    name: "Authentication",
-    live: true,
-    note: "one identity, every login method",
+    title: "One identity",
+    line: "Sign in once. Every tool, every group — one account you own.",
   },
   {
-    icon: ShieldCheck,
-    name: "Authorization",
-    live: true,
-    note: "one session across every app",
-  },
-  {
-    icon: Server,
-    name: "Storage",
-    live: true,
-    note: "Citus Postgres + S3-compatible object storage",
-  },
-  {
-    icon: MessagesSquare,
-    name: "Communication",
-    live: true,
-    note: "mail, webmail and Matrix chat",
-  },
-  {
-    icon: Workflow,
-    name: "Workflow",
-    live: true,
-    note: "projects and shared databases",
+    icon: Users,
+    title: "Your group, your rules",
+    line: "Every group is a real, self-governing entity — not a folder.",
   },
   {
     icon: Wallet,
-    name: "Finance",
-    live: false,
-    note: "group treasury — planned",
+    title: "Money that stays fair",
+    line: "A treasury per group, private by default, provable on demand.",
+  },
+]
+
+const FAQ = [
+  {
+    q: "What does it cost?",
+    a: "Membership runs on a sliding scale — pay what you can, so cost never keeps a neighbor out. Groups cover their own infrastructure at cost.",
   },
   {
-    icon: Scale,
-    name: "Compliance",
-    live: false,
-    note: "governance tooling — planned",
+    q: "Who owns my data?",
+    a: "You do. Your files, messages and records live on infrastructure the coop controls — never resold, never used to sell you anything.",
   },
   {
-    icon: RefreshCw,
-    name: "Lifecycle",
-    live: false,
-    note: "onboarding & offboarding — planned",
+    q: "Do I need to be technical?",
+    a: "No. If you can use a phone, you can run a group. The tools are self-hosted but the sharp edges are already handled.",
+  },
+  {
+    q: "Is this a company?",
+    a: "No. It's a cooperative — owned and run by its members, with every decision on a quorum, not a boardroom.",
   },
 ]
 
@@ -171,38 +162,42 @@ export default async function LandingPage({
   const signIn = `/${lang}/sign-in`
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-switzer text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center" aria-label="irl.coop home">
-            <Logo className="h-7 text-primary" />
+          <Link
+            href="/"
+            className="flex items-center gap-2"
+            aria-label="irl.coop home"
+          >
+            <Logo className="h-6 text-foreground" />
+            <span className="text-base font-semibold tracking-tight">
+              irl.coop
+            </span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="#apps" className="hover:text-foreground">
-              Apps
+          <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+            <a href="#recipes" className="hover:text-foreground">
+              Recipes
             </a>
-            <a href="#identity" className="hover:text-foreground">
-              One identity
+            <a href="#tools" className="hover:text-foreground">
+              Tools
             </a>
-            <a href="#network" className="hover:text-foreground">
-              Groups
+            <a href="#how" className="hover:text-foreground">
+              How it works
             </a>
-            <a href="#architecture" className="hover:text-foreground">
-              Architecture
+            <a href="#faq" className="hover:text-foreground">
+              FAQ
             </a>
-            <Link href="/design" className="hover:text-foreground">
-              Design docs
-            </Link>
           </nav>
           <div className="flex items-center gap-2">
             <Link
               href={signIn}
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
+              className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:block"
             >
               Sign in
             </Link>
-            <Link href={signIn} className={buttonVariants({ size: "sm" })}>
+            <Link href={signIn} className={PILL.dark}>
               Join the coop
             </Link>
           </div>
@@ -210,269 +205,242 @@ export default async function LandingPage({
       </header>
 
       {/* Hero */}
-      <section className="container grid place-items-center gap-y-6 py-24 text-center md:py-32">
-        <span className="rounded-full border px-3 py-1 text-xs font-semibold tracking-widest text-muted-foreground">
-          COMMUNITY OS · MEMBER-OWNED
-        </span>
-        <h1 className="max-w-3xl text-5xl font-black leading-[1.05] tracking-tight md:text-7xl">
-          We&apos;re here for <span className="text-primary">cooperation.</span>
-        </h1>
-        <p className="max-w-2xl text-lg text-muted-foreground md:text-xl">
-          Share files, tools and spaces. Host events. Communicate securely. Run
-          a project, organize a club, build a network — with full control of
-          your data. This platform is owned and controlled by its members.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Link href={signIn} className={buttonVariants({ size: "lg" })}>
-            Sign up / Log in
-            <ArrowRight className="size-4" />
-          </Link>
-          <Link
-            href="#apps"
-            className={buttonVariants({ variant: "secondary", size: "lg" })}
-          >
-            Explore the apps
-          </Link>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          One identity, every app · Membership on a sliding scale
-        </p>
-      </section>
-
-      {/* Apps */}
-      <section id="apps" className="container py-20">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="mb-2 text-xs font-bold tracking-widest text-primary">
-            WHAT&apos;S LIVE
+      <section className="relative overflow-hidden bg-neutral-950 text-white">
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden="true"
+        >
+          <source src="/videos/hero-bg.mp4" type="video/mp4" />
+        </video>
+        <div
+          className="absolute inset-0 bg-neutral-950/55"
+          aria-hidden="true"
+        />
+        <div className="container relative flex flex-col items-center gap-6 py-28 text-center md:py-40">
+          <span className="rounded-full border border-white/15 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-white/60">
+            Member-owned · Community OS
+          </span>
+          <h1 className="max-w-4xl text-5xl font-normal leading-[0.95] tracking-[-0.03em] sm:text-6xl md:text-7xl lg:text-8xl">
+            We&apos;re here for{" "}
+            <em className="font-serif italic">cooperation.</em>
+          </h1>
+          <p className="max-w-xl text-base text-white/70 md:text-lg">
+            Share tools, time, skills and space. The apps your community
+            already needs — project management, visual databases, websites,
+            chat — under one identity you own. No platform in the middle.
           </p>
-          <h2 className="text-3xl font-black tracking-tight md:text-4xl">
-            The tools your group actually needs
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Best-in-class open-source apps, running on infrastructure you
-            control and signing in with the same identity — no separate
-            accounts, no per-service passwords.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {APPS.map((app) => {
-            const isInternal = app.url.startsWith("/")
-            const href = isInternal ? `/${lang}${app.url}` : app.url
-            const linkClass =
-              "mt-auto inline-flex items-center gap-1 text-sm font-semibold"
-            return (
-              <Card
-                key={app.title}
-                className="group relative flex flex-col gap-3 overflow-hidden p-6 transition-all hover:-translate-y-0.5 hover:shadow-lg"
-              >
-                <span
-                  className="absolute inset-x-0 top-0 h-1"
-                  style={{ background: app.color }}
-                />
-                <div className="flex items-center justify-between">
-                  <div
-                    className="grid size-11 place-items-center rounded-xl"
-                    style={{ backgroundColor: `${app.color}1a`, color: app.color }}
-                  >
-                    <app.icon className="size-5" />
-                  </div>
-                  <span
-                    className="rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide"
-                    style={{
-                      color: app.color,
-                      borderColor: `${app.color}40`,
-                      backgroundColor: `${app.color}14`,
-                    }}
-                  >
-                    {app.brand}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold">{app.title}</h3>
-                <p className="text-sm text-muted-foreground">{app.description}</p>
-                {isInternal ? (
-                  <Link href={href} className={linkClass} style={{ color: app.color }}>
-                    Open{" "}
-                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </Link>
-                ) : (
-                  <a href={href} className={linkClass} style={{ color: app.color }}>
-                    Open{" "}
-                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </a>
-                )}
-              </Card>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* One identity */}
-      <section id="identity" className="border-y bg-muted/40">
-        <div className="container grid items-center gap-10 py-20 md:grid-cols-2">
-          <div>
-            <p className="mb-2 text-xs font-bold tracking-widest text-primary">
-              ONE IDENTITY
-            </p>
-            <h2 className="text-3xl font-black tracking-tight md:text-4xl">
-              Every login method, one account
-            </h2>
-          </div>
-          <div className="space-y-4 text-muted-foreground">
-            <p>
-              Sign in with Google, a passkey, or anything else — every method
-              maps to a single canonical identity that you own. Your username
-              becomes your @irl.coop address, and your mailbox, projects and
-              data follow you across every app.
-            </p>
-            <p className="flex items-center gap-2 text-sm">
-              <KeyRound className="size-4 text-primary" />
-              No per-app passwords. Ever.
-            </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href={signIn} className={PILL.light}>
+              Join the coop <ArrowRight className="size-4" />
+            </Link>
+            <a href="#recipes" className={PILL.ghost}>
+              Browse the recipes
+            </a>
           </div>
         </div>
       </section>
 
-      {/* How groups interconnect */}
-      <section id="network" className="border-y bg-muted/40">
-        <div className="container py-20">
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <p className="mb-2 text-xs font-bold tracking-widest text-primary">
-              HOW GROUPS CONNECT
-            </p>
-            <h2 className="text-3xl font-black tracking-tight md:text-4xl">
-              Groups, not silos.
-            </h2>
-            <p className="mt-3 text-muted-foreground">
-              Every person and every group is a node in one network. Every
-              connection is an explicit edge — decisions · space · trust · money
-              — so groups can interlock deeply without losing themselves.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              {
-                icon: Users,
-                title: "Grouping",
-                description:
-                  "Groups can hold groups. A regional coalition seats its member farms, and subgroups share its space and services while keeping their own decisions. No silos — nested, not fenced.",
-              },
-              {
-                icon: Vote,
-                title: "Voting",
-                description:
-                  "Every decision runs on a quorum: 1-of-1 for you, N-of-M for a group. No server, operator, or hostile backend can act alone — the math forbids it — and timelocks make big changes reversible.",
-              },
-              {
-                icon: Wallet,
-                title: "Money",
-                description:
-                  "Every group gets a treasury: shared savings, quorum-gated pools, funds with spending rules, automatic distributions. Balances stay private by default, with proofs available on demand.",
-              },
-            ].map((primitive) => (
-              <Card key={primitive.title} className="flex flex-col gap-3 p-6">
-                <div className="grid size-11 place-items-center rounded-lg border bg-background">
-                  <primitive.icon className="size-5 text-primary" />
-                </div>
-                <h3 className="text-lg font-bold">{primitive.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {primitive.description}
-                </p>
-              </Card>
-            ))}
-          </div>
-          <div className="mt-8 rounded-xl border border-primary/30 bg-primary/5 p-6 md:p-8">
-            <h3 className="text-xl font-black tracking-tight">
-              Membership is a set, not a tree.
-            </h3>
-            <p className="mt-2 max-w-3xl text-muted-foreground">
-              You can sit in many groups at once and move between them without
-              switching hats. The group you&apos;re acting for is part of the
-              action itself: &ldquo;approve as member of Cold Storage Co-op —
-              2-of-3&rdquo;. One identity, many seats, one approval inbox — and
-              from these three primitives, new cooperation forms emerge on their
-              own: labor swaps between farms, joint regional purchasing,
-              data-sharing agreements, federated partners who keep their own
-              trucks.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Architecture */}
-      <section id="architecture" className="container py-20">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="mb-2 text-xs font-bold tracking-widest text-primary">
-            ARCHITECTURE
-          </p>
-          <h2 className="text-3xl font-black tracking-tight md:text-4xl">
-            Eight pillars. One ecosystem.
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Best-in-class open-source tools, wired together so members hold the
-            keys — not a corporation. Live pillars marked, the rest planned.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {PILLARS.map((pillar) => (
+      {/* Principles */}
+      <section className="border-b">
+        <div className="container grid gap-10 py-20 md:grid-cols-3 md:gap-6">
+          {PRINCIPLES.map((p) => (
             <div
-              key={pillar.name}
-              className={cn(
-                "rounded-xl border p-5",
-                pillar.live
-                  ? "border-primary/40 bg-primary/5"
-                  : "border-dashed opacity-60"
-              )}
+              key={p.title}
+              className="flex flex-col items-center gap-3 text-center"
             >
-              <div className="mb-3 flex items-center justify-between">
-                <pillar.icon className="size-5 text-primary" />
-                {pillar.live && (
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold tracking-wider text-primary">
-                    LIVE
-                  </span>
-                )}
+              <div className="grid size-11 place-items-center rounded-full border">
+                <p.icon className="size-5" />
               </div>
-              <h3 className="font-bold">{pillar.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {pillar.note}
-              </p>
+              <h3 className="text-lg font-medium">{p.title}</h3>
+              <p className="max-w-xs text-sm text-muted-foreground">{p.line}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="border-t">
-        <div className="container grid place-items-center gap-y-5 py-20 text-center">
-          <h2 className="max-w-2xl text-3xl font-black tracking-tight md:text-4xl">
-            Join the coop.
-          </h2>
-          <p className="max-w-xl text-muted-foreground">
-            One identity, your data, your servers. Sign up in under a minute.
+      {/* Recipes */}
+      <section id="recipes" className="container py-24 md:py-32">
+        <div className="mx-auto mb-14 max-w-2xl text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Cooperative playbooks
           </p>
-          <Link href={signIn} className={buttonVariants({ size: "lg" })}>
-            Sign up / Log in
-            <ArrowRight className="size-4" />
+          <h2 className="text-4xl font-normal leading-tight tracking-tight md:text-5xl">
+            Ways people already <em className="font-serif italic">do it.</em>
+          </h2>
+          <p className="mt-4 text-muted-foreground">
+            Real groups, real needs — captured as recipes you can copy and make
+            your own.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {RECIPES.map((r) => (
+            <div
+              key={r.name}
+              className="flex flex-col gap-3 rounded-2xl border p-6 transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              <span className="text-2xl">{r.emoji}</span>
+              <h3 className="text-base font-medium leading-snug">{r.name}</h3>
+              <p className="text-sm text-muted-foreground">{r.line}</p>
+              <div className="mt-auto flex flex-wrap gap-1.5 pt-2">
+                {r.tools.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Tools */}
+      <section id="tools" className="border-y bg-muted/40">
+        <div className="container py-24 md:py-32">
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              One toolbox
+            </p>
+            <h2 className="text-4xl font-normal leading-tight tracking-tight md:text-5xl">
+              General tools, <em className="font-serif italic">every kind of group.</em>
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              You shouldn&apos;t need to know the name of the software. You
+              should need to know what it does.
+            </p>
+          </div>
+          <div className="grid gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-2 lg:grid-cols-4">
+            {TOOLS.map((t) => (
+              <div
+                key={t.role}
+                className="flex flex-col gap-2 bg-background p-6"
+              >
+                <h3 className="text-lg font-medium">{t.role}</h3>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {t.brand}
+                </span>
+                <p className="text-sm text-muted-foreground">{t.used}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="container py-24 md:py-32">
+        <div className="mx-auto mb-14 max-w-2xl text-center">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            How it works
+          </p>
+          <h2 className="text-4xl font-normal leading-tight tracking-tight md:text-5xl">
+            Groups, <em className="font-serif italic">not silos.</em>
+          </h2>
+          <p className="mt-4 text-muted-foreground">
+            Every person and every group is a node in one network. Connections
+            are explicit — so groups interlock without losing themselves.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              icon: Users,
+              title: "Groups hold groups",
+              body: "A coalition seats its member farms. A tool library spins off a maintenance group with its own budget. Nested, never fenced.",
+            },
+            {
+              icon: KeyRound,
+              title: "Every decision on a quorum",
+              body: "1-of-1 for you, N-of-M for a group. No server or operator can act alone — the math forbids it.",
+            },
+            {
+              icon: Wallet,
+              title: "A treasury per group",
+              body: "Shared savings, quorum-gated pools, automatic splits. Private by default, provable on demand.",
+            },
+          ].map((f) => (
+            <div
+              key={f.title}
+              className="flex flex-col gap-3 rounded-2xl border p-6"
+            >
+              <div className="grid size-11 place-items-center rounded-full border">
+                <f.icon className="size-5" />
+              </div>
+              <h3 className="text-lg font-medium">{f.title}</h3>
+              <p className="text-sm text-muted-foreground">{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="border-t">
+        <div className="container max-w-3xl py-24 md:py-32">
+          <div className="mb-12 text-center">
+            <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              FAQ
+            </p>
+            <h2 className="text-4xl font-normal leading-tight tracking-tight">
+              Questions, <em className="font-serif italic">answered.</em>
+            </h2>
+          </div>
+          <div className="divide-y border-y">
+            {FAQ.map((f) => (
+              <details key={f.q} className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-base font-medium">
+                  {f.q}
+                  <span className="text-muted-foreground transition-transform group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+                <p className="pb-5 text-sm text-muted-foreground">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="bg-neutral-950 text-white">
+        <div className="container flex flex-col items-center gap-6 py-24 text-center md:py-32">
+          <h2 className="max-w-2xl text-4xl font-normal leading-tight tracking-tight md:text-6xl">
+            Cooperation, <em className="font-serif italic">on your terms.</em>
+          </h2>
+          <p className="max-w-md text-white/70">
+            One identity, your data, your servers. Join in under a minute.
+          </p>
+          <Link href={signIn} className={PILL.light}>
+            Join the coop <ArrowRight className="size-4" />
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-muted/40">
+      <footer className="border-t bg-background">
         <div className="container flex flex-col items-center gap-4 py-12 text-center">
-          <div className="flex items-center">
-            <Logo className="h-6 text-primary" />
-          </div>
-          <p className="max-w-md text-sm text-muted-foreground">
-            irl.coop is a member-owned digital platform cooperative — a suite of
-            tools for the secure coordination of informal and formal
-            organizations.
-          </p>
-          <Link
-            href="/design"
-            className="text-sm font-semibold text-muted-foreground hover:text-foreground"
-          >
-            Design docs
+          <Link href="/" className="flex items-center gap-2">
+            <Logo className="h-5 text-foreground" />
+            <span className="text-sm font-semibold tracking-tight">
+              irl.coop
+            </span>
           </Link>
+          <p className="max-w-md text-sm text-muted-foreground">
+            A member-owned digital cooperative — tools for neighbors to share,
+            decide, and build together.
+          </p>
+          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <Link href="/design" className="hover:text-foreground">
+              Design docs
+            </Link>
+            <Link href={signIn} className="hover:text-foreground">
+              Sign in
+            </Link>
+          </div>
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-emerald-500" />
             All systems operational
