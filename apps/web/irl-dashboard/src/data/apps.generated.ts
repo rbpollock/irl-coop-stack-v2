@@ -14,5 +14,5 @@ export const generatedApps: GeneratedApp[] = [
   { title: "Studio", href: "https://studio.irl.coop", iconName: "Palette", section: "Build" },
   { title: "Social Media", href: "/apps/social-media", iconName: "Megaphone", section: "Coop" },
   { title: "API", href: "https://api.irl.coop", iconName: "Braces", section: "Build" },
-  { title: "Owncast", href: "https://owncast.irl.coop", iconName: "Radio", section: "Coop" },
+  { title: "Live Video", href: "/apps/stream", iconName: "Video", section: "Coop" },
 ]

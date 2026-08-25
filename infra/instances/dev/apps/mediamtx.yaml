@@ -1,0 +1,36 @@
+# mediamtx (MediaMTX) — self-hosted live media server / media router.
+#
+# Replaces Owncast (single-tenant). Multi-stream by design: a broadcaster
+# pushes RTMP to rtmp://mediamtx.irl.coop:1935/<path> and viewers pull HLS/RTSP
+# from the same path — N groups can stream simultaneously on one instance.
+# No external DB. Config (mediamtx.yml) is mounted read-only; it is a plain
+# protocol/config file, no secrets. RTMP ingest is a raw TCP port that the
+# router must forward like the mail/TURN ports (not an edge route). The thin
+# player frontend + coop JWT auth (authJWTJWKS -> coop-api grants) are the next
+# slice.
+name: mediamtx
+enabled: true
+pillar: communication
+type: image
+image: bluenviron/mediamtx:1.20.1
+ports:
+  - "1935:1935"   # RTMP ingest — router must forward like mail/TURN ports
+  - "8554:8554"   # RTSP (softphones / local viewers)
+  - "8888:8888"   # HLS — the edge routes browser viewing here
+volumes:
+  - /opt/app/communication/data/mediamtx:/data
+  - /opt/app/communication/etc/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+restart: unless-stopped
+dev:
+  volumes:
+    - ./data/mediamtx:/data
+    - ./etc/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+proxy:
+  hostname: stream.${DOMAIN}
+  port: 8888
+  description: MediaMTX live streaming (HLS viewer)
+nav:
+  label: Live Video
+  href: /apps/stream
+  icon: Video
+  section: Coop

@@ -8,9 +8,8 @@ import type { DictionaryType } from "@/lib/get-dictionary"
 import type { LocaleType } from "@/types"
 
 import { ensureLocalizedPathname } from "@/lib/i18n"
-import { getInitials } from "@/lib/utils"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { MemberAvatar } from "@/components/member-avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -42,22 +41,17 @@ export function UserDropdown({
           className="rounded-lg"
           aria-label="User"
         >
-          <Avatar className="size-9">
-            <AvatarImage src={user?.avatar ?? ""} alt="" />
-            <AvatarFallback className="bg-transparent">
-              {getInitials(displayName)}
-            </AvatarFallback>
-          </Avatar>
+          <MemberAvatar
+            sub={user?.id}
+            avatar={user?.avatar}
+            name={displayName}
+            className="size-9"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent forceMount>
         <DropdownMenuLabel className="flex gap-2">
-          <Avatar>
-            <AvatarImage src={user?.avatar ?? ""} alt="Avatar" />
-            <AvatarFallback className="bg-transparent">
-              {getInitials(displayName)}
-            </AvatarFallback>
-          </Avatar>
+          <MemberAvatar sub={user?.id} avatar={user?.avatar} name={displayName} />
           <div className="flex flex-col overflow-hidden">
             <p className="text-sm font-medium truncate">{displayName}</p>
             <p className="text-xs text-muted-foreground font-semibold truncate">

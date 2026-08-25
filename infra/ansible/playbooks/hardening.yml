@@ -1,0 +1,79 @@
+---
+# Host-level telephony hardening: fail2ban (registration-scanner bans) + a
+# persistent nftables rate-limit for the UDP 5060 flood that fail2ban's
+# TCP-only nftables action can't cover. FreeSWITCH runs with host networking,
+# so this is host-level, not in-container.
+#
+# Vars (override in inventory group_vars):
+#   freeswitch_log_path  — the host-mounted FreeSWITCH log (prod default below)
+#   freeswitch_ignoreip  — never-ban list (loopback + LAN + the router WAN IP,
+#                          which hairpin-NATs local WSS to appear external)
+- name: Harden the SIP/ESL surface (fail2ban + UDP rate-limit)
+  hosts: all
+  become: yes
+  vars:
+    freeswitch_log_path: /opt/app/communication/data/freeswitch/log/freeswitch.log
+    freeswitch_ignoreip: 127.0.0.1/8 192.168.18.0/24 64.135.141.73
+  tasks:
+    - name: Install fail2ban + nftables
+      ansible.builtin.apt:
+        name: [fail2ban, nftables]
+        state: present
+        update_cache: yes
+
+    - name: Deploy the FreeSWITCH fail2ban filter
+      ansible.builtin.copy:
+        src: ../files/fail2ban/freeswitch.filter.conf
+        dest: /etc/fail2ban/filter.d/freeswitch.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Deploy the FreeSWITCH fail2ban jail
+      ansible.builtin.template:
+        src: ../templates/fail2ban/jail-freeswitch.conf.j2
+        dest: /etc/fail2ban/jail.d/freeswitch.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: reload fail2ban
+
+    - name: Deploy the UDP 5060 rate-limit ruleset
+      ansible.builtin.copy:
+        src: ../files/fail2ban/freeswitch-udp.nft
+        dest: /etc/nftables/freeswitch-udp.nft
+        owner: root
+        group: root
+        mode: '0644'
+      notify: apply udp rate-limit
+
+    - name: Deploy the UDP rate-limit systemd unit
+      ansible.builtin.copy:
+        src: ../files/fail2ban/freeswitch-udp.service
+        dest: /etc/systemd/system/freeswitch-udp.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: reload systemd + enable udp rate-limit
+
+    - name: Enable + start fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: reload fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted
+
+    - name: apply udp rate-limit
+      ansible.builtin.command: /usr/sbin/nft -f /etc/nftables/freeswitch-udp.nft
+
+    - name: reload systemd + enable udp rate-limit
+      ansible.builtin.systemd:
+        name: freeswitch-udp
+        daemon_reload: yes
+        enabled: yes
+        state: started

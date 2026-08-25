@@ -58,6 +58,7 @@ def emit_compose(apps, out_dir, inst_dir):
     """Emit a pillar compose file merging all its apps (services + sidecars)."""
     services = {}
     volumes = {}
+    overrides = {}
     for app in apps:
         service_name = app.get("service_name", app["name"])
         svc = {}
@@ -84,28 +85,29 @@ def emit_compose(apps, out_dir, inst_dir):
         if app.get("network_mode"):
             svc["network_mode"] = app["network_mode"]
         services[service_name] = svc
+        if app.get("dev"):
+            overrides[service_name] = dict(app["dev"])
         for name, side in (app.get("sidecars") or {}).items():
-            services[name] = dict(side)
+            side = dict(side)
+            if "dev" in side:
+                overrides[name] = dict(side.pop("dev"))
+            services[name] = side
         volumes.update(app.get("named_volumes", {}))
     compose = {"services": services}
     if volumes:
         compose["volumes"] = volumes
     with open(out_dir / "docker-compose.yml", "w") as f:
         yaml.safe_dump(compose, f, sort_keys=False, default_flow_style=False)
-    # dev overrides (published ports / local paths), merged per service.
-    # Host paths in the spec's dev.volumes are relative to the INSTANCE dir —
-    # absolutize them so generated artifacts never hold volatile relative data.
-    overrides = {}
-    for app in apps:
-        if not app.get("dev"):
-            continue
-        dev = dict(app["dev"])
+    # dev overrides (published ports / local paths), merged per service — the
+    # main app service AND any sidecar that declares its own `dev:` block.
+    # Host paths in dev.volumes are relative to the INSTANCE dir — absolutize
+    # them so generated artifacts never hold volatile relative data.
+    for dev in overrides.values():
         if dev.get("volumes"):
             dev["volumes"] = [
                 str(inst_dir / v.split(":")[0]) + ":" + ":".join(v.split(":")[1:]) if v.startswith("./") else v
                 for v in dev["volumes"]
             ]
-        overrides[app.get("service_name", app["name"])] = dev
     if overrides:
         with open(out_dir / "docker-compose.override.yml", "w") as f:
             yaml.safe_dump({"services": overrides}, f, sort_keys=False, default_flow_style=False)

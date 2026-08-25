@@ -1,0 +1,36 @@
+# MediaMTX — multi-stream live media server (communication pillar).
+#
+# Broadcasters push RTMP to rtmp://stream.irl.coop:1935/<path>; viewers pull
+# HLS through the dashboard's same-origin /api/stream proxy (which adds the
+# viewer's coop JWT server-side). Multi-stream by design.
+
+logLevel: info
+
+# Protocols: RTMP ingest + RTSP + HLS. WebRTC/SRT need UDP port handling and
+# are left off; the API/metrics endpoints are off.
+rtmp: true
+rtsp: true
+hls: true
+webrtc: false
+srt: false
+api: false
+metrics: false
+
+# JWT auth against the coop session gateway. MediaMTX validates the coop JWT
+# (RS256, signed by coop-api — the key is stable via COOP_JWT_PRIVATE_KEY_B64
+# in apps/coop-api/.env) against coop-api's /jwks and reads the
+# `mediamtx_permissions` claim (array of {action, path}) minted by coop-api
+# from the member's group grants. Reach coop-api directly on the
+# communication_default bridge gateway (172.23.0.1 — same as fusionpbx's event
+# socket) to skip the TLS hairpin; authJWTIssuer still pins the token to the
+# real issuer.
+authMethod: jwt
+authJWTJWKS: http://172.23.0.1:3001/jwks
+authJWTClaimKey: mediamtx_permissions
+authJWTIssuer: https://api.irl.coop
+
+# Any path is publishable/readable, subject to the JWT permissions above
+# (multi-stream: each group publishes to its own path, e.g. live/<group>).
+paths:
+  all_others:
+

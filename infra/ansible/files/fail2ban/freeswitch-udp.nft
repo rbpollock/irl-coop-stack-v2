@@ -1,0 +1,14 @@
+# irl.coop FreeSWITCH UDP 5060 rate-limit.
+#
+# fail2ban's nftables-allports action only ever blocks TCP (its `protocol`
+# option does not clear the l4proto tcp restriction), so the UDP registration
+# flood needs a separate rate-limit. 8 new conns/minute with a small burst is
+# enough for the few legit registrations; the excess (the scanners) is dropped.
+# Applied at boot by freeswitch-udp.service (RemainAfterExit oneshot).
+table inet freeswitch-udp {
+  chain input {
+    type filter hook input priority filter - 2; policy accept;
+    udp dport 5060 ct state new limit rate 8/minute burst 5 packets accept
+    udp dport 5060 drop
+  }
+}

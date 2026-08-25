@@ -31,6 +31,9 @@ import chatRoutes from './chat'
 import eventRoutes from './events'
 import notificationRoutes from './notifications'
 import mailWebhookRoutes from './mail'
+import telephonyRoutes from './telephony'
+import avatarRoutes from './avatars'
+import internalRoutes from './internal'
 
 const fastify = Fastify({
   logger: true,
@@ -85,6 +88,9 @@ fastify.register(chatRoutes)
 fastify.register(eventRoutes)
 fastify.register(notificationRoutes)
 fastify.register(mailWebhookRoutes)
+fastify.register(telephonyRoutes)
+fastify.register(avatarRoutes)
+fastify.register(internalRoutes)
 
 // Graceful shutdown — releases :3001 deterministically so ts-node-dev's
 // `--respawn` (and any external restart) can rebind immediately. Without this,

@@ -1,0 +1,51 @@
+{{define "error.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · irl.coop</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f6f7f8; color: #1a1d21; padding: 24px;
+  }
+  .card {
+    background: #fff; border: 1px solid #e6e8eb; border-radius: 14px;
+    max-width: 460px; width: 100%; padding: 44px 36px; text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+  }
+  .brand { font-weight: 700; font-size: 15px; letter-spacing: 0.4px; color: #16a34a; margin-bottom: 10px; }
+  h1 { font-size: 23px; margin: 0 0 12px; font-weight: 650; }
+  .msg { color: #5c6470; font-size: 15px; line-height: 1.55; margin: 0 0 30px; }
+  .actions { display: flex; flex-direction: column; gap: 10px; }
+  a.btn { display: inline-block; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 600; }
+  a.primary { background: #16a34a; color: #fff; }
+  a.primary:hover { background: #15803d; }
+  a.secondary { color: #374151; border: 1px solid #d1d5db; background: #fff; }
+  a.secondary:hover { background: #f3f4f6; }
+  .muted { margin-top: 26px; font-size: 12px; color: #9aa1ab; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">irl.coop</div>
+    <h1>{{if eq .StatusCode 403}}Access restricted{{else}}{{.Title}}{{end}}</h1>
+    <p class="msg">
+      {{if eq .StatusCode 403}}
+        This is the telephony admin console. Your account doesn't have platform-admin access — sign in with an authorized account.
+      {{else}}
+        {{.Message}}
+      {{end}}
+    </p>
+    <div class="actions">
+      <a class="btn primary" href="{{.ProxyPrefix}}/sign_out?rd=https%3A%2F%2Fapi.irl.coop%2Fapi%2Fauth%2Flogout">Sign in</a>
+      <a class="btn secondary" href="https://irl.coop/">Back to irl.coop</a>
+    </div>
+    {{if .RequestID}}<div class="muted">Request ID: {{.RequestID}}</div>{{end}}
+  </div>
+</body>
+</html>
+{{end}}

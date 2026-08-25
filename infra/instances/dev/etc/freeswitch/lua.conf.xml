@@ -1,0 +1,11 @@
+<configuration name="lua.conf" description="LUA Configuration">
+  <settings>
+    <!-- FusionPBX xml_handler: app.lua (argv[1]="xml_handler") dispatches to
+         app/xml_handler/index.lua, which serves configuration/dialplan/directory/
+         languages from the fusionpbx Postgres DB via resources/functions/config.lua
+         (reads /etc/fusionpbx/config.conf) + freeswitch.Dbh (luasql.postgres). -->
+    <param name="script-directory" value="$${script_dir}/?.lua"/>
+    <param name="xml-handler-script" value="app.lua xml_handler"/>
+    <param name="xml-handler-bindings" value="configuration,dialplan,directory,languages"/>
+  </settings>
+</configuration>

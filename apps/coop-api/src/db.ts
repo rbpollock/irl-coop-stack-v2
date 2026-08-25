@@ -16,6 +16,19 @@ const pool = new Pool({
   max: 5,
 });
 
+// Least-privilege operator pool for platform-admin promotion/demotion. Connects
+// as `coop_ops` (LOGIN, EXECUTE-only on the two promotion functions — no table
+// grants, not superuser) so the app's main `coop` pool can never self-promote.
+// The password is the derived secret ${SECRET:coop.ops} (env COOP_OPS).
+const opsPool = new Pool({
+  host: process.env.COOP_DB_HOST ?? "172.17.0.1",
+  port: Number(process.env.COOP_DB_PORT ?? 5432),
+  user: "coop_ops",
+  password: process.env.COOP_OPS ?? "",
+  database: process.env.COOP_DB_NAME ?? "irlcoop",
+  max: 1,
+});
+
 // Idempotent schema — coop-api self-provisions its projection tables on boot.
 // gen_random_uuid() is built into Postgres 13+ (Citus is 16), no extension.
 const DDL = `
@@ -30,6 +43,14 @@ CREATE TABLE IF NOT EXISTS groups (
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- A user's OWN group (groups.kind='personal', created_by=sub, seated by
+-- coop_ensure_personal_group) is their telephony identity — enforce one per sub
+-- at the DB level so no race can mint a second. The extension-identity binding
+-- (docs/design/telephony.md) rests on it. kind here is only the own-group
+-- marker, not a telephony distinction.
+CREATE UNIQUE INDEX IF NOT EXISTS groups_personal_created_by_uniq
+  ON groups (created_by) WHERE kind = 'personal';
 
 CREATE TABLE IF NOT EXISTS group_members (
   group_id   uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -219,7 +240,11 @@ INSERT INTO grants (name, description) VALUES
   ('telephony.agent', 'Serve as a queue agent'),
   ('telephony.caller', 'Make and receive calls on group/personal extensions'),
   ('telephony.records.read', 'Read the group call records and voicemail'),
-  ('telephony.device.provision', 'Provision/rotate a member device; the secret never passes through the grant-holder')
+  ('telephony.device.provision', 'Provision/rotate a member device; the secret never passes through the grant-holder'),
+  ('telephony.platform.admin', 'Administer the shared FreeSWITCH platform (FusionPBX ops UI)'),
+  ('storage.platform.admin', 'Administer the shared MinIO object store (console)'),
+  ('media.stream.view', 'Watch coop live streams'),
+  ('media.stream.broadcast', 'Broadcast live streams for the group')
 ON CONFLICT (name) DO NOTHING;
 
 -- Builtin roles.
@@ -227,7 +252,8 @@ INSERT INTO roles (name, description, builtin) VALUES
   ('owner', 'Full control of the group', true),
   ('member', 'Default member: call and read records', true),
   ('agent', 'Queue agent', true),
-  ('telephony-admin', 'Telephony administration', true)
+  ('telephony-admin', 'Telephony administration', true),
+  ('platform-admin', 'Shared platform administration (FusionPBX ops UI)', true)
 ON CONFLICT (name) DO NOTHING;
 
 -- Role -> grant bundles.
@@ -235,21 +261,24 @@ INSERT INTO role_grants (role_id, grant_name)
 SELECT r.id, g.name
 FROM roles r
 JOIN grants g ON (
-     (r.name = 'owner' AND g.name IN ('group.manage','group.members.manage','resource.scope','telephony.admin','telephony.agent','telephony.caller','telephony.records.read'))
-  OR (r.name = 'member' AND g.name IN ('resource.scope','telephony.caller','telephony.records.read'))
+     (r.name = 'owner' AND g.name IN ('group.manage','group.members.manage','resource.scope','telephony.admin','telephony.agent','telephony.caller','telephony.records.read','media.stream.view','media.stream.broadcast'))
+  OR (r.name = 'member' AND g.name IN ('resource.scope','telephony.caller','telephony.records.read','media.stream.view'))
   OR (r.name = 'agent' AND g.name IN ('telephony.agent','telephony.caller'))
   OR (r.name = 'telephony-admin' AND g.name IN ('telephony.admin','telephony.caller','telephony.records.read'))
+  OR (r.name = 'platform-admin' AND g.name IN ('telephony.platform.admin','storage.platform.admin'))
 )
 ON CONFLICT (role_id, grant_name) DO NOTHING;
 
--- Default telephony templates (operator-authored catalog).
+-- Default telephony templates (operator-authored catalog). Every group gets an
+-- extension (its number) + a ring group (fan-out to members); kind is not a
+-- telephony distinction.
 INSERT INTO telephony_templates (name, kind, description, resources) VALUES
-  ('Member', 'member', 'Personal extension + voicemail for every member',
-   '[{"type":"extension","name":"extension","config":{"count":1,"voicemail":true}}]'::jsonb),
-  ('Support team', 'support', 'Queue + IVR + voicemail + ring group',
-   '[{"type":"queue","name":"queue","config":{"strategy":"ring-all","agents_role":"agent"}},{"type":"ivr","name":"menu","config":{"greeting":"welcome"}},{"type":"voicemail","name":"voicemail","config":{}},{"type":"ring_group","name":"ring","config":{}}]'::jsonb),
-  ('Board room', 'conference', 'Conference room + PIN + recording',
-   '[{"type":"conference","name":"room","config":{"pin":true,"recording":true}}]'::jsonb)
+  ('Member', 'member', 'Own group: extension + ring group + voicemail',
+   '[{"type":"extension","name":"extension","config":{"voicemail":true}},{"type":"ring_group","name":"ring","config":{}},{"type":"voicemail","name":"voicemail","config":{}}]'::jsonb),
+  ('Support team', 'support', 'Group extension + ring group + queue + IVR + voicemail',
+   '[{"type":"extension","name":"extension","config":{}},{"type":"ring_group","name":"ring","config":{}},{"type":"queue","name":"queue","config":{"strategy":"ring-all","agents_role":"agent"}},{"type":"ivr","name":"menu","config":{"greeting":"welcome"}},{"type":"voicemail","name":"voicemail","config":{}}]'::jsonb),
+  ('Board room', 'conference', 'Group extension + ring group + conference room',
+   '[{"type":"extension","name":"extension","config":{}},{"type":"ring_group","name":"ring","config":{}},{"type":"conference","name":"room","config":{"pin":true,"recording":true}}]'::jsonb)
 ON CONFLICT (name) DO NOTHING;
 `;
 
@@ -285,3 +314,87 @@ export async function withIdentity<T>(
 }
 
 export { pool };
+
+// Resolve a member's roles (seat role names) and grants (role names -> grant
+// capabilities) across ALL their seats — the union used for the OIDC `roles`
+// and `grants` claims. Runs inside withIdentity(sub) so RLS lets the member
+// read their own seats (coop_can_view_group resolves membership via app.sub);
+// the roles/role_grants/grants catalog tables are not RLS-scoped. Grants
+// resolve only for KNOWN roles (role_grants); an unknown role name in a seat
+// contributes no grants (additive model).
+export async function getRolesAndGrants(
+  sub: string,
+): Promise<{ roles: string[]; grants: string[] }> {
+  return withIdentity(sub, async (client) => {
+    const rolesRes = await client.query<{ name: string }>(
+      `SELECT DISTINCT unnest(roles) AS name FROM group_members WHERE sub = $1`,
+      [sub],
+    );
+    const grantsRes = await client.query<{ name: string }>(
+      `SELECT DISTINCT g.name
+         FROM group_members gm
+         JOIN roles      r  ON r.name = ANY(gm.roles)
+         JOIN role_grants rg ON rg.role_id = r.id
+         JOIN grants     g  ON g.name = rg.grant_name
+        WHERE gm.sub = $1`,
+      [sub],
+    );
+    return {
+      roles: rolesRes.rows.map((r) => r.name),
+      grants: grantsRes.rows.map((r) => r.name),
+    };
+  });
+}
+
+// The member's RELATED GROUPS — the functional group concept (NOT permissions).
+// Every user IS a 1-of-1 group: their personal group (kind='personal', seated
+// as owner) plus every coop group they hold a seat in (admin or otherwise —
+// a seat is the relationship). The Keycloak `groups` mapper emits these ids as
+// the OIDC `groups` claim. Mirrors the /api/v1/profile membership query.
+export async function getRelatedGroups(sub: string): Promise<string[]> {
+  return withIdentity(sub, async (client) => {
+    await client.query("SELECT coop_ensure_personal_group()");
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT g.id
+         FROM group_members gm
+         JOIN groups g ON g.id = gm.group_id
+        WHERE gm.sub = $1
+        ORDER BY g.created_at ASC`,
+      [sub],
+    );
+    return rows.map((r) => r.id);
+  });
+}
+
+// Promote / demote a member to shared-platform admin. `platform-admin` is the
+// platform-scoped role (grants telephony.platform.admin) that the FusionPBX
+// oauth2-proxy gate reads; it lives on the member's own 1-of-1 seat. The DB
+// functions are SECURITY DEFINER (BYPASSRLS) and idempotent — promotion is
+// additive, revocation strips only the one role — and live in coop_rls.sql, so
+// promotion is reproducible (survives a storage-pillar reset) and never needs
+// ad-hoc SQL. Each call also writes an audit event (source='platform'). The
+// functions are locked to the `coop_ops` operator role (REVOKE FROM PUBLIC +
+// session_user guard), so these run over a separate least-privilege pool — the
+// app's main `coop` pool can never self-promote.
+export async function ensurePlatformAdmin(sub: string): Promise<void> {
+  await opsPool.query("SELECT coop_ensure_platform_admin($1)", [sub]);
+}
+
+export async function revokePlatformAdmin(sub: string): Promise<void> {
+  await opsPool.query("SELECT coop_revoke_platform_admin($1)", [sub]);
+}
+
+// System-write bridge for telephony resources. Runs the SECURITY DEFINER
+// coop_provision_telephony_resource over the least-privilege coop_ops pool
+// (the app's `coop` pool can never write telephony_resources — no user policy).
+export async function provisionTelephonyResource(
+  groupId: string,
+  resourceType: string,
+  externalRef: string,
+  config: Record<string, unknown> = {},
+): Promise<void> {
+  await opsPool.query(
+    "SELECT coop_provision_telephony_resource($1, NULL, $2, $3, $4::jsonb)",
+    [groupId, resourceType, externalRef, JSON.stringify(config)],
+  );
+}

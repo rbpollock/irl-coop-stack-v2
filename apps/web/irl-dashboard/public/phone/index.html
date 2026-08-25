@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Browser Phone</title>
+        <meta name="description" content="Browser Phone is a fully featured browser based WebRTC SIP phone. It connects to FreeSWITCH via WebSocket and registers an extension.">
+
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+        <meta name="HandheldFriendly" content="true">
+
+        <meta name="format-detection" content="telephone=no"/>
+        <meta name="SKYPE_TOOLBAR" content="SKYPE_TOOLBAR_PARSER_COMPATIBLE"/>
+
+        <meta http-equiv="Pragma" content="no-cache"/>
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+        <meta http-equiv="Expires" content="0"/>
+
+        <link rel="icon" href="favicon.ico">
+
+        <!-- Styles (vendored, no CDN) -->
+        <link rel="stylesheet" type="text/css" href="lib/Normalize/normalize-v8.0.1.css"/>
+        <link rel="stylesheet" type="text/css" href="lib/fonts/font_roboto/roboto.css"/>
+        <link rel="stylesheet" type="text/css" href="lib/fonts/font_awesome/css/font-awesome.min.css"/>
+        <link rel="stylesheet" type="text/css" href="lib/jquery/jquery-ui.min.css"/>
+        <link rel="stylesheet" type="text/css" href="lib/Croppie/croppie.css"/>
+        <link rel="stylesheet" type="text/css" href="phone.css"/>
+        <script type="text/javascript">
+            // Provision runtime options can go here.
+            var phoneOptions = {
+                loadAlternateLang: true
+            }
+
+            var web_hook_on_transportError = function(t, ua){
+                // console.warn("web_hook_on_transportError",t, ua);
+            }
+            var web_hook_on_register = function(ua){
+                // console.warn("web_hook_on_register", ua);
+            }
+            var web_hook_on_registrationFailed = function(e){
+                // console.warn("web_hook_on_registrationFailed", e);
+            }
+            var web_hook_on_unregistered = function(){
+                // console.warn("web_hook_on_unregistered", ua);
+            }
+            var web_hook_on_invite = function(session){
+                // console.warn("web_hook_on_invite", session);
+            }
+            var web_hook_on_message = function(message){
+                // console.warn("web_hook_on_message", message);
+            }
+            var web_hook_on_modify = function(action, session){
+                // console.warn("web_hook_on_modify", action, session);
+            }
+            var web_hook_on_dtmf = function(item, session){
+                // console.warn("web_hook_on_dtmf", item, session);
+            }
+            var web_hook_on_terminate = function(session){
+                // console.warn("web_hook_on_terminate", session);
+            }
+        </script>
+    </head>
+
+    <body>
+        <!-- Loading Animation -->
+        <div class=loading>
+            <span class="fa fa-circle-o-notch fa-spin"></span>
+        </div>
+
+        <!-- The Phone -->
+        <div id=Phone></div>
+
+        <!-- Scripts (vendored, no CDN) -->
+        <script type="text/javascript" src="lib/jquery/jquery-3.3.1.min.js"></script>
+        <script type="text/javascript" src="lib/jquery/jquery.md5-min.js"></script>
+        <script type="text/javascript" src="lib/jquery/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="lib/Chart/Chart.bundle-2.7.2.js"></script>
+        <script type="text/javascript" src="lib/SipJS/sip-0.20.0.min.js"></script>
+        <script type="text/javascript" src="lib/FabricJS/fabric-2.4.6.min.js"></script>
+        <script type="text/javascript" src="lib/Moment/moment-with-locales-2.24.0.min.js"></script>
+        <script type="text/javascript" src="lib/Croppie/croppie-2.6.4.min.js"></script>
+        <script type="text/javascript" src="lib/XMPP/strophe-1.4.1.umd.min.js"></script>
+        <script type="text/javascript">
+            // SIP config resolution (sovereign — no FusionPBX PHP session):
+            //   1. sessionStorage["irlcoop.phone.config"] set by the dashboard
+            //      host (same-origin) — the normal path; the SIP secret never
+            //      rides the URL or a log.
+            //   2. URL query params as a standalone/debug fallback.
+            var server = "";
+            var sipDomain = "";
+            var extension = "";
+            var password = "";
+            var fullname = "";
+            var __phoneCfg = {};
+            try {
+                __phoneCfg = JSON.parse(sessionStorage.getItem("irlcoop.phone.config") || "{}");
+            } catch (e) { __phoneCfg = {}; }
+            var q = new URLSearchParams(window.location.search);
+            server    = __phoneCfg.server    || q.get("server")    || "";
+            sipDomain = __phoneCfg.domain    || q.get("domain")    || "";
+            extension = __phoneCfg.extension || q.get("extension") || "";
+            password  = __phoneCfg.password  || q.get("password")  || "";
+            fullname  = __phoneCfg.fullname  || q.get("fullname")  || "";
+            // Seed the phone's stable profile ID from the identity config. The
+            // vendored phone treats a missing profileUserID as "no account yet"
+            // and opens its settings screen instead of registering — so bind it
+            // to our identity (Keycloak sub) before phone.js boots.
+            if (__phoneCfg.profileUserID) {
+                try { if (!localStorage.getItem("profileUserID")) localStorage.setItem("profileUserID", __phoneCfg.profileUserID); } catch (e) {}
+            }
+            const webPort = '7443';
+            const webPath = '/wss';
+        </script>
+        <script type="text/javascript" src="phone.js"></script>
+    </body>
+</html>

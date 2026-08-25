@@ -70,7 +70,7 @@ export function ProfileView() {
 
   return (
     <div className="container px-0">
-      <ProfileHeader locale={locale} profile={profile} />
+      <ProfileHeader locale={locale} profile={profile} onAvatarChanged={load} />
       <ProfileContent profile={profile} />
     </div>
   )

@@ -22,12 +22,106 @@ env:
   # without it MinIO can't decrypt the stored root secret; null it too.
   MINIO_KMS_SECRET_KEY_FILE: ""
   MINIO_CONFIG_ENV_FILE: ""
+  # Server-side OIDC (STS AssumeRoleWithWebIdentity) — NOT the console's SSO
+  # button (that was removed upstream). This is what the s3-bridge calls: it
+  # hands MinIO the coop JWT (minted by coop-api), MinIO validates iss/sig/aud
+  # against this config and reads the `policy` claim (storage.platform.admin →
+  # "consoleAdmin"). `client_id` must equal the coop JWT's `aud` = "irl-coop".
+  MINIO_IDENTITY_OPENID_CONFIG_URL: https://api.${DOMAIN}/.well-known/openid-configuration
+  MINIO_IDENTITY_OPENID_CLIENT_ID: irl-coop
+  MINIO_IDENTITY_OPENID_CLIENT_SECRET: ${SECRET:minio.oidc}
+  MINIO_IDENTITY_OPENID_CLAIM_NAME: policy
 volumes:
   - /opt/app/storage/data/minio:/data
+sidecars:
+  # Member-avatar store: dedicated `profiles` bucket + `profiles-s3` user.
+  # Lives in the same compose as minio, so the service name (not a gateway IP)
+  # reaches it. NOT anonymous-download: avatars are read through coop-api
+  # cookie-auth, never a public URL.
+  profiles-minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 minioadmin "${SECRET:minio.root}"
+        for i in $(seq 1 30); do
+          mc admin info local >/dev/null 2>&1 && break
+          sleep 2
+        done
+        mc mb --ignore-existing local/profiles
+        mc admin user info local profiles-s3 >/dev/null 2>&1 || mc admin user add local profiles-s3 "${SECRET:minio.profiles-s3}"
+        mc admin policy attach local readwrite --user profiles-s3
+        echo 'profiles MinIO bucket ready.'
+  # coop SSO → console bridge. Sits between the s3-gate (oauth2-proxy, which
+  # enforces platform-admin and passes the coop JWT as X-Forwarded-Access-Token)
+  # and the MinIO console. Exchanges the coop JWT for MinIO STS credentials and
+  # signs the user straight into the console (no second login).
+  s3-bridge:
+    image: node:22-alpine
+    command: ["node", "/app/s3-bridge.js"]
+    environment:
+      CONSOLE_UPSTREAM: http://minio:9001
+      MINIO_STS_URL: http://minio:9000
+      PUBLIC_CONSOLE_URL: https://s3.${DOMAIN}
+    depends_on:
+      - minio
+    restart: unless-stopped
+    dev:
+      volumes:
+        - "./assets/minio/s3-bridge.js:/app/s3-bridge.js:ro"
+  # SSO gate for the console (s3.<DOMAIN>): oauth2-proxy in front of the
+  # s3-bridge — the fleet gate pattern (nocodb-gate / webstudio-gate /
+  # fusionpbx-gate). Admin-only: --allowed-group gates on the `platform-admin`
+  # role (coop JWT `roles` claim), so console access is granted only to platform
+  # admins. Passes the access token downstream so the bridge can mint STS creds.
+  s3-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    command:
+      - --provider=oidc
+      - --oidc-issuer-url=https://api.${DOMAIN}
+      - --client-id=s3-gate
+      - --client-secret=${SECRET:s3-gate.oidc}
+      - --redirect-url=https://s3.${DOMAIN}/oauth2/callback
+      - --email-domain=*
+      - --upstream=http://s3-bridge:4181
+      - --http-address=0.0.0.0:4180
+      - --cookie-secret=irlcoop-s3-gate-cookie-secret-12
+      - --cookie-secure=false
+      # Show the branded sign-in page (rather than auto-bouncing to Keycloak)
+      # so s3.irl.coop reads "Sign in to irl.coop".
+      - --skip-provider-button=false
+      - --provider-display-name=irl.coop
+      - --banner=Sign in to irl.coop
+      # Admin-only: only members holding the platform-admin role pass the gate.
+      - --oidc-groups-claim=roles
+      - --allowed-group=platform-admin
+      # Forward the coop JWT to the s3-bridge so it can mint MinIO STS creds.
+      - --pass-access-token=true
+      # Preserve the original Host so the console's WebSocket origin check
+      # (Origin vs Host) matches through the proxy chain.
+      - --pass-host-header=true
+      # oauth2-proxy 403s WebSocket UPGRADE requests even for allowed users
+      # (the upgrade handshake can't carry the redirect/group flow) — and the
+      # PWA manifest is fetched by the service worker outside the auth context.
+      # Skip the gate for both: the /ws/* socket and the manifest carry no
+      # secret, and /ws/* is still protected by the console's own admin-only
+      # session cookie (minted by the STS bridge).
+      - --skip-auth-route=^/ws/
+      - --skip-auth-route=^/manifest\.json$
+    ports:
+      # NOT loopback-bound: the traefik edge reaches the gate via the docker
+      # gateway (same as nocodb-gate 8082). Restrict at the firewall in prod.
+      # 8088 is the next free host port (8081-8087 are taken).
+      - "8088:4180"
+    depends_on:
+      - s3-bridge
+      - minio
 proxy:
   - hostname: s3.${DOMAIN}
-    port: 9001
-    description: the MinIO console (browser)
+    port: 8088
+    description: the MinIO console (coop SSO → STS bridge; admin-only)
   - hostname: s3api.${DOMAIN}
     port: 9000
     description: the S3 API

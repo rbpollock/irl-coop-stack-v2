@@ -8,7 +8,8 @@ voting), regenerative-vision-note.md (regenerative score), private-treasury-guar
 ## 1. The model in one paragraph
 
 Groups are the primitive, and they form a graph: Safe-accounts (nodes) + memberships
-(edges). This doc defines the three layers that make that graph *live* instead of a
++ child relationships (edges). This doc defines the three layers that make that graph
+*live* instead of a
 pile of isolated apps — the **event bus** (how things communicate), **group shapes**
 (how a group is structured and provisioned), and the **commons economy** (how shared
 infrastructure is funded without coercion). Everything is privacy-by-default: the bus
@@ -121,6 +122,34 @@ parked; the *export* is group-local.
 
 This yields a disclosure spectrum a group can hold independently per axis:
 **proofs-only** (private) ↔ **structure-shared** (library) ↔ **data-public**.
+
+### 3.4 Child relationships — a rights set, not a flag
+
+A group can hold a **child relationship** to another group (parent → child). This is not
+a schema flag or a type — it is the existing `subgroup-of` relationship from
+account-and-key-model.md ("Group relationships & reserved powers"), composed with an
+economics edge for funding. Two declared relationship-record edges:
+
+- **`subgroup-of`** (governance + infra): the child is an autonomous Safe sharing the
+  parent's namespace. Its *terms* declare the rights set — what the parent may do (veto
+  on constitutional changes, reserved powers via the co-owner seat + guard + timelock)
+  and what the child decides autonomously.
+- **`sponsored-by`** (economics): the funding allocation — the parent transfers a budget
+  into the child's Safe. Caps and budget-transfer authority are terms on this edge, not
+  inferred from the subgroup edge.
+
+- **The child is a full group** — its own Safe (its flat funding pool), its own treasury,
+  its own budget and sub-accounts, its own seats and governance. The only thing "child"
+  about it is the binding; strip the binding and it is an independent group.
+- **Composition applied to relations.** Same principle as §3.2, and the same as the
+  registry's own rule: "ownership implies membership ONLY; every other meaning is
+  DECLARED." Nothing is inherited, everything is declared. A sub-project becomes a child
+  group when it needs its own allocation or autonomous decisions — it is *promoted*, not
+  subclassed.
+- **Example.** A tool-sharing group's maintenance effort is a child group: `subgroup-of`
+  the parent (shares namespace, parent holds a veto) + `sponsored-by` (its own fund
+  allocation / Safe wallet + sub-accounts), deciding its own maintenance spending from
+  its budget.
 
 ## 4. Provisioning
 

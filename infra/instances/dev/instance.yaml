@@ -32,7 +32,9 @@ apps:
   - element-web
   - element-call
   - coturn
-  - owncast
+  - freeswitch
+  - fusionpbx
+  - mediamtx
   - onlyoffice
 
 # which pillars actually run on the dev box today (deployment concern — the

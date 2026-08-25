@@ -1,0 +1,15 @@
+<configuration name="event_socket.conf" description="Socket Client">
+  <settings>
+    <param name="nat-map" value="false"/>
+    <param name="listen-ip" value="0.0.0.0"/>
+    <param name="listen-port" value="8021"/>
+    <param name="password" value="__ESL_PASSWORD__"/>
+    <!-- Hardening: the full-control ESL channel is ACL'd to loopback (fs_cli)
+         + the communication bridge (FusionPBX UI) only. Inline CIDRs (NOT a
+         named list): FreeSWITCH 1.10.12's named-list path misbehaves here, and
+         the implicit default (loopback.auto) would block the bridge.
+         172.23.0.0/16 = the communication_default compose bridge subnet. -->
+    <param name="apply-inbound-acl" value="127.0.0.0/8,172.23.0.0/16"/>
+    <param name="stop-on-bind-error" value="true"/>
+  </settings>
+</configuration>

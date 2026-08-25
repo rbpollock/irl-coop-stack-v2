@@ -9,23 +9,55 @@
 # combines the mounted fullchain+privkey into wss.pem, so `wss://sip.irl.coop:7443`
 # validates in the browser (a self-signed WSS cert would hard-fail the WebSocket
 # handshake). See also the renewal hook in infra/scripts/renew-cert.sh.
+#
+# Image is the spike build (mod_lua for the FusionPBX directory seam + mod_opus
+# for WebRTC audio). The mounted files override the stock conf in place:
+#   vars.xml      — domain=irl.coop (else registrations normalize to the IP)
+#   lua.conf.xml  — mod_lua xml_handler binding app.lua (FusionPBX full stack)
+#   scripts/      — FusionPBX's app.lua lua tree (directory + dialplan + ring
+#                   groups + configuration, DB-driven via luasql.postgres)
+#   config.conf   — the lua DB DSN template (__PLACEHOLDER__s; the entrypoint
+#                   renders the real value from ${SECRET:fusionpbx.db-password})
+#   event_socket.conf.xml — ESL channel, ACL'd to loopback+docker bridge, with
+#                   a derived (non-ClueCon) password rendered at start
+#   acl.conf.xml   — the `sip-control` ACL (default=deny) the event socket uses
+# Individual-file mounts (NOT the whole conf dir) so the stock dialplan
+# (default.xml: 9196 echo) and sofia profiles in the image stay intact.
 name: freeswitch
 pillar: communication
 type: image
-image: irlcoop/freeswitch:spike
+image: irlcoop/freeswitch:spike-opus
 network_mode: host
+restart: unless-stopped
 env:
-  # recorded facts; the event-socket + DB secrets are ${SECRET:...} later
+  # recorded fact; the real SIP domain is set in the mounted vars.xml
   SIP_DOMAIN: ${DOMAIN}
+  # Derived secrets the entrypoint renders into config.conf + event_socket.conf.xml.
+  FUSIONPBX_DB_PASSWORD: ${SECRET:fusionpbx.db-password}
+  ESL_PASSWORD: ${SECRET:freeswitch.esl-password}
 volumes:
-  - /opt/app/communication/etc/freeswitch:/usr/local/freeswitch/conf
+  - /opt/app/communication/etc/freeswitch/vars.xml:/usr/local/freeswitch/conf/vars.xml:ro
+  - /opt/app/communication/etc/freeswitch/lua.conf.xml:/usr/local/freeswitch/conf/autoload_configs/lua.conf.xml:ro
+  - /opt/app/communication/etc/freeswitch/scripts:/usr/local/freeswitch/scripts:ro
+  - /opt/app/communication/etc/freeswitch/config.conf:/etc/freeswitch/templates/config.conf:ro
+  - /opt/app/communication/etc/freeswitch/event_socket.conf.xml:/etc/freeswitch/templates/event_socket.conf.xml:ro
+  - /opt/app/communication/certs/irl.coop:/etc/freeswitch/tls:ro
   - /opt/app/communication/data/freeswitch:/var/lib/freeswitch
+  - /opt/app/communication/data/freeswitch/cache:/var/cache/fusionpbx
+  - /opt/app/communication/data/freeswitch/log:/usr/local/freeswitch/log
 dev:
   volumes:
-    - ./etc/freeswitch:/usr/local/freeswitch/conf
-    - ./data/freeswitch:/var/lib/freeswitch
+    - ./etc/freeswitch/vars.xml:/usr/local/freeswitch/conf/vars.xml:ro
+    - ./etc/freeswitch/lua.conf.xml:/usr/local/freeswitch/conf/autoload_configs/lua.conf.xml:ro
+    - ./etc/freeswitch/scripts:/usr/local/freeswitch/scripts:ro
+    - ./etc/freeswitch/config.conf:/etc/freeswitch/templates/config.conf:ro
+    - ./etc/freeswitch/event_socket.conf.xml:/etc/freeswitch/templates/event_socket.conf.xml:ro
     - ./certs/irl.coop:/etc/freeswitch/tls:ro
-# NOTE: host-published SIP/WS/WSS/RTP + the event-socket (8021) are bound by
-# mod_sofia directly on the host — no `ports:` block (same as coturn). The router
-# must forward 5060/5066/7443 (+ RTP range) like the existing mail/TURN ports.
-# FusionPBX reaches the event socket at 172.17.0.1:8021 and shares ./etc/freeswitch.
+    - ./data/freeswitch:/var/lib/freeswitch
+    - ./data/freeswitch/cache:/var/cache/fusionpbx
+    - ./data/freeswitch/log:/usr/local/freeswitch/log
+# NOTE: host-published SIP/WS/WSS/RTP are bound by mod_sofia directly on the
+# host — no `ports:` block (same as coturn). The router must forward
+# 5060/5066/7443 (+ RTP range) like the existing mail/TURN ports. The event
+# socket (8021) is ACL'd to loopback + the docker bridge; FusionPBX reaches it
+# at 172.17.0.1:8021.

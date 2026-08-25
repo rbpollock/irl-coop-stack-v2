@@ -35,6 +35,11 @@ const sections: NavigationType[] = [
         iconName: "Mail",
       },
       {
+        title: "Calls",
+        href: "/apps/calls",
+        iconName: "Phone",
+      },
+      {
         title: "Files",
         href: "/apps/files",
         iconName: "FolderOpen",

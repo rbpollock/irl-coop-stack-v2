@@ -84,9 +84,9 @@ export function makeS3Client(opts: S3ClientOpts) {
     getObject(bucket: string, key: string): Promise<Response> {
       return request("GET", `/${bucket}/${encodeKey(key)}`);
     },
-    putObject(bucket: string, key: string, body: Buffer): Promise<Response> {
+    putObject(bucket: string, key: string, body: Buffer, contentType?: string): Promise<Response> {
       return request("PUT", `/${bucket}/${encodeKey(key)}`, "", body, {
-        "content-type": "application/octet-stream",
+        "content-type": contentType ?? "application/octet-stream",
       });
     },
     deleteObject(bucket: string, key: string): Promise<Response> {

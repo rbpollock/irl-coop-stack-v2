@@ -4,6 +4,7 @@ import * as jwt from "jsonwebtoken";
 import { getProfile, type CoopProfile } from "./profile-store";
 import { getUserProfile, addUserRequiredAction } from "./keycloak-admin";
 import { provisionOnSignIn } from "./provisioning";
+import { getRolesAndGrants } from "./db";
 
 // ---------------------------------------------------------------------------
 // coop-api as the fleet's OIDC issuer (session-gateway auth)
@@ -144,11 +145,37 @@ async function verifyIdToken(idToken: string): Promise<any> {
 }
 
 // The coop JWT — RS256, validated by the fleet via /jwks.
-function mintCoopJwt(
+async function mintCoopJwt(
   claims: Record<string, any>,
   profile?: Partial<CoopProfile>,
   ttl: jwt.SignOptions["expiresIn"] = "1h"
-): string {
+): Promise<string> {
+  // Resolve the member's roles + grants (union across their seats) for the
+  // `roles` and `grants` claims. Best-effort: a lookup failure emits empty
+  // claims rather than blocking sign-in (mirrors provisionOnSignIn).
+  let roles: string[] = [];
+  let grants: string[] = [];
+  try {
+    ({ roles, grants } = await getRolesAndGrants(claims.sub));
+  } catch {
+    // sign-in must not fail on a role-lookup error
+  }
+
+  // MediaMTX permissions (authJWTClaimKey: mediamtx_permissions) — the claim
+  // MediaMTX's JWT auth reads to gate publish/read per path. Coarse first
+  // slice: view → read any path, broadcast → publish any path. Per-group path
+  // scoping (group → stream path) mirrors telephony's group → extension and is
+  // the next slice.
+  const mediamtx_permissions: { action: string; path: string }[] = [];
+  if (grants.includes("media.stream.view")) mediamtx_permissions.push({ action: "read", path: "" });
+  if (grants.includes("media.stream.broadcast")) mediamtx_permissions.push({ action: "publish", path: "" });
+
+  // MinIO console SSO: translate grants into a MinIO `policy` claim (MinIO
+  // reads MINIO_IDENTITY_OPENID_CLAIM_NAME, default "policy"). Platform-scoped
+  // storage admin → consoleAdmin; everyone else gets none (they can SSO in but
+  // have no console capabilities — admin only if granted).
+  const policy = grants.includes("storage.platform.admin") ? "consoleAdmin" : null;
+
   return jwt.sign(
     {
       sub: claims.sub,
@@ -165,6 +192,13 @@ function mintCoopJwt(
       // Standard OIDC scope claim — stalwart's OIDC directory requireScopes
       // validates against this; real providers always carry it.
       scope: "openid profile email",
+      // Group-model entitlements: role NAMES + resolved grant capabilities
+      // (roles -> role_grants -> grants). The fleet gates (oauth2-proxy) read
+      // these via --oidc-groups-claim / --allowed-group.
+      roles,
+      grants,
+      mediamtx_permissions,
+      policy,
     },
     privateKeyPem,
     {
@@ -196,7 +230,7 @@ export async function issueCodeForUser(
   const stored = await getProfile(sub);
   const code = crypto.randomUUID();
   codes.set(code, {
-    jwt: mintCoopJwt({ sub }, { ...stored, email }),
+    jwt: await mintCoopJwt({ sub }, { ...stored, email }),
     clientId,
     redirectUri,
     state,
@@ -284,6 +318,14 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     ],
   }));
 
+  // ---- global logout: drop the fleet coop_session cookie and return to the
+  // dashboard. Reached via the FusionPBX "log out" -> oauth2-proxy /oauth2/sign_out
+  // chain (the gate clears its own _oauth2_proxy cookie first, then redirects here).
+  fastify.get("/api/auth/logout", async (request, reply) => {
+    clearSessionCookie(reply, request);
+    return reply.redirect("https://irl.coop/");
+  });
+
   // ---- authorize: session cookie? -> code now (no Keycloak page). ----
   //     No session -> bounce to Keycloak once; the callback sets the cookie.
   fastify.get("/api/auth/authorize", async (request, reply) => {
@@ -315,7 +357,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
         // the Keycloak admin lookup.
         const stored = await getProfile(session.sub);
         codes.set(code, {
-          jwt: mintCoopJwt(session, { ...stored, email: live.email ?? null }),
+          jwt: await mintCoopJwt(session, { ...stored, email: live.email ?? null }),
           clientId: client_id!,
           redirectUri: redirect_uri!,
           state,
@@ -389,10 +431,10 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       // Best-effort, idempotent — never blocks the sign-in redirect.
       await provisionOnSignIn(claims.sub, claims.email);
       const stored = await getProfile(claims.sub);
-      const coopJwt = mintCoopJwt(claims, stored);
+      const coopJwt = await mintCoopJwt(claims, stored);
 
       // The coop session: subsequent authorize calls skip the Keycloak page.
-      const sessionJwt = mintCoopJwt(claims, stored, sessionTtl);
+      const sessionJwt = await mintCoopJwt(claims, stored, sessionTtl);
       setSessionCookie(reply, sessionJwt, request);
 
       const code = crypto.randomUUID();
@@ -465,6 +507,8 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
             email: access.email,
             name: access.name,
             avatar: access.avatar,
+            roles: access.roles ?? [],
+            grants: access.grants ?? [],
             nonce,
             iat: now,
             exp: now + 3600,
@@ -482,6 +526,9 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
             email_verified: access.email_verified ?? true,
             name: access.name,
             avatar: access.avatar,
+            roles: access.roles ?? [],
+            grants: access.grants ?? [],
+            policy: access.policy ?? null,
             nonce,
             iat: now,
             exp: now + 3600,
@@ -505,6 +552,17 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     }
     try {
       const decoded: any = verifyCoopJwt(authHeader.slice(7));
+      // Re-resolve roles/grants from the live DB so a promote/demote takes
+      // effect on the next gate refresh (oauth2-proxy --cookie-refresh) without
+      // a full re-login. Best-effort: fall back to the JWT snapshot on lookup
+      // failure so userinfo never 500s on a transient DB blip.
+      let roles = decoded.roles ?? [];
+      let grants = decoded.grants ?? [];
+      try {
+        ({ roles, grants } = await getRolesAndGrants(decoded.sub));
+      } catch {
+        // keep the snapshot
+      }
       return reply.send({
         sub: decoded.sub,
         id: decoded.sub,
@@ -515,6 +573,8 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
         picture: decoded.avatar ?? null,
         email_verified: decoded.email_verified ?? true,
         status: decoded.status ?? "ONLINE",
+        roles,
+        grants,
       });
     } catch {
       return reply.code(401).send({ error: "invalid_token" });
@@ -552,8 +612,8 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       // Same invite-on-first-signin provisioning as the OAuth callback.
       await provisionOnSignIn(claims.sub, claims.email);
       const stored = await getProfile(claims.sub);
-      const coopJwt = mintCoopJwt(claims, stored);
-      setSessionCookie(reply, mintCoopJwt(claims, stored, sessionTtl), request);
+      const coopJwt = await mintCoopJwt(claims, stored);
+      setSessionCookie(reply, await mintCoopJwt(claims, stored, sessionTtl), request);
       return reply.send({ access_token: coopJwt, token_type: "Bearer", expires_in: 3600 });
     } catch (err: any) {
       request.log.error({ err: err.message }, "login failed");

@@ -2,11 +2,12 @@ import Link from "next/link"
 import { UserPen } from "lucide-react"
 
 import { ensureLocalizedPathname } from "@/lib/i18n"
-import { cn, getInitials } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 import { AspectRatio } from "@/components/ui/aspect-ratio"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { buttonVariants } from "@/components/ui/button"
+import { ChangeAvatar } from "@/components/change-avatar"
+import { MemberAvatar } from "@/components/member-avatar"
 
 import type { Profile } from "../_lib/profile"
 
@@ -18,9 +19,11 @@ function shortAddress(a: string | null | undefined) {
 export function ProfileHeader({
   locale,
   profile,
+  onAvatarChanged,
 }: {
   locale: string
   profile: Profile
+  onAvatarChanged?: () => void
 }) {
   const name = profile.name ?? profile.email ?? "Member"
   const personalSafe = shortAddress(
@@ -32,16 +35,19 @@ export function ProfileHeader({
     <section className="bg-background border-y border-border">
       <AspectRatio ratio={5 / 1} className="bg-muted" />
       <div className="relative w-full flex flex-col items-center gap-2 p-4 md:flex-row">
-        <Avatar className="size-32 -mt-20 md:size-40">
-          <AvatarImage
-            src={profile.avatar ?? undefined}
-            alt="Profile Avatar"
-            className="border-4 border-background"
+        <div className="relative -mt-20 shrink-0">
+          <MemberAvatar
+            sub={profile.sub}
+            avatar={profile.avatar}
+            name={name}
+            className="size-32 md:size-40"
+            imageClassName="border-4 border-background"
           />
-          <AvatarFallback className="border-4 border-background">
-            {getInitials(name)}
-          </AvatarFallback>
-        </Avatar>
+          <ChangeAvatar
+            onSuccess={onAvatarChanged}
+            className="absolute bottom-1 end-1"
+          />
+        </div>
         <Link
           href={ensureLocalizedPathname("/pages/account/settings", locale)}
           className={cn(

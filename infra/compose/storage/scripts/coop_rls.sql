@@ -318,6 +318,83 @@ SECURITY DEFINER SET search_path = public AS $$
 $$ LANGUAGE sql STABLE;
 ALTER FUNCTION coop_has_grant(uuid, text) OWNER TO coop_rls;
 
+-- Platform admin (FusionPBX ops gate). `platform-admin` is a PLATFORM-scoped
+-- role (grants telephony.platform.admin) that lives on the member's personal
+-- 1-of-1 seat. Unlike owner/telephony-admin it is NOT bundled by any builtin
+-- role, so promoting is an explicit operator act. SECURITY DEFINER (BYPASSRLS
+-- as coop_rls) and idempotent: promotion is additive (never strips existing
+-- roles), revocation removes only platform-admin.
+
+-- coop_ops: least-privilege operator role that may promote/demote. LOGIN, holds
+-- ONLY EXECUTE on the two functions below (no table grants, not superuser). Its
+-- password is the derived secret ${SECRET:coop.ops} (env COOP_OPS), set at
+-- bootstrap via `ALTER ROLE coop_ops PASSWORD ...` (coop_rls.sql has no secrets
+-- access). The app role `coop` is deliberately locked OUT below.
+DO $ops$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'coop_ops') THEN
+    CREATE ROLE coop_ops LOGIN;
+  END IF;
+END
+$ops$;
+
+CREATE OR REPLACE FUNCTION coop_ensure_platform_admin(sub_arg text) RETURNS void
+SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  gid uuid;
+BEGIN
+  IF sub_arg IS NULL THEN RETURN; END IF;
+  IF session_user NOT IN ('postgres', 'coop_ops') THEN
+    RAISE EXCEPTION 'coop_ensure_platform_admin: operator-only (session_user=%)', session_user;
+  END IF;
+  SELECT id INTO gid FROM groups WHERE kind = 'personal' AND created_by = sub_arg LIMIT 1;
+  IF gid IS NULL THEN
+    INSERT INTO groups (safe_address, name, privacy, kind, created_by)
+    VALUES (NULL, 'Personal', 'members', 'personal', sub_arg)
+    RETURNING id INTO gid;
+    INSERT INTO group_members (group_id, sub, roles, visibility)
+    VALUES (gid, sub_arg, ARRAY['owner','platform-admin'], 'canonical');
+  ELSE
+    UPDATE group_members
+       SET roles = ARRAY(SELECT DISTINCT x FROM unnest(roles || ARRAY['owner','platform-admin']) AS x)
+     WHERE group_id = gid AND sub = sub_arg;
+  END IF;
+  -- Audit: record EVERY promotion (source_event_id NULL => never deduped).
+  PERFORM coop_ingest_event(sub_arg, 'platform', NULL, 'platform_admin.granted',
+                            jsonb_build_object('sub', sub_arg, 'actor', session_user), now());
+END;
+$$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_ensure_platform_admin(text) OWNER TO coop_rls;
+
+CREATE OR REPLACE FUNCTION coop_revoke_platform_admin(sub_arg text) RETURNS void
+SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  gid uuid;
+BEGIN
+  IF sub_arg IS NULL THEN RETURN; END IF;
+  IF session_user NOT IN ('postgres', 'coop_ops') THEN
+    RAISE EXCEPTION 'coop_revoke_platform_admin: operator-only (session_user=%)', session_user;
+  END IF;
+  SELECT id INTO gid FROM groups WHERE kind = 'personal' AND created_by = sub_arg LIMIT 1;
+  IF gid IS NOT NULL THEN
+    UPDATE group_members
+       SET roles = ARRAY(SELECT x FROM unnest(roles) AS x WHERE x <> 'platform-admin')
+     WHERE group_id = gid AND sub = sub_arg;
+  END IF;
+  PERFORM coop_ingest_event(sub_arg, 'platform', NULL, 'platform_admin.revoked',
+                            jsonb_build_object('sub', sub_arg, 'actor', session_user), now());
+END;
+$$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_revoke_platform_admin(text) OWNER TO coop_rls;
+
+-- Lock the promotion path to coop_ops (superuser postgres always bypasses).
+-- `coop` (the app role) and any member code path get neither EXECUTE nor a pass
+-- through the session_user guard — no self-promotion, even from a future bug.
+REVOKE EXECUTE ON FUNCTION coop_ensure_platform_admin(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION coop_revoke_platform_admin(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_ensure_platform_admin(text) TO coop_ops;
+GRANT EXECUTE ON FUNCTION coop_revoke_platform_admin(text) TO coop_ops;
+
 -- group_telephony: owner/telephony-admin administered, member-readable.
 ALTER TABLE group_telephony FORCE ROW LEVEL SECURITY;
 ALTER TABLE group_telephony ENABLE ROW LEVEL SECURITY;
@@ -341,3 +418,37 @@ CREATE POLICY telephony_resources_select ON telephony_resources FOR SELECT USING
 
 -- Grant table access to coop_rls (BYPASSRLS helper role) for the new tables.
 GRANT SELECT, INSERT, UPDATE, DELETE ON group_telephony, telephony_resources, telephony_templates, grants, roles, role_grants TO coop_rls;
+
+-- System-write bridge for telephony resources (the provisioning path's
+-- projection write). SECURITY DEFINER + owned by coop_rls (BYPASSRLS) so it can
+-- write telephony_resources despite the no-user-write RLS policy, and locked to
+-- coop_ops so the app's `coop` pool can never mint a resource on its own. Also
+-- stamps the resource_scopes row that makes CDR/call events group-resolvable
+-- through the existing ingest fan-out. Idempotent.
+CREATE OR REPLACE FUNCTION coop_provision_telephony_resource(
+  p_group_id            uuid,
+  p_group_telephony_id  uuid,
+  p_resource_type       text,
+  p_external_ref        text,
+  p_config              jsonb DEFAULT '{}'::jsonb
+) RETURNS uuid
+SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  rid uuid;
+BEGIN
+  IF session_user NOT IN ('postgres', 'coop_ops') THEN
+    RAISE EXCEPTION 'coop_provision_telephony_resource: operator-only (session_user=%)', session_user;
+  END IF;
+  INSERT INTO telephony_resources (group_id, group_telephony_id, resource_type, external_ref, config)
+  VALUES (p_group_id, p_group_telephony_id, p_resource_type, p_external_ref, p_config)
+  ON CONFLICT (group_id, resource_type, external_ref) DO NOTHING
+  RETURNING id INTO rid;
+  INSERT INTO resource_scopes (group_id, app, resource_key, scoped_by)
+  VALUES (p_group_id, 'freeswitch', p_external_ref, 'system')
+  ON CONFLICT (group_id, app, resource_key) DO NOTHING;
+  RETURN rid;
+END;
+$$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) OWNER TO coop_rls;
+REVOKE EXECUTE ON FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) TO coop_ops;

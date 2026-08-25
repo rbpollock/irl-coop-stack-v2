@@ -1,0 +1,13 @@
+# FreeSWITCH registration-scanner jail (see filter.d/freeswitch.conf).
+# Action is nftables-allports: the iptables-* actions silently no-op on
+# Debian 12 (nftables-native), and the nftables action only blocks TCP — the
+# UDP 5060 flood is rate-limited separately by freeswitch-udp.service.
+[freeswitch]
+enabled = true
+filter = freeswitch
+logpath = {{ freeswitch_log_path }}
+maxretry = 5
+findtime = 300
+bantime = 3600
+action = nftables-allports[name=freeswitch]
+ignoreip = {{ freeswitch_ignoreip }}

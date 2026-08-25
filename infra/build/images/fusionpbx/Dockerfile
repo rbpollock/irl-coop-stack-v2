@@ -21,6 +21,18 @@ RUN git clone --depth 1 -b 5.5.7 https://github.com/fusionpbx/fusionpbx.git /var
   && mkdir -p /var/cache/fusionpbx \
   && chown -R www-data:www-data /var/www/fusionpbx /var/cache/fusionpbx
 
+# Header-SSO shim (oauth2-proxy gate identity -> FusionPBX session).
+COPY header_sso.php /var/www/fusionpbx/resources/header_sso.php
+# Global logout (FusionPBX session -> gate sign_out -> coop logout).
+COPY logout.php /var/www/fusionpbx/logout.php
+# Catch PHP syntax errors in the shim + logout at build time.
+RUN php -l /var/www/fusionpbx/resources/header_sso.php \
+ && php -l /var/www/fusionpbx/logout.php
+# Wire the shim into the default php-fpm pool. php_admin_value[auto_prepend_file]
+# is the reliable mechanism — the FastCGI PHP_VALUE route is not honored by
+# php-fpm for auto_prepend_file.
+RUN echo 'php_admin_value[auto_prepend_file] = /var/www/fusionpbx/resources/header_sso.php' >> /etc/php/8.2/fpm/pool.d/www.conf
+
 # nginx site (minimal port-80; Traefik terminates TLS upstream).
 COPY nginx-fusionpbx.conf /etc/nginx/sites-available/fusionpbx
 RUN ln -sf /etc/nginx/sites-available/fusionpbx /etc/nginx/sites-enabled/fusionpbx \

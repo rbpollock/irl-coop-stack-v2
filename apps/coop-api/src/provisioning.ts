@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { withIdentity } from "./db";
 import { deploySafe } from "./safe";
+import { ensurePersonalTelephony } from "./telephony";
 
 // ---------------------------------------------------------------------------
 // Invite-on-first-signin provisioning (docs/design/irl-coop-group.md §3).
@@ -209,5 +210,9 @@ export async function provisionMatrix(sub: string, email: string | null | undefi
 
 // The sign-in hook. Fire-and-forget tolerant: never throws, always best-effort.
 export async function provisionOnSignIn(sub: string, email: string | null | undefined): Promise<void> {
-  await Promise.allSettled([ensurePersonalSafe(sub), provisionMatrix(sub, email)]);
+  await Promise.allSettled([
+    ensurePersonalSafe(sub),
+    provisionMatrix(sub, email),
+    ensurePersonalTelephony(sub),
+  ]);
 }

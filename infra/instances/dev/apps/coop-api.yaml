@@ -23,6 +23,11 @@ nav:
 env:
   MINIO_ACCESS_KEY: docs-s3
   MINIO_SECRET_KEY: ${SECRET:minio.docs-s3}
+  # Member-avatar store — dedicated `profiles` bucket + `profiles-s3` user
+  # (provisioned by the profiles-minio-init sidecar in minio.yaml).
+  MINIO_PROFILES_ACCESS_KEY: profiles-s3
+  MINIO_PROFILES_SECRET_KEY: ${SECRET:minio.profiles-s3}
+  MINIO_PROFILES_BUCKET: profiles
   ONLYOFFICE_JWT_SECRET: ${SECRET:onlyoffice.jwt}
   # HMAC secret for the short-lived content relay tokens (docs.sig).
   DOCS_SIG: ${SECRET:docs.sig}
@@ -42,9 +47,23 @@ env:
   COOP_DB_USER: coop
   COOP_DB_PASSWORD: ${SECRET:postgres.coop}
   COOP_DB_NAME: irlcoop
+  # coop_ops operator role (least-privilege; EXECUTE-only on the platform-admin
+  # promotion functions) — password for the dedicated opsPool in db.ts.
+  COOP_OPS: ${SECRET:coop.ops}
   # Postiz DB (the group→org projection target) — derived postiz role/password.
   POSTIZ_DB_HOST: 172.17.0.1
   POSTIZ_DB_PORT: "5432"
   POSTIZ_DB_USER: postiz
   POSTIZ_DB_PASSWORD: ${SECRET:postgres.postiz}
   POSTIZ_DB_NAME: postiz
+  # FusionPBX system DB (telephony sip-config read): derived password replaces
+  # the old hardcoded spike value in apps/coop-api/.env.
+  FUSIONPBX_DB_HOST: 172.17.0.1
+  FUSIONPBX_DB_PORT: "5432"
+  FUSIONPBX_DB_USER: fusionpbx
+  FUSIONPBX_DB_NAME: fusionpbx
+  FUSIONPBX_DB_PASSWORD: ${SECRET:fusionpbx.db-password}
+  # Shared bearer secret for the Keycloak `groups` protocol mapper: Keycloak
+  # calls GET /api/internal/groups?sub=<sub> (CoopGroupsMapper SPI JAR) to
+  # resolve a user's groups live from coop-api. Server-to-server only.
+  KEYCLOAK_GROUPS_TOKEN: ${SECRET:keycloak.groups-token}

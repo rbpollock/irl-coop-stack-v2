@@ -1,0 +1,14 @@
+[Unit]
+Description=irl.coop FreeSWITCH UDP 5060 rate-limit (scanner hardening)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# delete-then-create so a restart (or manual nft -f) never stacks duplicate rules
+ExecStartPre=-/usr/sbin/nft delete table inet freeswitch-udp
+ExecStart=/usr/sbin/nft -f /etc/nftables/freeswitch-udp.nft
+
+[Install]
+WantedBy=multi-user.target

@@ -76,11 +76,11 @@ const APPS = [
   {
     icon: Radio,
     title: "Live Video",
-    brand: "Owncast",
-    url: "https://owncast.irl.coop",
+    brand: "MediaMTX",
+    url: "https://stream.irl.coop",
     color: "#EF4444",
     description:
-      "Self-hosted livestreaming for talks, gatherings and events — no platform in the middle.",
+      "Self-hosted live video — broadcast and watch streams across the coop, no platform in the middle.",
   },
   {
     icon: HardDrive,

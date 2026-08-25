@@ -3,31 +3,78 @@
 # Members do NOT use this UI (Robbie dislikes it); they get the dashboard
 # "Calls" app over WSS. This is the provisioning/ops surface only. It drives
 # FreeSWITCH over mod_event_socket (172.17.0.1:8021), shares the FreeSWITCH
-# conf dir (read for now), and stores its config in a `fusionpbx` DB on the
-# shared Citus. Exposed as https://pbx.irl.coop via the edge (wildcard cert).
+# conf dir (read-only), and stores its config in a `fusionpbx` DB on the
+# shared Citus. Exposed as https://pbx.irl.coop via the edge (wildcard cert),
+# identity-gated by an oauth2-proxy sidecar (same pattern as nocodb/webstudio).
+# FusionPBX's OWN admin login (v_users md5(salt+pw)) is the second layer that
+# actually excludes members; the gate only keeps it off the open internet.
 name: fusionpbx
 pillar: communication
 type: image
-image: irlcoop/fusionpbx:spike   # to be built: php-fpm + nginx + fusionpbx app
-ports:
-  - "8087:80"                     # nginx inside; edge routes to 172.17.0.1:8087
+image: irlcoop/fusionpbx:spike
+restart: unless-stopped
 env:
-  FS_EVENT_SOCKET_HOST: 172.17.0.1
-  FS_EVENT_SOCKET_PORT: 8021
-  DB_HOST: 172.17.0.1
-  DB_NAME: fusionpbx
-  DB_USER: fusionpbx
-  # DB_PASSWORD: ${SECRET:fusionpbx.db-password}
+  # Derived secrets the entrypoint renders into /etc/fusionpbx/config.conf.
+  FUSIONPBX_DB_PASSWORD: ${SECRET:fusionpbx.db-password}
+  ESL_PASSWORD: ${SECRET:freeswitch.esl-password}
 volumes:
+  - /opt/app/communication/etc/fusionpbx/config.conf:/etc/fusionpbx/templates/config.conf:ro
   - /opt/app/communication/etc/freeswitch:/etc/freeswitch:ro
-  - /opt/app/communication/etc/fusionpbx:/etc/fusionpbx
   - /opt/app/communication/data/fusionpbx:/var/lib/fusionpbx
+depends_on:
+  - freeswitch
 dev:
   volumes:
+    - ./etc/fusionpbx/config.conf:/etc/fusionpbx/templates/config.conf:ro
     - ./etc/freeswitch:/etc/freeswitch:ro
-    - ./etc/fusionpbx:/etc/fusionpbx
     - ./data/fusionpbx:/var/lib/fusionpbx
+sidecars:
+  fusionpbx-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    restart: always
+    command:
+      - --provider=oidc
+      # the fleet session gateway — the coop_session cookie makes authorize
+      # instant (no Keycloak page when the dashboard session exists)
+      - --oidc-issuer-url=https://api.${DOMAIN}
+      - --client-id=fusionpbx-gate
+      - --client-secret=${SECRET:fusionpbx-gate.secret}
+      - --redirect-url=https://pbx.${DOMAIN}/oauth2/callback
+      # Authorization from the group model (not a hardcoded email): read the
+      # member's `grants` claim (union of their seat roles -> grants) and admit
+      # only holders of the platform telephony permit. `email-domain=*` is the
+      # mandatory email-validation baseline (not the gate) — the real restriction
+      # is the allowed-group below. `cookie-refresh` re-validates against
+      # /api/auth/userinfo (which re-resolves grants from the DB), so a demotion
+      # bites within ~5m instead of at next re-login.
+      - --email-domain=*
+      - --oidc-groups-claim=grants
+      - --allowed-group=telephony.platform.admin
+      - --cookie-refresh=5m
+      # forward the authenticated identity to FusionPBX as X-Forwarded-Email
+      # (the header_sso shim uses it to skip the FusionPBX password login).
+      - --set-xauthrequest=true
+      # allow /oauth2/sign_out?rd=… to redirect to the coop logout on any
+      # *.irl.coop subdomain (the global-logout handoff).
+      - --whitelist-domain=.irl.coop
+      # branded error page (replaces the bare "403 Forbidden" with a sign-in
+      # screen) — mounted via the sidecar's dev.volumes below.
+      - --custom-templates-dir=/etc/oauth2-proxy/templates
+      - --upstream=http://fusionpbx:80
+      - --http-address=0.0.0.0:4180
+      - --cookie-secret=cc0b0d8085016d098dac7cae6afbb702
+      - --cookie-secure=false
+      - --skip-provider-button=true
+    ports:
+      # host-published for the traefik edge (172.17.0.1:8087) — restrict at the
+      # firewall in prod.
+      - "8087:4180"
+    dev:
+      volumes:
+        - ./etc/fusionpbx-gate/error.html:/etc/oauth2-proxy/templates/error.html:ro
+    depends_on:
+      - fusionpbx
 proxy:
   hostname: pbx.${DOMAIN}
   port: 8087
-  description: FusionPBX ops/admin UI (telephony provisioning)
+  description: FusionPBX ops/admin UI (telephony provisioning, identity-gated)

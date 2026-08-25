@@ -107,9 +107,10 @@ permitted(extension) =
 
 - Requested caller-ID ∈ `permitted(extension)` → allow, present it.
 - Else → reject the outbound leg (or fall back to the caller's own number).
-- Lookup via `mod_xml_curl`/a coop-api endpoint at call time (same seam
-  FusionPBX already uses for dynamic directory/dialplan), so the grant table is
-  the single source of truth — no static dialplan hand-editing.
+- Lookup via a coop-api endpoint at call time (a mod_xml_curl or mod_lua
+  dialplan hook — FusionPBX's own dynamic directory/dialplan is served by
+  mod_lua's xml_handler), so the grant table is the single source of truth — no
+  static dialplan hand-editing.
 
 ## UX — "call as" selector
 

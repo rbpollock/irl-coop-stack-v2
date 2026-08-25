@@ -32,6 +32,12 @@ env:
   # the legacy X-Frame-Options would block the dashboard chat widget's SSO
   # iframe, so drop the header entirely
   KC_XFRAMEOPTIONS: "NONE"
+dev:
+  volumes:
+    # Custom OIDC protocol mapper (coop-groups-mapper.jar): makes the `groups`
+    # scope real by fetching a user's groups live from coop-api. Built from
+    # ./assets/keycloak/mapper/ (build.sh); mounted so it survives a recreate.
+    - "./assets/keycloak/coop-groups-mapper.jar:/opt/keycloak/providers/coop-groups-mapper.jar:ro"
 proxy:
   hostname: auth.${DOMAIN}
   port: 8081
