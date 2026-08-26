@@ -1,0 +1,324 @@
+<!--
+  irl.coop — Group "world-doc" starter (for Webstudio HtmlEmbed)
+  ===============================================================
+
+  WHAT THIS IS
+    A self-contained block you drop into a Webstudio site to give a group its
+    world-doc: the group's identity (fetched live from coop-api, scoped by your
+    permissions via Postgres RLS) plus an embedded Plane panel and NocoDB panel.
+
+  HOW TO INSTALL IN WEBSTUDIO
+    1. In the builder, insert an "HtmlEmbed" component.
+    2. Open its Settings and paste everything BETWEEN the COPY markers below
+       (the style block, the #world-doc div, and the script) into the code field.
+    3. Set the component to CLIENT-ONLY (clientOnly: true). This is required —
+       the fetch must run in the browser so your coop_session cookie is sent.
+       Server-side render has no cookie and would 401.
+    4. Publish. Open the site at {group}.irl.coop while signed in to the coop.
+
+  WHAT IT SHOWS
+    - If the current hostname's slug matches one of your groups → that group's
+      world-doc (name, description, kind/privacy, your role, Safe address)
+      + Plane and NocoDB panels.
+    - Otherwise → a "Your groups" index (every group you have permissions to),
+      which is the RLS-scoped "world-doc info" surface.
+
+  CONFIG (edit the values at the top of the <script>)
+    API_BASE   — coop-api base URL
+    PLANE_URL  — Plane embed URL (add ?embed=1 to hide Plane's chrome)
+    NOCODB_URL — NocoDB URL (or a shared/embedded view URL)
+    GROUP_SLUG — optional hard override; normally auto-detected from the hostname
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Group world-doc — starter</title>
+</head>
+<body style="margin:0; padding:0; background:#fff;">
+
+<!-- ============================== COPY FROM HERE ============================== -->
+<style>
+  .wd {
+    --wd-fg: #111111;
+    --wd-muted: #6b7280;
+    --wd-border: #e5e7eb;
+    --wd-card: #fafafa;
+    --wd-accent: #111111;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto,
+      system-ui, sans-serif;
+    color: var(--wd-fg);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wd * { box-sizing: border-box; }
+
+  .wd .wd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .wd .wd-grid { grid-template-columns: 1fr; } }
+
+  .wd .wd-overline {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--wd-muted); margin: 0 0 8px; font-weight: 600;
+  }
+  .wd .wd-name {
+    font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
+    font-size: clamp(32px, 5vw, 52px); font-weight: 400; line-height: 1.05;
+    margin: 0 0 12px; letter-spacing: -0.01em;
+  }
+  .wd .wd-name em { font-style: italic; }
+  .wd .wd-desc { font-size: 16px; color: var(--wd-muted); margin: 0 0 20px; max-width: 60ch; }
+
+  .wd .wd-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+  .wd .wd-badge {
+    font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--wd-border); color: var(--wd-fg); background: #fff;
+  }
+  .wd .wd-badge.wd-role { background: var(--wd-accent); color: #fff; border-color: var(--wd-accent); }
+
+  .wd .wd-meta {
+    display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 14px 16px;
+    border: 1px solid var(--wd-border); border-radius: 12px; margin-bottom: 24px;
+    background: var(--wd-card); font-size: 13px; color: var(--wd-muted);
+  }
+  .wd .wd-meta strong { color: var(--wd-fg); font-weight: 600; }
+  .wd .wd-meta .wd-safe {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--wd-fg); cursor: pointer; user-select: all;
+  }
+
+  .wd .wd-panel {
+    border: 1px solid var(--wd-border); border-radius: 12px; overflow: hidden;
+    background: var(--wd-card); display: flex; flex-direction: column;
+  }
+  .wd .wd-panel-head {
+    padding: 10px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--wd-muted); border-bottom: 1px solid var(--wd-border);
+  }
+  .wd .wd-panel iframe { width: 100%; height: 560px; border: 0; display: block; }
+
+  .wd .wd-state {
+    padding: 32px 20px; text-align: center; color: var(--wd-muted);
+    border: 1px dashed var(--wd-border); border-radius: 12px; font-size: 15px;
+  }
+  .wd .wd-state a { color: var(--wd-fg); font-weight: 600; text-decoration: underline; }
+
+  .wd .wd-group-card {
+    border: 1px solid var(--wd-border); border-radius: 12px; padding: 18px 20px;
+    margin-bottom: 12px; background: #fff;
+  }
+  .wd .wd-group-card h3 {
+    margin: 0 0 4px; font-size: 20px; font-weight: 600; font-family: "Instrument Serif", Georgia, serif;
+  }
+  .wd .wd-group-card p { margin: 0; font-size: 14px; color: var(--wd-muted); }
+
+  .wd .wd-spinner {
+    width: 20px; height: 20px; border: 2px solid var(--wd-border);
+    border-top-color: var(--wd-accent); border-radius: 50%; margin: 0 auto 12px;
+    animation: wd-spin 0.8s linear infinite;
+  }
+  @keyframes wd-spin { to { transform: rotate(360deg); } }
+</style>
+
+<div id="world-doc" class="wd" data-api="https://api.irl.coop"
+     data-plane="https://plane.irl.coop/?embed=1"
+     data-nocodb="https://nocodb.irl.coop"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var root = document.getElementById("world-doc");
+  if (!root) return;
+
+  // -------- CONFIG (override here or via data-* attributes on #world-doc) --------
+  var API_BASE = root.getAttribute("data-api") || "https://api.irl.coop";
+  var PLANE_URL = root.getAttribute("data-plane") || "https://plane.irl.coop/?embed=1";
+  var NOCODB_URL = root.getAttribute("data-nocodb") || "https://nocodb.irl.coop";
+  // Hard override for the group slug; normally auto-detected from {group}.irl.coop.
+  var GROUP_SLUG = root.getAttribute("data-group") || null;
+
+  // -------- helpers --------
+  function slugify(s) {
+    return String(s || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function slugFromHost() {
+    var h = window.location.hostname;
+    if (h === "irl.coop" || h === "www.irl.coop" || h === "localhost") return null;
+    return slugify(h.replace(/\.irl\.coop$/, ""));
+  }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function shortSafe(addr) {
+    if (!addr) return "";
+    if (addr.length <= 12) return addr;
+    return addr.slice(0, 6) + "\u2026" + addr.slice(-4);
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // -------- render states --------
+  function renderLoading() {
+    root.innerHTML = "";
+    var box = el("div", "wd-state");
+    box.appendChild(el("div", "wd-spinner"));
+    box.appendChild(el("div", null, "Loading group data\u2026"));
+    root.appendChild(box);
+  }
+
+  function renderSignedOut() {
+    root.innerHTML = "";
+    var box = el("div", "wd-state");
+    box.appendChild(el("div", null, "Sign in to view your group\u2019s world-doc."));
+    var link = el("a", null, "Sign in to irl.coop");
+    link.href = "https://irl.coop";
+    var p = el("p", null);
+    p.appendChild(link);
+    box.appendChild(p);
+    root.appendChild(box);
+  }
+
+  function renderError(msg) {
+    root.innerHTML = "";
+    var box = el("div", "wd-state");
+    box.appendChild(el("div", null, "Couldn\u2019t load group data"));
+    box.appendChild(el("p", null, msg || ""));
+    root.appendChild(box);
+  }
+
+  // -------- group world-doc --------
+  function renderGroup(group) {
+    var grid, head, badge;
+
+    // header
+    var over = el("p", "wd-overline", "Group");
+    root.appendChild(over);
+
+    var name = el("h1", "wd-name");
+    name.innerHTML = "The <em>" + escapeHtml(group.name || "Group") + "</em> collective";
+    root.appendChild(name);
+
+    if (group.description) {
+      root.appendChild(el("p", "wd-desc", group.description));
+    }
+
+    var badges = el("div", "wd-badges");
+    if (group.kind) badges.appendChild(el("span", "wd-badge", group.kind));
+    if (group.privacy) badges.appendChild(el("span", "wd-badge", group.privacy));
+    (group.roles || []).forEach(function (r) {
+      var b = el("span", "wd-badge wd-role", r);
+      badges.appendChild(b);
+    });
+    if (group.alias) badges.appendChild(el("span", "wd-badge", "as " + group.alias));
+    root.appendChild(badges);
+
+    // meta row
+    var meta = el("div", "wd-meta");
+    if (group.safe_address) {
+      var safe = el("span", "wd-safe", shortSafe(group.safe_address));
+      safe.title = "Safe: " + group.safe_address + " (click to copy)";
+      safe.addEventListener("click", function () {
+        if (navigator.clipboard) navigator.clipboard.writeText(group.safe_address);
+      });
+      var safeWrap = el("span");
+      safeWrap.appendChild(document.createTextNode("Treasury "));
+      safeWrap.appendChild(safe);
+      meta.appendChild(safeWrap);
+    }
+    if (group.visibility) {
+      meta.appendChild(el("span", null, "Visibility: " + group.visibility));
+    }
+    root.appendChild(meta);
+
+    // app panels
+    grid = el("div", "wd-grid");
+
+    var plane = el("div", "wd-panel");
+    plane.appendChild(el("div", "wd-panel-head", "Projects \u00b7 Plane"));
+    var pIframe = document.createElement("iframe");
+    pIframe.src = PLANE_URL;
+    pIframe.title = "Plane";
+    pIframe.loading = "lazy";
+    plane.appendChild(pIframe);
+    grid.appendChild(plane);
+
+    var noco = el("div", "wd-panel");
+    noco.appendChild(el("div", "wd-panel-head", "Databases \u00b7 NocoDB"));
+    var nIframe = document.createElement("iframe");
+    nIframe.src = NOCODB_URL;
+    nIframe.title = "NocoDB";
+    nIframe.loading = "lazy";
+    noco.appendChild(nIframe);
+    grid.appendChild(noco);
+
+    root.appendChild(grid);
+  }
+
+  function renderIndex(groups) {
+    var over = el("p", "wd-overline", "Your groups");
+    root.appendChild(over);
+    var name = el("h1", "wd-name", "Your groups");
+    root.appendChild(name);
+    root.appendChild(el("p", "wd-desc",
+      "Every cooperative you belong to. Open one to see its world-doc."));
+
+    groups.forEach(function (g) {
+      var card = el("div", "wd-group-card");
+      var h = el("h3", null, g.name || "Unnamed group");
+      card.appendChild(h);
+      if (g.description) card.appendChild(el("p", null, g.description));
+      root.appendChild(card);
+    });
+  }
+
+  // -------- boot --------
+  renderLoading();
+
+  fetch(API_BASE + "/api/v1/site/groups", { credentials: "include" })
+    .then(function (res) {
+      if (res.status === 401) return { signedOut: true };
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      root.innerHTML = "";
+      if (data && data.signedOut) return renderSignedOut();
+      var groups = Array.isArray(data) ? data : [];
+      if (groups.length === 0) return renderSignedOut();
+
+      var slug = GROUP_SLUG || slugFromHost();
+      var group = null;
+      if (slug) {
+        group = groups.find(function (g) {
+          return slugify(g.name) === slug || slugify(g.alias) === slug;
+        });
+      }
+
+      if (group) renderGroup(group);
+      else renderIndex(groups);
+    })
+    .catch(function (err) {
+      renderError(err && err.message ? err.message : String(err));
+    });
+})();
+</script>
+<!-- ============================== COPY TO HERE ============================== -->
+
+</body>
+</html>

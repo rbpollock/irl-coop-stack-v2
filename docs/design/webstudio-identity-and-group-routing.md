@@ -1,6 +1,6 @@
 # Webstudio identity + `{groupname}.irl.coop` dynamic routing
 
-Status: **design agreed, routing implemented, identity component specced (not yet built)**
+Status: **design agreed, routing implemented, client widget built (HtmlEmbed starter), native SDK component not built**
 
 ## Problem
 
@@ -122,11 +122,13 @@ gives the correct "fallback" behaviour and makes group sites self-service.
 
 ## Open items / next steps
 
-1. **Client widget** — either (a) built-in **HtmlEmbed**/Custom Code running a
-   credentialed fetch today (zero build), or (b) a baked-in **`GroupData` SDK
-   component**, which requires **rebuilding the builder + publisher images**
-   (no runtime/volume component-registration mechanism exists in the
-   self-hosted images). Recommend (a) first to prove the chain, graduate to (b).
+1. **Client widget** — ~~(a) HtmlEmbed/Custom Code credentialed fetch~~ **done**
+   (see `apps/webstudio/templates/world-doc-embed.html`): a self-contained
+   HtmlEmbed block (set **client-only**, `clientOnly: true`) that fetches
+   `/api/v1/site/groups` with `credentials: 'include'`, auto-detects the group
+   slug from the `{group}.irl.coop` host, and renders the group header + Plane
+   and NocoDB iframe panels. (b) a baked-in **`GroupData` SDK component**
+   remains unbuilt (needs a builder+publisher image rebuild).
 2. ~~coop-api session-auth + CORS~~ — **done**: `/api/v1/site/groups`
    (`verifySessionRequest`) + `*.irl.coop` CORS origin callback, verified live
    (401 without cookie; wildcard origin reflected; non-irlcoop origin blocked;
