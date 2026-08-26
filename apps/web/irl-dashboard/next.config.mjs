@@ -8,6 +8,12 @@ const nextConfig = {
   // See https://lucide.dev/guide/packages/lucide-react#nextjs-example
   transpilePackages: ["lucide-react"],
 
+  // Serve blocking (static) metadata to ALL user agents, not just Next.js's
+  // built-in crawler allowlist — so Googlebot, third-party share-preview
+  // checkers, and any non-standard UA still see og:/twitter: tags in the
+  // initial HTML instead of streamed metadata.
+  htmlLimitedBots: /.*/,
+
   // See https://nextjs.org/docs/app/building-your-application/routing/redirecting#redirects-in-nextconfigjs
   async redirects() {
     return [
