@@ -159,18 +159,23 @@ def emit_views(apps, out_dir):
                 shutil.copy(src, dst)
 
 
-def emit_proxy(instance, apps, out_dir):
+def emit_proxy(instance, apps, out_dir, inst_dir):
     """Emit the Traefik file-provider config (dynamic.yml).
 
     Routes come from each app's `proxy:` section (hostname + host-published
     port via the docker gateway 172.17.0.1) plus the traefik app's own extra
-    `routes:` (e.g. the apex). TLS uses the *.irl.coop wildcard cert mounted
-    from the instance tree.
+    `routes:` (e.g. the apex). TLS certs are discovered from the instance tree
+    (inst_dir/certs/<name>/{fullchain,privkey}.pem) and mounted by the traefik
+    app's `./certs` volume.
     """
     def _route_name(prefix, host):
-        label = host.split(".")[0]
-        if label == "*":
-            label = "wildcard"
+        # Wildcards must yield unique names — a `*.irl.coop` and a
+        # `*.studio.irl.coop` on the same app would otherwise both collapse to
+        # `<app>-wildcard` and overwrite each other in the routers dict.
+        if host.startswith("*."):
+            label = "wildcard-" + host[2:].replace(".", "-")
+        else:
+            label = host.split(".")[0]
         return f"{prefix}-{label}"
 
     def _host_rule(host):
@@ -210,16 +215,28 @@ def emit_proxy(instance, apps, out_dir):
         http["services"][name] = {
             "loadBalancer": {"servers": [{"url": f"http://172.17.0.1:{port}"}]}
         }
+    # Discover every cert in the instance tree (inst_dir/certs/<name>/{fullchain,
+    # privkey}.pem). The traefik app mounts ./certs → /etc/traefik/certs:ro, so
+    # each subdir holding a keypair becomes a TLS cert entry; `lego/` (acme.sh
+    # state) is skipped because it holds .cer/.key, not fullchain/privkey.pem.
+    certificates = []
+    certs_root = inst_dir / "certs"
+    if certs_root.is_dir():
+        for cert_dir in sorted(certs_root.iterdir()):
+            if not cert_dir.is_dir():
+                continue
+            if (cert_dir / "fullchain.pem").exists() and (
+                cert_dir / "privkey.pem"
+            ).exists():
+                certificates.append(
+                    {
+                        "certFile": f"/etc/traefik/certs/{cert_dir.name}/fullchain.pem",
+                        "keyFile": f"/etc/traefik/certs/{cert_dir.name}/privkey.pem",
+                    }
+                )
     dynamic = {
         "http": http,
-        "tls": {
-            "certificates": [
-                {
-                    "certFile": "/etc/traefik/certs/irl.coop/fullchain.pem",
-                    "keyFile": "/etc/traefik/certs/irl.coop/privkey.pem",
-                }
-            ]
-        },
+        "tls": {"certificates": certificates},
     }
     path = out_dir / "compose" / "proxy"
     path.mkdir(parents=True, exist_ok=True)
@@ -415,7 +432,7 @@ def main():
     emit_inventory(instance, apps, out)
     emit_clients(instance, apps, out)
     emit_views(apps, out)
-    emit_proxy(instance, apps, out)
+    emit_proxy(instance, apps, out, inst_dir)
     emit_ansible_edge(instance, inst_dir, out)
     emit_secrets_env(instance, inst_dir, master_hex, out)
     emit_matrix_config(inst_dir, out)

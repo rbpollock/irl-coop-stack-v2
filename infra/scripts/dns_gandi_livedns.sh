@@ -1,19 +1,24 @@
 #!/bin/sh
-# Working dns_gandi_livedns hook for acme.sh — replaces the image's (which
-# fails on the current LiveDNS v5 API). Verified against api.gandi.net/v5:
-#   PUT    /v5/livedns/domains/<zone>/records/_acme-challenge/TXT  -> 201
-#   DELETE /v5/livedns/domains/<zone>/records/_acme-challenge/TXT  -> 204
+# dns_gandi_livedns hook for acme.sh — irl.coop apex zone (subdomain wildcards
+# like *.studio.irl.coop share the same zone). Gandi LiveDNS v5 API:
+#   PUT    /v5/livedns/domains/<zone>/records/<name>/TXT  -> 201
+#   DELETE /v5/livedns/domains/<zone>/records/<name>/TXT  -> 204
 # Auth: Bearer $GANDI_LIVEDNS_KEY (the 40-char v5 API key).
-# Both the wildcard and the apex challenge land on _acme-challenge.<zone>, so
-# add() MERGES into the existing TXT record instead of replacing it.
+# The ZONE is the apex (default `irl.coop`, override with GANDI_ZONE); the
+# record name is the challenge FQDN relative to that zone:
+#   _acme-challenge.irl.coop        -> _acme-challenge
+#   _acme-challenge.studio.irl.coop -> _acme-challenge.studio
+# add() MERGES into an existing TXT rrset so apex + subdomain challenges coexist.
 GANDI_BASE="https://api.gandi.net/v5/livedns"
+ZONE="${GANDI_ZONE:-irl.coop}"
 
-_gandi_zone() {
-  echo "$1" | sed 's/^_acme-challenge\.//'
+# _acme-challenge.studio.irl.coop -> _acme-challenge.studio (relative to ZONE)
+_gandi_name() {
+  echo "${1%.$ZONE}"
 }
 
 _gandi_url() {
-  echo "$GANDI_BASE/domains/$(_gandi_zone "$1")/records/_acme-challenge/TXT"
+  echo "$GANDI_BASE/domains/$ZONE/records/$(_gandi_name "$1")/TXT"
 }
 
 dns_gandi_livedns_add() {
@@ -27,12 +32,11 @@ dns_gandi_livedns_add() {
   else
     new_values="[\"$txtvalue\"]"
   fi
-  curl -s -X PUT "$url" \
+  code="$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$url" \
     -H "Authorization: Bearer $GANDI_LIVEDNS_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"rrset_ttl\":300,\"rrset_values\":$new_values}" \
-    | grep -q '"message"' && return 0
-  return 1
+    -d "{\"rrset_ttl\":300,\"rrset_values\":$new_values}")"
+  [ "$code" = "201" ] || [ "$code" = "200" ]
 }
 
 dns_gandi_livedns_rm() {

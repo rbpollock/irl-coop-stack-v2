@@ -15,7 +15,7 @@ name: webstudio
 pillar: workflow
 type: image
 service_name: webstudio
-image: ghcr.io/webstudio-community/builder:latest
+image: irlcoop/webstudio-builder-gate-sso:2026.08.26
 env:
   NODE_ENV: production
   PORT: "3000"
@@ -28,6 +28,9 @@ env:
   # dev login (password = AUTH_SECRET) until Webstudio supports generic OIDC
   DEV_LOGIN: "true"
   DEV_LOGIN_EMAIL: admin@${DOMAIN}
+  # coop-api Gate SSO: auto-login from the oauth2-proxy forwarded identity
+  # (x-forwarded-email) + "Log in with irl.coop" button on the login page.
+  GATE_SSO_ENABLED: "true"
   DEPLOYMENT_ENVIRONMENT: production
   DEPLOYMENT_URL: https://studio.${DOMAIN}
   PGRST_JWT_SECRET: ${SECRET:webstudio.pgrst}
@@ -42,6 +45,11 @@ env:
   S3_BUCKET: webstudio-assets
   TRPC_SERVER_API_TOKEN: ${SECRET:webstudio.trpc}
   SELF_HOSTED_PUBLISHER_URL: http://webstudio-publisher:4000
+ports:
+  # Canvas preview subdomains (p-<projectId>.studio.irl.coop) reach the builder
+  # DIRECTLY, bypassing the oauth2-proxy gate — canvas auth is the per-request
+  # authToken query param, not the gate cookie (scoped to studio.irl.coop).
+  - "3006:3000"
 volumes:
   - webstudio-uploads:/app/public/s/uploads
 restart: always
@@ -58,6 +66,9 @@ proxy:
   - hostname: studio.${DOMAIN}
     port: 3003
     description: Webstudio builder (coop-identity gated)
+  - hostname: "*.studio.${DOMAIN}"
+    port: 3006
+    description: Webstudio canvas preview (p-<projectId> subdomains; auth via authToken)
   - hostname: "*.${DOMAIN}"
     port: 3004
     priority: 1
@@ -82,6 +93,14 @@ sidecars:
       - --cookie-secret=irlcoop-studio-gate-dev-sec-1234
       - --cookie-secure=false
       - --skip-provider-button=true
+      # forward the coop identity (X-Forwarded-Email) to the builder for Gate SSO
+      - --pass-user-headers=true
+      # Canvas OAuth token endpoint is called SERVER-TO-SERVER by the builder's
+      # /auth/ws/callback (no gate cookie) to exchange the PKCE code for an access
+      # token. Skip the gate here — the route self-authenticates via HTTP Basic
+      # (AUTH_WS_CLIENT_ID/AUTH_WS_CLIENT_SECRET). Without this, the callback's
+      # token fetch 302s to coop-api and the canvas lands on /error.
+      - --skip-auth-route=^/oauth/ws/token$
     ports:
       - "3003:4180"
     depends_on:
@@ -117,7 +136,7 @@ sidecars:
           -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon;" \
           -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;"
   webstudio-migrate:
-    image: ghcr.io/webstudio-community/builder:latest
+    image: irlcoop/webstudio-builder-gate-sso:2026.08.26
     restart: "no"
     entrypoint:
       - /prisma/node_modules/.bin/prisma
