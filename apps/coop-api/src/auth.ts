@@ -145,7 +145,7 @@ async function verifyIdToken(idToken: string): Promise<any> {
 }
 
 // The coop JWT — RS256, validated by the fleet via /jwks.
-async function mintCoopJwt(
+export async function mintCoopJwt(
   claims: Record<string, any>,
   profile?: Partial<CoopProfile>,
   ttl: jwt.SignOptions["expiresIn"] = "1h"
