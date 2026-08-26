@@ -1,11 +1,131 @@
-# Formbricks — surveys/forms (workflow pillar).
+# Formbricks — open-source surveys/forms (workflow pillar).
+#
+# 2026 architecture is multi-service: the web app (Next.js) + Cube (semantic
+# analytics layer, REQUIRED for the web app to start) + a one-shot Prisma
+# migration. The optional Hub (template/insights sharing) is NOT deployed.
+# Uses the shared Citus Postgres (db `formbricks`, role `formbricks`, pgvector
+# available via the citus `-vector` image) and the shared Redis (db index 1).
+#
+# No oauth2-proxy gate: survey respondents are anonymous and must reach the app
+# (the embed script runs on group sites). Admin login is native email/password
+# + invite — Formbricks OIDC SSO is Enterprise-licensed (/ee), so no gate-SSO
+# patch here.
 name: formbricks
-enabled: false
 pillar: workflow
 type: image
-image: formbricks/formbricks:latest
+image: ghcr.io/formbricks/formbricks:latest
 env:
-  DATABASE_URL: postgres://${POSTGRES_USER}:***@postgres:5432/formbricks
-labels:
-  traefik.enable: "true"
-  traefik.http.routers.forms.rule: Host(`forms.${DOMAIN}`)
+  WEBAPP_URL: https://forms.${DOMAIN}
+  NEXTAUTH_URL: https://forms.${DOMAIN}
+  DATABASE_URL: postgresql://formbricks:${SECRET:postgres.formbricks}@172.17.0.1:5432/formbricks
+  NEXTAUTH_SECRET: ${SECRET:formbricks.nextauth}
+  ENCRYPTION_KEY: ${SECRET:formbricks.encryption}
+  CRON_SECRET: ${SECRET:formbricks.cron}
+  REDIS_URL: redis://172.17.0.1:6379/1
+  CUBEJS_API_URL: http://formbricks-cube:4000
+  CUBEJS_API_SECRET: ${SECRET:formbricks.cube}
+  CUBEJS_JWT_ISSUER: formbricks-web
+  CUBEJS_JWT_AUDIENCE: formbricks-cube
+  # Hub (template/insights) — required by env validation in the 2026 build
+  HUB_API_URL: http://formbricks-hub:8080
+  HUB_API_KEY: ${SECRET:formbricks.hub}
+  # no SMTP yet — disable email verification + password reset
+  EMAIL_VERIFICATION_DISABLED: "1"
+  PASSWORD_RESET_DISABLED: "1"
+  # self-hosted: accounts are invite-only
+  INVITE_DISABLED: "0"
+  # migrations run in the formbricks-migrate sidecar (ordering vs cube)
+  SKIP_STARTUP_MIGRATION: "true"
+ports:
+  - "3008:3000"
+restart: always
+depends_on:
+  formbricks-migrate:
+    condition: service_completed_successfully
+  formbricks-cube:
+    condition: service_healthy
+healthcheck:
+  test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 60s
+proxy:
+  hostname: forms.${DOMAIN}
+  port: 3008
+  description: Formbricks (open-source surveys/forms)
+nav:
+  label: Surveys
+  icon: ClipboardList
+  section: Coop
+sidecars:
+  formbricks-db-setup:
+    image: postgres:15-alpine
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_roles WHERE rolname='formbricks'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE ROLE formbricks LOGIN PASSWORD '${SECRET:postgres.formbricks}'"
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='formbricks'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE DATABASE formbricks OWNER formbricks"
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/formbricks" -c "CREATE EXTENSION IF NOT EXISTS vector" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto"
+        echo 'formbricks DB ready.'
+  formbricks-migrate:
+    image: ghcr.io/formbricks/formbricks:latest
+    restart: "no"
+    entrypoint: ["sh", "-c"]
+    command:
+      - node packages/database/dist/scripts/apply-migrations.js
+    environment:
+      DATABASE_URL: postgresql://formbricks:${SECRET:postgres.formbricks}@172.17.0.1:5432/formbricks
+    depends_on:
+      formbricks-db-setup:
+        condition: service_completed_successfully
+  formbricks-cube:
+    image: cubejs/cube:v1.6.6
+    restart: always
+    environment:
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: 172.17.0.1
+      CUBEJS_DB_NAME: formbricks
+      CUBEJS_DB_USER: formbricks
+      CUBEJS_DB_PASS: ${SECRET:postgres.formbricks}
+      CUBEJS_DB_PORT: "5432"
+      CUBEJS_API_SECRET: ${SECRET:formbricks.cube}
+      CUBEJS_JWT_ISSUER: formbricks-web
+      CUBEJS_JWT_AUDIENCE: formbricks-cube
+      CUBEJS_DEFAULT_API_SCOPES: meta,data
+      CUBEJS_EXTERNAL_DEFAULT: "false"
+      CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
+    depends_on:
+      formbricks-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    dev:
+      volumes:
+        - ./assets/formbricks/cube/cube.js:/cube/conf/cube.js:ro
+        - ./assets/formbricks/cube/schema:/cube/conf/model:ro
+  formbricks-hub-migrate:
+    image: ghcr.io/formbricks/hub:latest
+    restart: "no"
+    entrypoint: ["sh", "-c"]
+    command:
+      - 'goose -dir /app/migrations postgres "postgresql://formbricks:${SECRET:postgres.formbricks}@172.17.0.1:5432/formbricks?sslmode=disable" up && river migrate-up --database-url "postgresql://formbricks:${SECRET:postgres.formbricks}@172.17.0.1:5432/formbricks?sslmode=disable"'
+    depends_on:
+      formbricks-migrate:
+        condition: service_completed_successfully
+  formbricks-hub:
+    image: ghcr.io/formbricks/hub:latest
+    restart: always
+    environment:
+      API_KEY: ${SECRET:formbricks.hub}
+      DATABASE_URL: postgresql://formbricks:${SECRET:postgres.formbricks}@172.17.0.1:5432/formbricks?sslmode=disable
+      HUB_INTERNAL_API_TOKEN: ${SECRET:formbricks.hubinternal}
+    depends_on:
+      formbricks-hub-migrate:
+        condition: service_completed_successfully

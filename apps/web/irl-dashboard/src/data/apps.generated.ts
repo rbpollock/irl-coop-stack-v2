@@ -11,6 +11,8 @@ export type GeneratedApp = {
 
 export const generatedApps: GeneratedApp[] = [
   { title: "Databases", href: "https://nocodb.irl.coop", iconName: "Database", section: "Coop" },
+  { title: "Surveys", href: "https://forms.irl.coop", iconName: "ClipboardList", section: "Coop" },
+  { title: "Events", href: "https://events.irl.coop", iconName: "CalendarDays", section: "Coop" },
   { title: "Studio", href: "https://studio.irl.coop", iconName: "Palette", section: "Build" },
   { title: "Social Media", href: "/apps/social-media", iconName: "Megaphone", section: "Coop" },
   { title: "API", href: "https://api.irl.coop", iconName: "Braces", section: "Build" },

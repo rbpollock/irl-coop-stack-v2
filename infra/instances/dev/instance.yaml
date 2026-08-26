@@ -24,6 +24,7 @@ apps:
   - temporal
   - temporal-ui
   - formbricks
+  - hievents
   - webstudio
   - postiz
   - plane
