@@ -3,9 +3,10 @@ import { randomBytes } from "node:crypto";
 import { ethers } from "ethers";
 import type { PoolClient } from "pg";
 import { verifyBearer } from "./verify-jwt";
-import { verifySessionRequest } from "./auth";
+import { verifySessionRequest, sessionFromRequest } from "./auth";
 import { deploySafe } from "./safe";
-import { withIdentity } from "./db";
+import { withIdentity, pool } from "./db";
+import { slugify, isValidSlug, RESERVED_SLUGS } from "./slug";
 
 // ---------------------------------------------------------------------------
 // Groups = Safes (Layer-2 projection). A group IS a Safe: "create a group"
@@ -48,6 +49,26 @@ async function isMember(client: PoolClient, groupId: string, sub: string): Promi
   return (r.rowCount ?? 0) > 0;
 }
 
+// Privacy-blind slug occupancy: whether ANY group holds this slug, regardless
+// of privacy tier (a members/hidden group's slug is still un-takeable). Runs
+// through the SECURITY DEFINER coop_slug_taken (BYPASSRLS), not an RLS read.
+async function slugTaken(slug: string): Promise<boolean> {
+  const r = await pool.query<{ coop_slug_taken: boolean }>(
+    "SELECT coop_slug_taken($1)",
+    [slug],
+  );
+  return r.rows[0]?.coop_slug_taken ?? false;
+}
+
+// Host → slug: strip port, drop the .irl.coop suffix, take the last remaining
+// label. `acme.irl.coop` → `acme`; `events.acme.irl.coop` → `acme`. Anything
+// else (webstudio canvas p-*.studio, infra hosts) yields a reserved label or
+// nonsense that simply resolves to no group.
+function hostToSlug(host: string): string {
+  const h = (host ?? "").split(":")[0].toLowerCase().trim();
+  return (h.replace(/\.irl\.coop$/, "").split(".").pop() ?? "").toLowerCase();
+}
+
 export default async function groupRoutes(fastify: FastifyInstance): Promise<void> {
   // Deploy the member's Safe + record the group projection in one event.
   fastify.post("/api/v1/groups", async (request, reply) => {
@@ -60,6 +81,32 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
     const privacy = PRIVACY.includes(body.privacy) ? body.privacy : "members";
     if (!name) return reply.code(400).send({ error: "name is required" });
+
+    // Canonical slug: an explicit canonical slug, or derived from the name
+    // (lowercase, spaces + special chars stripped). Duplicates are rejected up
+    // front (coop_slug_taken) and enforced by groups_slug_uniq as the
+    // race-safe backstop — so we check BEFORE deploying the Safe (no orphan).
+    let slug: string;
+    if (body.slug !== undefined) {
+      const s = typeof body.slug === "string" ? body.slug.trim().toLowerCase() : "";
+      if (!isValidSlug(s)) {
+        return reply.code(400).send({ error: "slug must be lowercase letters/numbers/hyphens and not reserved" });
+      }
+      slug = s;
+    } else {
+      slug = slugify(name);
+      if (!slug) {
+        return reply.code(400).send({ error: "could not derive a slug from the name — provide a slug" });
+      }
+      if (RESERVED_SLUGS.has(slug)) {
+        return reply.code(409).send({ error: "slug is reserved", slug });
+      }
+    }
+    if (await slugTaken(slug)) {
+      return reply
+        .code(409)
+        .send({ error: "slug already taken", slug, suggestion: `${slug}-${Math.floor(1000 + Math.random() * 9000)}` });
+    }
 
     let saltNonce: bigint;
     try {
@@ -85,9 +132,9 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
 
       const result = await withIdentity(claims.sub, async (client) => {
         const group = await client.query(
-          `INSERT INTO groups (safe_address, name, privacy, created_by) VALUES ($1, $2, $3, $4)
-           RETURNING id, safe_address, name, description, privacy, created_at`,
-          [safeAddress, name, privacy, claims.sub],
+          `INSERT INTO groups (safe_address, name, slug, privacy, created_by) VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, safe_address, name, slug, description, privacy, created_at`,
+          [safeAddress, name, slug, privacy, claims.sub],
         );
         const row = group.rows[0];
         await client.query(
@@ -99,6 +146,14 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
 
       return reply.code(201).send({ ...result, tx_hash: txHash, seat: { roles: ["owner"] } });
     } catch (err: any) {
+      // Race backstop: groups_slug_uniq is authoritative. A concurrent create
+      // that wins the slug surfaces here (the Safe was already deployed — an
+      // orphan, but the slug is what matters and it is now taken).
+      if (err?.code === "23505" && String(err?.constraint ?? "").includes("slug")) {
+        return reply
+          .code(409)
+          .send({ error: "slug already taken", slug, suggestion: `${slug}-${Math.floor(1000 + Math.random() * 9000)}` });
+      }
       request.log.error({ err: err.message }, "group deploy failed");
       return reply.code(500).send({ error: err.message });
     }
@@ -142,6 +197,42 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
       return rows;
     });
     return reply.send(rows);
+  });
+
+  // Slug availability — privacy-blind (coop_slug_taken, SECURITY DEFINER) so a
+  // members/hidden group's slug is still un-takeable. Unauthenticated: the UI
+  // checks while the user types; it reveals only whether the slug is free, never
+  // which group holds it.
+  fastify.get("/api/v1/slugs/:slug/available", async (request, reply) => {
+    const slug = ((request.params as any).slug ?? "").toLowerCase();
+    if (!isValidSlug(slug)) return reply.send({ slug, available: false });
+    const available = !(await slugTaken(slug));
+    return reply.send({ slug, available });
+  });
+
+  // Host → group resolver for the published group sites at {slug}.irl.coop.
+  // Anonymous callers resolve only `open` groups (the plain pool read is RLS-
+  // filtered to privacy='open'); a session cookie additionally resolves groups
+  // the caller can view (members/hidden for a member). Accepts ?host= or ?slug=.
+  fastify.get("/api/v1/resolve", async (request, reply) => {
+    const q = request.query as Record<string, string | undefined>;
+    const slug = (q.slug ?? hostToSlug(q.host ?? "")).toLowerCase();
+    if (!slug) return reply.code(400).send({ error: "slug or host required" });
+
+    const cols = "id, slug, name, kind, privacy, safe_address";
+    const session = sessionFromRequest(request);
+    const row = session
+      ? await withIdentity(session.sub, async (client) => {
+          const { rows } = await client.query(
+            `SELECT ${cols} FROM groups WHERE slug = $1`,
+            [slug],
+          );
+          return rows[0] ?? null;
+        })
+      : ((await pool.query(`SELECT ${cols} FROM groups WHERE slug = $1 AND privacy = 'open'`, [slug])).rows[0] ?? null);
+
+    if (!row) return reply.code(404).send({ error: "no_group" });
+    return reply.send(row);
   });
 
   // Invite / seat a member in a group.
@@ -251,21 +342,41 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
       sets.push(`privacy = $${vals.length + 1}`);
       vals.push(body.privacy);
     }
+    if (body.slug !== undefined) {
+      const s = typeof body.slug === "string" ? body.slug.trim().toLowerCase() : "";
+      if (!isValidSlug(s)) {
+        return reply.code(400).send({ error: "slug must be lowercase letters/numbers/hyphens and not reserved" });
+      }
+      if (await slugTaken(s)) {
+        return reply.code(409).send({ error: "slug already taken", slug: s });
+      }
+      sets.push(`slug = $${vals.length + 1}`);
+      vals.push(s);
+    }
     if (sets.length === 0) return reply.code(400).send({ error: "nothing to update" });
 
-    const row = await withIdentity(claims.sub, async (client) => {
-      if (!(await isOwner(client, groupId, claims.sub))) return null;
-      vals.push(groupId);
-      await client.query(
-        `UPDATE groups SET ${sets.join(", ")}, updated_at = now() WHERE id = $${vals.length}`,
-        vals,
-      );
-      const { rows } = await client.query(
-        `SELECT id, safe_address, name, description, privacy FROM groups WHERE id = $1`,
-        [groupId],
-      );
-      return rows[0] ?? null;
-    });
+    let row: any = null;
+    try {
+      row = await withIdentity(claims.sub, async (client) => {
+        if (!(await isOwner(client, groupId, claims.sub))) return null;
+        vals.push(groupId);
+        await client.query(
+          `UPDATE groups SET ${sets.join(", ")}, updated_at = now() WHERE id = $${vals.length}`,
+          vals,
+        );
+        const { rows } = await client.query(
+          `SELECT id, safe_address, name, slug, description, privacy FROM groups WHERE id = $1`,
+          [groupId],
+        );
+        return rows[0] ?? null;
+      });
+    } catch (err: any) {
+      // Race backstop: a concurrent re-slug that wins surfaces as 23505.
+      if (err?.code === "23505" && String(err?.constraint ?? "").includes("slug")) {
+        return reply.code(409).send({ error: "slug already taken" });
+      }
+      throw err;
+    }
     if (!row) return reply.code(403).send({ error: "not a group owner" });
     return reply.send(row);
   });

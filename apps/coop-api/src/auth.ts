@@ -266,7 +266,7 @@ function clearSessionCookie(reply: FastifyReply, request: FastifyRequest): void 
   });
 }
 
-function sessionFromRequest(request: FastifyRequest): any | null {
+export function sessionFromRequest(request: FastifyRequest): any | null {
   const token = (request as any).cookies?.[COOKIE_NAME];
   if (!token) return null;
   try {

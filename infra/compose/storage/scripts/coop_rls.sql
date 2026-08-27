@@ -34,6 +34,20 @@ UPDATE groups g SET created_by = (
 ALTER TABLE groups ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'coop';
 ALTER TABLE groups ALTER COLUMN safe_address DROP NOT NULL;
 
+-- Canonical group slug ({slug}.irl.coop → group). Nullable (personal groups
+-- have no public subdomain); unique among named groups. The availability check
+-- must be privacy-blind — a members/hidden group's slug is still un-takeable —
+-- so it is a SECURITY DEFINER (BYPASSRLS as coop_rls) function, not an RLS read.
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS slug text;
+CREATE UNIQUE INDEX IF NOT EXISTS groups_slug_uniq ON groups (slug) WHERE slug IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION coop_slug_taken(p_slug text) RETURNS boolean
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM groups WHERE slug = p_slug)
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_slug_taken(text) OWNER TO coop_rls;
+
+
 -- identity
 CREATE OR REPLACE FUNCTION coop_current_sub() RETURNS text AS $$
   SELECT NULLIF(current_setting('app.sub', true), '')::text

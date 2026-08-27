@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS groups (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   safe_address text,
   name        text NOT NULL,
+  slug        text,
   description text,
   privacy     text NOT NULL DEFAULT 'members' CHECK (privacy IN ('open','members','hidden')),
   kind        text NOT NULL DEFAULT 'coop' CHECK (kind IN ('coop','personal')),
@@ -43,6 +44,14 @@ CREATE TABLE IF NOT EXISTS groups (
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- Canonical group slug ({slug}.irl.coop → group). Nullable: a personal group
+-- (kind='personal') has no public subdomain — it is addressed by its member
+-- identity, not a name. Unique among the named groups that DO carry one.
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS slug text;
+CREATE UNIQUE INDEX IF NOT EXISTS groups_slug_uniq
+  ON groups (slug) WHERE slug IS NOT NULL;
+
 
 -- A user's OWN group (groups.kind='personal', created_by=sub, seated by
 -- coop_ensure_personal_group) is their telephony identity — enforce one per sub
