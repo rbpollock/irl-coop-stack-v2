@@ -1,0 +1,177 @@
+From fabc85ff35b8774a7929649b56d695194f98f1f9 Mon Sep 17 00:00:00 2001
+From: Robbie <robbie@irl.coop>
+Date: Wed, 26 Aug 2026 22:10:27 -0400
+Subject: [PATCH] feat(builder): Gate-SSO auto-login + "Log in with irl.coop"
+ button
+
+---
+ apps/builder/app/auth/login.tsx              | 18 +++++++++
+ apps/builder/app/env/env.server.ts           |  7 ++++
+ apps/builder/app/routes/_ui.login._index.tsx | 42 +++++++++++++++++++-
+ apps/builder/app/shared/db/user.server.ts    | 15 +++++++
+ 4 files changed, 81 insertions(+), 1 deletion(-)
+
+diff --git a/apps/builder/app/auth/login.tsx b/apps/builder/app/auth/login.tsx
+index 4105b22..d476a65 100644
+--- a/apps/builder/app/auth/login.tsx
++++ b/apps/builder/app/auth/login.tsx
+@@ -24,6 +24,7 @@ export type LoginProps = {
+   isGithubEnabled?: boolean;
+   isGoogleEnabled?: boolean;
+   isSecretLoginEnabled?: boolean;
++  isGateSsoEnabled?: boolean;
+   devPlanNames?: string[];
+ };
+ 
+@@ -32,6 +33,7 @@ export const Login = ({
+   isGithubEnabled,
+   isGoogleEnabled,
+   isSecretLoginEnabled,
++  isGateSsoEnabled,
+   devPlanNames,
+ }: LoginProps) => {
+   globalStyles();
+@@ -65,6 +67,22 @@ export const Login = ({
+ 
+         <TooltipProvider>
+           <Flex direction="column" gap="3" css={{ width: "100%" }}>
++            {isGateSsoEnabled && (
++              <Form
++                method="get"
++                action="/oauth2/sign_in"
++                style={{ display: "contents" }}
++              >
++                <input type="hidden" name="rd" value="/dashboard" />
++                <Button
++                  type="submit"
++                  color="primary"
++                  css={{ height: theme.spacing[15] }}
++                >
++                  Log in with irl.coop
++                </Button>
++              </Form>
++            )}
+             <Form method="post" style={{ display: "contents" }}>
+               <Button
+                 disabled={isGoogleEnabled === false}
+diff --git a/apps/builder/app/env/env.server.ts b/apps/builder/app/env/env.server.ts
+index 668e623..df44d09 100644
+--- a/apps/builder/app/env/env.server.ts
++++ b/apps/builder/app/env/env.server.ts
+@@ -15,6 +15,12 @@ const environment = z.object({
+   // Secret session key, context encode
+   AUTH_SECRET: z.string().optional(),
+ 
++  // Gate SSO: the oauth2-proxy gate in front authenticates members against
++  // coop-api and forwards their canonical identity as x-forwarded-email.
++  // When "true", the login route auto-logs-in from that header and the login
++  // page shows a "Log in with irl.coop" button.
++  GATE_SSO_ENABLED: z.string().optional(),
++
+   // Opt-in escape hatch for local testing over plain HTTP (no TLS in front).
+   // __Host- prefixed cookies require the Secure attribute, so browsers silently
+   // refuse to set them over http://, breaking dev login and OAuth. Never set
+@@ -106,6 +112,7 @@ const rawEnv = {
+   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+   AUTH_SECRET: process.env.AUTH_SECRET,
++  GATE_SSO_ENABLED: process.env.GATE_SSO_ENABLED,
+   ALLOW_INSECURE_COOKIES: process.env.ALLOW_INSECURE_COOKIES,
+   DEPLOYMENT_ENVIRONMENT: process.env.DEPLOYMENT_ENVIRONMENT,
+   DEPLOYMENT_URL: process.env.DEPLOYMENT_URL,
+diff --git a/apps/builder/app/routes/_ui.login._index.tsx b/apps/builder/app/routes/_ui.login._index.tsx
+index f90ed4e..2a5c84d 100644
+--- a/apps/builder/app/routes/_ui.login._index.tsx
++++ b/apps/builder/app/routes/_ui.login._index.tsx
+@@ -5,7 +5,10 @@ import {
+   json,
+ } from "@remix-run/server-runtime";
+ import { useLoaderData, type MetaFunction } from "@remix-run/react";
+-import { findAuthenticatedUser } from "~/services/auth.server";
++import { authenticator, findAuthenticatedUser } from "~/services/auth.server";
++import { sessionStorage } from "~/services/session.server";
++import * as db from "~/shared/db";
++import { createContext } from "~/shared/context.server";
+ import env from "~/env/env.server";
+ import type { LoginProps } from "~/auth/index.client";
+ import { parsePlansEnv } from "@webstudio-is/plans";
+@@ -66,6 +69,42 @@ export const loader = async ({
+   // All requests from the builder or canvas app are safeguarded either by preventCrossOriginCookie for fetch requests
+   // or by allowedDestinations for iframe requests.
+ 
++  // irl.coop Gate SSO: the oauth2-proxy gate in front authenticates the member
++  // against coop-api and forwards their canonical identity as x-forwarded-email.
++  // Auto-login (create-or-login) so the member reaches the builder without a
++  // second login wall. On failure we fall through to the login page below,
++  // which shows the "Log in with irl.coop" button as a recovery path.
++  if (env.GATE_SSO_ENABLED === "true") {
++    const gateEmail = request.headers.get("x-forwarded-email");
++    if (gateEmail != null && gateEmail.trim() !== "") {
++      try {
++        const context = await createContext(request);
++        const user = await db.user.createOrLoginWithGate(
++          context,
++          gateEmail.trim()
++        );
++        const session = await sessionStorage.getSession(
++          request.headers.get("Cookie")
++        );
++        session.set(authenticator.sessionKey, {
++          userId: user.id,
++          createdAt: Date.now(),
++        });
++        const headers = createPrivateNoStoreHeaders();
++        headers.append(
++          "Set-Cookie",
++          await sessionStorage.commitSession(session)
++        );
++        throw redirect(dashboardPath(), { headers });
++      } catch (error) {
++        if (error instanceof Response) {
++          throw error;
++        }
++        console.error("Gate SSO auto-login failed", error);
++      }
++    }
++  }
++
+   const user = await findAuthenticatedUser(request);
+ 
+   const url = new URL(request.url);
+@@ -88,6 +127,7 @@ export const loader = async ({
+   return json(
+     {
+       isSecretLoginEnabled: env.DEV_LOGIN === "true",
++      isGateSsoEnabled: env.GATE_SSO_ENABLED === "true",
+       devPlanNames:
+         env.DEV_LOGIN === "true" ? [...parsePlansEnv(env.PLANS).keys()] : [],
+       isGithubEnabled: Boolean(env.GH_CLIENT_ID && env.GH_CLIENT_SECRET),
+diff --git a/apps/builder/app/shared/db/user.server.ts b/apps/builder/app/shared/db/user.server.ts
+index 6fe4a93..d23c4a5 100644
+--- a/apps/builder/app/shared/db/user.server.ts
++++ b/apps/builder/app/shared/db/user.server.ts
+@@ -150,6 +150,21 @@ export const createOrLoginWithDev = async (
+   return newUser;
+ };
+ 
++export const createOrLoginWithGate = async (
++  context: AppContext,
++  email: string
++): Promise<User> => {
++  const userData = {
++    email,
++    username: email.split("@")[0] ?? "member",
++    image: "",
++    provider: "gate-sso",
++  };
++
++  const newUser = await genericCreateAccount(context, userData);
++  return newUser;
++};
++
+ export const userProjectTag = z.object({
+   id: z.string(),
+   label: z.string().min(1).max(100),
+-- 
+2.53.0
+
