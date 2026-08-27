@@ -52,10 +52,22 @@ joins them across apps.
 |---|---|
 | open    | member list + resources directory-public |
 | members | members see everything; outsiders see count only |
-| hidden  | nobody enumerates; a member can *prove* "I belong, role Y" (zk-badge, later) |
+| hidden  | nobody enumerates; membership facts are proven on demand (zk-badge) — **the norm**, not the exception |
 
 Same rule as world-doc-and-contacts.md §3: flipping `privacy` narrows the view,
 zero data migration, zero re-encryption.
+
+**Hidden is the norm — membership is provable, not enumerable.** Most groups are
+`hidden`, so the projection cannot hold their membership as plaintext: RLS
+obscures the rows but the rows still exist in plaintext at rest, and a
+compromised store reads every group's seats. Hidden membership is
+commitment-based — membership, role, and relationship facts (member-of,
+subgroup-of, sponsored-by, distance) are attested by ZK proofs on demand, never
+enumerated. This promotes the zk-badge from "later" to a core requirement: the
+relationship registry stores commitments, and group-aware surfaces (investigator
+selection, cooperativeness scoring, provisioning, mail-as-group) read through
+proofs for hidden groups. The plaintext `group_members` projection remains the
+substrate for `open`/`members` groups only.
 
 ## 4. API surface (coop-api, `groups.ts`)
 

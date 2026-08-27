@@ -106,3 +106,85 @@ Privacy is non-negotiable, so the phasing question is scope, not whether. The v0
 5. Legal: which jurisdictions accept ZK-verified books; statutory escheatment interactions (residual-heir default must still work over shielded state).
 6. Timelock visibility: circuit-breaker freezes must be provable to everyone WITHOUT revealing amounts — freeze = nullifier set toggle, not balance disclosure.
 7. Scaffolding status: current dev-stage contracts are scaffolding, not production state — production launches shielded, and no public→shielded migration exists by design.
+
+## 10. Settlement & sponsorship — chargeback protection
+
+**The problem (one line).** Fiat is reversible for ~130 days (Visa/MC/ACH dispute
+windows); a group's Safe (crypto) is final. A group must not wait out the window
+to spend its contribution revenue — and settled Safe funds can never be clawed
+back, so chargeback risk must be resolved *before* value crosses into crypto.
+
+**The model.** The "sponsor" is not a third party: it is a **vertical fund** — a
+`subgroup-of` irl.coop (the root group) whose Safe *is* the fund's crypto treasury
+(the flat funding pool). One fund per vertical.
+
+- A group in a vertical is **`sponsored-by`** its vertical fund — the economics
+  edge from account-and-key-model.md (one-way flow, recognition, **no control**).
+  The underwriting **cap**, settlement fee, and repayment schedule are **terms on
+  this edge**, not a governance relationship.
+- **Contributor fiat** → group escrow (Tier-2 pending-liability ledger), held the
+  130-day window. Chargeback-exposed.
+- **Fund crypto** → group liquidity (Tier-1 inbound), instant and final. The fund
+  is the fiat→crypto bridge: it absorbs the reversibility window so the group
+  never waits for its revenue.
+- **T+130 settlement** (the only visible crossing, per §9): fiat repays the fund's
+  principal, the settlement fee is taken, and the **remainder goes to the fund,
+  always** (the fund may remit some to irl.coop's general funds).
+- **Chargeback losses** are absorbed by the fund up to the per-vertical cap — the
+  fund's "Reserve" sub-account (§2.1) is the chargeback-protection pool.
+
+**Risk is bounded by the cap, not by control.** Because `sponsored-by` is
+"no control," the fund cannot micromanage the group's spending; its exposure is
+bounded by the cap term on the edge. Governance stays separate (`subgroup-of`).
+
+**Decided (Aug 2026):**
+
+1. **Capitalization** — donors to irl.coop + coop-member governance decisions on
+   allocation, informed by member surveys (Formbricks).
+2. **Settlement remainder** — always to the fund; the fund may remit some to
+   irl.coop general funds.
+3. **Sponsorship priority is computed, not declared.** Cooperativeness is a
+   *measured* score, not a static form label. Inputs: the regenerative score
+   (ZK-metric), communication patterns, internal payouts, transaction types,
+   events, livestreams, chats — the operational signals the event bus + ledgers
+   already ingest. Prioritize cooperativeness; de-prioritize bad actors. A group
+   that scores highly but fits no standard cooperative form still qualifies —
+   the matrix is a seed, not a cage (composition-not-inheritance).
+4. **Cap** — set by a per-vertical policy, voted by that vertical sub-group's
+   members.
+
+**Purpose categories (the organizing axis).** The people-facing verticals —
+food sovereignty, civic engagement, infrastructure, … — are **purpose**
+categories, not sectors. They are **multi-valued** (a group may sit in several),
+exist to organize people around shared ends, and each is maintained by a
+vertical sub-group that sets and maintains its rules + funds.
+
+**Out of scope.** Mutuals / nonprofits / associations typically BYO their own
+Stripe and do not consume central chargeback protection — they sit outside the
+sponsorship rails, not in a middle priority tier.
+
+**Bad-actor signal — reputation-derived, human-gated.** De-prioritization is
+reputation-derived (member/contributor grievances), but every grievance is
+investigated by an irl.coop representative before it affects standing. The
+investigation is the anti-gaming + due-process layer: reputation is not applied
+algorithmically, a human rules on each case. This is the "arbitration" primitive
+from account-and-key-model.md's Trust dimension (on-chain arbitration records).
+Open: the investigator role, grievance admission criteria, the consequence
+ladder, appeal/due-process, and grievance privacy.
+
+**Conflict-of-interest exclusion (investigator selection).** Investigators are
+drawn by random quorum from the vertical, but a candidate who is "too close" to
+the accused group is auto-excluded. Closeness is the candidate's extended graph
+distance / connection weight over the relationship registry (member-of,
+subgroup-of, sponsored-by, …), attested by a ZK proof — so a hidden conflict (a
+relationship inside a hidden group) cannot be omitted. If excluding the too-close
+leaves too few candidates to form a quorum, they are included anyway but their
+weights are revealed to all (privacy by default, transparency on failure). Open:
+the exact distance/weight metric, the threshold, quorum size, and what the
+fallback reveals.
+
+**Open:**
+- The **purpose-category catalog** (multi-valued, people-facing) is undecided.
+- The **cooperativeness score's** inputs/weights/thresholds are set by each
+  vertical sub-group; the platform supplies the measurable-signal substrate
+  (event store, ledgers), not the formula.
