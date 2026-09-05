@@ -17,6 +17,8 @@ ports:
   - "1935:1935"   # RTMP ingest — router must forward like mail/TURN ports
   - "8554:8554"   # RTSP (softphones / local viewers)
   - "8888:8888"   # HLS — the edge routes browser viewing here
+  - "8889:8889"   # WebRTC / WHIP API & UDP ports for low-latency ingest/playback
+  - "8189:8189/udp" # WebRTC ICE UDP port range
 volumes:
   - /opt/app/communication/data/mediamtx:/data
   - /opt/app/communication/etc/mediamtx/mediamtx.yml:/mediamtx.yml:ro

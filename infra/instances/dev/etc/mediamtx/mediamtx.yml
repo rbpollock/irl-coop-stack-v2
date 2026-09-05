@@ -6,12 +6,13 @@
 
 logLevel: info
 
-# Protocols: RTMP ingest + RTSP + HLS. WebRTC/SRT need UDP port handling and
-# are left off; the API/metrics endpoints are off.
+# Protocols: RTMP ingest + RTSP + HLS + WebRTC / WHIP for ultra-low latency browser ingest.
 rtmp: true
 rtsp: true
 hls: true
-webrtc: false
+webrtc: true
+whip: true
+whap: true
 srt: false
 api: false
 metrics: false
