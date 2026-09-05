@@ -169,7 +169,8 @@ fastify.register(eventRoutes)
 fastify.register(notificationRoutes)
 fastify.register(mailWebhookRoutes)
 fastify.register(telephonyRoutes)
-fastify.register(geoRoutes)
+import vaultRoutes from "./vault";
+fastify.register(vaultRoutes);
 fastify.register(avatarRoutes)
 fastify.register(internalRoutes)
 fastify.register(weatherRoutes)

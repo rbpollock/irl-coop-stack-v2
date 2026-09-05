@@ -171,13 +171,23 @@ export async function mintCoopJwt(
   }
 
   // MediaMTX permissions (authJWTClaimKey: mediamtx_permissions) — the claim
-  // MediaMTX's JWT auth reads to gate publish/read per path. Coarse first
-  // slice: view → read any path, broadcast → publish any path. Per-group path
-  // scoping (group → stream path) mirrors telephony's group → extension and is
-  // the next slice.
+  // MediaMTX's JWT auth reads to gate publish/read per path. Scoped per group
+  // matching group seats and media.stream.broadcast / media.stream.view grants.
   const mediamtx_permissions: { action: string; path: string }[] = [];
-  if (grants.includes("media.stream.view")) mediamtx_permissions.push({ action: "read", path: "" });
-  if (grants.includes("media.stream.broadcast")) mediamtx_permissions.push({ action: "publish", path: "" });
+  if (grants.includes("media.stream.view")) {
+    mediamtx_permissions.push({ action: "read", path: "" });
+    for (const g of groups) {
+      mediamtx_permissions.push({ action: "read", path: `live/${g.slug}/*` });
+      mediamtx_permissions.push({ action: "read", path: `live/${g.slug}` });
+    }
+  }
+  if (grants.includes("media.stream.broadcast")) {
+    mediamtx_permissions.push({ action: "publish", path: "" });
+    for (const g of groups) {
+      mediamtx_permissions.push({ action: "publish", path: `live/${g.slug}/*` });
+      mediamtx_permissions.push({ action: "publish", path: `live/${g.slug}` });
+    }
+  }
 
   // MinIO console SSO: translate grants into a MinIO `policy` claim (MinIO
   // reads MINIO_IDENTITY_OPENID_CLAIM_NAME, default "policy"). Platform-scoped
