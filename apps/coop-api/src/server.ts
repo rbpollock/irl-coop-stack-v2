@@ -169,8 +169,8 @@ fastify.register(eventRoutes)
 fastify.register(notificationRoutes)
 fastify.register(mailWebhookRoutes)
 fastify.register(telephonyRoutes)
-import vaultRoutes from "./vault";
-fastify.register(vaultRoutes);
+import livestreamStateRoutes from "./livestream-state";
+fastify.register(livestreamStateRoutes);
 fastify.register(avatarRoutes)
 fastify.register(internalRoutes)
 fastify.register(weatherRoutes)

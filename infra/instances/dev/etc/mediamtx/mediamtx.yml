@@ -34,4 +34,11 @@ authJWTIssuer: https://api.irl.coop
 # (multi-stream: each group publishes to its own path, e.g. live/<group>).
 paths:
   all_others:
+    # Auto-archive recordings of streams directly into MinIO S3 bucket `docs` (or streaming archive)
+    runOnInit: 
+    runOnPublish: 
+    # Record streams as MP4 chunks when published
+    record: true
+    recordPath: /data/recordings/%s/%y-%m-%d_%H-%M-%S.mp4
+    recordFormat: mp4
 
