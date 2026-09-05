@@ -24,6 +24,10 @@ export default async function onboardingRoutes(fastify: FastifyInstance): Promis
         : null;
     const avatar =
       typeof body.avatar === "string" && body.avatar.trim() ? body.avatar.trim().slice(0, 500) : null;
+    const offerings =
+      typeof body.offerings === "string" && body.offerings.trim()
+        ? body.offerings.trim().slice(0, 500)
+        : null;
 
     if (!displayName) {
       return reply.code(400).send({ error: "displayName is required" });
@@ -33,6 +37,7 @@ export default async function onboardingRoutes(fastify: FastifyInstance): Promis
       email: claims.email ?? null,
       displayName,
       avatar,
+      offerings,
     });
     return reply.send({ onboarded: true, profile });
   });

@@ -1,0 +1,19 @@
+# lk-jwt-service — the MatrixRTC authorization service. It issues the LiveKit
+# JWTs (validating the Matrix OpenID token) so the SFU only admits verified
+# members. The rtc_foci.livekit_service_url in the well-known points at THIS
+# service's /livekit/jwt endpoint, not the SFU directly.
+name: lk-jwt
+pillar: communication
+type: image
+image: ghcr.io/element-hq/lk-jwt-service:latest
+ports:
+  - "8094:8080"
+env:
+  LIVEKIT_URL: wss://livekit.${DOMAIN}
+  LIVEKIT_KEY: livekit
+  LIVEKIT_SECRET: ${SECRET:livekit.secret}
+  LIVEKIT_FULL_ACCESS_HOMESERVERS: matrix.irl.coop
+proxy:
+  hostname: rtc.${DOMAIN}
+  port: 8094
+  description: MatrixRTC authorization service (LiveKit JWT issuer)

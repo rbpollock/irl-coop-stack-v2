@@ -1,0 +1,15 @@
+# LiveKit SFU — the MatrixRTC media server for Cinny/Element Call group calls.
+# Signaling on 7880 (HTTP/WebSocket), TCP fallback 7881, UDP media 7882.
+# The RTP media range (50000-60000/udp) is the follow-up router-forwarding
+# step; use_external_ip + STUN + the TCP fallback carry small calls until the
+# router forwards the full range.
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: true
+redis:
+  address: 172.17.0.1:6379
+# lk-jwt-service controls room creation; the SFU must not auto-create.
+room:
+  auto_create: false

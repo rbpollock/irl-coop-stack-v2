@@ -11,6 +11,7 @@
 // identified by group id (uuid). Emitted as a list of strings.
 import type { FastifyInstance } from "fastify";
 import { getRelatedGroups } from "./db";
+import { ingestEvent } from "./events";
 
 const TOKEN = process.env.KEYCLOAK_GROUPS_TOKEN ?? "";
 
@@ -30,6 +31,41 @@ export default async function internalRoutes(fastify: FastifyInstance): Promise<
     } catch (err) {
       request.log.error({ err }, "groups lookup failed");
       return reply.code(500).send({ error: "lookup failed" });
+    }
+  });
+
+  // Server-to-server event ingest for app sources (e.g. LiteFarm). A source
+  // emits typed domain events here; the store is the durable copy and the bus
+  // fans out. Same shared-token auth as the groups mapper.
+  fastify.post("/api/internal/events/ingest", async (request, reply) => {
+    const auth = request.headers.authorization ?? "";
+    if (!TOKEN || auth !== `Bearer ${TOKEN}`) {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+    const body = request.body as {
+      sub?: string;
+      source?: string;
+      source_event_id?: string | null;
+      type?: string;
+      payload?: Record<string, unknown>;
+      occurred_at?: number;
+    };
+    if (!body?.sub || !body?.source || !body?.type) {
+      return reply.code(400).send({ error: "sub, source, type required" });
+    }
+    try {
+      const id = await ingestEvent(
+        body.sub,
+        body.source,
+        body.source_event_id ?? null,
+        body.type,
+        body.payload ?? {},
+        body.occurred_at ?? Date.now(),
+      );
+      return { id };
+    } catch (err) {
+      request.log.error({ err }, "event ingest failed");
+      return reply.code(500).send({ error: "ingest failed" });
     }
   });
 }

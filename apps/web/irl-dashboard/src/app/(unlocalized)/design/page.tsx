@@ -32,6 +32,20 @@ export default function DesignIndexPage() {
         </p>
       </div>
 
+      <div className="mx-auto mb-10 flex max-w-2xl flex-col items-center gap-3 rounded-xl border bg-muted/40 p-5 text-center">
+        <p className="text-sm text-muted-foreground">
+          Looking for the consolidated overview? The group model — Safe-as-group,
+          the shared pathways, the ZK treasury, and the glossary — is published as
+          a standalone document.
+        </p>
+        <Link
+          href="/group-model.html"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
+        >
+          Read the group model <ArrowRight className="size-3.5" />
+        </Link>
+      </div>
+
       {categories.map((category) => (
         <section key={category.name} className="mb-12">
           <h2 className="mb-4 text-xl font-black tracking-tight">

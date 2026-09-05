@@ -11,6 +11,8 @@
     "@fastify/cors": "^11.3.0",
     "@fastify/formbody": "^8.0.2",
     "@fastify/multipart": "^10.1.1",
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^6.1.1",
     "@temporalio/client": "^1.22.0",
     "@temporalio/worker": "^1.22.0",
     "@temporalio/workflow": "^1.22.0",
@@ -23,8 +25,10 @@
     "js-yaml": "^5.2.3",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.1.0",
+    "mailparser": "^3.9.20",
     "nodemailer": "^7.0.13",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "smtp-server": "^3.19.6"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -7,4 +7,7 @@
 // and collect the evidence from /tmp (see docs/design/browser-management.md).
 const scenario = process.argv[2] ?? "files-flow"
 console.log(`[runner] scenario: ${scenario}`)
-await import(`/app/e2e/${scenario}.mjs`)
+import(`/app/e2e/${scenario}.mjs`).catch((err) => {
+  console.error(`[runner] scenario failed:`, err)
+  process.exit(1)
+})

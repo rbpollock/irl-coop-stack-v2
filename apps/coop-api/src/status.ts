@@ -273,7 +273,7 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
     
     const body = (request.body ?? {}) as { scenario?: string };
     const scenario = body.scenario ?? "files-flow";
-    if (!["files-flow", "linking-flow"].includes(scenario)) {
+    if (!["files-flow", "linking-flow", "farm-flow"].includes(scenario)) {
       return reply.code(400).send({ error: "invalid_request", error_description: "Unknown scenario" });
     }
 

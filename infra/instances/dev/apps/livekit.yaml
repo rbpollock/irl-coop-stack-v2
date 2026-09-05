@@ -1,0 +1,28 @@
+# LiveKit — the MatrixRTC SFU (media server) for Cinny/Element Call group
+# calls. Keys are derived (${SECRET:livekit.secret}); the config.yaml (ports,
+# Redis, TURN) is mounted read-only. Media ports: 7880 signalling, 7881 TCP
+# fallback, 7882 UDP; the 50000-60000 UDP RTP range is the router-forwarding
+# follow-up (use_external_ip + STUN carry small calls until then).
+name: livekit
+pillar: communication
+type: image
+image: livekit/livekit-server:v1.9.0
+command:
+  - --config
+  - /etc/livekit.yaml
+env:
+  LIVEKIT_KEYS: "livekit: ${SECRET:livekit.secret}"
+ports:
+  - "7880:7880"
+  - "7881:7881"
+  - "7882:7882/udp"
+volumes:
+  - /opt/app/communication/data/livekit:/data
+dev:
+  volumes:
+    - ./data/livekit:/data
+    - ./config/livekit/livekit.yaml:/etc/livekit.yaml:ro
+proxy:
+  hostname: livekit.${DOMAIN}
+  port: 7880
+  description: LiveKit SFU (MatrixRTC media server)

@@ -44,4 +44,25 @@ if [ -f "$ROOT/infra/build/images/postiz/build.sh" ]; then
   ok "postiz built"
 fi
 
+# 6. litefarm (irl.coop fork — gate SSO + group tenancy)
+if [ -f "$ROOT/infra/build/images/litefarm/build.sh" ]; then
+  say "building litefarm (irl.coop fork)..."
+  bash "$ROOT/infra/build/images/litefarm/build.sh"
+  ok "litefarm built"
+fi
+
+# 7. cinny (irl.coop fork — brand + auto-SSO)
+if [ -f "$ROOT/infra/build/images/cinny/build.sh" ]; then
+  say "building cinny (irl.coop fork)..."
+  bash "$ROOT/infra/build/images/cinny/build.sh" >/dev/null
+  ok "cinny built"
+fi
+
+# 8. formbricks (irl.coop fork — gate-SSO auto-login + SMTP relay + MinIO)
+if [ -f "$ROOT/infra/build/images/formbricks/build.sh" ]; then
+  say "building formbricks (gate-SSO)..."
+  bash "$ROOT/infra/build/images/formbricks/build.sh" >/dev/null
+  ok "formbricks built"
+fi
+
 say "All custom images built and ready!"

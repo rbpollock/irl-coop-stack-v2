@@ -10,6 +10,7 @@
   },
   "disable_custom_urls": true,
   "default_theme": "dark",
+  "mobile_guide_toast": false,
   "brand": "irl.coop",
   "show_labs_settings": false,
   "sso_redirect_options": {

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maps — irl.coop</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="maplibre-gl.css" />
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    #map { position: absolute; inset: 0; background: #f5f0e6; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="map-status" style="position:absolute;top:8px;left:8px;z-index:10;font:12px/1.4 sans-serif;color:#333;background:rgba(255,255,255,.85);padding:5px 9px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.2);">loading…</div>
+  <script src="pmtiles.js"></script>
+  <script src="maplibre-gl.js"></script>
+  <script>
+    (async function () {
+      try {
+      // register the pmtiles protocol (byte-range fetch, no tile server)
+      const protocol = new pmtiles.Protocol();
+      maplibregl.addProtocol("pmtiles", protocol.tile);
+
+      const STYLE = {
+        version: 8,
+        glyphs: "glyphs/{fontstack}/{range}.pbf",
+        sources: {
+          basemap: {
+            type: "vector",
+            url: "pmtiles://https://s3api.irl.coop/maps/coverage.pmtiles",
+            attribution: '© OpenMapTiles © OpenStreetMap contributors',
+            maxzoom: 14
+          }
+        },
+        layers: [
+          { id: "background", type: "background", paint: { "background-color": "#f5f0e6" } },
+
+          // water (ocean + lakes + rivers as polygons)
+          { id: "water", type: "fill", source: "basemap", "source-layer": "water",
+            paint: { "fill-color": "#a9c8dc" } },
+          { id: "waterway", type: "line", source: "basemap", "source-layer": "waterway",
+            paint: { "line-color": "#a9c8dc", "line-width": 1 } },
+
+          // landcover: woods / grass / ice / sand / rock
+          { id: "landcover-wood", type: "fill", source: "basemap", "source-layer": "landcover",
+            filter: ["==", "class", "wood"],
+            paint: { "fill-color": "#d7e0c4", "fill-opacity": 0.7 } },
+          { id: "landcover-grass", type: "fill", source: "basemap", "source-layer": "landcover",
+            filter: ["in", "class", "grass", "grassland"],
+            paint: { "fill-color": "#e0e2c0", "fill-opacity": 0.6 } },
+          { id: "landcover-ice", type: "fill", source: "basemap", "source-layer": "landcover",
+            filter: ["==", "class", "ice"],
+            paint: { "fill-color": "#e8eef2" } },
+          { id: "landcover-sand", type: "fill", source: "basemap", "source-layer": "landcover",
+            filter: ["in", "class", "sand", "beach", "dune"],
+            paint: { "fill-color": "#e9dcc0" } },
+          { id: "landcover-rock", type: "fill", source: "basemap", "source-layer": "landcover",
+            filter: ["in", "class", "rock", "bare_rock", "scree"],
+            paint: { "fill-color": "#dcd6cc" } },
+
+          // park
+          { id: "park", type: "fill", source: "basemap", "source-layer": "park",
+            paint: { "fill-color": "#cfe0c0", "fill-opacity": 0.7 } },
+
+          // landuse (subtle)
+          { id: "landuse-residential", type: "fill", source: "basemap", "source-layer": "landuse",
+            filter: ["in", "class", "residential", "suburb", "neighbourhood"],
+            paint: { "fill-color": "#ece7da", "fill-opacity": 0.5 } },
+          { id: "landuse-farm", type: "fill", source: "basemap", "source-layer": "landuse",
+            filter: ["in", "class", "farmland", "farmyard", "orchard", "vineyard"],
+            paint: { "fill-color": "#e7e6c0", "fill-opacity": 0.5 } },
+          { id: "landuse-industrial", type: "fill", source: "basemap", "source-layer": "landuse",
+            filter: ["in", "class", "industrial", "commercial", "quarry"],
+            paint: { "fill-color": "#e5dfd0", "fill-opacity": 0.5 } },
+
+          // boundaries
+          { id: "boundary", type: "line", source: "basemap", "source-layer": "boundary",
+            filter: [">=", "admin_level", 2],
+            paint: { "line-color": "#b8b0a0", "line-width": 0.8, "line-dasharray": [3, 2] } },
+
+          // aeroway (runways)
+          { id: "aeroway", type: "line", source: "basemap", "source-layer": "aeroway",
+            paint: { "line-color": "#d0ccc4", "line-width": 1 } },
+
+          // roads: casing then fill
+          { id: "road-casing", type: "line", source: "basemap", "source-layer": "transportation",
+            filter: ["in", "class", "motorway", "trunk", "primary", "secondary"],
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#d8c9ae", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1, 14, 7] } },
+          { id: "road-major", type: "line", source: "basemap", "source-layer": "transportation",
+            filter: ["in", "class", "motorway", "trunk", "primary"],
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#f2d9b0", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.8, 14, 5] } },
+          { id: "road-secondary", type: "line", source: "basemap", "source-layer": "transportation",
+            filter: ["in", "class", "secondary", "tertiary"],
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 3] } },
+          { id: "road-minor", type: "line", source: "basemap", "source-layer": "transportation",
+            filter: ["in", "class", "minor", "service", "track"],
+            paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 14, 1.2], "line-opacity": 0.8 } },
+          { id: "road-path", type: "line", source: "basemap", "source-layer": "transportation",
+            filter: ["in", "class", "path", "footway", "cycleway"],
+            paint: { "line-color": "#cfc8b8", "line-width": 0.7, "line-dasharray": [2, 1.5] } },
+
+          // buildings
+          { id: "building", type: "fill", source: "basemap", "source-layer": "building",
+            paint: { "fill-color": "#ddd3c2", "fill-opacity": 0.8 } },
+
+          // labels
+          { id: "water_name", type: "symbol", source: "basemap", "source-layer": "water_name",
+            filter: ["in", "class", "lake", "sea", "ocean"],
+            layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"],
+                      "text-size": 12, "symbol-placement": "line" },
+            paint: { "text-color": "#6a90a8" } },
+          { id: "transportation_name", type: "symbol", source: "basemap", "source-layer": "transportation_name",
+            layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"],
+                      "text-size": 11, "symbol-placement": "line", "symbol-spacing": 400 },
+            paint: { "text-color": "#8a7f6c", "text-halo-color": "#f5f0e6", "text-halo-width": 1.2 } },
+          { id: "place-city", type: "symbol", source: "basemap", "source-layer": "place",
+            filter: ["in", "class", "city", "town"],
+            layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"],
+                      "text-size": ["interpolate", ["linear"], ["zoom"], 4, 11, 14, 15] },
+            paint: { "text-color": "#4f483c", "text-halo-color": "#f5f0e6", "text-halo-width": 1.5 } },
+          { id: "place-village", type: "symbol", source: "basemap", "source-layer": "place",
+            filter: ["in", "class", "village", "hamlet", "suburb"],
+            layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"],
+                      "text-size": 11 },
+            paint: { "text-color": "#6b6355", "text-halo-color": "#f5f0e6", "text-halo-width": 1.2 } },
+          { id: "place-country", type: "symbol", source: "basemap", "source-layer": "place",
+            filter: ["in", "class", "country", "state"],
+            layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12,
+                      "text-transform": "uppercase", "text-letter-spacing": 0.08 },
+            paint: { "text-color": "#8a7f6c", "text-halo-color": "#f5f0e6", "text-halo-width": 1.2 } },
+          { id: "poi", type: "circle", source: "basemap", "source-layer": "poi",
+            paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 1, 14, 2.5],
+                     "circle-color": "#9a7b5a", "circle-opacity": 0.7 } },
+          { id: "mountain_peak", type: "symbol", source: "basemap", "source-layer": "mountain_peak",
+            layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 10 },
+            paint: { "text-color": "#8a7f6c" } }
+        ]
+      };
+
+      const map = new maplibregl.Map({
+        container: "map",
+        style: STYLE,
+        center: [-98.5, 39.8],
+        zoom: 3.4,
+        maxZoom: 16
+      });
+      // test hooks (read by browser_exec)
+      const setStatus = (t) => { const el = document.getElementById("map-status"); if (el) el.textContent = t; };
+      window.__map = map;
+      window.__mapStatus = { loaded: false, tilesLoaded: false, errors: [] };
+      map.on("load", () => { window.__mapStatus.loaded = true; setStatus("map loaded"); });
+      map.on("idle", () => { window.__mapStatus.tilesLoaded = true; setStatus("tiles loaded \u2713"); });
+      map.on("error", (e) => { const m = String((e && e.error && e.error.message) || e); window.__mapStatus.errors.push(m); setStatus("map error: " + m); });
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+      // --- discover overlay: nearby public markers from coop-api ---
+      let markersSrc = null;
+      map.on("load", async () => {
+        const src = { type: "geojson", data: { type: "FeatureCollection", features: [] } };
+        map.addSource("discover", src);
+        markersSrc = src;
+        map.addLayer({
+          id: "discover-dots", type: "circle", source: "discover",
+          paint: { "circle-radius": 6, "circle-color": "#c25e3a", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5 }
+        });
+        refreshMarkers();
+      });
+
+      async function refreshMarkers() {
+        if (!markersSrc) return;
+        const b = map.getBounds();
+        const sw = b.getSouthWest(), ne = b.getNorthEast();
+        const bbox = [sw.lng, sw.lat, ne.lng, ne.lat].map(v => v.toFixed(4)).join(",");
+        try {
+          const r = await fetch(`https://api.irl.coop/api/v1/discover/map?bbox=${bbox}`);
+          if (!r.ok) throw new Error(`discover ${r.status}`);
+          const geojson = await r.json();
+          markersSrc.data = geojson;
+          map.getSource("discover").setData(geojson);
+        } catch (e) {
+          console.warn("discover refresh failed:", e);
+        }
+      }
+      let t = null;
+      map.on("moveend", () => { clearTimeout(t); t = setTimeout(refreshMarkers, 250); });
+      } catch (e) { window.__error = String((e && e.stack) || e); const el = document.getElementById("map-status"); if (el) el.textContent = "SCRIPT ERROR: " + window.__error; }
+    })();
+  </script>
+</body>
+</html>

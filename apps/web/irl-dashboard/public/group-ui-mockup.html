@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fernwood Growing Co-op — group cockpit (mockup)</title>
+<style>
+  :root {
+    --bg: #f5f1e8;
+    --card: #fffdf7;
+    --ink: #221d15;
+    --muted: #6f6757;
+    --faint: #9a917e;
+    --border: #e5ddcc;
+    --border-strong: #d6ccb6;
+    --accent: #2f6b4f;
+    --accent-deep: #1f4d38;
+    --accent-soft: #e7efe8;
+    --amber: #9c6a20;
+    --amber-soft: #f6ecd8;
+    --danger: #b4493c;
+    --serif: "Iowan Old Style", "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --r: 10px;
+    --shadow: 0 1px 2px rgba(34,29,21,.05), 0 4px 16px rgba(34,29,21,.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .app { max-width: 1240px; margin: 0 auto; padding: 0 20px 48px; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; margin: 0 0 16px;
+    background: linear-gradient(var(--bg) 80%, transparent);
+    backdrop-filter: blur(4px);
+  }
+  .mark {
+    width: 38px; height: 38px; flex: none; border-radius: 11px;
+    display: grid; place-items: center;
+    background: var(--accent); color: #fff;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand h1 { font-family: var(--serif); font-size: 19px; font-weight: 600; letter-spacing: -.01em; margin: 0; white-space: nowrap; }
+  .brand .sub { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .chip {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px;
+    background: var(--card); white-space: nowrap;
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+  .badge { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; }
+  .badge.members { background: var(--accent-soft); color: var(--accent-deep); }
+  .spacer { flex: 1; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--border-strong); background: var(--card); color: var(--ink);
+    border-radius: 9px; padding: 7px 13px; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: border-color .15s, background .15s, transform .05s;
+    font-family: var(--sans);
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.ghost:hover { background: var(--accent-soft); color: var(--ink); }
+
+  /* ---------- layout ---------- */
+  .grid { display: grid; grid-template-columns: 300px 1fr 320px; gap: 16px; align-items: start; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 16px; box-shadow: var(--shadow);
+  }
+  .card + .card { margin-top: 16px; }
+  .card > h2 {
+    font-family: var(--serif); font-size: 14px; font-weight: 600; letter-spacing: .01em;
+    margin: 0 0 12px; display: flex; align-items: baseline; gap: 8px;
+  }
+  .card > h2 .count { margin-left: auto; font-family: var(--sans); font-size: 11px; color: var(--faint); font-weight: 500; }
+  .kicker { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+
+  /* ---------- members ---------- */
+  .member { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .member:last-child { border-bottom: none; }
+  .avatar {
+    width: 30px; height: 30px; flex: none; border-radius: 50%;
+    display: grid; place-items: center; font-size: 12.5px; font-weight: 600;
+    background: var(--accent-soft); color: var(--accent-deep);
+  }
+  .avatar.o { background: var(--accent); color: #fff; }
+  .member .who { min-width: 0; flex: 1; }
+  .member .name { font-weight: 600; font-size: 13px; }
+  .member .alias { font-size: 11.5px; color: var(--muted); font-family: var(--serif); font-style: italic; }
+  .role { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; border-radius: 5px; padding: 1px 6px; }
+  .role.owner { background: var(--accent); color: #fff; }
+  .role.member { background: var(--accent-soft); color: var(--accent-deep); }
+  .role.agent { background: var(--amber-soft); color: var(--amber); }
+
+  /* ---------- apps ---------- */
+  .apps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .app-tile {
+    border: 1px solid var(--border); border-radius: 9px; padding: 9px 10px;
+    display: flex; align-items: center; gap: 8px; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .app-tile:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .app-tile .glyph { width: 22px; height: 22px; flex: none; display: grid; place-items: center; font-size: 13px; border-radius: 6px; background: var(--bg); }
+  .app-tile .an { font-size: 12.5px; font-weight: 600; }
+  .app-tile .scope { font-size: 10px; color: var(--faint); }
+
+  /* ---------- pathways ---------- */
+  .pathways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pathway {
+    position: relative; border: 1px solid var(--border); border-radius: var(--r);
+    padding: 13px 13px 12px; cursor: pointer; background: var(--card);
+    transition: border-color .15s, box-shadow .15s, transform .05s;
+    min-height: 104px; display: flex; flex-direction: column;
+  }
+  .pathway:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+  .pathway:active { transform: translateY(1px); }
+  .pathway:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pathway.available { opacity: .62; }
+  .pathway.available:hover { opacity: 1; }
+  .p-head { display: flex; align-items: center; gap: 8px; }
+  .p-head svg { color: var(--accent); flex: none; }
+  .p-head .pn { font-weight: 600; font-size: 13px; letter-spacing: -.01em; }
+  .p-state { margin-top: 6px; font-size: 12px; color: var(--muted); flex: 1; }
+  .p-state b { color: var(--ink); font-weight: 600; }
+  .p-act {
+    margin-top: 9px; font-size: 11px; font-weight: 600; color: var(--accent);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .p-act .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .pathway.available .p-act .dot { background: var(--faint); }
+  .shape-note {
+    margin-top: 12px; font-size: 11.5px; color: var(--faint); border-top: 1px dashed var(--border); padding-top: 10px;
+  }
+  .shape-note b { color: var(--muted); font-weight: 600; }
+
+  /* ---------- treasury ---------- */
+  .ledger { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .ledger:last-of-type { border-bottom: none; }
+  .ledger .tier { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; width: 30px; flex: none; color: var(--faint); }
+  .ledger .ln { font-size: 12.5px; }
+  .ledger .lv { margin-left: auto; text-align: right; }
+  .ledger .lv .big { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+  .ledger .lv .sml { font-size: 10.5px; color: var(--faint); }
+  .split { margin-top: 10px; }
+  .split .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+  .split .row .n { flex: 1; color: var(--muted); }
+  .split .row .amt { font-family: var(--mono); font-weight: 600; }
+  .split .row .bar { width: 96px; height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .split .row .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+
+  /* ---------- decisions ---------- */
+  .prop { border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; margin-bottom: 10px; }
+  .prop:last-child { margin-bottom: 0; }
+  .prop .pt { font-weight: 600; font-size: 13px; }
+  .prop .pm { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .prop .meta { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .prop .meta .quorum { font-size: 11px; color: var(--muted); }
+  .prop .meta .quorum b { color: var(--ink); font-family: var(--mono); }
+  .meter { flex: 1; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .meter > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .vote {
+    margin-top: 9px; width: 100%; border: 1px solid var(--border-strong); background: var(--card);
+    color: var(--accent); border-radius: 7px; padding: 6px 0; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: var(--sans); transition: background .15s;
+  }
+  .vote:hover { background: var(--accent-soft); }
+  .vote.voted { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ---------- activity ---------- */
+  .event { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .event:last-child { border-bottom: none; }
+  .e-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--faint); }
+  .e-dot.high { background: var(--danger); }
+  .e-dot.med { background: var(--amber); }
+  .e-dot.low { background: var(--accent); }
+  .event .et { font-size: 12.5px; font-weight: 600; }
+  .event .ed { font-size: 11.5px; color: var(--muted); }
+  .event .ec { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--faint); flex: none; }
+
+  /* ---------- drawer ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(34,29,21,.34); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
+  .scrim.show { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 92vw;
+    background: var(--card); border-left: 1px solid var(--border);
+    transform: translateX(100%); transition: transform .22s cubic-bezier(.3,.7,.3,1);
+    z-index: 50; padding: 20px 22px; overflow-y: auto; box-shadow: -12px 0 40px rgba(34,29,21,.12);
+  }
+  .drawer.show { transform: translateX(0); }
+  .drawer h3 { font-family: var(--serif); font-size: 18px; margin: 0 0 4px; }
+  .drawer .close { position: absolute; top: 14px; right: 14px; background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; line-height: 1; }
+  .steps { display: flex; gap: 0; margin: 16px 0 18px; }
+  .step { flex: 1; text-align: center; position: relative; }
+  .step::before { content: ""; position: absolute; top: 9px; left: -50%; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+  .step:first-child::before { display: none; }
+  .step .n { width: 20px; height: 20px; border-radius: 50%; margin: 0 auto; background: var(--border); color: var(--muted); font-size: 11px; font-weight: 700; display: grid; place-items: center; position: relative; z-index: 1; }
+  .step.on .n { background: var(--accent); color: #fff; }
+  .step .sl { font-size: 10px; color: var(--faint); margin-top: 4px; }
+  .step.on .sl { color: var(--accent); font-weight: 600; }
+  .field { margin-bottom: 13px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em; }
+  .field input, .field textarea {
+    width: 100%; border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px;
+    font-family: var(--sans); font-size: 13px; color: var(--ink); background: #fff;
+  }
+  .field input:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 58px; }
+  .hint { font-size: 11px; color: var(--faint); margin-top: 4px; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60; font-family: var(--sans);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 1080px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+    .col-center { grid-column: 1 / -1; order: -1; }
+  }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+    .pathways { grid-template-columns: repeat(2, 1fr); }
+    .brand h1 { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== top bar ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4C8 4 6 7 6 10c0 5 6 8 6 8s6-3 6-8c0-3-2-6-6-6Z"/><path d="M12 20v-2"/></svg>
+      </div>
+      <div>
+        <h1>Fernwood Growing Co-op</h1>
+        <div class="sub">
+          <span class="badge members">members · private</span>
+          <span class="chip">Safe <b>0x7f3a…c2d1</b></span>
+          <span class="chip"><b>3-of-5</b> threshold</span>
+        </div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" type="button">Share</button>
+    <button class="btn" type="button" id="inviteBtn">Invite a member</button>
+    <button class="btn primary" type="button" id="proposeBtn">New proposal</button>
+  </header>
+
+  <!-- ===== body ===== -->
+  <main class="grid">
+
+    <!-- left: members + apps -->
+    <aside class="col-left">
+      <section class="card">
+        <h2>Members <span class="count">5 seats</span></h2>
+        <div class="member"><span class="avatar o">M</span><div class="who"><div class="name">Maya</div><div class="alias">plot coordinator</div></div><span class="role owner">owner</span></div>
+        <div class="member"><span class="avatar">T</span><div class="who"><div class="name">Tom</div><div class="alias">&nbsp;</div></div><span class="role member">member</span></div>
+        <div class="member"><span class="avatar">P</span><div class="who"><div class="name">Priya</div><div class="alias">treasurer</div></div><span class="role member">member</span></div>
+        <div class="member"><span class="avatar">L</span><div class="who"><div class="name">Lena</div><div class="alias">tool steward</div></div><span class="role member">member</span></div>
+        <div class="member"><span class="avatar">J</span><div class="who"><div class="name">Jesse</div><div class="alias">seasonal helper</div></div><span class="role agent">agent</span></div>
+      </section>
+
+      <section class="card">
+        <h2>Apps <span class="count">group-scoped</span></h2>
+        <div class="apps">
+          <div class="app-tile"><span class="glyph">🗂</span><div><div class="an">Plane</div><div class="scope">season plan</div></div></div>
+          <div class="app-tile"><span class="glyph">▦</span><div><div class="an">NocoDB</div><div class="scope">plots · tools</div></div></div>
+          <div class="app-tile"><span class="glyph">💬</span><div><div class="an">Chat</div><div class="scope">5 rooms</div></div></div>
+          <div class="app-tile"><span class="glyph">📁</span><div><div class="an">Files</div><div class="scope">MinIO</div></div></div>
+          <div class="app-tile"><span class="glyph">🌾</span><div><div class="an">Farm</div><div class="scope">LiteFarm</div></div></div>
+          <div class="app-tile"><span class="glyph">☑</span><div><div class="an">Surveys</div><div class="scope">Formbricks</div></div></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- center: pathways (the "do" surface) -->
+    <section class="col-center">
+      <div class="card">
+        <h2>Pathways <span class="count">the group's verbs</span></h2>
+        <div class="pathways">
+          <button class="pathway" data-path="reserve">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M9 12.5l2 2 4-4.5"/></svg><span class="pn">Reserve</span></span>
+            <span class="p-state"><b>2 items out</b> — tiller, ladder · due Sat</span>
+            <span class="p-act"><span class="dot"></span>Reserve a thing</span>
+          </button>
+          <button class="pathway" data-path="match">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M16 4l4 3-4 3"/><path d="M20 17H4M8 14l-4 3 4 3"/></svg><span class="pn">Match</span></span>
+            <span class="p-state"><b>1 new match</b> — manure ↔ hay</span>
+            <span class="p-act"><span class="dot"></span>Browse offers</span>
+          </button>
+          <button class="pathway" data-path="credit">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span class="pn">Credit</span></span>
+            <span class="p-state"><b>320h · balanced</b> — fairness ✓</span>
+            <span class="p-act"><span class="dot"></span>Log hours</span>
+          </button>
+          <button class="pathway" data-path="fund">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="13" r="5.5"/><path d="M14.5 7.5a5.5 5.5 0 0 1 0 11"/></svg><span class="pn">Fund</span></span>
+            <span class="p-state"><b>Pool $1,240</b> · +$180 this month</span>
+            <span class="p-act"><span class="dot"></span>Contribute</span>
+          </button>
+          <button class="pathway" data-path="govern">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5.5"/></svg><span class="pn">Govern</span></span>
+            <span class="p-state"><b>2 open proposals</b> · quorum tracked</span>
+            <span class="p-act"><span class="dot"></span>Propose a decision</span>
+          </button>
+          <button class="pathway" data-path="cover">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/><path d="M9 12l2 2 4-4"/></svg><span class="pn">Cover</span></span>
+            <span class="p-state"><b>Rota covered</b> — childcare Sat ✓</span>
+            <span class="p-act"><span class="dot"></span>View rota</span>
+          </button>
+          <button class="pathway available" data-path="anonymize">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16"/><path d="M10 5.3A8.6 8.6 0 0 1 12 5c4.5 0 8 7 8 7a16 16 0 0 1-2.2 3"/><path d="M6.2 6.5C4.6 7.9 4 12 4 12s3.5 7 8 7a9 9 0 0 0 3.2-.6"/></svg><span class="pn">Anonymize</span></span>
+            <span class="p-state"><b>3 stories</b> shared this season</span>
+            <span class="p-act"><span class="dot"></span>Share a story</span>
+          </button>
+          <button class="pathway available" data-path="prove">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L7 21l5-2.5L17 21l-1.5-7.5"/></svg><span class="pn">Prove</span></span>
+            <span class="p-state"><b>2 badges</b> · 1 verified this week</span>
+            <span class="p-act"><span class="dot"></span>Request a badge</span>
+          </button>
+          <button class="pathway available" data-path="curate">
+            <span class="p-head"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M5 12h14M5 17h14"/><path d="M9 7h.01M9 12h.01M9 17h.01"/></svg><span class="pn">Curate</span></span>
+            <span class="p-state"><b>4 events</b> on the list</span>
+            <span class="p-act"><span class="dot"></span>Add an event</span>
+          </button>
+        </div>
+        <p class="shape-note"><b>This group's shape</b> selects Reserve · Match · Credit · Fund · Govern · Cover as active; Anonymize · Prove · Curate stay available. A shape is a selection of pathways — nothing more.</p>
+      </div>
+    </section>
+
+    <!-- right: treasury + decisions + activity -->
+    <aside class="col-right">
+      <section class="card">
+        <h2>Treasury <span class="count">private · provable</span></h2>
+        <div class="ledger"><span class="tier">T1</span><div class="ln">Money</div><div class="lv"><div class="big">$1,240</div><div class="sml">shielded · +$180/mo</div></div></div>
+        <div class="ledger"><span class="tier">T2</span><div class="ln">Credits</div><div class="lv"><div class="big">320h</div><div class="sml">balanced · hash-chained</div></div></div>
+        <div class="ledger"><span class="tier">T3</span><div class="ln">Badges</div><div class="lv"><div class="big">4</div><div class="sml">2 verified this week</div></div></div>
+        <div class="split">
+          <div class="kicker" style="margin-bottom:4px">This month's split</div>
+          <div class="row"><span class="n">Priya</span><span class="bar"><i style="width:90%"></i></span><span class="amt">$45</span></div>
+          <div class="row"><span class="n">Maya</span><span class="bar"><i style="width:80%"></i></span><span class="amt">$40</span></div>
+          <div class="row"><span class="n">Tom</span><span class="bar"><i style="width:70%"></i></span><span class="amt">$35</span></div>
+          <div class="row"><span class="n">Lena</span><span class="bar"><i style="width:70%"></i></span><span class="amt">$35</span></div>
+          <div class="row"><span class="n">Jesse</span><span class="bar"><i style="width:50%"></i></span><span class="amt">$25</span></div>
+        </div>
+        <button class="btn primary" style="width:100%;margin-top:12px;justify-content:center" type="button" id="keeperBtn">Run the keeper</button>
+      </section>
+
+      <section class="card">
+        <h2>Decisions <span class="count">2 open</span></h2>
+        <div class="prop">
+          <div class="pt">Buy a walk-in cold frame</div>
+          <div class="pm">$320 from the pool · extends the season</div>
+          <div class="meta"><span class="quorum">3 / 5</span><span class="meter"><i style="width:60%"></i></span><span class="quorum">quorum <b>3</b> · 2d left</span></div>
+          <button class="vote" type="button">Sign &amp; vote</button>
+        </div>
+        <div class="prop">
+          <div class="pt">Accept a new household (the Rivas)</div>
+          <div class="pm">Five plots → six · needs a 4-of-5 vote</div>
+          <div class="meta"><span class="quorum">1 / 5</span><span class="meter"><i style="width:20%"></i></span><span class="quorum">quorum <b>4</b> · 5d left</span></div>
+          <button class="vote" type="button">Sign &amp; vote</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Activity <span class="count">live</span></h2>
+        <div class="event"><span class="e-dot high"></span><div><div class="et">coverage.settled</div><div class="ed">Childcare rota — Saturday covered</div></div><span class="ec">2m</span></div>
+        <div class="event"><span class="e-dot med"></span><div><div class="et">vote.cast</div><div class="ed">Tom voted on the cold frame</div></div><span class="ec">18m</span></div>
+        <div class="event"><span class="e-dot low"></span><div><div class="et">match.found</div><div class="ed">Manure ↔ hay — Jesse &amp; Priya</div></div><span class="ec">1h</span></div>
+        <div class="event"><span class="e-dot low"></span><div><div class="et">mail.received</div><div class="ed">Season plan draft, v3</div></div><span class="ec">3h</span></div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<!-- ===== propose drawer ===== -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Propose a decision">
+  <button class="close" id="closeBtn" aria-label="Close">×</button>
+  <p class="kicker">Govern · propose</p>
+  <h3>Propose a decision</h3>
+  <p class="hint" style="margin-top:2px">Members sign the proposal hash with EIP-1271 — the Safe counts the quorum.</p>
+  <div class="steps">
+    <div class="step on"><span class="n">1</span><span class="sl">Draft</span></div>
+    <div class="step"><span class="n">2</span><span class="sl">Deliberate</span></div>
+    <div class="step"><span class="n">3</span><span class="sl">Vote</span></div>
+    <div class="step"><span class="n">4</span><span class="sl">Execute</span></div>
+  </div>
+  <div class="field"><label>Title</label><input type="text" placeholder="e.g. Buy a walk-in cold frame" value="Buy a walk-in cold frame"></div>
+  <div class="field"><label>Options</label><textarea placeholder="One option per line">Yes — approve the $320 purchase
+No — revisit next season</textarea></div>
+  <div class="field"><label>Quorum</label><input type="text" value="3 of 5"></div>
+  <div class="field"><label>Deadline</label><input type="text" value="2 days from now"></div>
+  <div class="field"><label>Optional transaction (Safe payload)</label><input type="text" placeholder="none — recorded statement only"></div>
+  <button class="btn primary" style="width:100%;justify-content:center" type="button" id="submitBtn">Propose to the governance room</button>
+  <p class="hint">Announced to the governance room; members deliberate, then sign. On quorum, it executes or is recorded on-chain.</p>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  (function () {
+    var drawer = document.getElementById('drawer');
+    var scrim = document.getElementById('scrim');
+    var toast = document.getElementById('toast');
+    function open() { drawer.classList.add('show'); scrim.classList.add('show'); }
+    function close() { drawer.classList.remove('show'); scrim.classList.remove('show'); }
+    function say(msg) { toast.textContent = msg; toast.classList.add('show'); setTimeout(function(){ toast.classList.remove('show'); }, 2200); }
+
+    document.getElementById('proposeBtn').addEventListener('click', open);
+    document.querySelector('[data-path="govern"]').addEventListener('click', open);
+    document.getElementById('closeBtn').addEventListener('click', close);
+    scrim.addEventListener('click', close);
+    document.getElementById('submitBtn').addEventListener('click', function(){ close(); say('Proposal drafted — announced to the governance room'); });
+
+    document.getElementById('inviteBtn').addEventListener('click', function(){ say('Invite sent — pending seat, approved by an owner'); });
+    document.getElementById('keeperBtn').addEventListener('click', function(){ say('Keeper ran — this month\u2019s split distributed'); });
+
+    // pathway actions (light) + vote toggle
+    var acts = {
+      reserve: 'Reserve a thing — pick an item and a due-back date',
+      match: 'Browse offers — manure for hay, or post your own',
+      credit: 'Log hours — plant ten, draw ten',
+      fund: 'Contribute — pay what you can, provably covered',
+      cover: 'View the rota — three-on-watch, Saturday covered',
+      anonymize: 'Share a story — anonymization owned by the source',
+      prove: 'Request a badge — provable, not enumerable',
+      curate: 'Add an event — curator-picked or community-signaled'
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('.pathway'), function (el) {
+      el.addEventListener('click', function () {
+        if (el.getAttribute('data-path') === 'govern') return; // handled above
+        say(acts[el.getAttribute('data-path')] || 'Coming soon');
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.vote'), function (btn) {
+      btn.addEventListener('click', function () {
+        var on = btn.classList.toggle('voted');
+        btn.textContent = on ? 'Voted ✓' : 'Sign & vote';
+        if (on) say('Signed with EIP-1271 — vote counted');
+      });
+    });
+  })();
+</script>
+</body>
+</html>

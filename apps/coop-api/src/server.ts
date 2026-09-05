@@ -32,8 +32,13 @@ import eventRoutes from './events'
 import notificationRoutes from './notifications'
 import mailWebhookRoutes from './mail'
 import telephonyRoutes from './telephony'
+import geoRoutes from './geo'
 import avatarRoutes from './avatars'
 import internalRoutes from './internal'
+import weatherRoutes from './weather'
+import { startSmtpRelay } from './smtp-relay'
+import swagger from '@fastify/swagger'
+import swaggerUi from '@fastify/swagger-ui'
 
 const fastify = Fastify({
   logger: true,
@@ -72,6 +77,81 @@ fastify.addContentTypeParser("application/octet-stream", (request, payload, done
   payload.on("data", (c: Buffer) => chunks.push(c))
   payload.on("end", () => done(null, Buffer.concat(chunks)))
 })
+
+// OpenAPI/Swagger — auto-documents every route registered below. Browsable at
+// https://api.irl.coop/api/docs (UI) and /api/docs/json (raw spec).
+// (No top-level await — this module is CommonJS; register in order like the
+// other plugins, Fastify loads them before listen() anyway.)
+const API_TAGS = [
+  { name: "auth", description: "OIDC fleet gateway + Keycloak bridge (discovery, authorize, token, login, userinfo)" },
+  { name: "identity", description: "Member profile, username claiming, avatar, passkeys, social" },
+  { name: "groups", description: "The coop group model (members, decisions, tracks, markers, resources, discovery)" },
+  { name: "safe", description: "ERC-4337 Safe relayer (deploy / predict)" },
+  { name: "docs", description: "OnlyOffice docs (relay tokens)" },
+  { name: "files", description: "Files panel + sharing (variant-B relay tokens)" },
+  { name: "bus", description: "Notifications + events (SSE stream, ingest, Redis pub/sub)" },
+  { name: "mail", description: "Stalwart inbound webhook" },
+  { name: "telephony", description: "FusionPBX sip-config" },
+  { name: "weather", description: "Open-Meteo gateway" },
+  { name: "stack", description: "Declared-vs-running status + browser runner" },
+  { name: "chat", description: "Matrix chat rooms" },
+  { name: "matrix", description: "Matrix appservice transaction endpoints (Synapse → coop-api)" },
+  { name: "internal", description: "Server-to-server (Keycloak groups mapper, app event ingest)" },
+]
+
+const TAG_RULES: [RegExp, string][] = [
+  [/^\/(\.well-known|jwks|api\/auth|api\/onboard)/, "auth"],
+  [/^\/api\/v1\/(me|profile|resolve|slugs|social|auth\/passkey|username)/, "identity"],
+  [/^\/api\/v1\/(groups|site\/groups|discover)/, "groups"],
+  [/^\/api\/safe/, "safe"],
+  [/^\/api\/v1\/docs/, "docs"],
+  [/^\/api\/v1\/files/, "files"],
+  [/^\/api\/v1\/(notifications|events)/, "bus"],
+  [/^\/api\/v1\/webhooks\/stalwart/, "mail"],
+  [/^\/api\/v1\/telephony/, "telephony"],
+  [/^\/api\/v1\/weather/, "weather"],
+  [/^\/api\/v1\/stack/, "stack"],
+  [/^\/api\/v1\/chat/, "chat"],
+  [/^\/_matrix|\/transactions/, "matrix"],
+  [/^\/api\/internal/, "internal"],
+]
+
+const VERBS: Record<string, string> = { GET: "Get", POST: "Create", PUT: "Update", PATCH: "Update", DELETE: "Delete" }
+
+function summaryFor(method: string, url: string): string {
+  const verb = VERBS[method] ?? method
+  const cleaned = url.replace(/^\/api\/(v1\/)?/, "").replace(/\//g, " ")
+  return `${verb} ${cleaned}`.trim()
+}
+
+fastify.register(swagger, {
+  openapi: {
+    info: {
+      title: "coop-api",
+      description: "The irl.coop sovereign stack hub: auth bridge (Keycloak + Google broker), OIDC fleet session gateway, coop group model, Safe relayer, docs/files relay tokens, notification/event bus, Matrix appservice, telephony, geo, weather, Stalwart mail webhook, and the SMTP relay.",
+      version: "1.0.0",
+    },
+    servers: [{ url: "https://api.irl.coop" }],
+    tags: API_TAGS,
+  },
+})
+
+// Group every route under a responsibility tag + derive a human summary, so the
+// Swagger UI is organized without annotating all 16 modules by hand.
+fastify.addHook("onRoute", (opts) => {
+  const url = opts.url ?? ""
+  const tag = TAG_RULES.find(([re]) => re.test(url))?.[1] ?? "misc"
+  opts.schema = {
+    ...(opts.schema ?? {}),
+    tags: [tag],
+    summary: opts.schema?.summary ?? summaryFor(opts.method as string, url),
+  }
+})
+
+fastify.register(swaggerUi, {
+  routePrefix: "/api/docs",
+  uiConfig: { docExpansion: "list", deepLinking: true, displayRequestDuration: true },
+})
 fastify.register(authRoutes)
 fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)
@@ -89,8 +169,10 @@ fastify.register(eventRoutes)
 fastify.register(notificationRoutes)
 fastify.register(mailWebhookRoutes)
 fastify.register(telephonyRoutes)
+fastify.register(geoRoutes)
 fastify.register(avatarRoutes)
 fastify.register(internalRoutes)
+fastify.register(weatherRoutes)
 
 // Graceful shutdown — releases :3001 deterministically so ts-node-dev's
 // `--respawn` (and any external restart) can rebind immediately. Without this,
@@ -127,6 +209,8 @@ const start = async () => {
     }
     // Listen on all network interfaces (0.0.0.0) so localhost fetches work
     await fastify.listen({ port: Number(process.env.PORT ?? 3001), host: '0.0.0.0' })
+    // SMTP relay (internal apps → Stalwart XOAUTH2) — see smtp-relay.ts
+    startSmtpRelay()
     const issuer = process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8081/realms/irl-coop'
     const base = process.env.COOP_API_BASE_URL ?? 'http://localhost:3001'
     fastify.log.info('--- auth bridge chain (redirect-URI matrix) ---')

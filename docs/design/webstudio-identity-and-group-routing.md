@@ -113,6 +113,68 @@ Routing design (specific-over-wildcard):
 Unknown subdomains now fall through to the publisher (404 if no site), which
 gives the correct "fallback" behaviour and makes group sites self-service.
 
+## Publish targets — group, project, and bring-your-own domain
+
+Recorded 2026-08-27 (extends the routing above: the two-level scheme is a
+refinement; BYOD + the Vercel option + SSO-on-custom-domain are new).
+
+### Target scheme
+
+1. **Group site** — `{groupname}.irl.coop` (the group's default/home site).
+2. **Project site** — `{clean-projectname}.{groupname}.irl.coop` (a specific
+   Webstudio project under the group's namespace).
+3. **Bring-your-own domain (BYOD)** — a member points `theircoop.org` at a
+   published project.
+
+The publisher already routes any domain by `Host` header via its `Domain`
+rows, so 1 and 2 are only a **Traefik fallback-router widening**: the current
+single-label `HostRegexp(\`^[^.]+[.]irl[.]coop$\`)` (priority 1) must also match
+two labels (`{project}.{group}.irl.coop`) — e.g.
+`HostRegexp(\`^[^.]+([.][^.]+)*[.]irl[.]coop$\`)` (one-or-more labels under the
+apex, still excluding `irl.coop`). Specific app routes (`nocodb`, `api`, `auth`,
+…) keep winning at their higher default priority. No new TLS — the wildcard
+`*.irl.coop` cert already covers every depth.
+
+### Bring-your-own domain
+
+Webstudio already supports custom domains per project (a `Domain` row + TXT
+verification). For a subdomain of our own apex the TXT can be auto-written via
+Gandi LiveDNS; for a **foreign apex** (`theircoop.org`) the member adds the DNS
+record themselves. Open decision: which service orchestrates verification.
+
+**Vercel option (open):** rather than running the publisher for arbitrary
+foreign domains, partner with Vercel for **API-based publish + routing** — build
+the site in self-hosted Webstudio, ship the static/runtime output to Vercel via
+their API, and let Vercel own DNS/TLS/routing for the custom domain. This keeps
+the builder + data self-hosted (sovereignty) while delegating the commodity
+edge. Trade-off to weigh: a third-party edge for published sites.
+
+### SSO on custom domains — the hard part
+
+`coop_session` is `.irl.coop`-scoped and `SameSite=Lax`, and coop-api's CORS
+allowlist is `*.irl.coop`. Both break on a foreign domain (`theircoop.org`):
+
+1. **Cookie** — a cross-site fetch from `theircoop.org` → `api.irl.coop` does
+   NOT carry the `SameSite=Lax` `.irl.coop` cookie (different registrable
+   domains), so the `GroupData` widget's `credentials:'include'` fetch fails.
+2. **CORS** — `api.irl.coop` reflects only `*.irl.coop` origins.
+
+Options to record (not decide):
+- **Redirect flow** — the custom-domain site bounces to `auth.irl.coop`, gets a
+  short-lived per-domain token, and injects it (OAuth-style, not a shared
+  cookie). Most standard; needs a token delivery + refresh story.
+- **SameSite=None + explicit origin allowlist** — widen the cookie and CORS to
+  the specific custom domains. Weakens the cookie's cross-site posture; each
+  BYOD domain must be registered.
+- **Embedded identity only** — the custom-domain site carries no session itself;
+  identity lives in an `.irl.coop` iframe that talks to the page via
+  `postMessage`. Aligns with the iframe-embedding pattern already used for
+  Plane/NocoDB.
+
+The Vercel route complicates 1 further (the edge host may not share the
+`.irl.coop` cookie at all), which is the strongest argument for a
+redirect/token flow rather than cookie tricks.
+
 ## Decisions
 
 - **Routing:** specific has priority over wildcard (explicit `priority: 1` on
@@ -141,3 +203,11 @@ gives the correct "fallback" behaviour and makes group sites self-service.
    still route to their specific apps (302), an unknown subdomain reaches the
    publisher (`Not found`), the apex is unaffected, and TLS is valid on the
    wildcard (no `-k`).
+6. **Two-level routing** — widen the Traefik fallback to
+   `{project}.{group}.irl.coop` (see "Publish targets" above), not just
+   `{group}.irl.coop`.
+7. **BYOD orchestration** — which service verifies a foreign custom domain
+   (TXT / Gandi auto-write) and creates the publisher `Domain` row.
+8. **SSO on custom domains** — pick a flow (redirect/token vs SameSite=None
+   allowlist vs embedded-identity iframe); the `.irl.coop` cookie + CORS do not
+   reach foreign domains today.

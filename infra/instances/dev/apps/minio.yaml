@@ -22,6 +22,14 @@ env:
   # without it MinIO can't decrypt the stored root secret; null it too.
   MINIO_KMS_SECRET_KEY_FILE: ""
   MINIO_CONFIG_ENV_FILE: ""
+  # CORS: MinIO does NOT implement the S3 PutBucketCors API — cross-origin
+  # access is configured ONLY via this server env var. `*` is correct here:
+  # the public-read `maps` basemap (ODbL) is fetched by the browser from any
+  # irl.coop origin (dashboard, group subdomains, webstudio sites, localhost
+  # dev), and every other bucket is credential/signed-URL gated so a `*` ACAO
+  # header leaks nothing. The pmtiles client fetches tiles with a Range header
+  # (CORS-safelisted → no preflight), so a bare ACAO:* is all it needs.
+  MINIO_API_CORS_ALLOW_ORIGIN: "*"
   # Server-side OIDC (STS AssumeRoleWithWebIdentity) — NOT the console's SSO
   # button (that was removed upstream). This is what the s3-bridge calls: it
   # hands MinIO the coop JWT (minted by coop-api), MinIO validates iss/sig/aud
@@ -54,6 +62,30 @@ sidecars:
         mc admin user info local profiles-s3 >/dev/null 2>&1 || mc admin user add local profiles-s3 "${SECRET:minio.profiles-s3}"
         mc admin policy attach local readwrite --user profiles-s3
         echo 'profiles MinIO bucket ready.'
+  # Formbricks survey-attachment store: dedicated `formbricks` bucket +
+  # `formbricks-s3` service user, scoped to that bucket only (least privilege —
+  # unlike profiles' blanket readwrite). Formbricks keys objects as
+  # workspaceId/accessType/fileName, so the bucket holds all workspaces.
+  formbricks-minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 minioadmin "${SECRET:minio.root}"
+        for i in $(seq 1 30); do
+          mc admin info local >/dev/null 2>&1 && break
+          sleep 2
+        done
+        mc mb --ignore-existing local/formbricks
+        mc admin user info local formbricks-s3 >/dev/null 2>&1 || mc admin user add local formbricks-s3 "${SECRET:minio.formbricks-s3}"
+        cat > /tmp/formbricks-bucket-policy.json << 'POLICY'
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::formbricks","arn:aws:s3:::formbricks/*"]}]}
+        POLICY
+        mc admin policy create local formbricks-bucket /tmp/formbricks-bucket-policy.json >/dev/null 2>&1 || true
+        mc admin policy attach local formbricks-bucket --user formbricks-s3
+        echo 'formbricks MinIO bucket ready.'
   # coop SSO → console bridge. Sits between the s3-gate (oauth2-proxy, which
   # enforces platform-admin and passes the coop JWT as X-Forwarded-Access-Token)
   # and the MinIO console. Exchanges the coop JWT for MinIO STS credentials and

@@ -25,7 +25,7 @@ command -v docker >/dev/null || { fail "docker not found"; exit 1; }
 
 # Check and build missing custom images before bringing up pillars
 missing_images=0
-for img in "irlcoop/element-web:v1.12.18" "irlcoop/synapse-s3:v1.118.0" "irlcoop/postgres-citus:12.1-vector" "irlcoop/browser-runner:latest" "irlcoop/postiz:2026.08.3"; do
+for img in "irlcoop/element-web:v1.12.18" "irlcoop/synapse-s3:v1.118.0" "irlcoop/postgres-citus:12.1-vector" "irlcoop/browser-runner:latest" "irlcoop/postiz:2026.08.3" "irlcoop/cinny:v4.12.6" "irlcoop/formbricks-gate-sso:5.4.0" "irlcoop/litefarm-api:2026.08.30" "irlcoop/litefarm-web:2026.08.30"; do
   if ! docker image inspect "$img" >/dev/null 2>&1; then
     missing_images=1
     break
@@ -85,6 +85,27 @@ if bash "$ROOT/infra/scripts/stack-up-hosts.sh"; then
 else
   warn "host apps bring-up reported an issue"
 fi
+
+# 3.5. OIDC-dependent services (matrix + oauth2-proxy gates) need coop-api's
+# OIDC discovery. coop-api comes up LAST, so on a cold boot these crash with
+# 502 (Synapse OIDC has no retry; oauth2-proxy dies on discovery failure).
+# Wait for coop-api, then restart the stragglers.
+say "OIDC-dependent services (matrix + gates)"
+# Wait for coop-api THROUGH THE EDGE (the URL the gates/matrix actually probe —
+# oauth2-proxy does OIDC discovery at https://api.irl.coop, so a direct :3001
+# check can pass while traefik's backend is still 502).
+for _ in $(seq 1 30); do
+  curl -sf -o /dev/null -m 3 "https://api.irl.coop/.well-known/openid-configuration" && break
+  sleep 2
+done
+for c in communication-matrix-1 $(docker ps -a --filter ancestor=quay.io/oauth2-proxy/oauth2-proxy --format '{{.Names}}' 2>/dev/null); do
+  [ -n "$c" ] || continue
+  if [ "$(docker inspect "$c" --format '{{.State.Running}}' 2>/dev/null)" = "true" ]; then
+    ok "$c up"
+  else
+    docker start "$c" >/dev/null 2>&1 && ok "$c restarted" || warn "$c restart failed"
+  fi
+done
 
 # 4. Snapshot for motd / operators
 say "snapshot"

@@ -30,6 +30,16 @@ const sections: NavigationType[] = [
         iconName: "Network",
       },
       {
+        title: "Maps",
+        href: "/apps/map",
+        iconName: "Map",
+      },
+      {
+        title: "Farm",
+        href: "/apps/farm",
+        iconName: "Sprout",
+      },
+      {
         title: "Webmail",
         href: "/apps/webmail",
         iconName: "Mail",
@@ -38,6 +48,11 @@ const sections: NavigationType[] = [
         title: "Calls",
         href: "/apps/calls",
         iconName: "Phone",
+      },
+      {
+        title: "Video & Chat",
+        href: "/apps/chat",
+        iconName: "Video",
       },
       {
         title: "Files",

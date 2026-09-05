@@ -20,6 +20,7 @@ import {
 } from "@/lib/utils"
 
 import { navigationsData } from "@/data/navigations"
+import { useGroups } from "@/hooks/use-groups"
 import { Logo } from "./logo"
 import { useSettings } from "@/hooks/use-settings"
 import { Badge } from "@/components/ui/badge"
@@ -50,6 +51,7 @@ export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
   const params = useParams()
   const { openMobile, setOpenMobile, isMobile } = useSidebar()
   const { settings } = useSettings()
+  const groups = useGroups()
 
   const locale = params.lang as LocaleType
   const direction = i18n.localeDirection[locale]
@@ -129,6 +131,26 @@ export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
     }
   }
 
+  // The "Surveys" nav item becomes a per-group submenu — clickthrough to each
+  // group's Formbricks workspace (forms.irl.coop/?group=<slug>, resolved by the
+  // gate-SSO route). Falls back to the plain link until the groups claim loads.
+  const navData = navigationsData.map((nav) => ({
+    ...nav,
+    items: nav.items.map((item) => {
+      if (item.title === "Surveys" && groups.length > 0) {
+        return {
+          title: item.title,
+          iconName: item.iconName,
+          items: groups.map((g) => ({
+            title: g.name,
+            href: `https://forms.irl.coop/?group=${g.slug}`,
+          })),
+        }
+      }
+      return item
+    }),
+  }))
+
   return (
     <SidebarWrapper side={isRTL ? "right" : "left"}>
       <SidebarHeader>
@@ -143,7 +165,7 @@ export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
       </SidebarHeader>
       <ScrollArea>
         <SidebarContent className="gap-0">
-          {navigationsData.map((nav) => {
+          {navData.map((nav) => {
             const title = getDictionaryValue(
               titleCaseToCamelCase(nav.title),
               dictionary.navigation

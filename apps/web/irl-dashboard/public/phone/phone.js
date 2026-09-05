@@ -312,7 +312,7 @@ function getFilter(filter, keyword){
     }
 }
 function base64toBlob(base64Data, contentType) {
-    if(base64Data.indexOf("," != -1)) base64Data = base64Data.split(",")[1]; // [data:image/png;base64] , [xxx...]
+    if(base64Data.indexOf("," != -1)) base64Data = base64Data.split(",")[1]; // strip "data:image/png;base64," prefix
     var byteCharacters = atob(base64Data);
     var slicesCount = Math.ceil(byteCharacters.length / 1024);
     var byteArrays = new Array(slicesCount);

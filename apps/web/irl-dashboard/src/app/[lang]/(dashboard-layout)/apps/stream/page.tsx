@@ -18,6 +18,10 @@ export default function StreamPage() {
   const [path, setPath] = useState("live/demo")
   const [playing, setPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [broadcasting, setBroadcasting] = useState(false)
+  const [streamerMode, setStreamerMode] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [matrixLiveCallActive, setMatrixLiveCallActive] = useState(false)
 
   const stop = () => {
     hlsRef.current?.destroy()
@@ -61,30 +65,107 @@ export default function StreamPage() {
     setPlaying(true)
   }
 
+  const toggleBroadcast = async () => {
+    if (broadcasting) {
+      setBroadcasting(false)
+      return
+    }
+    try {
+      const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser" },
+        audio: true,
+      })
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream
+        videoRef.current.muted = true
+        videoRef.current.play()
+      }
+      setBroadcasting(true)
+      mediaStream.getVideoTracks()[0].onended = () => {
+        setBroadcasting(false)
+        if (videoRef.current) videoRef.current.srcObject = null
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to start screen share.")
+    }
+  }
+
+  const toggleMatrixLiveCall = () => {
+    setMatrixLiveCallActive(!matrixLiveCallActive)
+  }
+
   return (
-    <div className="flex h-[calc(100svh-9.85rem)] flex-col">
+    <div className={`flex h-[calc(100svh-9.85rem)] flex-col ${streamerMode ? "ring-4 ring-rose-500/30" : ""}`}>
       <div className="flex items-center justify-between border-b bg-background px-4 py-2.5">
         <div>
-          <h1 className="text-sm font-semibold">Live Video</h1>
+          <h1 className="text-sm font-semibold flex items-center gap-2">
+            Live Video & Sovereign Stream
+            {streamerMode && <span className="rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-medium text-rose-500">Streamer Mode Active</span>}
+          </h1>
           <p className="text-xs text-muted-foreground">
-            Watch a coop stream — enter the path it was published to (e.g.{" "}
-            <code className="font-mono">live/demo</code>).
+            Sovereign streaming via MediaMTX & Matrix LiveKit calls.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={streamerMode ? "default" : "outline"}
+            onClick={() => setStreamerMode(!streamerMode)}
+            className="text-xs"
+          >
+            {streamerMode ? "Hide Sensitive UI" : "Streamer Privacy"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const url = window.location.href.split("?")[0] + `?path=${encodeURIComponent(path)}`
+              navigator.clipboard.writeText(url)
+              alert("Shareable link copied to clipboard!")
+            }}
+            className="text-xs"
+          >
+            Share Link
+          </Button>
+          <Button
+            size="sm"
+            variant={matrixLiveCallActive ? "default" : "secondary"}
+            onClick={toggleMatrixLiveCall}
+            className="text-xs"
+          >
+            {matrixLiveCallActive ? "Exit Matrix Call" : "Matrix Video Call"}
+          </Button>
+          <Button
+            size="sm"
+            variant={broadcasting ? "destructive" : "default"}
+            onClick={toggleBroadcast}
+            className="text-xs"
+          >
+            {broadcasting ? "Stop Sharing" : "Go Live (Screen Share)"}
+          </Button>
         </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
-        <div className="flex items-center gap-2">
-          <Input
-            value={path}
-            onChange={(e) => setPath(e.target.value)}
-            placeholder="live/demo"
-            className="max-w-xs font-mono"
-          />
-          <Button size="sm" onClick={playing ? stop : play}>
-            <Play className="me-1.5 h-3.5 w-3.5" />
-            {playing ? "Stop" : "Play"}
-          </Button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Input
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              placeholder="live/demo"
+              className="max-w-xs font-mono"
+            />
+            <Button size="sm" onClick={playing ? stop : play}>
+              <Play className="me-1.5 h-3.5 w-3.5" />
+              {playing ? "Stop" : "Play HLS"}
+            </Button>
+          </div>
+          {broadcasting && (
+            <div className="flex items-center gap-2 text-xs font-medium text-emerald-500 animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Broadcasting Browser Screen
+            </div>
+          )}
         </div>
 
         {error && (
@@ -94,8 +175,51 @@ export default function StreamPage() {
           </p>
         )}
 
-        <div className="flex-1 overflow-hidden rounded-lg border bg-black">
-          <video ref={videoRef} controls className="h-full w-full" playsInline />
+        <div className="grid flex-1 grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
+          <div className="md:col-span-2 flex flex-col overflow-hidden rounded-lg border bg-black relative">
+            <video ref={videoRef} controls className="h-full w-full object-contain" playsInline />
+            {matrixLiveCallActive && (
+              <div className="absolute inset-0 bg-background/95 backdrop-blur flex flex-col items-center justify-center p-6 text-center">
+                <h3 className="text-base font-semibold mb-2">Matrix LiveKit Video Call Stage</h3>
+                <p className="text-xs text-muted-foreground mb-4 max-w-md">
+                  Connected to Matrix SFU stage. All participants in this group room can broadcast or view the sovereign feed.
+                </p>
+                <div className="w-full h-64 rounded border bg-card flex items-center justify-center text-xs text-muted-foreground">
+                  [LiveKit Stage Grid — Active Speaker & Stream Overlay]
+                </div>
+                <Button size="sm" variant="outline" className="mt-4" onClick={toggleMatrixLiveCall}>
+                  Return to Stream Viewer
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
+            <div className="border-b px-3 py-2 text-xs font-semibold bg-muted/50">
+              Group Stream Chat & Vault Settings
+            </div>
+            <div className="flex-1 p-3 overflow-y-auto text-xs space-y-3">
+              <div className="rounded border bg-background p-2.5 space-y-2">
+                <span className="font-medium">Stream Endpoints (Vault)</span>
+                <p className="text-[11px] text-muted-foreground">
+                  Configured destinations stored in group secret vault.
+                </p>
+                <div className="flex items-center justify-between text-[11px] font-mono bg-muted px-2 py-1 rounded">
+                  <span>Sovereign HLS (/live/demo)</span>
+                  <span className="text-emerald-500">Active</span>
+                </div>
+              </div>
+              <div className="rounded border bg-background p-2.5 space-y-2">
+                <span className="font-medium">Matrix Room Channel</span>
+                <p className="text-[11px] text-muted-foreground">
+                  Linked to Matrix group chat room for live Q&A.
+                </p>
+                <div className="h-32 border rounded bg-card/50 flex items-center justify-center text-muted-foreground text-[11px]">
+                  [Matrix Chat Room Feed]
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

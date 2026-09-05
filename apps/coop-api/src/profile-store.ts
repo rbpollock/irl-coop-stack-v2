@@ -7,6 +7,7 @@ export interface CoopProfile {
   email: string | null;
   displayName: string | null;
   avatar: string | null;
+  offerings: string | null;
   onboarded: boolean;
   onboardedAt: string | null;
   preferences: Record<string, unknown>;
@@ -25,6 +26,7 @@ interface ProfileRow {
   email: string | null;
   display_name: string | null;
   avatar: string | null;
+  offerings: string | null;
   onboarded: boolean;
   onboarded_at: Date | null;
   preferences: Record<string, unknown>;
@@ -38,6 +40,7 @@ function toProfile(r: ProfileRow): CoopProfile {
     email: r.email,
     displayName: r.display_name,
     avatar: r.avatar,
+    offerings: r.offerings ?? null,
     onboarded: r.onboarded,
     onboardedAt: r.onboarded_at ? r.onboarded_at.toISOString() : null,
     preferences: r.preferences ?? {},
@@ -55,7 +58,7 @@ export async function getProfile(sub: string): Promise<CoopProfile | undefined> 
 
 export async function upsertProfile(
   sub: string,
-  patch: { email?: string | null; displayName?: string | null; avatar?: string | null; preferences?: Record<string, unknown> },
+  patch: { email?: string | null; displayName?: string | null; avatar?: string | null; offerings?: string | null; preferences?: Record<string, unknown> },
 ): Promise<CoopProfile> {
   const now = new Date().toISOString();
   // Merge semantics mirror the retired JSON store: a field is only overwritten
@@ -66,6 +69,7 @@ export async function upsertProfile(
     email: patch.email !== undefined ? patch.email : existing?.email ?? null,
     displayName: patch.displayName !== undefined ? patch.displayName : existing?.displayName ?? null,
     avatar: patch.avatar !== undefined ? patch.avatar : existing?.avatar ?? null,
+    offerings: patch.offerings !== undefined ? patch.offerings : existing?.offerings ?? null,
     preferences: patch.preferences !== undefined ? patch.preferences : existing?.preferences ?? {},
     onboarded: true,
     onboardedAt: existing?.onboardedAt ?? now,
@@ -74,17 +78,18 @@ export async function upsertProfile(
   };
   await withIdentity(sub, async (client) => {
     await client.query(
-      `INSERT INTO profiles (sub, email, display_name, avatar, preferences, onboarded, onboarded_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5::jsonb, true, $6, $7, $8)
+      `INSERT INTO profiles (sub, email, display_name, avatar, offerings, preferences, onboarded, onboarded_at, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, true, $7, $8, $9)
        ON CONFLICT (sub) DO UPDATE SET
          email = EXCLUDED.email,
          display_name = EXCLUDED.display_name,
          avatar = EXCLUDED.avatar,
+         offerings = EXCLUDED.offerings,
          preferences = EXCLUDED.preferences,
          onboarded = true,
          onboarded_at = EXCLUDED.onboarded_at,
          updated_at = EXCLUDED.updated_at`,
-      [next.sub, next.email, next.displayName, next.avatar, JSON.stringify(next.preferences), next.onboardedAt, next.createdAt, next.updatedAt],
+      [next.sub, next.email, next.displayName, next.avatar, next.offerings, JSON.stringify(next.preferences), next.onboardedAt, next.createdAt, next.updatedAt],
     );
   });
   return next;

@@ -1,0 +1,25 @@
+diff --git a/src/app/pages/auth/SSOLogin.tsx b/src/app/pages/auth/SSOLogin.tsx
+index 0000000..0000000 100644
+--- a/src/app/pages/auth/SSOLogin.tsx
++++ b/src/app/pages/auth/SSOLogin.tsx
+@@ -1,4 +1,4 @@
+-import React, { useMemo } from 'react';
++import React, { useEffect, useMemo } from 'react';
+ import { IIdentityProvider, SSOAction, createClient } from 'matrix-js-sdk';
+ import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
+@@ -17,6 +17,15 @@
+   const getSSOIdUrl = (ssoId?: string): string =>
+     mx.getSsoLoginUrl(redirectUrl, 'sso', ssoId, action);
+ 
++  // irl.coop: auto-login — if SSO is available, immediately redirect to the
++  // first provider. Keycloak completes silently when the member already has a
++  // coop session (logged into the dashboard), so Cinny logs in with no click.
++  useEffect(() => {
++    const first = providers?.[0];
++    if (first?.id) window.location.href = getSSOIdUrl(first.id);
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [providers, redirectUrl, action]);
++
+   const withoutIcon = providers
+     ? providers.find(
+         (provider) => !provider.icon || !mx.mxcUrlToHttp(provider.icon, 96, 96, 'crop', false)

@@ -1,9 +1,7 @@
 import type { ReactNode } from "react"
 
-import { chatsData } from "./_data/chats"
-
-import { ChatWrapper } from "./_components/chat-wrapper"
-
+// The chat route is now a full-page Element iframe — no narrow chat-panel
+// wrapper. Render children full-width in the dashboard layout's content area.
 export default function ChatLayout({ children }: { children: ReactNode }) {
-  return <ChatWrapper chatsData={chatsData}>{children}</ChatWrapper>
+  return <>{children}</>
 }

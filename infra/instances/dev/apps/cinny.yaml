@@ -1,0 +1,24 @@
+# Cinny — the coop's Matrix client for the dashboard chat + calling surface.
+# Lighter and mobile-responsive than Element (no mobile-guide redirect); video
+# calling rides the homeserver's Element Call / LiveKit + coturn infra via
+# @element-hq/element-call-embedded. Auth = the homeserver's OIDC (the `matrix`
+# client) — no separate Keycloak client. config.json lives in
+# ./config/cinny/ and is mounted read-only.
+name: cinny
+pillar: communication
+type: image
+image: irlcoop/cinny:v4.12.6
+ports:
+  - "8093:80"
+volumes:
+  - /opt/app/communication/data/cinny:/data
+dev:
+  volumes:
+    - ./data/cinny:/data
+    - ./config/cinny/config.json:/usr/share/nginx/html/config.json:ro
+proxy:
+  hostname: cinny.${DOMAIN}
+  port: 8093
+  description: Cinny Matrix client (dashboard chat + calling)
+  headers:
+    Cache-Control: "no-cache"

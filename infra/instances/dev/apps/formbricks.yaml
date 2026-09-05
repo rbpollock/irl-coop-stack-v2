@@ -6,16 +6,23 @@
 # Uses the shared Citus Postgres (db `formbricks`, role `formbricks`, pgvector
 # available via the citus `-vector` image) and the shared Redis (db index 1).
 #
-# No oauth2-proxy gate: survey respondents are anonymous and must reach the app
-# (the embed script runs on group sites). Admin login is native email/password
-# + invite — Formbricks OIDC SSO is Enterprise-licensed (/ee), so no gate-SSO
-# patch here.
+# Gate-SSO (like nocodb/webstudio): Formbricks OIDC SSO is Enterprise-licensed
+# (/ee) and phone-homes to ee.formbricks.com, so the ADMIN domain (forms.*) sits
+# behind an oauth2-proxy gate → coop-api OIDC → x-forwarded-email → auto-login
+# (the irlcoop/formbricks-gate-sso image patches the middleware + a gate-sso
+# route). Survey RESPONDENTS stay anonymous on the PUBLIC_URL domain (surveys.*),
+# which is NOT gated.
 name: formbricks
 pillar: workflow
 type: image
-image: ghcr.io/formbricks/formbricks:latest
+image: irlcoop/formbricks-gate-sso:5.4.0
 env:
   WEBAPP_URL: https://forms.${DOMAIN}
+  # anonymous survey-respondent domain (NOT gated — the embed script + /s/* +
+  # /api/v*/client/* live here; the admin domain above is the gated one)
+  PUBLIC_URL: https://surveys.${DOMAIN}
+  # gate-SSO auto-login from the oauth2-proxy x-forwarded-email (opt-in)
+  GATE_SSO_ENABLED: "1"
   NEXTAUTH_URL: https://forms.${DOMAIN}
   DATABASE_URL: postgresql://formbricks:${SECRET:postgres.formbricks}@172.17.0.1:5432/formbricks
   NEXTAUTH_SECRET: ${SECRET:formbricks.nextauth}
@@ -29,11 +36,31 @@ env:
   # Hub (template/insights) — required by env validation in the 2026 build
   HUB_API_URL: http://formbricks-hub:8080
   HUB_API_KEY: ${SECRET:formbricks.hub}
-  # no SMTP yet — disable email verification + password reset
+  # SMTP via the coop-api relay (172.17.0.1:1025, LOGIN with the shared secret) —
+  # the relay delivers through Stalwart XOAUTH2 (apps/coop-api/src/smtp-relay.ts).
+  SMTP_HOST: 172.17.0.1
+  SMTP_PORT: "1025"
+  SMTP_USER: relay
+  SMTP_PASSWORD: ${SECRET:smtp.relay}
+  SMTP_SECURE_ENABLED: "0"
+  SMTP_AUTHENTICATED: "1"
+  SMTP_REJECT_UNAUTHORIZED_TLS: "0"
+  MAIL_FROM_NAME: irl.coop
+  MAIL_FROM: notifications@irl.coop
+  # SSO handles auth, so Formbricks-side email verification/password-reset stay off
   EMAIL_VERIFICATION_DISABLED: "1"
   PASSWORD_RESET_DISABLED: "1"
   # self-hosted: accounts are invite-only
   INVITE_DISABLED: "0"
+  # Survey file uploads → the coop MinIO (bucket formbricks, user formbricks-s3,
+  # provisioned by formbricks-minio-init in minio.yaml). Path-style + the docker
+  # gateway IP (cross-pillar, same pattern as matrix → 172.17.0.1:9000).
+  S3_ACCESS_KEY: formbricks-s3
+  S3_SECRET_KEY: ${SECRET:minio.formbricks-s3}
+  S3_REGION: us-east-1
+  S3_BUCKET_NAME: formbricks
+  S3_ENDPOINT_URL: http://172.17.0.1:9000
+  S3_FORCE_PATH_STYLE: "1"
   # migrations run in the formbricks-migrate sidecar (ordering vs cube)
   SKIP_STARTUP_MIGRATION: "true"
 ports:
@@ -51,14 +78,50 @@ healthcheck:
   retries: 5
   start_period: 60s
 proxy:
-  hostname: forms.${DOMAIN}
-  port: 3008
-  description: Formbricks (open-source surveys/forms)
+  - hostname: forms.${DOMAIN}
+    port: 8095
+    description: Formbricks admin (coop-identity gated)
+  - hostname: surveys.${DOMAIN}
+    port: 3008
+    description: Formbricks public survey domain (anonymous respondents)
 nav:
   label: Surveys
   icon: ClipboardList
   section: Coop
 sidecars:
+  formbricks-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    command:
+      - --provider=oidc
+      # the fleet session gateway — the coop_session cookie makes authorize
+      # instant (no Keycloak page when the dashboard session exists)
+      - --oidc-issuer-url=https://api.${DOMAIN}
+      - --client-id=formbricks-gate
+      - --client-secret=formbricks-gate-secret
+      - --redirect-url=https://forms.${DOMAIN}/oauth2/callback
+      - --email-domain=*
+      - --upstream=http://formbricks:3000
+      - --http-address=0.0.0.0:4180
+      - --cookie-secret=irlcoop-formbricks-gate-sec-1234
+      - --cookie-secure=false
+      - --skip-provider-button=true
+      # inject the identity (X-Forwarded-Email/User/Groups) for the app's gate-SSO
+      - --pass-user-headers=true
+      # the coop JWT's `groups` claim (JSON string of {slug,name,roles}) → the
+      # x-forwarded-groups header the gate-SSO route parses for group→team mapping
+      - --oidc-groups-claim=groups
+      # the coop-api id_token is a large JWT; the default cookie session store
+      # blows past the browser 4KB cookie limit and the browser truncates it
+      # ("cookie signature not valid" → redirect loop). Store the session in
+      # Redis (tiny cookie = session id). DB 2 = the formbricks app uses DB 1.
+      - --session-store-type=redis
+      - --redis-connection-url=redis://172.17.0.1:6379/2
+    ports:
+      # NOT loopback-bound: the traefik edge reaches the gate via the docker
+      # gateway (172.17.0.1:8095) — restrict at the firewall in prod.
+      - "8095:4180"
+    depends_on:
+      - formbricks
   formbricks-db-setup:
     image: postgres:15-alpine
     restart: "no"

@@ -1,6 +1,15 @@
 # Synapse homeserver config — irl.coop private chat (federation disabled).
 # Generated for the dev instance; secrets live here (gitignored).
 server_name: "matrix.irl.coop"
+public_baseurl: "https://matrix.irl.coop"
+# /.well-known/matrix/client is built dynamically — serve it and add the
+# MatrixRTC rtc_foci (the LiveKit SFU) for Cinny/Element Call group calls.
+serve_client_wellknown: true
+serve_server_wellknown: true
+extra_well_known_client_content:
+  org.matrix.msc4143.rtc_foci:
+    - type: livekit
+      livekit_service_url: "https://rtc.irl.coop"
 pid_file: /data/homeserver.pid
 report_stats: false
 # signing key generated at first start — /config is mounted read-only
@@ -14,7 +23,15 @@ listeners:
     resources:
       - names: [client]
         compress: true
-# No federation listener: inbound federation is off by construction.
+      # Serve ONLY the federation "openid" servlet group (REQUIRE_AUTH=false),
+      # which is /_matrix/federation/v1/openid/userinfo — the endpoint lk-jwt
+      # uses to validate Matrix OpenID tokens. Real federation stays off (no
+      # federation servlet group here + federation_domain_whitelist: [] below).
+      - names: [openid]
+        compress: false
+# No federation listener (8448): inbound federation is off by construction.
+# serve_server_wellknown redirects federation traffic to :443 → this listener
+# via the edge (Traefik TLS), which is how lk-jwt-service reaches it.
 
 database:
   name: psycopg2
@@ -29,7 +46,20 @@ media_store_path: /data/media_store
 
 enable_registration: false
 enable_registration_without_verification: false
-enable_room_list_search: false
+enable_room_list_search: true
+# Allow any member to send the group-call membership state event (Cinny gates
+# the call button on it, and it otherwise defaults to state_default=50, which
+# only moderators/creators have). Power level 0 = every member can call.
+default_power_level_content_override:
+  private_chat:
+    events:
+      "org.matrix.msc3401.call.member": 0
+  trusted_private_chat:
+    events:
+      "org.matrix.msc3401.call.member": 0
+  public_chat:
+    events:
+      "org.matrix.msc3401.call.member": 0
 trusted_key_servers: []
 federation_domain_whitelist: []
 url_preview_enabled: false

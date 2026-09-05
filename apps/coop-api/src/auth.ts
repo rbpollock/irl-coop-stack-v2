@@ -4,7 +4,7 @@ import * as jwt from "jsonwebtoken";
 import { getProfile, type CoopProfile } from "./profile-store";
 import { getUserProfile, addUserRequiredAction } from "./keycloak-admin";
 import { provisionOnSignIn } from "./provisioning";
-import { getRolesAndGrants } from "./db";
+import { getRolesAndGrants, getGroupSeats } from "./db";
 
 // ---------------------------------------------------------------------------
 // coop-api as the fleet's OIDC issuer (session-gateway auth)
@@ -161,6 +161,15 @@ export async function mintCoopJwt(
     // sign-in must not fail on a role-lookup error
   }
 
+  // The member's coop-group seats — the OIDC `groups` claim apps map to their
+  // own tenant model (Formbricks Team per group). Best-effort, like roles.
+  let groups: { slug: string; name: string; roles: string[] }[] = [];
+  try {
+    groups = await getGroupSeats(claims.sub);
+  } catch {
+    // sign-in must not fail on a group-lookup error
+  }
+
   // MediaMTX permissions (authJWTClaimKey: mediamtx_permissions) — the claim
   // MediaMTX's JWT auth reads to gate publish/read per path. Coarse first
   // slice: view → read any path, broadcast → publish any path. Per-group path
@@ -197,6 +206,11 @@ export async function mintCoopJwt(
       // these via --oidc-groups-claim / --allowed-group.
       roles,
       grants,
+      // Coop group seats as a JSON string (NOT an array): oauth2-proxy's
+      // --oidc-groups-claim forwards a string claim verbatim to x-forwarded-groups,
+      // which the Formbricks gate-SSO route parses. An array-of-objects claim
+      // gets Go-%-formatted (invalid JSON) on the way out.
+      groups: JSON.stringify(groups),
       mediamtx_permissions,
       policy,
     },
@@ -447,8 +461,39 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
   });
 
   // Code exchange: code + client credentials -> coop JWT (+ id_token for NextAuth).
-  fastify.post("/api/auth/token", async (request, reply) => {
-    const body = (request.body ?? {}) as Record<string, string>;
+  fastify.post(
+    "/api/auth/token",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["grant_type", "code", "redirect_uri"],
+          properties: {
+            grant_type: { type: "string", description: "authorization_code" },
+            code: { type: "string", description: "One-time authorization code" },
+            client_id: { type: "string", description: "OIDC client id (or Basic auth)" },
+            client_secret: { type: "string", description: "OIDC client secret (or Basic auth)" },
+            redirect_uri: { type: "string" },
+            state: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              access_token: { type: "string", description: "Coop JWT" },
+              id_token: { type: "string", description: "OIDC id_token" },
+              token_type: { type: "string" },
+              expires_in: { type: "number" },
+            },
+          },
+          400: { type: "object", properties: { error: { type: "string" }, error_description: { type: "string" } } },
+          401: { type: "object", properties: { error: { type: "string" } } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = (request.body ?? {}) as Record<string, string>;
     let clientId = body.client_id ?? "";
     let clientSecret = body.client_secret ?? "";
 
@@ -583,8 +628,35 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
 
   // Password login: coop-api performs the auth server-side (zero redirect,
   // no Keycloak page). Sets the session cookie for the SSO gateway.
-  fastify.post("/api/auth/login", async (request, reply) => {
-    const body = (request.body ?? {}) as Record<string, string>;
+  fastify.post(
+    "/api/auth/login",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["username", "password"],
+          properties: {
+            username: { type: "string", description: "Coop identity email" },
+            password: { type: "string", description: "Password (direct grant)" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              access_token: { type: "string", description: "Coop JWT (RS256, aud irl-coop)" },
+              token_type: { type: "string", description: "Bearer" },
+              expires_in: { type: "number", description: "Seconds until expiry" },
+            },
+          },
+          400: { type: "object", properties: { error: { type: "string" }, error_description: { type: "string" } } },
+          401: { type: "object", properties: { error: { type: "string" }, error_description: { type: "string" } } },
+          502: { type: "object", properties: { error: { type: "string" } } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = (request.body ?? {}) as Record<string, string>;
     const { username, password } = body;
     if (!username || !password) {
       return reply.code(400).send({ error: "invalid_request", error_description: "username and password required" });

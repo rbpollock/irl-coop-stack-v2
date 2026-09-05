@@ -1,0 +1,6 @@
+{
+  "defaultHomeserver": 0,
+  "homeserverList": ["matrix.irl.coop"],
+  "allowCustomHomeservers": false,
+  "hashRouter": { "enabled": false }
+}

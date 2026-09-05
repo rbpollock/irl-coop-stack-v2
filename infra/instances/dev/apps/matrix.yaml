@@ -48,6 +48,11 @@ proxy:
   hostname: matrix.${DOMAIN}
   port: 8008
   description: Synapse client-server API (federation disabled)
+  # Synapse hardcodes Content-Security-Policy: frame-ancestors 'none'; the
+  # dashboard iframes Element, whose OIDC SSO redirects through this origin —
+  # override to allow the dashboard + Element to frame it.
+  headers:
+    Content-Security-Policy: "frame-ancestors 'self' https://${DOMAIN} https://element.${DOMAIN}"
 oidc:
   client_id: matrix
   redirect: /_synapse/client/oidc/callback

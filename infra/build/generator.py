@@ -188,6 +188,7 @@ def emit_proxy(instance, apps, out_dir, inst_dir):
         return f"Host(`{host}`)"
 
     routes = []
+    middlewares = {}
     for app in apps:
         proxies = app.get("proxy")
         if not proxies:
@@ -196,21 +197,28 @@ def emit_proxy(instance, apps, out_dir, inst_dir):
             proxies = [proxies]
         for p in proxies:
             host = p["hostname"]
-            routes.append(
-                (_route_name(app["name"], host), host, p["port"], p.get("priority"))
-            )
+            name = _route_name(app["name"], host)
+            mw = None
+            # optional per-route response header override (e.g. CSP frame-ancestors)
+            headers = p.get("headers")
+            if headers:
+                mw = f"{name}-headers"
+                middlewares[mw] = {"headers": {"customResponseHeaders": headers}}
+            routes.append((name, host, p["port"], p.get("priority"), mw))
     for app in apps:
         if app["name"] == "traefik":
             for r in app.get("routes", []):
                 host = r["hostname"]
                 routes.append(
-                    (_route_name("traefik", host), host, r["port"], r.get("priority"))
+                    (_route_name("traefik", host), host, r["port"], r.get("priority"), None)
                 )
-    http = {"routers": {}, "services": {}}
-    for name, host, port, priority in routes:
+    http = {"routers": {}, "services": {}, "middlewares": middlewares}
+    for name, host, port, priority, mw in routes:
         router = {"rule": _host_rule(host), "service": name, "tls": {}}
         if priority is not None:
             router["priority"] = priority
+        if mw:
+            router["middlewares"] = [mw]
         http["routers"][name] = router
         http["services"][name] = {
             "loadBalancer": {"servers": [{"url": f"http://172.17.0.1:{port}"}]}

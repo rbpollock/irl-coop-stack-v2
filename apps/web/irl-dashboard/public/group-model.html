@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Group as the Primitive — irl.coop</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #5a5a5a;
+    --rule: #d8d8d8;
+    --accent: #0e5a4a;
+    --accent-soft: #e8f1ee;
+    --figure-bg: #fafafa;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "STIX Two Text", "Source Serif 4", Georgia, "Times New Roman", serif;
+    color: var(--ink);
+    background: #fff;
+    line-height: 1.55;
+    font-size: 15.5px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 860px; margin: 0 auto; padding: 56px 40px 80px; }
+
+  /* Title block */
+  .titleblock { border-bottom: 2px solid var(--ink); padding-bottom: 22px; margin-bottom: 28px; }
+  .kicker { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 14px; font-weight: 600; }
+  .subtitle { font-size: 16.5px; font-style: italic; color: var(--muted); margin: 0 0 18px; }
+  .meta { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12.5px; color: var(--muted); display: flex; gap: 28px; flex-wrap: wrap; }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  /* Abstract */
+  .abstract { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 0 0 34px; font-size: 14.5px; }
+  .abstract h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: ui-sans-serif, system-ui, sans-serif; }
+
+  /* Sections */
+  h2 { font-size: 21px; margin: 44px 0 10px; font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+  h3 { font-size: 16.5px; margin: 26px 0 8px; font-weight: 600; }
+  p { margin: 0 0 13px; }
+  a { color: var(--accent); }
+
+  /* Tables */
+  table { border-collapse: collapse; width: 100%; margin: 16px 0 22px; font-size: 13.5px; }
+  caption { caption-side: top; text-align: left; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  th { border-bottom: 1.5px solid var(--ink); text-align: left; padding: 7px 10px 7px 0; font-weight: 600; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+  td { border-bottom: 1px solid var(--rule); padding: 7px 10px 7px 0; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  code, .mono { font-family: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; background: var(--figure-bg); padding: 1px 4px; border-radius: 3px; border: 1px solid #eee; }
+  .kw { color: var(--accent); font-family: ui-monospace, monospace; font-weight: 600; }
+
+  /* Figures */
+  figure { margin: 22px 0 26px; }
+  .fig { background: var(--figure-bg); border: 1px solid var(--rule); border-radius: 4px; padding: 18px; }
+  .fig svg { display: block; width: 100%; height: auto; }
+  figcaption { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  figcaption b { color: var(--ink); }
+
+  /* Blockquote */
+  blockquote { margin: 14px 0; padding: 4px 0 4px 18px; border-left: 3px solid var(--accent); color: #333; font-style: italic; }
+  blockquote .src { display: block; font-style: normal; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
+  ul, ol { margin: 8px 0 16px; padding-left: 24px; }
+  li { margin-bottom: 6px; }
+
+  .refs { font-size: 13px; }
+  .refs ol { padding-left: 22px; }
+  .refs li { margin-bottom: 7px; }
+  .footnote { font-size: 12.5px; color: var(--muted); }
+  .toc { columns: 2; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; line-height: 1.9; margin: 0 0 8px; }
+  .toc a { text-decoration: none; color: var(--ink); }
+  .toc .n { color: var(--muted); display: inline-block; min-width: 20px; }
+  @media (max-width: 720px) { .toc { columns: 1; } .page { padding: 32px 20px 60px; } }
+
+/* glossary tooltips + glossary section */
+.term { border-bottom: 1px dotted #0e5a4a; cursor: help; position: relative; }
+.term:hover::after {
+  content: attr(data-tip);
+  position: absolute; left: 0; bottom: 140%;
+  width: 250px; background: #1a1a1a; color: #f5f5f5;
+  padding: 6px 9px; border-radius: 4px; font-size: 12px; line-height: 1.45;
+  white-space: normal; font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400; font-style: normal; box-shadow: 0 2px 10px rgba(0,0,0,.18);
+  z-index: 300; pointer-events: none;
+}
+.glossary .gcat { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #8a8a8a; font-family: ui-sans-serif, system-ui, sans-serif; margin: 24px 0 10px; }
+.glossary .gcols { columns: 2; column-gap: 40px; }
+.glossary .g { break-inside: avoid; margin: 0 0 12px; }
+.glossary .gt { font-weight: 600; color: #0e5a4a; font-family: ui-monospace, monospace; font-size: 12.5px; }
+.glossary .gd { font-size: 13px; color: #444; margin: 2px 0 0; }
+@media (max-width: 720px) { .glossary .gcols { columns: 1; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="titleblock">
+  <p class="kicker">Technical Overview &middot; Design Reference</p>
+  <h1>The Group as the Primitive: Safe-Based Membership, Declarative Group Shapes, and Provable Governance</h1>
+  <p class="subtitle">A consolidated account of the cooperative group model underlying irl.coop — its identity layer, data model, provisioning machinery, on-chain mechanisms, zero-knowledge proof system, and application integration points.</p>
+  <div class="meta">
+    <span><b>Author:</b> irl.coop (Robbie Pollock)</span>
+    <span><b>Status:</b> design + partial implementation</span>
+    <span><b>Version:</b> 2026-09-04</span>
+  </div>
+</div>
+
+<div class="abstract">
+  <h2>Abstract</h2>
+  <p>irl.coop is organized around a single primitive: the <b>group</b>. Rather than a separate "organization" entity layered on top of user accounts, a group <em>is</em> a Safe smart contract — the same ERC-4337 account a person holds, deployed with an N-of-M owner set instead of a 1-of-1 passkey. Membership is the owner set (on-chain truth); a Citus projection renders it for applications (off-chain projection). Every application consumes the group as its own tenant object through a single indirection row, <code>resource_scopes {group_id, app, resource_key}</code>, and a per-request identity variable, <code>app.sub</code>, enforced by Postgres row-level security. Groups are born from a five-axis declarative <em>shape</em> (roles, apps, config, governance, proofs), assembled by composition rather than inheritance, and — by default — <em>hidden</em>: membership is provable in zero-knowledge but never enumerable. A central event bus (source → event → notification → channel) and a Temporal provisioning reconciler tie the model together, with a private shielded treasury, ERC-7715 permission-grant delegation, and a ZK regenerative-score metric as the economic and reputational spine.</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1"><span class="n">1</span>Introduction</a><br>
+  <a href="#s2"><span class="n">2</span>The group primitive</a><br>
+  <a href="#s3"><span class="n">3</span>Seats &amp; membership</a><br>
+  <a href="#s4"><span class="n">4</span>Roles &amp; capabilities</a><br>
+  <a href="#s5"><span class="n">5</span>Identity, keys &amp; admission</a><br>
+  <a href="#s6"><span class="n">6</span>Governance</a><br>
+  <a href="#s7"><span class="n">7</span>Data scoping &amp; projection</a><br>
+  <a href="#s8"><span class="n">8</span>Communications</a><br>
+  <a href="#s9"><span class="n">9</span>Group shapes</a><br>
+  <a href="#s10"><span class="n">10</span>Event bus &amp; provisioning</a><br>
+  <a href="#s11"><span class="n">11</span>On-chain mechanisms &amp; the private treasury</a><br>
+  <a href="#s12"><span class="n">12</span>Zero-knowledge proving</a><br>
+  <a href="#s13"><span class="n">13</span>Application integrations</a><br>
+  <a href="#s14"><span class="n">14</span>Integration workflows</a><br>
+  <a href="#s15"><span class="n">15</span>Core data flow</a><br>
+  <a href="#s16"><span class="n">16</span>Tensions &amp; open problems</a><br>
+  <a href="#s17"><span class="n">A</span>Addendum — worked examples</a><br>
+  <a href="#refs"><span class="n">&#9702;</span>References</a><br>
+  <a href="#glossary"><span class="n">&#9702;</span>Glossary</a>
+</nav>
+
+<h2 id="s1">1&nbsp;&nbsp;Introduction</h2>
+<p>The design ambition of irl.coop is a cooperative in which the <b>group</b> — not the user, and not an "organization" entity — is the fundamental unit of membership, governance, and application tenancy. This document consolidates the current design and the implemented subset into one reference: what the group is, how membership is represented and proven, how groups are provisioned, and how every application in the stack attaches to them.</p>
+<p>Three commitments recur throughout and should be read as the load-bearing invariants:</p>
+<ul>
+  <li><b>The group is the primitive, not the user.</b> Every account is already a Safe; the co-op is one Safe the members hold together. There is no second account type.</li>
+  <li><b>Projection, never truth.</b> The chain (the Safe's owner set and threshold) is the source of truth. Everything else — seats, resources, the world-doc — is a rebuildable projection of that on-chain fact.</li>
+  <li><b>Hidden is the norm.</b> Most groups are hidden by default; membership is provable on demand but never enumerable by third parties.</li>
+</ul>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 760 370" role="img" aria-label="The group in the stack">
+      <defs><marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <rect x="20" y="16" width="720" height="54" rx="4" fill="#f4f4f4"/>
+      <text x="32" y="32" font-family="system-ui,sans-serif" font-size="10" fill="#8a8a8a" font-weight="600">identity &#183; edge</text>
+      <g font-family="system-ui,sans-serif">
+        <rect x="130" y="28" width="160" height="34" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="210" y="49" text-anchor="middle" font-size="11" font-weight="600" fill="#0e5a4a">Keycloak (OIDC)</text>
+        <rect x="310" y="28" width="160" height="34" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="390" y="49" text-anchor="middle" font-size="11" font-weight="600" fill="#0e5a4a">coop-api (gateway)</text>
+        <rect x="490" y="28" width="160" height="34" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="570" y="49" text-anchor="middle" font-size="11" font-weight="600" fill="#0e5a4a">Traefik (edge)</text>
+      </g>
+      <line x1="290" y1="45" x2="308" y2="45" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#a9)"/>
+      <line x1="470" y1="45" x2="488" y2="45" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#a9)"/>
+      <rect x="230" y="96" width="300" height="70" rx="8" fill="#0e5a4a"/>
+      <text x="380" y="121" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="14" font-weight="600">the group — a Safe</text>
+      <text x="380" y="140" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="10">owner set (on-chain)</text>
+      <text x="380" y="156" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="10">seats &#183; resource_scopes (Citus)</text>
+      <line x1="390" y1="62" x2="383" y2="94" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#a9)"/>
+      <text x="399" y="80" font-family="monospace" font-size="9" fill="#0e5a4a">OIDC</text>
+      <g font-family="system-ui,sans-serif">
+        <rect x="20" y="210" width="170" height="140" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="30" y="232" font-size="12" font-weight="600" fill="#0e5a4a">apps</text>
+        <text x="30" y="256" font-family="monospace" font-size="9.5" fill="#333">irl-dashboard &#183; Plane</text>
+        <text x="30" y="273" font-family="monospace" font-size="9.5" fill="#333">NocoDB &#183; Formbricks</text>
+        <text x="30" y="290" font-family="monospace" font-size="9.5" fill="#333">Postiz &#183; Webstudio</text>
+        <text x="30" y="307" font-family="monospace" font-size="9.5" fill="#333">LiteFarm &#183; Matrix/Cinny</text>
+        <rect x="200" y="210" width="170" height="140" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="210" y="232" font-size="12" font-weight="600" fill="#0e5a4a">data &amp; storage</text>
+        <text x="210" y="256" font-family="monospace" font-size="9.5" fill="#333">Citus (Postgres)</text>
+        <text x="210" y="273" font-family="monospace" font-size="9.5" fill="#333">Redis (cache &#183; pub/sub)</text>
+        <text x="210" y="290" font-family="monospace" font-size="9.5" fill="#333">MinIO (S3 storage)</text>
+        <rect x="380" y="210" width="170" height="140" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="390" y="232" font-size="12" font-weight="600" fill="#0e5a4a">communication</text>
+        <text x="390" y="256" font-family="monospace" font-size="9.5" fill="#333">Stalwart (mail)</text>
+        <text x="390" y="273" font-family="monospace" font-size="9.5" fill="#333">Synapse (chat)</text>
+        <text x="390" y="290" font-family="monospace" font-size="9.5" fill="#333">FreeSWITCH (telephony)</text>
+        <text x="390" y="307" font-family="monospace" font-size="9.5" fill="#333">LiveKit (video)</text>
+        <rect x="560" y="210" width="170" height="140" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="570" y="232" font-size="12" font-weight="600" fill="#0e5a4a">workflow &amp; chain</text>
+        <text x="570" y="256" font-family="monospace" font-size="9.5" fill="#333">Temporal (workflows)</text>
+        <text x="570" y="273" font-family="monospace" font-size="9.5" fill="#333">Hardhat (Safe contracts)</text>
+        <text x="570" y="290" font-family="monospace" font-size="9.5" fill="#333">event bus (Redis &#8594; Temporal)</text>
+      </g>
+      <line x1="320" y1="166" x2="105" y2="208" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#a9)"/>
+      <line x1="355" y1="166" x2="285" y2="208" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#a9)"/>
+      <line x1="405" y1="166" x2="465" y2="208" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#a9)"/>
+      <line x1="440" y1="166" x2="645" y2="208" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#a9)"/>
+      <text x="178" y="192" font-family="monospace" font-size="9" fill="#0e5a4a">resource_scopes</text>
+      <text x="298" y="192" font-family="monospace" font-size="9" fill="#0e5a4a">seats &#183; scopes</text>
+      <text x="425" y="192" font-family="monospace" font-size="9" fill="#0e5a4a">provisioned</text>
+      <text x="548" y="192" font-family="monospace" font-size="9" fill="#0e5a4a">events</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 1.</b> The group in the stack. One identity spine (Keycloak → coop-api → Traefik) authenticates members; the group is a Safe whose on-chain owner set is projected into seats and <code>resource_scopes</code> in Citus. Every pillar — the apps, the data stores, the communication channels, and the Temporal/hardhat workflow — hangs off that projection.</figcaption>
+</figure>
+
+<figure>
+  <div class="fig" style="background:#f6f2e9">
+    <a href="group-ui-mockup.html" target="_blank" rel="noopener" style="display:block;border:1px solid #e3dccd;border-radius:10px;overflow:hidden;">
+      <img src="group-ui-mockup.png" alt="A mockup of a group's cockpit UI — seats, roles, the three ledger tiers, open proposals, and the nine shared pathways as actions." style="width:100%;height:auto;display:block;" loading="lazy" />
+    </a>
+  </div>
+  <figcaption><b>The group, in use.</b> A mockup of the group cockpit — seats and roles, the three ledger tiers, open proposals, and the nine shared pathways as actions — showing how a group sees its whole state and does its work. <a href="group-ui-mockup.html" target="_blank" rel="noopener">Open the interactive mockup ↗</a></figcaption>
+</figure>
+
+<h2 id="s2">2&nbsp;&nbsp;The group primitive</h2>
+<p>A group <b>is a Safe smart contract</b>. An individual account is a 1-of-1 Safe (a single passkey owner); a group is the <em>same contract</em> deployed with an N-of-M owner set. The cooperative is expressed as a graph:</p>
+<blockquote>nodes (Safe-accounts) + edges (memberships) = one cooperative graph.
+  <span class="src">— irl-coop-group.md, Principle 1</span>
+</blockquote>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 320" role="img" aria-label="The cooperative graph">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5a5a5a"/></marker>
+      </defs>
+      <!-- group Safe center -->
+      <rect x="300" y="120" width="120" height="76" rx="8" fill="#0e5a4a"/>
+      <text x="360" y="150" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="13" font-weight="600">Group Safe</text>
+      <text x="360" y="168" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="10.5">N-of-M owners</text>
+      <text x="360" y="182" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="10.5">threshold t</text>
+      <!-- member Safes -->
+      <g font-family="monospace" font-size="10">
+        <circle cx="120" cy="70" r="6" fill="#fff" stroke="#0e5a4a" stroke-width="2"/>
+        <text x="92" y="45" fill="#333">1-of-1 Safe (passkey)</text>
+        <circle cx="560" cy="70" r="6" fill="#fff" stroke="#0e5a4a" stroke-width="2"/>
+        <text x="532" y="45" fill="#333">1-of-1 Safe</text>
+        <circle cx="120" cy="250" r="6" fill="#fff" stroke="#0e5a4a" stroke-width="2"/>
+        <text x="88" y="285" fill="#333">1-of-1 Safe</text>
+        <circle cx="560" cy="250" r="6" fill="#fff" stroke="#0e5a4a" stroke-width="2"/>
+        <text x="536" y="285" fill="#333">Safe-as-owner (DAO)</text>
+      </g>
+      <!-- edges = memberships -->
+      <line x1="126" y1="70" x2="300" y2="128" stroke="#5a5a5a" stroke-width="1.3" marker-end="url(#arr)"/>
+      <line x1="554" y1="70" x2="420" y2="128" stroke="#5a5a5a" stroke-width="1.3" marker-end="url(#arr)"/>
+      <line x1="126" y1="250" x2="300" y2="188" stroke="#5a5a5a" stroke-width="1.3" marker-end="url(#arr)"/>
+      <line x1="554" y1="250" x2="420" y2="188" stroke="#5a5a5a" stroke-width="1.3" marker-end="url(#arr)"/>
+      <text x="360" y="300" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11.5" fill="#5a5a5a">edges = memberships (seats) &#183; membership = the owner set</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 2.</b> The cooperative graph. Individual accounts are 1-of-1 Safes; a group is the same contract with an N-of-M owner set. A person is a member <em>iff</em> their Safe address is in the owner set.</figcaption>
+</figure>
+
+<p>The model is split into two layers:</p>
+<table>
+  <tr><th>Layer</th><th>Role</th><th>Where</th><th>Property</th></tr>
+  <tr><td><b>Layer 1 — truth</b></td><td>owner set + threshold; who can act</td><td>on-chain (Safe)</td><td>authoritative, provable</td></tr>
+  <tr><td><b>Layer 2 — projection</b></td><td>queryable registry (members, seats, scoped resources)</td><td>Citus <code>irlcoop</code></td><td>rebuildable from Layer 1; "dies nothing when dropped"</td></tr>
+</table>
+
+<p>Groups compose because a Safe can be an owner of another Safe — so a child group is simply another Safe seated in the parent's owner set, with no special machinery. <code>irl.coop</code> is one such group: a peer that stewards the technology stack and redistributes funds (§A.4), not a root above other groups. Its Safe address is derived from a fixed well-known salt <code>keccak256("irl.coop")</code>, a platform constant that survives secret rotation.</p>
+
+<h2 id="s3">3&nbsp;&nbsp;Seats &amp; membership</h2>
+<p>The <b>seat</b> is the universal membership primitive — the per-(user, group) persona. A seat <em>is</em> a membership, with presentation attached:</p>
+<pre style="background:var(--figure-bg); border:1px solid var(--rule); border-radius:4px; padding:12px 14px; font-family:monospace; font-size:12.5px; line-height:1.7; overflow-x:auto;">seat = { sub          &mdash; Keycloak realm subject (private, never rendered)
+         alias        &mdash; "Harvest Coordinator" | "Robert"   (presentation in THIS group)
+         roles        &mdash; [...]
+         visibility   &mdash; "role-only" | "alias" | "canonical"
+         MatrixId     &mdash; @&lt;localpart&gt;:matrix.irl.coop
+         joinedAt }</pre>
+
+<p>Because every application reads the same seat record, the same person is "Robert" in one group and "Coordinator" in another, and a governance action ("approve as member of Cold Storage Co-op — 2-of-3") renders identically in mail, a Matrix room, and a project. The personal account is the <b>"self-group" seat</b>; the group seat is the first-class citizen. "Every app reads the seat, never the raw identity."</p>
+
+<p>Two distinct enums are easily conflated and worth separating precisely:</p>
+<table>
+  <caption>Table 1 — privacy (group-level) vs visibility (seat-level)</caption>
+  <tr><th>Enum</th><th>Values</th><th>Meaning</th></tr>
+  <tr><td><code>groups.privacy</code></td><td><code>open</code> | <code>members</code> | <code>hidden</code></td><td>who may see the member list</td></tr>
+  <tr><td><code>group_members.visibility</code></td><td><code>role-only</code> | <code>alias</code> | <code>canonical</code></td><td>how THIS seat is rendered</td></tr>
+</table>
+<table>
+  <caption>Table 2 — group privacy tiers</caption>
+  <tr><th>Tier</th><th>Visibility</th><th>What apps render</th></tr>
+  <tr><td><code>open</code></td><td>member list is directory-public</td><td>full member list in the projection</td></tr>
+  <tr><td><code>members</code></td><td>only members see the list</td><td>members see members; outsiders see nothing/count</td></tr>
+  <tr><td><code>hidden</code></td><td><b>provable but not enumerable</b></td><td>nobody can list; a member can prove "I belong, role Y"</td></tr>
+</table>
+<p>Hidden membership is commitment-based: the facts (member-of, subgroup-of, sponsored-by, distance) are attested by <b>zk-badges</b> on demand, never enumerated. The plaintext <code>group_members</code> projection remains the substrate only for <code>open</code>/<code>members</code> groups.</p>
+
+<h2 id="s4">4&nbsp;&nbsp;Roles &amp; capabilities</h2>
+<p>Two role vocabularies coexist and are reconciled in the implementation:</p>
+<ul>
+  <li><b>Design model</b> (irl-coop-group.md): <code>founder</code>, <code>admin</code>, <code>member</code>, <code>inviter</code>, <code>observer</code> — "labels on owner sets," stored in the seat index, governed by the Safe.</li>
+  <li><b>Implemented RBAC</b> (coop_rls.sql): <code>owner</code> (4), <code>admin</code> (3), <code>inviter</code> (2), <code>member</code> (1), <code>observer</code> (0) — where <code>owner</code> is the implemented counterpart of the design's <code>founder</code>. Ownership is a seat with role <code>'owner'</code>.</li>
+</ul>
+
+<p>Roles are <b>bundles of grants</b> — a capability catalog resolved through three catalog tables (<code>roles</code>, <code>grants</code>, <code>role_grants</code>). The capability check <code>coop_has_grant(gid, g)</code> resolves a role name through <code>role_grants.grant_name</code>. The live grant catalog:</p>
+<table>
+  <caption>Table 3 — the live grant (capability) catalog and the role→grant mapping</caption>
+  <tr><th>Grant</th><th>Held by</th></tr>
+  <tr><td><code>group.manage</code>, <code>group.members.manage</code></td><td><code>owner</code></td></tr>
+  <tr><td><code>media.stream.view</code>, <code>resource.scope</code>, <code>telephony.caller</code>, <code>telephony.records.read</code></td><td><code>owner</code>, <code>member</code></td></tr>
+  <tr><td><code>media.stream.broadcast</code>, <code>telephony.admin</code>, <code>telephony.agent</code></td><td><code>owner</code></td></tr>
+  <tr><td><code>telephony.agent</code>, <code>telephony.caller</code></td><td><code>agent</code></td></tr>
+  <tr><td><code>telephony.admin</code>, <code>telephony.caller</code>, <code>telephony.records.read</code></td><td><code>telephony-admin</code></td></tr>
+  <tr><td><code>storage.platform.admin</code>, <code>telephony.platform.admin</code></td><td><code>platform-admin</code> (platform-scoped, on the personal seat)</td></tr>
+</table>
+
+<p class="footnote"><code>platform-admin</code> and <code>telephony-admin</code> are <b>platform-scoped</b> roles held on the member's personal 1-of-1 seat — not bundled by any builtin role, so promotion is an explicit operator act through the <code>coop_ops</code> least-privilege role. App-layer enforcement of capabilities is a UX gate; "the Safe is the final arbiter (EIP-1271 for signatures)."</p>
+
+<h2 id="s5">5&nbsp;&nbsp;Identity, keys &amp; admission</h2>
+
+<h3>5.1&nbsp;&nbsp;Invite-on-first-signin</h3>
+<p>There is no separate "invite" concept in development — "the Google account IS the invitation." The first sign-in through the Google broker / Keycloak atomically: (a) creates the person account (their own 1-of-1 Safe), and (b) provisions their Matrix account and personal space. Signing up does <em>not</em> seat anyone in <code>irl.coop</code> — joining the coop is a separate, opt-in act (§A.4). <code>ensureGroupSeat</code> is fully idempotent — "a convergent function, not a one-shot job." The admission gate is a group setting: <code>open</code>, <code>invite-list</code> (Safe-controlled allowlist), or <code>approval</code> (a pending seat an <code>inviter</code> approves).</p>
+
+<h3>5.2&nbsp;&nbsp;Deterministic addresses (CREATE2)</h3>
+<p>Every Safe address is CREATE2-deterministic from a user-held <code>saltNonce</code>; the proxy salt is <code>keccak256(abi.encodePacked(keccak256(initializer), saltNonce))</code>, so the initializer (owners/threshold) is part of the salt and no identity→onchain mapping is stored server-side ("uncorrelatable Safe provisioning"). Salt variants:</p>
+<ul>
+  <li>user-created groups: random <code>freshSalt()</code></li>
+  <li>personal account: sub-derived deterministic salt</li>
+  <li>irl.coop (the steward group): fixed <code>keccak256("irl.coop")</code></li>
+  <li>co-op group Safe (design): fixed documented salt <code>irlcoop-group-v1</code></li>
+</ul>
+
+<h3>5.3&nbsp;&nbsp;Passkeys &amp; session keys</h3>
+<p>Passkey-first, with a deliberate concealment of the machinery: "members must never see keys, thresholds, or the word 'Safe' if we can avoid it." An individual is 1-of-1; a user Safe's proposed ownership is 2-of-3 (passkey + user recovery + the DAO Safe as assist-only owner). P-256 passkey verification runs through the Base precompile <code>0x00…0100</code> per <b>EIP-7212</b>. Routine operations run under <b>session keys</b> (the <code>SessionKeyModule</code>) for a small blast radius.</p>
+<p><b>Delegation, not custody</b> is the settled invariant. Delegation is expressed as an <b>ERC-7715 permission grant</b> (Safe → signer) with three properties: (1) the signer is a <em>permitted key, not an owner</em>; (2) the permission is <em>scoped</em> (bounded actions, caps, recipient allowlists, expiry); (3) revocation is <em>instant and on-chain</em>, controlled by the Safe. One primitive, three holder-shapes — an interactive session key (user device), an automation/delivery key (platform-custodial, narrow per-workflow), and an agent key. A <b>role</b> is itself "a named bundle of scoped ERC-7715 grants, not a string": assigning a role is the group Safe signing the grants to the member's key; removing it is revocation. The delegation registry enumerates every delegate with scope and expiry; the Safe is the revocation authority for everything.</p>
+<blockquote>No bypass on Temporal. Every Temporal call is authorized by a <em>user's</em> ERC-4337 session key. No service identity, no system role, no <code>BYPASSRLS</code> function, no cross-user reader.
+  <span class="src">— delegation-and-session-keys.md, settled invariant</span>
+</blockquote>
+
+<h2 id="s6">6&nbsp;&nbsp;Governance</h2>
+<p>Voting is <b>Safe transactions with a UX layer</b>: propose (any <code>member</code> creates a proposal with title, options, quorum %, deadline, optional transaction payload) → deliberate (announced to the governance Matrix room) → vote (members sign the proposal hash with <b>EIP-1271</b> — the personal Safe's signature) → count (quorum % of the owner set by deadline) → execute (a Safe transaction, or a recorded on-chain signed statement). The deterministic vote id is <code>H(groupId, nonce, proposerSub)</code>.</p>
+<p>Group-shape governance splits the meta-axis into <b>constitutional</b> (amendment rules, quorum, admission/expulsion — hard to change) and <b>ordinary</b> (app bundle, delivery prefs, role assignments — shifted under the constitutional process). A split is a constitutional event producing two new group records seeded from the parent's <em>current state</em>, not the original shape.</p>
+<p>Membership is binary (a Safe address is or is not in the owner set); "ownership implies membership ONLY — a Safe in another's owner-set is a seat in its decisions, nothing more." Reserved powers are not a special owner role but a co-owner seat + allowance/session-key module + guard module + timelock guard. Relationship edges are typed over four dimensions — Governance (owner seats · threshold), Infrastructure (namespace · mailboxes · quotas), Trust (OIDC · SMTP · Matrix · arbitration), Economics (funding · sponsorship) — yielding the relationship types <code>member-of</code>, <code>subgroup-of</code>, <code>federated-with</code>, <code>sponsored-by</code>.</p>
+
+<h2 id="s7">7&nbsp;&nbsp;Data scoping &amp; projection</h2>
+<p>The projection enforces visibility in Postgres, "not the app — no app-level bypass." Identity is <code>app.sub</code>, a per-request session variable set by coop-api. <code>FORCE ROW LEVEL SECURITY</code> plus a <code>BYPASSRLS</code> helper role (<code>coop_rls</code>) make policies fire even for the table-owner connection.</p>
+<p>The RLS predicate helpers (SECURITY DEFINER, owned by <code>coop_rls</code>):</p>
+<ul>
+  <li><code>coop_current_sub()</code> — reads <code>current_setting('app.sub', true)</code></li>
+  <li><code>coop_is_member(gid)</code> / <code>coop_is_owner(gid)</code> / <code>coop_is_creator(gid)</code></li>
+  <li><code>coop_can_view_group(gid)</code> — <code>privacy = 'open' OR coop_is_member OR created_by = current_sub</code></li>
+  <li><code>coop_ensure_personal_group()</code> — idempotently provisions the "self-group"</li>
+  <li><code>coop_has_grant(gid, g)</code> — role→grant bundle check</li>
+</ul>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 330" role="img" aria-label="Projection data model">
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="30" y="28" width="320" height="66" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="46" y="50" font-size="13" font-weight="600" fill="#0e5a4a">groups</text>
+        <text x="46" y="69" font-family="monospace" font-size="11" fill="#333">id · safe_address · name</text>
+        <text x="46" y="85" font-family="monospace" font-size="11" fill="#333">slug · privacy · kind</text>
+
+        <rect x="380" y="28" width="320" height="80" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="396" y="50" font-size="13" font-weight="600" fill="#0e5a4a">group_members (seat)</text>
+        <text x="396" y="69" font-family="monospace" font-size="11" fill="#333">group_id → groups</text>
+        <text x="396" y="85" font-family="monospace" font-size="11" fill="#333">sub (private) · roles[]</text>
+        <text x="396" y="101" font-family="monospace" font-size="11" fill="#333">alias · visibility</text>
+
+        <rect x="30" y="200" width="320" height="66" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="46" y="222" font-size="13" font-weight="600" fill="#0e5a4a">resource_scopes</text>
+        <text x="46" y="241" font-family="monospace" font-size="11" fill="#333">group_id → groups</text>
+        <text x="46" y="257" font-family="monospace" font-size="11" fill="#333">app · resource_key · scoped_by</text>
+
+        <rect x="380" y="190" width="320" height="80" rx="6" fill="#fff" stroke="#0e5a4a"/>
+        <text x="396" y="212" font-size="13" font-weight="600" fill="#0e5a4a">roles · grants · role_grants</text>
+        <text x="396" y="231" font-family="monospace" font-size="11" fill="#333">roles(name) · grants(name)</text>
+        <text x="396" y="247" font-family="monospace" font-size="11" fill="#333">role_grants(role_id · grant_name)</text>
+        <text x="396" y="263" font-family="monospace" font-size="11" fill="#333">coop_has_grant() resolves roles[]</text>
+      </g>
+      <line x1="350" y1="55" x2="378" y2="55" stroke="#0e5a4a" marker-end="url(#arr2)" stroke-width="1.4"/>
+      <line x1="190" y1="94" x2="190" y2="198" stroke="#0e5a4a" marker-end="url(#arr2)" stroke-width="1.4"/>
+      <line x1="540" y1="108" x2="540" y2="188" stroke="#0e5a4a" marker-end="url(#arr2)" stroke-width="1.4"/>
+      <text x="360" y="315" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11.5" fill="#5a5a5a" font-style="italic">resource_scopes { group_id · app · resource_key } — the one indirection mapping a group to its tenant in every application</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 3.</b> The projection data model. <code>group_members</code> (one row = a seat) links members to groups; <code>resource_scopes {group_id, app, resource_key}</code> links a group to its tenant object in every application; <code>roles/grants/role_grants</code> is the capability catalog.</figcaption>
+</figure>
+
+<p><code>resource_scopes</code> is the universal link row: every group-scoped resource — a Matrix room, a Plane project, a NocoDB base, a MinIO key prefix, a FreeSWITCH DID, a Postiz org, a LiteFarm farm — is one row carrying <code>app</code> + <code>resource_key</code> + <code>scoped_by</code>. The per-user projection is a materialized view family (<code>world_doc__%SUB_SANITIZED%</code>, deterministically named) that unions "my groups" with "resources scoped to my groups" — a join over <code>group_members → resource_scopes → per-app projections</code>, group-scoped rather than merely per-user.</p>
+
+<h2 id="s8">8&nbsp;&nbsp;Communications</h2>
+<p>Communications are <b>derived, not stored</b>. Each group gets a Matrix space + channel set created by coop-api through the Synapse admin API (<code>POST /_synapse/admin/v1/rooms</code>): a space plus <code>general</code>, <code>governance</code>, <code>treasury</code>, and per-project rooms, with deterministic aliases (<code>#irl-coop-general:matrix.irl.coop</code>). Power levels map roles: founder/admin = 100, member = 50, observer = 0 (read-only). Group <code>privacy</code> maps to room access: <code>open → public/public/listed</code>, <code>members → private/invite/unlisted</code>, <code>hidden → private/invite/unlisted</code>. The room list is rebuilt from the Synapse admin API on every world-doc refresh — "no second registry of channels."</p>
+
+<h2 id="s9">9&nbsp;&nbsp;Group shapes</h2>
+<p>A <b>shape</b> is the template a group is born from — five axes, four inward and one outward:</p>
+<table>
+  <caption>Table 4 — the five-axis group shape seed</caption>
+  <tr><th>Axis</th><th>Content</th></tr>
+  <tr><td><code>roles</code></td><td>the vocabulary shared between authorization and notification targeting</td></tr>
+  <tr><td><code>apps</code></td><td>what gets provisioned, each with a hook</td></tr>
+  <tr><td><code>config</code></td><td>default delivery/urgency rules</td></tr>
+  <tr><td><code>governance</code></td><td>thresholds, quotas, membership policy — the meta-axis (constitutional vs ordinary)</td></tr>
+  <tr><td><code>proofs</code></td><td>the outward interface: what the group can reveal without exposing internals</td></tr>
+</table>
+
+<p><b>Shape = seed, not cage.</b> All five axes are <em>initial values</em> written to the group's Postgres record at provisioning; afterwards the group's record is authoritative and the shape is never re-read. <b>Composition, not inheritance</b>: shapes assemble primitives rather than extend a base ("Men's circle" is a custom composition, not a subclass of "group"), so a built-in shape evolving later never silently changes existing groups. Three lifecycles: <b>built-in</b> (curated, git), <b>custom</b> (per-group, Postgres), and <b>shared</b> (a group exports its shape to a public blueprint library; others adopt/remix). The library shares <em>structure</em> (roles, apps, governance, proof schema), never <em>records</em> (members, votes, metrics) — a blueprint commons, not a data commons.</p>
+<p><b>Child relationships are a rights set, not a flag.</b> A child group is an autonomous Safe holding a <code>subgroup-of</code> edge (governance + infrastructure: shares the parent's namespace, terms declare veto/reserved-powers/autonomy) and possibly a <code>sponsored-by</code> edge (economics: the funding allocation with caps and budget-transfer authority on the edge). The child is a full group — own Safe, own treasury, own seats and governance; strip the binding and it is independent. A sub-project becomes a child group by <b>promotion, not subclassing</b>.</p>
+
+<h2 id="s10">10&nbsp;&nbsp;Event bus &amp; provisioning</h2>
+
+<h3>10.1&nbsp;&nbsp;The event bus</h3>
+<p>The bus is a many-to-many router: sources <em>emit</em> events, channels <em>deliver</em> them. The pipeline is <code>source → event → notification → channel</code>, where an <b>event</b> is raw and typed (<code>vote.cast</code>, <code>match.found</code>, <code>mail.received</code>) and a <b>notification</b> is rendered, user-scoped, localized. Persisting raw events (rather than collapsing to notifications at publish) yields three things free: watches (a subscription layer over the stream), Temporal (a workflow is just another channel), and future sources.</p>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 250" role="img" aria-label="Event bus">
+      <defs><marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <g font-family="system-ui,sans-serif" font-size="12">
+        <rect x="20" y="90" width="120" height="52" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="80" y="112" text-anchor="middle" fill="#0e5a4a" font-weight="600">source</text>
+        <text x="80" y="128" text-anchor="middle" font-family="monospace" font-size="9.5">votes · matches · mail · chat</text>
+        <rect x="200" y="90" width="110" height="52" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="255" y="112" text-anchor="middle" fill="#0e5a4a" font-weight="600">event</text>
+        <text x="255" y="128" text-anchor="middle" font-family="monospace" font-size="9.5">typed, persisted</text>
+        <rect x="370" y="90" width="130" height="52" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="435" y="112" text-anchor="middle" fill="#0e5a4a" font-weight="600">notification</text>
+        <text x="435" y="128" text-anchor="middle" font-family="monospace" font-size="9.5">rendered, user-scoped</text>
+        <rect x="560" y="90" width="140" height="52" rx="5" fill="#0e5a4a"/>
+        <text x="630" y="112" text-anchor="middle" fill="#fff" font-weight="600">channel</text>
+        <text x="630" y="128" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9.5">toast · inbox · email · chat</text>
+      </g>
+      <line x1="140" y1="116" x2="196" y2="116" stroke="#0e5a4a" marker-end="url(#arr3)" stroke-width="1.3"/>
+      <line x1="310" y1="116" x2="366" y2="116" stroke="#0e5a4a" marker-end="url(#arr3)" stroke-width="1.3"/>
+      <line x1="500" y1="116" x2="556" y2="116" stroke="#0e5a4a" marker-end="url(#arr3)" stroke-width="1.3"/>
+      <g font-family="system-ui,sans-serif" font-size="11" fill="#333">
+        <rect x="200" y="180" width="200" height="44" rx="5" fill="#f0f0f0" stroke="#d0d0d0"/>
+        <text x="300" y="200" text-anchor="middle" font-family="monospace" font-size="9.5">Redis irl:notify:{sub}</text>
+        <text x="300" y="214" text-anchor="middle" font-size="9.5">one channel per user</text>
+        <line x1="300" y1="142" x2="300" y2="176" stroke="#0e5a4a" marker-end="url(#arr3)" stroke-width="1.2"/>
+        <rect x="440" y="180" width="240" height="44" rx="5" fill="#f0f0f0" stroke="#d0d0d0"/>
+        <text x="560" y="200" text-anchor="middle" font-family="monospace" font-size="9.5">Temporal workflow (delivery)</text>
+        <text x="560" y="214" text-anchor="middle" font-size="9.5">email (Stalwart) · post (Matrix)</text>
+        <line x1="560" y1="142" x2="560" y2="176" stroke="#0e5a4a" marker-end="url(#arr3)" stroke-width="1.2"/>
+      </g>
+    </svg>
+  </div>
+  <figcaption><b>Figure 4.</b> The event bus. Sources emit typed events; coop-api resolves group targets server-side and publishes to each eligible member's Redis channel; a group-configurable Temporal workflow decides delivery. Anonymization is owned by the source, never the bus.</figcaption>
+</figure>
+
+<p>Group targets resolve <b>server-side</b> — coop-api looks up members + roles, filters by a role allowlist, and publishes to each eligible member's channel; the client only ever subscribes to its own channel and never does role filtering. Delivery is not the bus's job: the bus decides <em>who should know</em>; a Temporal workflow decides <em>what to do about it</em> (the bus never learns SMTP or Matrix). Anonymization is owned by the source.</p>
+
+<h3>10.2&nbsp;&nbsp;Provisioning</h3>
+<p>A group template (per-shape YAML declaring the app bundle) maps 1:1 onto a Temporal provisioning workflow: each declared app is an activity (hook), run in order, idempotent, with compensation on failure. Provisioned state (what this group <em>actually</em> got) is stored in Postgres. The reconciler is:</p>
+<pre style="background:var(--figure-bg); border:1px solid var(--rule); border-radius:4px; padding:12px 14px; font-family:monospace; font-size:12.5px; line-height:1.7;">declared  = catalog features × this group's activation    (what it should have)
+actual    = resource_scopes + per-app state               (what it got)
+drift     = declared − actual                             (missing → provision it)</pre>
+<p>Activation rows live in <code>app_activations(group_id, app, enabled, adopted_at)</code>, kept separate from the shape so the shape stays read-only and the sweep can index by app. Adoption policy: <b>core</b> features opt-out (batch-reconciled on ship), <b>optional</b> apps opt-in (lazy, hook fires on first use), <b>platform</b> always (declarative build). The reconciler never rewrites customization — composition, not inheritance.</p>
+
+<h2 id="s11">11&nbsp;&nbsp;On-chain mechanisms &amp; the private treasury</h2>
+<p>The treasury is private by default and pure-math: "no TEE, no trusted operator — all hiding/proving is ZK (commitments, proofs, nullifiers)." Every account (person, group, DAO) holds exactly one private treasury, bound to its Safe but logically separate from governance state. The chain stores <b>no balances — only commitments</b>:</p>
+<ul>
+  <li><b>Notes (UTXOs).</b> <code>commit(amount, owner_key, project_scope, rng)</code> — a note is an asset of exactly one project account inside one treasury.</li>
+  <li><b>Commitments tree.</b> Each treasury's notes form a Merkle tree; the root is the chain state. Balances are unreadable — only commitments.</li>
+  <li><b>Nullifiers.</b> Spending reveals <code>nullifier = H(note_secret)</code>; the chain enforces "nullifier unseen," so a note is spent exactly once — double-counting structurally impossible.</li>
+  <li><b>Transfers as ZK proofs.</b> A transfer proves conservation in-circuit (inputs = outputs), existence of each input nullifier, authorization (the Safe's quorum signed via <b>EIP-1271</b>), and new output commitments.</li>
+  <li><b>Viewing keys.</b> A master viewing key (custodian set) and per-project <b>project viewing keys</b> open only that project's notes — compliance is a scope-limited report, never the whole book.</li>
+</ul>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 230" role="img" aria-label="Private treasury">
+      <defs><marker id="arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <g font-family="system-ui,sans-serif" font-size="12">
+        <rect x="30" y="70" width="150" height="60" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="105" y="92" text-anchor="middle" font-weight="600" fill="#0e5a4a">notes (UTXOs)</text>
+        <text x="105" y="108" text-anchor="middle" font-family="monospace" font-size="9">commit(amt, key, scope, rng)</text>
+        <rect x="290" y="70" width="150" height="60" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="365" y="92" text-anchor="middle" font-weight="600" fill="#0e5a4a">commitment tree</text>
+        <text x="365" y="108" text-anchor="middle" font-family="monospace" font-size="9">Merkle root = chain state</text>
+        <rect x="550" y="70" width="150" height="60" rx="5" fill="#0e5a4a"/>
+        <text x="625" y="92" text-anchor="middle" font-weight="600" fill="#fff">nullifier set</text>
+        <text x="625" y="108" text-anchor="middle" font-family="monospace" font-size="9" fill="#cfe3dc">H(note_secret), spent-once</text>
+      </g>
+      <line x1="180" y1="100" x2="286" y2="100" stroke="#0e5a4a" marker-end="url(#arr4)" stroke-width="1.3"/>
+      <line x1="440" y1="100" x2="546" y2="100" stroke="#0e5a4a" marker-end="url(#arr4)" stroke-width="1.3"/>
+      <rect x="180" y="160" width="360" height="44" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/>
+      <text x="360" y="179" text-anchor="middle" font-weight="600" fill="#0e5a4a">ZK transfer proof (Groth16/PLONK)</text>
+      <text x="360" y="195" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#333">conservation in-circuit · existence · EIP-1271 quorum · guards</text>
+      <line x1="360" y1="160" x2="360" y2="134" stroke="#0e5a4a" marker-end="url(#arr4)" stroke-width="1.2"/>
+    </svg>
+  </div>
+  <figcaption><b>Figure 5.</b> The shielded state model. Value lives in notes; only commitment-tree roots and nullifiers touch the chain; a transfer is a ZK proof attesting conservation, existence, Safe authorization, and guard conditions.</figcaption>
+</figure>
+
+<p><b>Guards gate everything</b> at three enforcement points — (1) <b>in-circuit conditions</b> (the transfer proof attests policy: per-ledger limits, required seats as the Safe's signature in public inputs, timelock windows, zk-badge gates), (2) the <b>on-chain <code>TransactionGuard</code></b> (authoritative for governance-adjacent actions: owner-set changes, module installs, relationship-record edits), and (3) <b>app-layer pre-validation</b> (coop-api's policy engine, never authoritative alone). Guards are data-driven, versioned, and upgradeable only through the guarded path.</p>
+<p>The ledger taxonomy splits value into three integrity tiers:</p>
+<table>
+  <caption>Table 5 — the three ledger tiers</caption>
+  <tr><th>Tier</th><th>What</th><th>Where</th><th>Integrity</th></tr>
+  <tr><td><b>1</b></td><td>money: savings, shares, capital, distributions, DAO funds</td><td>shielded on-chain (ZK treasury)</td><td>conservation in-circuit + nullifiers + consensus</td></tr>
+  <tr><td><b>2</b></td><td>participation: time-bank hours, labor swaps, quest credits</td><td>off-chain (Postgres), hash-chained, periodically anchored</td><td>double-entry + idempotency keys + sequence numbers + Merkle anchors</td></tr>
+  <tr><td><b>3</b></td><td>badges/stats: zk-badge predicates</td><td>off-chain commitments</td><td>proof binds to the Tier-2 hash chain</td></tr>
+</table>
+<p>Settlement and sponsorship are chargeback-aware. Fiat is reversible ~130 days; Safe (crypto) is final. A <b>sponsor</b> is a <b>vertical fund</b> — a <code>subgroup-of</code> irl.coop whose Safe is the fund's treasury. A group is <code>sponsored-by</code> its fund (one-way flow, recognition, no control), with cap, settlement fee, and repayment schedule as terms on the edge. The <b>T+130 settlement</b> is the only visible crossing; chargeback losses are absorbed by the fund's reserve sub-account up to the per-vertical cap.</p>
+
+<h2 id="s12">12&nbsp;&nbsp;Zero-knowledge proving</h2>
+<p>The group graph is <b>hidden by default, provable on demand</b>. Four statements of increasing difficulty:</p>
+<table>
+  <caption>Table 6 — proof statements and constructions</caption>
+  <tr><th>Statement</th><th>Construction</th><th>Feasibility</th></tr>
+  <tr><td>Membership — "X ∈ members(G)"</td><td>Merkle proof over the group's member-commitment tree (Semaphore / zk-kit)</td><td>off-the-shelf</td></tr>
+  <tr><td>Role — "X holds Y in G"</td><td>membership proof with the role inside the leaf commitment</td><td>off-the-shelf</td></tr>
+  <tr><td>Relationship — "edge (G₁,R,G₂)"</td><td>membership proof over an edge-commitment tree (reveal R + one endpoint)</td><td>off-the-shelf</td></tr>
+  <tr><td>Non-membership — "X ∉ members(G)"</td><td>frontier tree, or sorted-tree range proof (Micali–Rabin–Kilian ZK-Sets)</td><td>off-the-shelf</td></tr>
+  <tr><td>Bounded distance — "dist(X,G) ≥ K" (K small)</td><td>conjunction of non-membership over G's ≤(K−1)-hop neighborhood</td><td>feasible, medium effort</td></tr>
+  <tr><td>Exact distance — "dist(X,G) = K"</td><td>ZKGraph-style SSSP verification, O(m) circuit</td><td><b>research-grade</b></td></tr>
+</table>
+<p>Each group maintains a <b>member commitment tree</b> whose leaves are <code>commit(sub, role)</code> (the Keycloak <code>sub</code> + seat roles, blinded by a per-seat nonce); membership is a standard Merkle-authentication-path proof in ZK so neither <code>sub</code> nor role is revealed beyond the statement. <b>Decision (recommended):</b> ship bounded distance with K ∈ {1,2,3} (the form actually needed for conflict-of-interest exclusion); defer exact distance indefinitely. Prover runs client-side (sovereignty pattern; witnesses never leave the device); verifier runs on-chain (Groth16/PLONK over Poseidon-on-BN254); coop-api is the relay.</p>
+<p><b>Two tiers of "hidden"</b> — <b>tier 1</b> (hidden-from-public, the default): membership stored centrally but RLS-scoped, no public projection, roles minted into the JWT as today; <b>tier 2</b> (hidden-from-platform, opt-in/deferred): the platform holds only commitment roots, the user presents membership proofs at sign-in, and member fan-out runs on <b>derived delivery keys</b> (<code>D_i = H(sub_i, group_id) · G</code>, stealth-address style) so endpoints are enumerable but unlinkable to identities.</p>
+<p>The <b>regenerative score</b> is a ZK-metric over four generic-core signals — <b>flow</b> (value actually moved), <b>reciprocity</b> (balanced vs extractive), <b>distribution</b> (spread vs hub-concentrated), <b>persistence</b> (retention + succession) — each required to pass an inclusion test that is provable in ZK <em>and</em> hard to game. A proof binds a timestamp/block ("as of block N, score ≥ 0.8") and the group's public identity so it can't be replayed. <b>Honest over comprehensive</b>: a Sybil-friendly metric defeats the proof, since a ZK proof vouches for the claim, never the truth of the data.</p>
+
+<h2 id="s13">13&nbsp;&nbsp;Application integrations</h2>
+<p>The governing primitive is the coop group; every application consumes the group as its own tenant object. Identity is one Keycloak realm (<code>irl-coop</code>, issuer <code>https://auth.irl.coop/realms/irl-coop</code>, Google brokered through Keycloak), with coop-api as the canonical fleet OIDC gateway (<code>api.irl.coop</code>). The <b>gate-SSO pattern</b> puts an oauth2-proxy "fleet gate" (<code>&lt;app&gt;-gate</code>) in front of each app, authenticating against coop-api and forwarding identity as headers.</p>
+
+<table>
+  <caption>Table 7 — the identity spine (verbatim claim/header names)</caption>
+  <tr><th>Name</th><th>Kind</th><th>Carries</th></tr>
+  <tr><td><code>groups</code></td><td>id_token claim</td><td>array of <code>{slug, name, roles[]}</code>, minted by coop-api for group-aware clients</td></tr>
+  <tr><td><code>x-forwarded-user</code></td><td>header</td><td>Keycloak <code>sub</code></td></tr>
+  <tr><td><code>x-forwarded-email</code></td><td>header</td><td>canonical coop email</td></tr>
+  <tr><td><code>x-forwarded-groups</code></td><td>header</td><td>JSON of the <code>groups</code> claim, forwarded via <code>--oidc-groups-claim=groups --pass-user-headers</code></td></tr>
+  <tr><td><code>coop_session</code></td><td>cookie</td><td>the coop JWT (RS256, <code>sub</code>+<code>email</code>), <code>.irl.coop</code>-scoped, <code>SameSite=Lax</code></td></tr>
+</table>
+
+<table>
+  <caption>Table 8 — how each application maps the group</caption>
+  <tr><th>App</th><th>Group maps to</th><th>Role mapping</th><th>Scoping</th></tr>
+  <tr><td><b>Formbricks</b></td><td><code>Team</code> + <code>Workspace</code> (group-private), under one coop <code>Organization</code></td><td><code>owner</code>→team admin/manage; <code>member</code>/<code>agent</code>→contributor/readWrite</td><td>group-private workspace per group; native workspace switcher = group switch</td></tr>
+  <tr><td><b>Postiz</b></td><td><code>Organization</code> (org id = group UUID)</td><td>owner→SUPERADMIN, admin→ADMIN, member→USER, inviter→INVITER, observer→OBSERVER</td><td>own role checks; Temporal <code>postizSyncSweep</code> syncs the projection</td></tr>
+  <tr><td><b>Webstudio</b></td><td>published site at <code>{groupname}.irl.coop</code> (a <code>Domain</code> row)</td><td>identity-only today; per-group authz is a follow-on</td><td>RLS on <code>app.sub</code>; <code>GroupData</code> widget reads <code>/api/v1/site/groups</code></td></tr>
+  <tr><td><b>LiteFarm</b></td><td><code>farm</code> (<code>farm.group_id ↔ groups.id</code>), 1:1</td><td>authoritative in coop-api; synced on login</td><td>native <code>userFarm</code> filtering; <code>resource_scopes</code> row</td></tr>
+  <tr><td><b>Matrix/Cinny</b></td><td>a room (per-group); room→group scoping pending</td><td>none native; power levels 100/50/0</td><td>appservice pushes event metadata; events land in the sender's personal group until scoped</td></tr>
+  <tr><td><b>NocoDB</b> (reference)</td><td>a base/workspace behind RLS + Gate-SSO</td><td>—</td><td>RLS + <code>x-forwarded-email</code></td></tr>
+</table>
+
+<p>Data scoping is either <b>re-expressed or delegated, never both</b>: apps with a native tenant+membership model keep their own access checks and are treated as a projection of group state (Postiz, LiteFarm); apps without one get RLS on <code>app.sub</code> (coop-api, NocoDB, Webstudio). The link row everywhere is <code>resource_scopes {group_id, app, resource_key}</code>; group-scoped surfaces are provisioned deterministically from the group slug.</p>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 300" role="img" aria-label="App integrations">
+      <defs><marker id="arr5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <g font-family="system-ui,sans-serif" font-size="11.5">
+        <rect x="20" y="20" width="150" height="50" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="95" y="42" text-anchor="middle" font-weight="600" fill="#0e5a4a">Keycloak (irl-coop)</text>
+        <text x="95" y="58" text-anchor="middle" font-family="monospace" font-size="8.5">Google broker</text>
+        <rect x="230" y="20" width="170" height="50" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="315" y="42" text-anchor="middle" font-weight="600" fill="#0e5a4a">coop-api</text>
+        <text x="315" y="58" text-anchor="middle" font-family="monospace" font-size="8.5">fleet OIDC gateway · groups claim</text>
+        <rect x="460" y="20" width="240" height="50" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="580" y="42" text-anchor="middle" font-weight="600" fill="#0e5a4a">oauth2-proxy gates</text>
+        <text x="580" y="58" text-anchor="middle" font-family="monospace" font-size="8.5">x-forwarded-user / email / groups</text>
+      </g>
+      <line x1="170" y1="45" x2="226" y2="45" stroke="#0e5a4a" marker-end="url(#arr5)" stroke-width="1.3"/>
+      <line x1="400" y1="45" x2="456" y2="45" stroke="#0e5a4a" marker-end="url(#arr5)" stroke-width="1.3"/>
+      <g font-family="system-ui,sans-serif" font-size="11.5">
+        <rect x="20" y="120" width="120" height="56" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/>
+        <text x="80" y="142" text-anchor="middle" font-weight="600" fill="#0e5a4a">group</text>
+        <text x="80" y="158" text-anchor="middle" font-family="monospace" font-size="8.5">seats · roles · slug</text>
+        <rect x="20" y="200" width="120" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="80" y="222" text-anchor="middle" font-weight="600" fill="#0e5a4a">resource_scopes</text>
+        <text x="80" y="238" text-anchor="middle" font-family="monospace" font-size="8.5">group_id · app · key</text>
+      </g>
+      <g font-family="system-ui,sans-serif" font-size="10">
+        <rect x="200" y="115" width="120" height="40" rx="4" fill="#fff" stroke="#0e5a4a"/><text x="260" y="139" text-anchor="middle">Formbricks (Team+WS)</text>
+        <rect x="350" y="115" width="120" height="40" rx="4" fill="#fff" stroke="#0e5a4a"/><text x="410" y="139" text-anchor="middle">Postiz (Org)</text>
+        <rect x="500" y="115" width="120" height="40" rx="4" fill="#fff" stroke="#0e5a4a"/><text x="560" y="139" text-anchor="middle">Webstudio (site)</text>
+        <rect x="200" y="175" width="120" height="40" rx="4" fill="#fff" stroke="#0e5a4a"/><text x="260" y="199" text-anchor="middle">LiteFarm (farm)</text>
+        <rect x="350" y="175" width="120" height="40" rx="4" fill="#fff" stroke="#0e5a4a"/><text x="410" y="199" text-anchor="middle">Matrix (room)</text>
+        <rect x="500" y="175" width="120" height="40" rx="4" fill="#fff" stroke="#0e5a4a"/><text x="560" y="199" text-anchor="middle">NocoDB (base)</text>
+      </g>
+      <line x1="140" y1="135" x2="196" y2="135" stroke="#0e5a4a" marker-end="url(#arr5)" stroke-width="1.2"/>
+      <line x1="140" y1="228" x2="196" y2="185" stroke="#0e5a4a" marker-end="url(#arr5)" stroke-width="1.2"/>
+      <text x="170" y="168" font-family="monospace" font-size="8.5" fill="#0e5a4a">slug → tenant</text>
+      <text x="175" y="215" font-family="monospace" font-size="8.5" fill="#0e5a4a">link row</text>
+      <text x="360" y="282" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#5a5a5a">identity spine: one realm → one fleet gateway → one gate per app → one tenant per group</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 6.</b> Application integration. One Keycloak realm and one fleet OIDC gateway feed per-app gates; each app maps the group to its own tenant object keyed through <code>resource_scopes</code>.</figcaption>
+</figure>
+
+<h2 id="s14">14&nbsp;&nbsp;Integration workflows</h2>
+<p>Integration workflows are the backbone of the system's operation: how actions are implemented across multiple apps, and how provable private records are created that make sense of what has happened — allowing complex execution and communication steps to branch from a single event.</p>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 760 250" role="img" aria-label="A single event branches into execution, notification, and record">
+      <defs><marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <rect x="20" y="90" width="150" height="56" rx="8" fill="#0e5a4a"/>
+      <text x="95" y="113" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="12" font-weight="600">one event</text>
+      <text x="95" y="130" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9.5">vote.cast</text>
+      <g font-family="system-ui,sans-serif">
+        <rect x="360" y="22" width="380" height="48" rx="6" fill="#fff" stroke="#0e5a4a"/><text x="550" y="42" text-anchor="middle" font-size="11" font-weight="600" fill="#0e5a4a">execute</text><text x="550" y="58" text-anchor="middle" font-family="monospace" font-size="9" fill="#333">task flips · guarded transfer · next workflow</text>
+        <rect x="360" y="90" width="380" height="48" rx="6" fill="#fff" stroke="#0e5a4a"/><text x="550" y="110" text-anchor="middle" font-size="11" font-weight="600" fill="#0e5a4a">notify</text><text x="550" y="126" text-anchor="middle" font-family="monospace" font-size="9" fill="#333">members · channels, by preference and urgency</text>
+        <rect x="360" y="158" width="380" height="48" rx="6" fill="#fff" stroke="#0e5a4a"/><text x="550" y="178" text-anchor="middle" font-size="11" font-weight="600" fill="#0e5a4a">record</text><text x="550" y="194" text-anchor="middle" font-family="monospace" font-size="9" fill="#333">provable private ledger · projection</text>
+      </g>
+      <line x1="170" y1="100" x2="358" y2="46" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#w)"/>
+      <line x1="170" y1="118" x2="358" y2="114" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#w)"/>
+      <line x1="170" y1="136" x2="358" y2="182" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#w)"/>
+    </svg>
+  </div>
+  <figcaption><b>Figure 7.</b> A single event branches. One typed event (e.g. <code>vote.cast</code>) fans out through Temporal into execution (a task flips, a guarded transfer moves), notification (members, by preference and urgency), and record (the provable private ledger and the projection). Any branch may in turn emit the next event.</figcaption>
+</figure>
+
+<p>One row, one event, one workflow. Every app object is keyed to the group by a <code>resource_scopes</code> row; every change is a typed event on the bus; Temporal listens and translates. Apps never call each other directly — Plane emits <code>project.completed</code>, coop-api mints the proposal, the keeper moves the money.</p>
+<table>
+  <caption>Table 12 — the integration mappings, with Plane as the running example</caption>
+  <tr><th>App object</th><th>Connects to</th><th>Mechanism</th></tr>
+  <tr><td>Plane task ("needs a decision")</td><td>Governance proposal</td><td>the proposal's execution payload is the task ID; on quorum, execute flips the task</td></tr>
+  <tr><td>Plane task budget</td><td>Funding pool (project account)</td><td>a cost estimate → an operating-fund account (2-of-3, per-ledger); completion credits the entitlement table → the keeper distributes</td></tr>
+  <tr><td>Plane task deadline</td><td>Calendar / event</td><td>the due date projects to the calendar; the lifecycle emits <code>project.completed</code> / <code>milestone.reached</code></td></tr>
+  <tr><td>any of the above</td><td>each other</td><td><code>vote.cast</code> → execute → guarded transfer → task flips → <code>project.completed</code></td></tr>
+</table>
+<p>Threaded example — "buy a cold frame": a task with a $320 estimate → a proposal → 3-of-5 signs with EIP-1271 → execute is a guarded transfer from the operating fund → the task flips to funded → <code>project.completed</code> → the calendar clears → members are notified.</p>
+<p>The same rule covers every app, not just Plane: a Formbricks response feeds <code>social.*</code>; a NocoDB row is a reservation; a Matrix message is a <code>chat.*</code> event. Integration is one pattern, many instances — every app-to-app flow is this pattern with a different row and a different event.</p>
+
+
+
+
+<h2 id="s15">15&nbsp;&nbsp;Core data flow</h2>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 170" role="img" aria-label="Sign-in pipeline">
+      <defs><marker id="arr6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <g font-family="system-ui,sans-serif" font-size="11">
+        <rect x="15" y="55" width="110" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="70" y="78" text-anchor="middle" font-weight="600" fill="#0e5a4a">sign-in</text>
+        <text x="70" y="94" text-anchor="middle" font-family="monospace" font-size="8.5">Keycloak / Google</text>
+        <rect x="160" y="55" width="120" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="220" y="78" text-anchor="middle" font-weight="600" fill="#0e5a4a">person Safe</text>
+        <text x="220" y="94" text-anchor="middle" font-family="monospace" font-size="8.5">CREATE2 1-of-1</text>
+        <rect x="315" y="55" width="120" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="375" y="78" text-anchor="middle" font-weight="600" fill="#0e5a4a">seat mint</text>
+        <text x="375" y="94" text-anchor="middle" font-family="monospace" font-size="8.5">ensureGroupSeat</text>
+        <rect x="470" y="55" width="120" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="530" y="78" text-anchor="middle" font-weight="600" fill="#0e5a4a">provision</text>
+        <text x="530" y="94" text-anchor="middle" font-family="monospace" font-size="8.5">Matrix · apps</text>
+        <rect x="625" y="55" width="80" height="56" rx="5" fill="#0e5a4a"/>
+        <text x="665" y="78" text-anchor="middle" font-weight="600" fill="#fff">world-doc</text>
+        <text x="665" y="94" text-anchor="middle" font-family="monospace" font-size="8.5" fill="#cfe3dc">projection</text>
+      </g>
+      <line x1="125" y1="83" x2="156" y2="83" stroke="#0e5a4a" marker-end="url(#arr6)" stroke-width="1.3"/>
+      <line x1="280" y1="83" x2="311" y2="83" stroke="#0e5a4a" marker-end="url(#arr6)" stroke-width="1.3"/>
+      <line x1="435" y1="83" x2="466" y2="83" stroke="#0e5a4a" marker-end="url(#arr6)" stroke-width="1.3"/>
+      <line x1="590" y1="83" x2="621" y2="83" stroke="#0e5a4a" marker-end="url(#arr6)" stroke-width="1.3"/>
+      <text x="360" y="140" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#5a5a5a">one sign-in → fully provisioned member · idempotent (convergent, not one-shot)</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 8.</b> The sign-in pipeline (coop-api, after the Keycloak/Google callback): person provisioning → group seat mint → Matrix/app provisioning → world-doc refresh. Every step is idempotent.</figcaption>
+</figure>
+
+<h2 id="s16">16&nbsp;&nbsp;Tensions &amp; open problems</h2>
+<ul>
+  <li><b>Two role vocabularies</b> coexist (design <code>founder/admin/member/inviter/observer</code> vs implemented <code>owner/admin/inviter/member/observer</code>, <code>owner</code> ↔ <code>founder</code>); the reconciliation should be made explicit and one vocabulary retired.</li>
+  <li><b>Two delegation terms</b> appear across docs — "ERC-4337 session key" (§2 settled invariant) and "ERC-7715 permission grant" (§3/§4) — preserved here verbatim but in need of a single canonical name.</li>
+  <li><b>Exact graph distance</b> ("dist(X,G) = K") is research-grade (ZKGraph lineage, O(m) circuit); the recommended shipped form is bounded distance K ∈ {1,2,3}.</li>
+  <li><b>Hidden-from-platform (tier 2)</b> is deferred: it requires JWT mint to become proof-verification and fan-out to move to derived delivery keys — per-group opt-in, not yet the norm.</li>
+  <li><b>Matrix room→group scoping</b> is pending: events currently land in the sender's personal group until a room is scoped to its group.</li>
+  <li><b>Federation</b> (library hosting, cross-domain SSO/BYOD) is parked by design; the group model is local-first.</li>
+  <li><b>Prover performance on mobile</b> is the single real risk flagged in the ZK feasibility verdict — cryptographic possibility is not in question.</li>
+</ul>
+
+<h2 id="s17">Addendum &mdash; Worked Examples: Group Shapes in Practice</h2>
+<p>This addendum grounds the abstractions above in a set of shared pathways — the recurring flows the example shapes compose from — and draws out one consequence the model was designed for: <b>many small groups sharing a single website, while money still settles to individuals.</b> Throughout, "project management" = Plane, "visual database" = NocoDB, "storage" = MinIO, "chat" = Matrix/Cinny, and "website builder" = Webstudio.</p>
+
+<h3>A.1&nbsp;&nbsp;The shared pathways</h3>
+<p>Shapes are not bespoke — each is a <b>bundle of a small set of shared pathways</b>. Where the main body describes what a group <em>is</em> and how it is <em>provisioned</em>, this section names the nine recurring flows that do the actual work. A shape selects which pathways apply; that selection <em>is</em> the shape — composition made literal. Each pathway is drawn below as a flow, with the examples that apply. The worked deep-dives (A.2, A.6, A.7) show specific shapes; here the point is that every shape is just a selection of these pathways.</p>
+
+<h4>1. Reserve — the physical commons</h4>
+<p>A member declares a shared thing (tool, plot, clothes, a watch slot); another reserves it with a due-back; the reservation ledger is the whole economy, so no money changes hands.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Reserve pathway">
+      <defs><marker id="p1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="15" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="90" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">declare</text><text x="90" y="61" text-anchor="middle" font-size="8.5" fill="#333">thing · slot</text>
+        <rect x="195" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="270" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">reserve</text><text x="270" y="61" text-anchor="middle" font-size="8.5" fill="#333">due-back</text>
+        <rect x="375" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="450" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">custody</text><text x="450" y="61" text-anchor="middle" font-size="8.5" fill="#333">transfer</text>
+        <rect x="555" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="630" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">return</text><text x="630" y="61" text-anchor="middle" font-size="8.5" fill="#333">release</text>
+      </g>
+      <line x1="165" y1="52" x2="193" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p1)"/>
+      <line x1="345" y1="52" x2="373" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p1)"/>
+      <line x1="525" y1="52" x2="553" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p1)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 🔧 tool library · 👕 hand-me-downs · 🌱 growing team · 🧒 childcare</figcaption>
+</figure>
+
+<h4>2. Match — exchange</h4>
+<p>Two offers cross the matcher (manure↔hay, need→solution, dancer↔event); a <code>match.found</code> event settles them as Tier-2 credits or introduces the parties.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Match pathway">
+      <defs><marker id="p2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="15" y="10" width="140" height="40" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="85" y="34" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">offer A (have)</text>
+        <rect x="15" y="70" width="140" height="40" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="85" y="94" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">offer B (need)</text>
+        <rect x="220" y="38" width="140" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="290" y="64" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">matcher</text>
+        <rect x="410" y="38" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="485" y="64" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">match.found</text>
+        <rect x="610" y="38" width="100" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="660" y="58" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">settle</text><text x="660" y="71" text-anchor="middle" font-size="8.5" fill="#333">intro</text>
+      </g>
+      <line x1="155" y1="30" x2="218" y2="55" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p2)"/>
+      <line x1="155" y1="90" x2="218" y2="66" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p2)"/>
+      <line x1="360" y1="60" x2="408" y2="60" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p2)"/>
+      <line x1="560" y1="60" x2="608" y2="60" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p2)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 🚜 farmer exchange · 🧶 craft circle · 🎭 theater (casting) · 📖 solutions library · 🎉 gatherings · 💃 dance list</figcaption>
+</figure>
+
+<h4>3. Credit — reciprocity</h4>
+<p>Hours and contributions are recorded off-chain and hash-chained; balances trend to zero, and the fairness signal (the regenerative score) flags who never reciprocates.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Credit pathway">
+      <defs><marker id="p3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="15" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="90" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">contribute</text><text x="90" y="61" text-anchor="middle" font-size="8.5" fill="#333">hours · items</text>
+        <rect x="195" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="270" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">hash-chained</text><text x="270" y="61" text-anchor="middle" font-size="8.5" fill="#333">ledger (Tier-2)</text>
+        <rect x="375" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="450" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">balance</text><text x="450" y="61" text-anchor="middle" font-size="8.5" fill="#333">→ 0</text>
+        <rect x="555" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="630" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">fairness</text><text x="630" y="61" text-anchor="middle" font-size="8.5" fill="#333">signal</text>
+      </g>
+      <line x1="165" y1="52" x2="193" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p3)"/>
+      <line x1="345" y1="52" x2="373" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p3)"/>
+      <line x1="525" y1="52" x2="553" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p3)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 🧒 childcare · 🌱 growing team · 🔪 food skills · 🧶 craft circle · 🚜 farmer exchange · 🔬 research · 📚 study · ✍️ writing · 🏫 student club</figcaption>
+</figure>
+
+<h4>4. Fund &amp; distribute — money</h4>
+<p>Inflows (dues, tithes, tickets, prize) land in the group's Safe — the flat pool; distributions auto-split per the entitlement table via the keeper; project viewing keys scope compliance.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 130" role="img" aria-label="Fund and distribute pathway">
+      <defs><marker id="p4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="15" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="90" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">inflows</text><text x="90" y="61" text-anchor="middle" font-size="8.5" fill="#333">dues · tithes · prize</text>
+        <rect x="195" y="30" width="150" height="44" rx="5" fill="#0e5a4a"/><text x="270" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#fff">Safe</text><text x="270" y="61" text-anchor="middle" font-size="8.5" fill="#cfe3dc">the pool</text>
+        <rect x="375" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="450" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">entitlement</text><text x="450" y="61" text-anchor="middle" font-size="8.5" fill="#333">table</text>
+        <rect x="555" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="630" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">keeper</text><text x="630" y="61" text-anchor="middle" font-size="8.5" fill="#333">→ payout</text>
+      </g>
+      <line x1="165" y1="52" x2="193" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p4)"/>
+      <line x1="345" y1="52" x2="373" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p4)"/>
+      <line x1="525" y1="52" x2="553" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p4)"/>
+      <text x="360" y="100" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#5a5a5a" font-style="italic">project viewing keys scope compliance — never the whole book</text>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 🧶 craft circle · 🎭 theater · ⛪ church · 🏫 student club · ⚒️ union · 🏆 contest · 🌱 growing team</figcaption>
+</figure>
+
+<h4>5. Govern — decisions</h4>
+<p>Propose → deliberate → members sign with EIP-1271 → count quorum → execute (a Safe transaction or a recorded on-chain statement).</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Govern pathway">
+      <defs><marker id="p5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="10" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="75" y="56" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">propose</text>
+        <rect x="150" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="215" y="56" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">deliberate</text>
+        <rect x="290" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="355" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">sign</text><text x="355" y="61" text-anchor="middle" font-size="8.5" fill="#333">EIP-1271</text>
+        <rect x="430" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="495" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">count</text><text x="495" y="61" text-anchor="middle" font-size="8.5" fill="#333">quorum</text>
+        <rect x="570" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="635" y="56" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">execute</text>
+      </g>
+      <line x1="140" y1="52" x2="148" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p5)"/>
+      <line x1="280" y1="52" x2="288" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p5)"/>
+      <line x1="420" y1="52" x2="428" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p5)"/>
+      <line x1="560" y1="52" x2="568" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p5)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> ⚒️ union (contract ratification) · 🎭 theater (the company) · 🏊 meetup (safety policy) · any group</figcaption>
+</figure>
+
+<h4>6. Cover — duty &amp; rota</h4>
+<p>A coverage constraint (three-on-watch, one kayaker per three swimmers) → a rotation schedule → coverage is provable, and the constraint is a guard: an event cannot be scheduled "safe" unless it is covered.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Cover pathway">
+      <defs><marker id="p6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="15" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="90" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">coverage</text><text x="90" y="61" text-anchor="middle" font-size="8.5" fill="#333">constraint (N : M)</text>
+        <rect x="195" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="270" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">rotation</text><text x="270" y="61" text-anchor="middle" font-size="8.5" fill="#333">schedule</text>
+        <rect x="375" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="450" y="56" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">covered?</text>
+        <rect x="555" y="30" width="150" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="630" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">guard</text><text x="630" y="61" text-anchor="middle" font-size="8.5" fill="#333">enforce</text>
+      </g>
+      <line x1="165" y1="52" x2="193" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p6)"/>
+      <line x1="345" y1="52" x2="373" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p6)"/>
+      <line x1="525" y1="52" x2="553" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p6)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 🧒 childcare · 🏊 meetup · 🏆 contest (rotating judges) · 🎉 gatherings</figcaption>
+</figure>
+
+<h4>7. Anonymize — privacy</h4>
+<p>Submit under a pen name (or a commitment); read, judge, and critique anonymously; attribution is revealed only at the end — or never. Anonymization is owned by the source.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Anonymize pathway">
+      <defs><marker id="p7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="15" y="30" width="200" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="115" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">submit</text><text x="115" y="61" text-anchor="middle" font-size="8.5" fill="#333">pen name · commit</text>
+        <rect x="255" y="30" width="200" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="355" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">read · judge</text><text x="355" y="61" text-anchor="middle" font-size="8.5" fill="#333">critique</text>
+        <rect x="495" y="30" width="200" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="595" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">attribute?</text><text x="595" y="61" text-anchor="middle" font-size="8.5" fill="#333">reveal only at end</text>
+      </g>
+      <line x1="215" y1="52" x2="253" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p7)"/>
+      <line x1="455" y1="52" x2="493" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p7)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 📖 solutions library · ⚒️ union (grievances) · 🏆 contest · 🔬 research &amp; ✍️ writing (peer review)</figcaption>
+</figure>
+
+<h4>8. Prove — credentials &amp; membership</h4>
+<p>A quorum issues a badge (a committed leaf); the holder range-proves "≥ passing" without revealing grade or identity; presents it with a nullifier (one slot per event); verifies against a public root.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Prove pathway">
+      <defs><marker id="p8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="10" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="75" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">quorum</text><text x="75" y="61" text-anchor="middle" font-size="8.5" fill="#333">issues badge</text>
+        <rect x="150" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="215" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">commit</text><text x="215" y="61" text-anchor="middle" font-size="8.5" fill="#333">leaf</text>
+        <rect x="290" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="355" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">range-prove</text><text x="355" y="61" text-anchor="middle" font-size="8.5" fill="#333">≥ passing</text>
+        <rect x="430" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="495" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">present</text><text x="495" y="61" text-anchor="middle" font-size="8.5" fill="#333">nullifier</text>
+        <rect x="570" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="635" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">verify</text><text x="635" y="61" text-anchor="middle" font-size="8.5" fill="#333">vs root</text>
+      </g>
+      <line x1="140" y1="52" x2="148" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p8)"/>
+      <line x1="280" y1="52" x2="288" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p8)"/>
+      <line x1="420" y1="52" x2="428" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p8)"/>
+      <line x1="560" y1="52" x2="568" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p8)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 🎓 education · 🏊 meetup (kayaker) · 🔪 food skills (food-safety) · 🏫 student club (eligibility) · ⚒️ union (hidden membership)</figcaption>
+</figure>
+
+<h4>9. Curate &amp; federate — discovery</h4>
+<p>Local events are curated (curator-picked + community-signaled) into a projection; locale groups <code>subgroup-of</code> a parent so one site unions every region's list.</p>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 120" role="img" aria-label="Curate and federate pathway">
+      <defs><marker id="p9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="10" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="75" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">events</text><text x="75" y="61" text-anchor="middle" font-size="8.5" fill="#333">(local)</text>
+        <rect x="150" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="215" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">curate</text><text x="215" y="61" text-anchor="middle" font-size="8.5" fill="#333">2 signals</text>
+        <rect x="290" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="355" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">projection</text><text x="355" y="61" text-anchor="middle" font-size="8.5" fill="#333">the list</text>
+        <rect x="430" y="30" width="130" height="44" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="495" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5a4a">subgroup-of</text><text x="495" y="61" text-anchor="middle" font-size="8.5" fill="#333">locales</text>
+        <rect x="570" y="30" width="130" height="44" rx="5" fill="#0e5a4a"/><text x="635" y="48" text-anchor="middle" font-size="9.5" font-weight="600" fill="#fff">one site</text><text x="635" y="61" text-anchor="middle" font-size="8.5" fill="#cfe3dc">all regions</text>
+      </g>
+      <line x1="140" y1="52" x2="148" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p9)"/>
+      <line x1="280" y1="52" x2="288" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p9)"/>
+      <line x1="420" y1="52" x2="428" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p9)"/>
+      <line x1="560" y1="52" x2="568" y2="52" stroke="#8a8a8a" stroke-width="1.3" marker-end="url(#p9)"/>
+    </svg>
+  </div>
+  <figcaption><b>Applies to:</b> 💃 dance list · ⛪ church network · 🏫 multi-campus club · 🌱 a block site</figcaption>
+</figure>
+
+<h3>A.2&nbsp;&nbsp;Two new shapes</h3>
+<p>Each new shape is a full five-axis seed, illustrating how the same axes specialize from the generic "group" vocabulary to a domain one.</p>
+
+<h4>Education — community-driven training &amp; certification</h4>
+<table>
+  <caption>Table 9 — the Education shape seed</caption>
+  <tr><th>Axis</th><th>Seed</th></tr>
+  <tr><td><code>roles</code></td><td>facilitator · instructor · learner · assessor · certifier</td></tr>
+  <tr><td><code>apps</code></td><td>Plane (curriculum &amp; schedule) · NocoDB (learner records) · Chat (cohorts) · Webstudio (course site) · MinIO (materials)</td></tr>
+  <tr><td><code>config</code></td><td>cohort cadence · module deadlines · reminder urgency</td></tr>
+  <tr><td><code>governance</code></td><td>certification is quorum-gated (no single certifier may sign) · admission policy · fee schedule</td></tr>
+  <tr><td><code>proofs</code></td><td>the certificate is a <b>Tier-3 zk-badge</b>: "completed course C, assessed ≥ passing" provable without revealing the learner's identity or the exact grade</td></tr>
+</table>
+
+<h4>Meetup — open-water swimming</h4>
+<table>
+  <caption>Table 10 — the Meetup shape seed</caption>
+  <tr><th>Axis</th><th>Seed</th></tr>
+  <tr><td><code>roles</code></td><td>organizer · swimmer · safety-kayaker · coordinator</td></tr>
+  <tr><td><code>apps</code></td><td>Chat (meetup thread) · NocoDB (roster &amp; waivers) · Plane (logistics) · MinIO (permits &amp; waivers)</td></tr>
+  <tr><td><code>config</code></td><td>RSVP window · safety ratio (N swimmers : 1 kayaker) · weather/cancel rules</td></tr>
+  <tr><td><code>governance</code></td><td>the safety ratio is <b>constitutional</b> (hard to change) · permit renewal · who may lead a swim</td></tr>
+  <tr><td><code>proofs</code></td><td>"a certified kayaker was on duty" provable as a zk-badge; the rota is coverage-provable</td></tr>
+</table>
+<p>The meetup's safety ratio is a worked example of a <b>guard condition</b> (§11): the meetup literally cannot be scheduled "safe" unless the rota is covered — the same rule compiled to the app-layer check (coop-api), and — when the group opts in — to the on-chain guard and the transfer-proof circuit. The kayaker rota itself is the <b>coordination family</b> (§5): a <code>queue:swim:volunteers</code> resource with a rotation/coverage schedule, and a <code>person:&lt;sub&gt;</code> coordinator who holds the permit — a scoped credential (<code>resource_scopes</code>) with an expiry, not a role.</p>
+
+<h3>A.3&nbsp;&nbsp;One website, many groups, money to individuals</h3>
+<p>The example shapes are hyper-local by design: a single city block might host the growing team, the tool library, the childcare co-op, and the hand-me-downs circle at once. Two existing edges do the work.</p>
+<p><b>1. <code>subgroup-of</code> — one website.</b> The block is a group; each activity is a <em>child group</em> sharing its namespace. One site at <code>{block}.irl.coop</code> renders every child under the parent's projection. The children remain full groups — each with its own Safe, treasury, seats, and governance — so <em>"ownership implies membership ONLY"</em>: the parent is a namespace host, not a landlord. A child that outgrows the block takes its site, its Safe, and its money with it (strip the binding and it is independent).</p>
+<p><b>2. The flat funding pool — money to individuals.</b> Each group's Safe <em>is</em> its funding pool (there is no separate entity). Money reaches individuals through the treasury's project accounts:</p>
+<ul>
+  <li><b>Distribution fund</b> — "auto-split per entitlement table, monthly via keeper." The twenty hands that harvest get their share per the entitlement table, not by a treasurer deciding each time.</li>
+  <li><b>Tier-2 labor credit</b> — the in-kind economy (childcare turns, harvest-paid-in-food, teaching hours) is off-chain hash-chained, so "everyone gets a turn" is auditable without forcing money into a non-monetary exchange.</li>
+  <li><b>Project viewing keys</b> — compliance is scope-limited: a vertical fund sees "the growing team distributed $X this month," never each household's balance.</li>
+  <li><b>T+130 settlement</b> — when real fiat crosses (course fees, ticket sales, material pools), the vertical fund absorbs chargeback exposure while the group's crypto stays final.</li>
+</ul>
+<p>The consequence is the design point the examples were chosen to illustrate: <b>the website is shared but the money is not.</b> A single site renders N groups; each group's Safe settles its own members independently. Sharing a website never implies sharing a treasury.</p>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 340" role="img" aria-label="One website, many groups, money to individuals">
+      <defs><marker id="arr7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <!-- parent site -->
+      <rect x="250" y="15" width="220" height="52" rx="6" fill="#0e5a4a"/>
+      <text x="360" y="36" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="12.5" font-weight="600">Neighborhood site</text>
+      <text x="360" y="54" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9.5">{block}.irl.coop — one projection, N groups</text>
+      <!-- children -->
+      <g font-family="system-ui,sans-serif" font-size="11">
+        <rect x="40" y="120" width="190" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="135" y="141" text-anchor="middle" font-weight="600" fill="#0e5a4a">🌱 Growing team</text>
+        <text x="135" y="157" text-anchor="middle" font-family="monospace" font-size="8.5">Safe = its own funding pool</text>
+        <rect x="265" y="120" width="190" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="360" y="141" text-anchor="middle" font-weight="600" fill="#0e5a4a">🔧 Tool library</text>
+        <text x="360" y="157" text-anchor="middle" font-family="monospace" font-size="8.5">Safe = its own funding pool</text>
+        <rect x="490" y="120" width="190" height="56" rx="5" fill="#fff" stroke="#0e5a4a"/>
+        <text x="585" y="141" text-anchor="middle" font-weight="600" fill="#0e5a4a">🧒 Childcare co-op</text>
+        <text x="585" y="157" text-anchor="middle" font-family="monospace" font-size="8.5">Safe = its own funding pool</text>
+      </g>
+      <!-- subgroup-of edges -->
+      <line x1="300" y1="67" x2="135" y2="118" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <line x1="360" y1="67" x2="360" y2="118" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <line x1="420" y1="67" x2="585" y2="118" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <text x="170" y="100" font-family="monospace" font-size="9" fill="#5a5a5a">subgroup-of (namespace)</text>
+      <!-- members -->
+      <g>
+        <circle cx="90" cy="230" r="5" fill="#0e5a4a"/><circle cx="135" cy="238" r="5" fill="#0e5a4a"/><circle cx="180" cy="228" r="5" fill="#0e5a4a"/>
+        <text x="135" y="262" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#333">members</text>
+        <circle cx="315" cy="230" r="5" fill="#0e5a4a"/><circle cx="360" cy="238" r="5" fill="#0e5a4a"/><circle cx="405" cy="228" r="5" fill="#0e5a4a"/>
+        <text x="360" y="262" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#333">members</text>
+        <circle cx="540" cy="230" r="5" fill="#0e5a4a"/><circle cx="585" cy="238" r="5" fill="#0e5a4a"/><circle cx="630" cy="228" r="5" fill="#0e5a4a"/>
+        <text x="585" y="262" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#333">members</text>
+      </g>
+      <!-- distribution edges -->
+      <line x1="135" y1="176" x2="110" y2="224" stroke="#0e5a4a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <line x1="135" y1="176" x2="160" y2="224" stroke="#0e5a4a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <line x1="360" y1="176" x2="335" y2="224" stroke="#0e5a4a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <line x1="360" y1="176" x2="385" y2="224" stroke="#0e5a4a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <line x1="585" y1="176" x2="560" y2="224" stroke="#0e5a4a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <line x1="585" y1="176" x2="610" y2="224" stroke="#0e5a4a" stroke-width="1.2" marker-end="url(#arr7)"/>
+      <text x="360" y="310" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11.5" fill="#5a5a5a">distribution (entitlement table) · labor credit (Tier-2) — each group settles its own members, never pooled across groups</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 9.</b> One website, many groups, money to individuals. The block site is the parent's namespace projection; each child group keeps its own Safe (its own funding pool) and settles its own members through the distribution fund and Tier-2 labor credit.</figcaption>
+</figure>
+
+<h3>A.4&nbsp;&nbsp;Stewardship and funding: the coop's verticals</h3>
+<p>The verticals are not a hierarchy rooted at irl.coop — they are irl.coop's <b>funding priorities</b>. irl.coop is a peer group that exists <em>alongside</em> emergent groups, not above them: it stewards the technology stack and redistributes funds to groups that exhibit cooperative metrics and match the priorities its own governance lays out (loosely starting from the verticals below). A group's connection to irl.coop is always by <em>choice</em>, never by default:</p>
+<ul>
+  <li><b>irl.coop — a steward, not a root.</b> A group like any other (a Safe), whose members are the people and groups who have joined it. It stewards the stack and holds the funds it redistributes. It is nobody's automatic parent.</li>
+  <li><b>Vertical funds</b> (<code>subgroup-of</code> irl.coop). irl.coop's own funding pools, one per priority. A group receives <code>sponsored-by</code> funding from a vertical when it matches that priority and demonstrates cooperative metrics — an opt-in relationship, not a nesting.</li>
+  <li><b>Autonomous groups</b> (peer to irl.coop). Anyone who signs up to use the platform gets their own group, not a seat in irl.coop. Groups form and operate independently of irl.coop; the only default relationship is that they use its tools.</li>
+</ul>
+<p><b>Joining the coop.</b> Membership in irl.coop is opt-in, and it is what grants a voice. When a group covers its cost (the pay-what-you-want model), it is strongly encouraged to join the coop — to become a member of the irl.coop Safe — so it has a say in how the coop uses funds and how the platform works. Funding and membership are separate edges: a group can be <code>sponsored-by</code> a vertical without being a member, and can be a member without receiving funding.</p>
+<p><b>Multi-valued axes.</b> A group is not confined to one vertical: "food sovereignty" and "ecological repair" both describe the growing team, so it holds a <code>sponsored-by</code> edge to each. The edges are declared, not inherited — nothing about the vertical is implied beyond the funding terms on the edge.</p>
+<p><b>Cross-cutting verticals.</b> Education is a vertical of its own, but its product — the zk certificate — is consumed across the others: food-safety for Food Skills, kayaker certs for the Meetup, first-aid for Childcare. That is the <code>proofs</code> axis of a shape doing its job: one vertical issues a credential, another vertical's guard conditions consume it.</p>
+<p class="footnote">The vertical names here are illustrative. The design docs name the actual sub-verticals as <b>Land Back, Solidarity Economies, Ecological Repair, Community Safety, Healing Justice, Cultural Power,</b> and <b>Relational Infrastructure</b> — the diagram below arranges one candidate subset, plus the cross-cutting Education vertical, to show the meta-group pattern rather than to fix the taxonomy.</p>
+<table>
+  <caption>Table 11 — irl.coop's candidate funding priorities and the groups that match them</caption>
+  <tr><th>Funding priority (a vertical fund of irl.coop)</th><th>Groups that match (<code>sponsored-by</code>, opt-in)</th></tr>
+  <tr><td>Food Sovereignty</td><td>🌱 growing team · 🚜 farmer exchange · 🔪 food skills</td></tr>
+  <tr><td>Ecological Repair</td><td>🌱 growing team · 🚜 farmer exchange (multi-valued)</td></tr>
+  <tr><td>Solidarity Economies</td><td>⚒️ worker union</td></tr>
+  <tr><td>Relational Infrastructure</td><td>🔧 tool library · 🧒 childcare · 👕 hand-me-downs · 🎉 gatherings · 📖 solutions library</td></tr>
+  <tr><td>Cultural Power</td><td>🎭 theater · 🧶 craft circle</td></tr>
+  <tr><td>Healing Justice</td><td>⛪ church(es)</td></tr>
+  <tr><td>Community Safety</td><td>🏊 meetup (safety kayakers)</td></tr>
+  <tr><td>Civic Engagement</td><td>🗳️ civic engagement (voter drives, poll workers, rides &amp; escorts, know-your-rights, advocacy)</td></tr>
+  <tr><td>Education (cross-cutting)</td><td>🎓 education · 🏫 student club — certifies 🔪 food skills · 🏊 meetup · 🧒 childcare</td></tr>
+</table>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 760 515" role="img" aria-label="The meta-group and its verticals">
+      <defs>
+        <marker id="arr8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker>
+        <marker id="arr9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a8a8a"/></marker>
+        <marker id="arr10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e7a6a"/></marker>
+      </defs>
+      <!-- root -->
+      <rect x="290" y="16" width="180" height="50" rx="6" fill="#0e5a4a"/>
+      <text x="380" y="36" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="13" font-weight="600">irl.coop — steward group</text>
+      <text x="380" y="53" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9">stewards the stack · funds groups</text>
+      <!-- verticals -->
+      <g font-family="system-ui,sans-serif">
+        <rect x="6" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="50" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Food</text><text x="50" y="141" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Sovereignty</text><text x="50" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+        <rect x="100" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="144" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Ecological</text><text x="144" y="141" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Repair</text><text x="144" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+        <rect x="194" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="238" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Solidarity</text><text x="238" y="141" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Economies</text><text x="238" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+        <rect x="288" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="332" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Relational</text><text x="332" y="141" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Infra.</text><text x="332" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+        <rect x="382" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="426" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Cultural</text><text x="426" y="141" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Power</text><text x="426" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+        <rect x="476" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="520" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Healing</text><text x="520" y="141" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Justice</text><text x="520" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+        <rect x="570" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="614" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Community</text><text x="614" y="141" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Safety</text><text x="614" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+        <rect x="664" y="110" width="88" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/><text x="708" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0e5a4a">Education</text><text x="708" y="143" text-anchor="middle" font-size="7.5" fill="#8a8a8a">cross-cutting</text><text x="708" y="155" text-anchor="middle" font-family="monospace" font-size="7" fill="#8a8a8a">vertical fund · Safe</text>
+      </g>
+      <!-- subgroup-of root -> vertical -->
+      <line x1="330" y1="66" x2="50" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <line x1="346" y1="66" x2="144" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <line x1="362" y1="66" x2="238" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <line x1="378" y1="66" x2="332" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <line x1="394" y1="66" x2="426" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <line x1="410" y1="66" x2="520" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <line x1="426" y1="66" x2="614" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <line x1="442" y1="66" x2="708" y2="108" stroke="#0e5a4a" stroke-width="1.4" marker-end="url(#arr8)"/>
+      <!-- local groups -->
+      <g font-family="system-ui,sans-serif" font-size="8.5" fill="#333">
+        <rect x="6" y="200" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="50" y="224" text-anchor="middle">🌱 plots</text>
+        <rect x="6" y="248" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="50" y="272" text-anchor="middle">🚜 harvest</text>
+        <rect x="6" y="296" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="50" y="320" text-anchor="middle">🔪 cook</text>
+        <rect x="194" y="200" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="238" y="224" text-anchor="middle">⚒️ union</text>
+        <rect x="288" y="200" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="332" y="224" text-anchor="middle">🔧 tools</text>
+        <rect x="288" y="248" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="332" y="272" text-anchor="middle">🧒 care</text>
+        <rect x="288" y="296" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="332" y="320" text-anchor="middle">👕 clothes</text>
+        <rect x="288" y="344" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="332" y="368" text-anchor="middle">🎉 events</text>
+        <rect x="288" y="392" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="332" y="416" text-anchor="middle">📖 stories</text>
+        <rect x="382" y="200" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="426" y="224" text-anchor="middle">🎭 theater</text>
+        <rect x="382" y="248" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="426" y="272" text-anchor="middle">🧶 craft</text>
+        <rect x="476" y="200" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="520" y="224" text-anchor="middle">⛪ church</text>
+        <rect x="570" y="200" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="614" y="224" text-anchor="middle">🏊 swim</text>
+        <rect x="664" y="200" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="708" y="224" text-anchor="middle">🎓 class</text>
+        <rect x="664" y="248" width="88" height="40" rx="5" fill="#e8f1ee" stroke="#0e5a4a"/><text x="708" y="272" text-anchor="middle">🏫 club</text>
+      </g>
+      <!-- sponsored-by vertical -> group -->
+      <line x1="50" y1="164" x2="50" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="50" y1="164" x2="50" y2="246" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="50" y1="164" x2="50" y2="294" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="238" y1="164" x2="238" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="332" y1="164" x2="332" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="332" y1="164" x2="332" y2="246" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="332" y1="164" x2="332" y2="294" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="332" y1="164" x2="332" y2="342" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="332" y1="164" x2="332" y2="390" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="426" y1="164" x2="426" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="426" y1="164" x2="426" y2="246" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="520" y1="164" x2="520" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="614" y1="164" x2="614" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="708" y1="164" x2="708" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="708" y1="164" x2="708" y2="246" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <!-- multi-valued: ecological -> shared groups -->
+      <line x1="144" y1="164" x2="62" y2="198" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <line x1="144" y1="164" x2="62" y2="246" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#arr9)"/>
+      <text x="144" y="228" text-anchor="middle" font-family="system-ui,sans-serif" font-size="7.5" fill="#8a8a8a" font-style="italic">shares 🌱 🚜</text>
+      <!-- cross-cutting: education certifies -->
+      <line x1="700" y1="164" x2="62" y2="296" stroke="#0e7a6a" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr10)"/>
+      <line x1="696" y1="164" x2="626" y2="198" stroke="#0e7a6a" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr10)"/>
+      <line x1="692" y1="164" x2="344" y2="246" stroke="#0e7a6a" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr10)"/>
+      <!-- legend -->
+      <g font-family="system-ui,sans-serif" font-size="9" fill="#5a5a5a">
+        <line x1="20" y1="458" x2="58" y2="458" stroke="#0e5a4a" stroke-width="1.5"/><text x="66" y="461">subgroup-of — namespace + funding source</text>
+        <line x1="20" y1="476" x2="58" y2="476" stroke="#8a8a8a" stroke-width="1.5"/><text x="66" y="479">sponsored-by — funding, no control (a group may hold several)</text>
+        <line x1="20" y1="494" x2="58" y2="494" stroke="#0e7a6a" stroke-width="1.5" stroke-dasharray="4 3"/><text x="66" y="497">certifies — Education issues a credential another vertical's guards consume</text>
+      </g>
+    </svg>
+  </div>
+  <figcaption><b>Figure 10.</b> Stewardship and funding, not a hierarchy. irl.coop — a peer, not a root — holds eight vertical funding pools as <code>subgroup-of</code> children; autonomous groups opt into <code>sponsored-by</code> funding when they match a priority and demonstrate cooperative metrics. A group in two verticals (🌱 plots, 🚜 harvest) holds both edges; Education is cross-cutting. Joining irl.coop (becoming a member, for a voice in how funds and the platform are run) is a separate, opt-in edge not drawn here.</figcaption>
+</figure>
+
+<h3>A.5&nbsp;&nbsp;The Tier-3 zk certificate, in practice</h3>
+<p>A Tier-3 certificate is a portable credential: it lets an individual prove <b>"I'm qualified"</b> without proving <b>"who I am,"</b> and lets a group prove <b>"we ran a covered operation"</b> without revealing its roster. The badge is an off-chain commitment — <code>commit(learner_sub, course_id, outcome, issued_at, expiry, certifier_quorum)</code> — issued by a quorum (no single assessor may mint one), bound to the Tier-2 assessment chain, and fresh (the proof binds a validity window). The outcome is a <b>range proof</b>: "assessed ≥ passing" is proven, the exact grade is not — a 98 and a 71 both prove "passed" identically.</p>
+<p><b>Individual → group.</b> A stranger filling a safety-kayaker slot on a public swim runs the prover on their own device (the witness never leaves it) and submits a proof asserting "I hold cert K from Education group E, currently valid." The meetup's gate verifies against E's public commitment root — learning that a qualified person is in the slot, and nothing else: no name, no grade, no other certificates, no <code>sub</code>. On success the swimmer is granted a scoped, expiring kayaker role for that RSVP window only. Anti-Sybil reuses the treasury's nullifier: each presentation includes <code>nullifier = H(cert_secret, event_id)</code>, so one cert fills at most one slot per event while remaining unlinkable across events.</p>
+<p><b>Group → authority.</b> Renewing its open-water permit, the meetup produces one aggregate proof over the season's Tier-2 records: "every swim met the 1:3 coverage ratio, and the kayaker on duty held a valid cert at the time." The authority verifies and accepts — the group reveals the <em>property</em> (safe coverage), never the <em>records</em> (who, when, how many). If a deeper audit is needed, a project viewing key opens only the coverage-ledger slice. This is "compliance on demand, not by default."</p>
+<p class="footnote"><b>Honest limit:</b> a ZK proof vouches for the claim, never the truth of the underlying data — a captured assessor quorum mints worthless badges no matter how crisp the cryptography. That is why certification is quorum-gated and the bad-actor signal is reputation-derived but human-gated. The cryptography hides identity; it cannot fix governance.</p>
+
+<h3>A.6&nbsp;&nbsp;Four institutional scenarios: formation → federation</h3>
+<p>Three further scenarios show the model's arc: each begins as a single group and, when it scales, becomes a meta-group by the same edges — <code>subgroup-of</code> for shared identity and <code>sponsored-by</code> for funding. They also exercise the model's least-obvious machinery: the hidden tier, the guards, and the coordination family.</p>
+
+<h4>⚒️ Worker union — in formation, then after formation</h4>
+<p><b>In formation (hidden).</b> Workers at a non-union workplace organize before a card-signing drive. This is the model's <b>hidden tier made load-bearing</b>: <code>privacy = hidden</code>, provable-but-not-enumerable membership. Each worker holds a ZK membership proof — "I'm with the union" — presentable to a fellow organizer without the employer ever seeing a roster. Grievances are collected as anonymized stories (the solutions-library primitive); the organizer does outreach through the coordination family (a rep handoff, a first-come volunteer queue). No dues yet, no treasury — just a Safe, seats, a hidden Matrix room, and the membership commitment tree.</p>
+<p><b>After formation (recognized).</b> Recognition flips <code>privacy</code> to <code>members</code> — the bargaining unit is now disclosed, because the employer must know who is covered. Dues are Tier-1 inflows; the <b>strike fund is a reserve</b> — 3-of-5 signatures, a timelock on outflow, and a circuit-breaker freeze (the guards of §11). Contract ratification is governance: members sign the contract hash with EIP-1271, quorum = % of the owner set. Strike pay is a <b>distribution fund</b>, auto-split per the entitlement table. A local may <code>subgroup-of</code> a national labor federation — an emergent meta-group, like the block: the federation shares its site and name, the local's Safe stays its own. Funding from irl.coop is separate and opt-in: the local receives <code>sponsored-by</code> support from the Solidarity Economies vertical only when it matches the priority and demonstrates cooperative metrics.</p>
+
+<h4>⛪ Church — a congregation, then a network</h4>
+<p><b>A single congregation.</b> Roles pastor · elder · deacon · member · visitor (the visitor is an external guest). Tithes are the funding pool; the <b>benevolence fund is a distribution account with discreet giving</b> — the deacon sees a coverage proof ("we helped N households this month"), never each giver's amount (project viewing keys). Services are events &amp; RSVP; pastoral care is the coordination family (a deacon reaches out = a handoff); small groups are Matrix rooms; the sermon archive is MinIO storage.</p>
+<p><b>A group of churches.</b> Congregations <code>subgroup-of</code> a shared body (the denomination or a local association): one website across the network (the A.3 pattern), a shared benevolence pool whose Safe is the body's fund, but each congregation keeps its own treasury, its own seats, and its own budget. Cross-denominational federation stays parked — the edges are declared, not inherited.</p>
+
+<h4>🏫 Student club — one campus, then many</h4>
+<p><b>One campus chapter.</b> Roles president · treasurer · officer · member · guest. Dues + university funding form the pool; the <b>budget is an operating fund</b> — 2-of-3 signatures and per-ledger category limits (the guards). Meetings and workshops are events &amp; RSVP; volunteer hours are Tier-2 labor credit; the "how we pulled this off" write-ups are the solutions library. The treasurer proves "we are within budget" to the student government via a coverage proof without exposing line items.</p>
+<p><b>Across many campuses.</b> A national organization is the meta-group; each campus chapter <code>subgroup-of</code> it — a shared national site, shared dues remittance into the national Safe, but each chapter's Safe settles its own events. Cross-campus, a member presents a ZK membership proof ("I'm a current member of chapter Y") to attend another campus's event without the host learning their identity, or a zk-badge ("current student at X") for eligibility. The multi-campus org is the A.3 "one website, many groups" pattern scaled from a block to a continent.</p>
+
+<h4>🗳️ Civic engagement — a chapter, then a network</h4>
+<p><b>A chapter.</b> A local civic-engagement group runs the whole catalogue of civic work. Voter-registration drives are events &amp; RSVP with voters as external guests. Poll-worker recruitment is the matcher — recruits are paired to precincts, and election-day coverage is a rotation/coverage constraint (every precinct needs N workers; poll-worker training is a zk-badge). Ride-sharing to the polls runs the matcher again (rides ↔ riders), and <b>escorts in hostile territories</b> are the coordination family — with the hidden tier made load-bearing: a rider or escort proves "I'm a vetted volunteer" without the roster ever being enumerable, and the ride itself is private. Know-your-rights trainings are the Education shape — cohorts, labor credit, a zk-badge, and anonymous attendance. Advocacy days in state houses and town halls are events &amp; RSVP with coordination routing who testifies. Calling lists and postcards are the labor-credit economy (calls and cards as Tier-2 credits); protests are events with marshals on a coverage rota.</p>
+<p><b>A network.</b> Chapters <code>subgroup-of</code> a state or national coalition (the Civic Engagement vertical) — one site, shared call-lists and ride infrastructure, per-chapter treasuries. The coalition's Safe holds the shared funds (postcards, printing, buses); each chapter keeps its own seats, and a chapter operating in a hostile territory stays <code>privacy = hidden</code> even inside the coalition — the parent sees that it exists, never its roster.</p>
+
+<h3>A.7&nbsp;&nbsp;Peer production, contests, and curated lists</h3>
+<p>Five more shapes. Three form a family — research, study, and writing groups share one skeleton — and two exercise distinctive machinery: the writing contest (anonymized judging + a prize pool) and the dance list (group curation + a federated listing).</p>
+
+<h4>The peer-production family</h4>
+<p>Research working groups, study groups, and writing groups differ mainly in output and formality, not structure. All three run on the same four primitives — a calendar (deadlines, cohorts, workshops), labor credit (research hours, teaching, feedback), the matcher (collaborators, study partners, beta readers), and <b>anonymized review</b> (drafts are critiqued before attribution is revealed, so a senior author and a newcomer get the same read). They are the Education shape (A.2) minus the certifier role: teaching and learning without a credential. In the meta-group they slot under <b>Education</b> (study group, research working group) and <b>Cultural Power</b> (writing group).</p>
+
+<h4>🏆 Writing contest — the NYC Midnight pattern</h4>
+<p>A contest accepting submissions for judging by a rotating panel, with anonymized entries, a prize pool, and publication of the winners. Its flow is a loop of rounds: a prompt (genre, word limit, deadline) → entrants submit under a pen name → a rotating panel reads and scores the anonymized entries → placement (winner, shortlist, honorable mention) → the winner's identity is revealed at the award → winners publish in an anthology, magazine, compilation, or on the web. Five mechanisms carry it:</p>
+<ul>
+  <li><b>Anonymized judging.</b> "Anonymization is owned by the source" (§10): the contest system holds the author→pen-name map, and the judging view carries only the pen name and the text. Judges never see the author — the same principle as the solutions library's anonymized stories.</li>
+  <li><b>A rotating panel.</b> Rotation/coverage (§10) assigns which judges read which round, so no single judge reads every entry and no pair of judges colludes across rounds. Judges are external guests — scoped seats with read-and-score rights and no governance stake.</li>
+  <li><b>Conflict-of-interest exclusion.</b> A judge "too close" to an entrant in the relationship graph is auto-excluded from that entry's panel — the §12 bounded-distance proof (<code>dist(judge, entrant) ≥ K</code>, K ∈ {1,2,3}), so closeness is excluded without revealing who is close to whom.</li>
+  <li><b>The prize pool.</b> The group's Safe is the pool (there is no separate prize account); the winner is paid via the distribution fund per the entitlement table — a single distribution for the winner, a split for shortlist and honorable mention. A vertical fund can <code>sponsored-by</code> the contest to seed the pool.</li>
+  <li><b>Publication.</b> The anthology is collective selling (book, magazine, or compilation) plus Webstudio (web) and MinIO (print-ready files). Entry is opt-in; the prize is not contingent on publication.</li>
+</ul>
+<p>The privacy-hardened variant is a commitment: an entry is submitted as <code>commit(entry, author, round)</code>, judged on the text (the commitment is opened for the text, the author stays hidden), and only the winner's commitment is opened at the award — "provable but not enumerable" (§12) applied to authorship. Version 0 is the pen-name form above; the commitment form is the deferred, harder path, and only matters if a contest wants judges to be provably unable to unmask an entrant.</p>
+
+<h4>💃 Dance list — curated, and federated</h4>
+<p>A group-curated list of upcoming dance events in a locale, federated so people from multiple regions see every region's events on one website. Roles: curator, contributor, dancer, and (external) event organizer. Two mechanisms carry it:</p>
+<ul>
+  <li><b>Curation.</b> The list is a <em>projection</em>, not a store: events live as events &amp; RSVP, and the list renders a curated subset. Two signals, as in the blueprint library (§9): curator-picked (moderated) and community-signaled (highlighted = attendance + upvote count). Curators hold a scoped seat, not ownership — the event organizer keeps their own event data.</li>
+  <li><b>One website, many regions.</b> Each locale is a child group <code>subgroup-of</code> a parent "dance" group. Each child curates its region's events and keeps its own seats, treasury, and curation authority; the parent site unions every locale's list. This is the A.3 pattern — a shared namespace and site, not full federation. True cross-domain federation (separate domains, takedown-resilient DNS) is parked; the shared-site form already delivers "see every region's in-person events on one website."</li>
+</ul>
+<p>The matcher surfaces events near a dancer or on their travel dates; the calendar renders the union across locales. It works for dance specifically because events are <em>local</em> (a venue, a date) but discovery is <em>global</em> — the subgroup-of pattern gives global discovery with local curation authority. It slots under <b>Cultural Power</b> in the meta-group.</p>
+
+<h3>A.8&nbsp;&nbsp;The weave</h3>
+<p>The weave is how people — or an advanced, RAG-fueled, scoped AI inference engine — coordinate to meet a complex need. It is not the machinery; it is the intelligence that drives it. Five steps:</p>
+<ol>
+  <li><b>Sense</b> — detect or sense complex needs, possibly held by multiple parties.</li>
+  <li><b>Synthesize &amp; connect</b> — understand and synthesize the solution space (sometimes negotiating), and connect the needs to offers, possibly across multiple parties.</li>
+  <li><b>Fill gaps</b> — determine what is missing, and fill it with a new "glue" need — or fulfill it directly.</li>
+  <li><b>Secure &amp; complete</b> — establish communication, protection for the exchange, contingencies, and the collective understanding of what "complete" feels like.</li>
+  <li><b>Steward</b> — optionally steward the creation of a group from this configuration, to perpetuate the arrangement as a self-sustaining, managed entity.</li>
+</ol>
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 760 200" role="img" aria-label="The weave, five steps">
+      <defs><marker id="wv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#9c6a20"/></marker></defs>
+      <text x="20" y="24" font-family="system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#8a8a8a" letter-spacing=".06em">THE WEAVE — people · or a scoped AI inference engine (RAG)</text>
+      <g font-family="system-ui,sans-serif">
+        <rect x="20" y="46" width="130" height="70" rx="6" fill="#fff" stroke="#9c6a20"/><text x="85" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="#9c6a20">1 · sense</text><text x="85" y="85" text-anchor="middle" font-size="8.5" fill="#333">complex needs</text><text x="85" y="99" text-anchor="middle" font-size="8.5" fill="#333">multi-party</text>
+        <rect x="168" y="46" width="130" height="70" rx="6" fill="#fff" stroke="#9c6a20"/><text x="233" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="#9c6a20">2 · synthesize</text><text x="233" y="85" text-anchor="middle" font-size="8.5" fill="#333">solution space</text><text x="233" y="99" text-anchor="middle" font-size="8.5" fill="#333">negotiate · connect</text>
+        <rect x="316" y="46" width="130" height="70" rx="6" fill="#fff" stroke="#9c6a20"/><text x="381" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="#9c6a20">3 · fill gaps</text><text x="381" y="85" text-anchor="middle" font-size="8.5" fill="#333">new "glue" need</text><text x="381" y="99" text-anchor="middle" font-size="8.5" fill="#333">or self-fulfill</text>
+        <rect x="464" y="46" width="130" height="70" rx="6" fill="#fff" stroke="#9c6a20"/><text x="529" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="#9c6a20">4 · secure</text><text x="529" y="85" text-anchor="middle" font-size="8.5" fill="#333">protection</text><text x="529" y="99" text-anchor="middle" font-size="8.5" fill="#333">contingencies · complete</text>
+        <rect x="612" y="46" width="130" height="70" rx="6" fill="#fff" stroke="#9c6a20"/><text x="677" y="68" text-anchor="middle" font-size="11" font-weight="600" fill="#9c6a20">5 · steward</text><text x="677" y="85" text-anchor="middle" font-size="8.5" fill="#333">form a group</text><text x="677" y="99" text-anchor="middle" font-size="8.5" fill="#333">self-sustaining</text>
+      </g>
+      <line x1="150" y1="81" x2="166" y2="81" stroke="#9c6a20" stroke-width="1.3" marker-end="url(#wv)"/>
+      <line x1="298" y1="81" x2="314" y2="81" stroke="#9c6a20" stroke-width="1.3" marker-end="url(#wv)"/>
+      <line x1="446" y1="81" x2="462" y2="81" stroke="#9c6a20" stroke-width="1.3" marker-end="url(#wv)"/>
+      <line x1="594" y1="81" x2="610" y2="81" stroke="#9c6a20" stroke-width="1.3" marker-end="url(#wv)"/>
+    </svg>
+  </div>
+  <figcaption><b>Figure 11.</b> The weave — five steps: sense complex needs, synthesize the solution space and connect needs to offers, fill the gaps, secure the exchange, and (optionally) steward a group into being. Run by people, increasingly assisted by a scoped AI inference engine.</figcaption>
+</figure>
+<p>The pathways meet the weave at specific steps: the matcher is step 2; the guards and escrow are step 4; provisioning a group from a shape is step 5; the solutions library — anonymized stories of how a need was met — is the memory that feeds step 1 and step 2.</p>
+<p>Threaded example — "manure for hay," done properly as a weave: someone senses that the fields need fertilizing and the stable needs clearing; the weave synthesizes "manure for hay" and connects Jesse (surplus hay) to Priya (need for manure); it fills the gap — nobody to haul it — with a new glue need ("a truck and a driver"), which Jesse happens to fill; it establishes protection (both confirm before it counts as done) and what "complete" feels like (hay delivered, manure spread); and, if the swap recurs each season, it may steward a standing arrangement — a group — to perpetuate it.</p>
+
+
+<h2 id="refs">References</h2>
+<div class="refs">
+<p>Design documents (repo <code>docs/design/</code>), cited by the section they inform:</p>
+<ol>
+  <li>irl-coop-group.md — the group Safe, seats, roles, invite-on-first-signin, voting, Matrix provisioning (§§2–6, 8, 15).</li>
+  <li>account-and-key-model.md — CREATE2, passkeys, ERC-7212, the two-layer truth/projection split (§5).</li>
+  <li>world-doc-and-contacts.md — the seat model, seat-level visibility, the world-doc projection (§§3, 7).</li>
+  <li>group-scoping.md — RLS (<code>coop_can_view_group</code> et al.), <code>resource_scopes</code>, hidden-norm (§§3, 7).</li>
+  <li>event-bus-and-group-shapes.md — the five-axis shape, the event bus, provisioning reconciler, commons economy (§§9, 10).</li>
+  <li>group-shape-scenarios.md — the skill-sharing economy scenarios (§10).</li>
+  <li>zk-membership-graph-proofs.md — membership/role/relationship/distance proofs, tiers of hidden, delivery keys (§12).</li>
+  <li>private-treasury-guards-ledgers.md — the shielded treasury, guards, ledger taxonomy, settlement (§11).</li>
+  <li>delegation-and-session-keys.md — ERC-4337/ERC-7715 delegation, session/delivery/agent keys, the delegation registry (§5).</li>
+  <li>regenerative-vision-note.md — the regenerative score ZK-metric (§12).</li>
+  <li>formbricks-group-mapping.md, postiz-group-awareness.md, webstudio-identity-and-group-routing.md, litefarm-integration.md, matrix-chat-and-notifications.md — application integration points (§13).</li>
+</ol>
+<p class="footnote">Implementation artifacts referenced: <code>coop_rls.sql</code> (RLS policies and predicate helpers), <code>world_doc_user_view.sql</code> / <code>plane_user_view.sql</code> (projection views), the live <code>irlcoop</code> schema (<code>groups</code>, <code>group_members</code>, <code>roles</code>, <code>grants</code>, <code>role_grants</code>, <code>resource_scopes</code>), and the live role→grant capability matrix.</p>
+</div>
+
+<h2 id="glossary">Glossary</h2>
+<div class="glossary">
+<div class="gcat">Cryptography & zero-knowledge</div>
+<div class="gcols">
+<div class="g"><span class="gt">ZK / zero-knowledge proof</span><p class="gd">A proof that a statement is true while revealing nothing beyond the statement itself.</p></div>
+<div class="g"><span class="gt">UTXO</span><p class="gd">Unspent transaction output — the value note in the shielded treasury: a committed amount with an owner key.</p></div>
+<div class="g"><span class="gt">commitment</span><p class="gd">A cryptographic binding of a value (amount, identity, role) that hides it until opened.</p></div>
+<div class="g"><span class="gt">commitment tree</span><p class="gd">A Merkle tree of commitments; only its root is public, so balances are unreadable.</p></div>
+<div class="g"><span class="gt">nullifier</span><p class="gd">H(note_secret), revealed when a note is spent; the chain enforces "seen once", making double-spend structurally impossible.</p></div>
+<div class="g"><span class="gt">Merkle proof</span><p class="gd">An authentication path proving a leaf is in a tree without revealing the rest of the tree.</p></div>
+<div class="g"><span class="gt">range proof</span><p class="gd">A ZK proof that a value lies in a range ("score ≥ 0.8") without revealing the value.</p></div>
+<div class="g"><span class="gt">Groth16 / PLONK</span><p class="gd">SNARK proving systems; the verifier compiles to a small on-chain contract.</p></div>
+<div class="g"><span class="gt">Poseidon</span><p class="gd">A zk-friendly hash function, efficient inside circuits.</p></div>
+<div class="g"><span class="gt">BN254</span><p class="gd">An elliptic curve used for SNARKs.</p></div>
+<div class="g"><span class="gt">Semaphore / zk-kit</span><p class="gd">Tooling for anonymous membership proofs.</p></div>
+<div class="g"><span class="gt">viewing key</span><p class="gd">A key that opens a scope of the shielded treasury — master (all) or project (one project account).</p></div>
+<div class="g"><span class="gt">delivery key</span><p class="gd">A derived key D = H(sub, group) · G for notifying members without linking keys to identities.</p></div>
+<div class="g"><span class="gt">zk-badge</span><p class="gd">A Tier-3 credential (a commitment) proven in ZK without revealing the holder or the exact score.</p></div>
+<div class="g"><span class="gt">hidden-norm</span><p class="gd">Hidden by default, provable on demand — membership is never enumerable but always attestable.</p></div>
+</div>
+<div class="gcat">Standards (ERC / EIP)</div>
+<div class="gcols">
+<div class="g"><span class="gt">ERC-4337</span><p class="gd">Account abstraction — a standard for smart-contract accounts and user operations (session keys).</p></div>
+<div class="g"><span class="gt">ERC-7715</span><p class="gd">Permission grants — scoped, revocable delegation from a Safe to a signer.</p></div>
+<div class="g"><span class="gt">ERC-7212</span><p class="gd">The secp256r1 (P-256) signature-verification precompile, used for passkeys.</p></div>
+<div class="g"><span class="gt">EIP-1271</span><p class="gd">Contract signature validation — a contract (a Safe) attesting it signed a hash.</p></div>
+</div>
+<div class="gcat">Applications</div>
+<div class="gcols">
+<div class="g"><span class="gt">Plane</span><p class="gd">Self-hosted project management.</p></div>
+<div class="g"><span class="gt">NocoDB</span><p class="gd">Visual database (a spreadsheet UI over Postgres).</p></div>
+<div class="g"><span class="gt">Formbricks</span><p class="gd">Survey platform (gate-SSO integrated).</p></div>
+<div class="g"><span class="gt">Postiz</span><p class="gd">Social-media scheduling.</p></div>
+<div class="g"><span class="gt">Webstudio</span><p class="gd">Website builder — publishes per-group sites.</p></div>
+<div class="g"><span class="gt">LiteFarm</span><p class="gd">Farm management.</p></div>
+<div class="g"><span class="gt">Matrix / Synapse</span><p class="gd">Decentralized chat protocol / its server (group rooms).</p></div>
+<div class="g"><span class="gt">Cinny / Element</span><p class="gd">Matrix chat clients.</p></div>
+<div class="g"><span class="gt">Roundcube</span><p class="gd">Webmail.</p></div>
+<div class="g"><span class="gt">LiveKit</span><p class="gd">WebRTC SFU for video calls.</p></div>
+</div>
+<div class="gcat">Stack components</div>
+<div class="gcols">
+<div class="g"><span class="gt">Safe (smart contract)</span><p class="gd">A multisig smart-contract account — the group primitive: a group IS a Safe with N-of-M owners.</p></div>
+<div class="g"><span class="gt">Citus</span><p class="gd">A distributed extension of PostgreSQL (shared-nothing sharding).</p></div>
+<div class="g"><span class="gt">PostgreSQL</span><p class="gd">The relational database.</p></div>
+<div class="g"><span class="gt">Redis</span><p class="gd">In-memory store used for cache and pub/sub (the event bus).</p></div>
+<div class="g"><span class="gt">MinIO</span><p class="gd">S3-compatible object storage.</p></div>
+<div class="g"><span class="gt">Temporal</span><p class="gd">Durable workflow engine (provisioning, delivery, the keeper).</p></div>
+<div class="g"><span class="gt">Keycloak</span><p class="gd">The identity provider (the OIDC realm).</p></div>
+<div class="g"><span class="gt">Traefik</span><p class="gd">The edge reverse proxy.</p></div>
+<div class="g"><span class="gt">Stalwart</span><p class="gd">The mail server.</p></div>
+<div class="g"><span class="gt">FreeSWITCH / FusionPBX</span><p class="gd">Telephony (SIP/WSS).</p></div>
+<div class="g"><span class="gt">oauth2-proxy</span><p class="gd">The gate that authenticates apps via OIDC and forwards identity headers.</p></div>
+<div class="g"><span class="gt">Hardhat</span><p class="gd">The local Ethereum dev node (Safe contracts deploy here).</p></div>
+<div class="g"><span class="gt">coturn</span><p class="gd">TURN server for NAT traversal.</p></div>
+</div>
+<div class="gcat">Coop primitives</div>
+<div class="gcols">
+<div class="g"><span class="gt">seat</span><p class="gd">The per-(user, group) membership row (group_members) — the membership primitive.</p></div>
+<div class="g"><span class="gt">group shape</span><p class="gd">A group's five-axis seed (roles, apps, config, governance, proofs).</p></div>
+<div class="g"><span class="gt">resource_scopes</span><p class="gd">The row {group_id, app, resource_key} linking a group to its tenant in each app.</p></div>
+<div class="g"><span class="gt">RLS</span><p class="gd">Row-level security in Postgres (app.sub + coop_has_grant predicates).</p></div>
+<div class="g"><span class="gt">app.sub</span><p class="gd">The per-request identity session variable set by coop-api.</p></div>
+<div class="g"><span class="gt">Tier 1 / 2 / 3</span><p class="gd">Ledger tiers — money (shielded on-chain) / participation credits (hash-chained) / badges (commitments).</p></div>
+<div class="g"><span class="gt">entitlement table</span><p class="gd">The distribution schedule the keeper executes (who gets what share).</p></div>
+<div class="g"><span class="gt">matcher</span><p class="gd">The offer↔need matching service (match.* events).</p></div>
+<div class="g"><span class="gt">labor credit</span><p class="gd">Tier-2 time-bank for hours and contributions.</p></div>
+<div class="g"><span class="gt">regenerative score</span><p class="gd">The ZK metric over flow, reciprocity, distribution, persistence.</p></div>
+<div class="g"><span class="gt">vertical fund</span><p class="gd">A funding-priority pool held by irl.coop.</p></div>
+<div class="g"><span class="gt">subgroup-of / sponsored-by / member-of</span><p class="gd">Relationship edges — shared namespace / funding / membership.</p></div>
+<div class="g"><span class="gt">Gate-SSO</span><p class="gd">The oauth2-proxy + header-forwarding auto-login pattern.</p></div>
+<div class="g"><span class="gt">world-doc</span><p class="gd">The per-user projection (my groups + resources scoped to them).</p></div>
+</div>
+</div>
+
+</div>
+<script>
+(function(){
+  var TERMS = [{"forms": ["UTXO", "UTXOs"], "d": "Unspent transaction output — the value note in the shielded treasury: a committed amount with an owner key."}, {"forms": ["commitment", "commitments"], "d": "A cryptographic binding of a value (amount, identity, role) that hides it until opened."}, {"forms": ["nullifier", "nullifiers"], "d": "H(note_secret), revealed when a note is spent; the chain enforces \"seen once\", making double-spend structurally impossible."}, {"forms": ["Groth16", "PLONK"], "d": "SNARK proving systems; the verifier compiles to a small on-chain contract."}, {"forms": ["Poseidon"], "d": "A zk-friendly hash function, efficient inside circuits."}, {"forms": ["BN254"], "d": "An elliptic curve used for SNARKs."}, {"forms": ["Semaphore", "zk-kit"], "d": "Tooling for anonymous membership proofs."}, {"forms": ["viewing key", "viewing keys"], "d": "A key that opens a scope of the shielded treasury — master (all) or project (one project account)."}, {"forms": ["delivery key", "delivery keys"], "d": "A derived key D = H(sub, group) · G for notifying members without linking keys to identities."}, {"forms": ["zk-badge", "zk-badges"], "d": "A Tier-3 credential (a commitment) proven in ZK without revealing the holder or the exact score."}, {"forms": ["ERC-4337"], "d": "Account abstraction — a standard for smart-contract accounts and user operations (session keys)."}, {"forms": ["ERC-7715"], "d": "Permission grants — scoped, revocable delegation from a Safe to a signer."}, {"forms": ["ERC-7212"], "d": "The secp256r1 (P-256) signature-verification precompile, used for passkeys."}, {"forms": ["EIP-1271"], "d": "Contract signature validation — a contract (a Safe) attesting it signed a hash."}, {"forms": ["Plane"], "d": "Self-hosted project management."}, {"forms": ["NocoDB"], "d": "Visual database (a spreadsheet UI over Postgres)."}, {"forms": ["Formbricks"], "d": "Survey platform (gate-SSO integrated)."}, {"forms": ["Postiz"], "d": "Social-media scheduling."}, {"forms": ["Webstudio"], "d": "Website builder — publishes per-group sites."}, {"forms": ["LiteFarm"], "d": "Farm management."}, {"forms": ["Synapse"], "d": "Decentralized chat protocol / its server (group rooms)."}, {"forms": ["Cinny", "Element"], "d": "Matrix chat clients."}, {"forms": ["Roundcube"], "d": "Webmail."}, {"forms": ["LiveKit"], "d": "WebRTC SFU for video calls."}, {"forms": ["Safe", "Safes"], "d": "A multisig smart-contract account — the group primitive: a group IS a Safe with N-of-M owners."}, {"forms": ["Citus"], "d": "A distributed extension of PostgreSQL (shared-nothing sharding)."}, {"forms": ["Postgres", "PostgreSQL"], "d": "The relational database."}, {"forms": ["Redis"], "d": "In-memory store used for cache and pub/sub (the event bus)."}, {"forms": ["MinIO"], "d": "S3-compatible object storage."}, {"forms": ["Temporal"], "d": "Durable workflow engine (provisioning, delivery, the keeper)."}, {"forms": ["Keycloak"], "d": "The identity provider (the OIDC realm)."}, {"forms": ["Traefik"], "d": "The edge reverse proxy."}, {"forms": ["Stalwart"], "d": "The mail server."}, {"forms": ["FreeSWITCH", "FusionPBX"], "d": "Telephony (SIP/WSS)."}, {"forms": ["oauth2-proxy"], "d": "The gate that authenticates apps via OIDC and forwards identity headers."}, {"forms": ["Hardhat"], "d": "The local Ethereum dev node (Safe contracts deploy here)."}, {"forms": ["coturn"], "d": "TURN server for NAT traversal."}, {"forms": ["seat", "seats"], "d": "The per-(user, group) membership row (group_members) — the membership primitive."}, {"forms": ["resource_scopes"], "d": "The row {group_id, app, resource_key} linking a group to its tenant in each app."}, {"forms": ["RLS"], "d": "Row-level security in Postgres (app.sub + coop_has_grant predicates)."}, {"forms": ["app.sub"], "d": "The per-request identity session variable set by coop-api."}, {"forms": ["matcher"], "d": "The offer↔need matching service (match.* events)."}, {"forms": ["subgroup-of", "sponsored-by", "member-of"], "d": "Relationship edges — shared namespace / funding / membership."}, {"forms": ["Gate-SSO"], "d": "The oauth2-proxy + header-forwarding auto-login pattern."}, {"forms": ["world-doc"], "d": "The per-user projection (my groups + resources scoped to them)."}];
+  var forms = [];
+  TERMS.forEach(function(t){ t.forms.forEach(function(f){ forms.push(f); }); });
+  forms.sort(function(a,b){ return b.length - a.length; });
+  function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  var alt = forms.map(function(f){ return '(?<![A-Za-z0-9_])' + esc(f) + '(?![A-Za-z0-9_])'; }).join('|');
+  var master = new RegExp(alt, 'g');
+  var defBy = {};
+  TERMS.forEach(function(t){ t.forms.forEach(function(f){ defBy[f] = t.d; }); });
+  function walk(root){
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: function(n){
+      if(!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      var pr = n.parentElement;
+      if(!pr || pr.closest('script,style,svg,pre,.term,a,#glossary')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }});
+    var nodes = [];
+    while(w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach(function(node){
+      var text = node.nodeValue;
+      master.lastIndex = 0;
+      var frag = document.createDocumentFragment(), last = 0, m, any = false;
+      while((m = master.exec(text))){
+        any = true;
+        frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+        var s = document.createElement('span');
+        s.className = 'term';
+        s.setAttribute('data-tip', defBy[m[0]]);
+        s.textContent = m[0];
+        frag.appendChild(s);
+        last = m.index + m[0].length;
+      }
+      if(any){ frag.appendChild(document.createTextNode(text.slice(last))); node.parentNode.replaceChild(frag, node); }
+    });
+  }
+  walk(document.body);
+})();
+</script>
+
+</body>
+</html>

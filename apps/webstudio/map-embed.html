@@ -1,0 +1,29 @@
+<!--
+  irl.coop — Map embed (for Webstudio HtmlEmbed)
+  ==============================================
+  Embeds the sovereign basemap (maps.irl.coop) into a group site. Public — no
+  login needed: the basemap + federation explore markers render anonymously.
+  Fully self-hosted (PMTiles + Noto glyphs, zero external mapping services).
+
+  HOW TO INSTALL IN WEBSTUDIO
+    1. Insert an "HtmlEmbed" component.
+    2. Paste the block between the COPY markers below into its `code` field.
+    3. Set the component to CLIENT-ONLY (clientOnly: true).
+    4. Publish — the map is served at maps.irl.coop, the iframe fills its box.
+
+  CONFIG
+    - MAPS_URL — map base URL (default https://maps.irl.coop)
+    - The wrapper div controls height via CSS (default min-height 480px); set
+      it to any height — the iframe is absolutely positioned to fill it.
+-->
+
+<!-- ============================== COPY FROM HERE ============================== -->
+<div style="position:relative; width:100%; min-height:480px;">
+  <iframe
+    src="https://maps.irl.coop/"
+    title="Map"
+    style="position:absolute; inset:0; width:100%; height:100%; border:0;"
+    loading="lazy"
+    allow="fullscreen"></iframe>
+</div>
+<!-- ============================== COPY TO HERE ============================== -->

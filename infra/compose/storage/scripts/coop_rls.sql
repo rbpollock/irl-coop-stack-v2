@@ -466,3 +466,45 @@ $$ LANGUAGE plpgsql;
 ALTER FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) OWNER TO coop_rls;
 REVOKE EXECUTE ON FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) TO coop_ops;
+
+-- ---------------------------------------------------------------------------
+-- Geo (sovereign maps): tracks / markers / waypoints — group-scoped like
+-- resource_scopes. SELECT = a member/owner/creator of the group (public and
+-- federated content is served by the API's anonymous path — no app.sub — not
+-- RLS). INSERT = any member. UPDATE/DELETE = the object's owner or a group
+-- owner. waypoints denormalize group_id/owner_id so their policies match.
+-- ---------------------------------------------------------------------------
+GRANT SELECT, INSERT, UPDATE, DELETE ON tracks, markers, waypoints TO coop_rls;
+
+ALTER TABLE tracks FORCE ROW LEVEL SECURITY;
+ALTER TABLE tracks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tracks_select ON tracks;
+CREATE POLICY tracks_select ON tracks FOR SELECT USING (coop_can_view_group(group_id));
+DROP POLICY IF EXISTS tracks_insert ON tracks;
+CREATE POLICY tracks_insert ON tracks FOR INSERT WITH CHECK (coop_is_member(group_id));
+DROP POLICY IF EXISTS tracks_update ON tracks;
+CREATE POLICY tracks_update ON tracks FOR UPDATE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));
+DROP POLICY IF EXISTS tracks_delete ON tracks;
+CREATE POLICY tracks_delete ON tracks FOR DELETE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));
+
+ALTER TABLE markers FORCE ROW LEVEL SECURITY;
+ALTER TABLE markers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS markers_select ON markers;
+CREATE POLICY markers_select ON markers FOR SELECT USING (coop_can_view_group(group_id));
+DROP POLICY IF EXISTS markers_insert ON markers;
+CREATE POLICY markers_insert ON markers FOR INSERT WITH CHECK (coop_is_member(group_id));
+DROP POLICY IF EXISTS markers_update ON markers;
+CREATE POLICY markers_update ON markers FOR UPDATE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));
+DROP POLICY IF EXISTS markers_delete ON markers;
+CREATE POLICY markers_delete ON markers FOR DELETE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));
+
+ALTER TABLE waypoints FORCE ROW LEVEL SECURITY;
+ALTER TABLE waypoints ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS waypoints_select ON waypoints;
+CREATE POLICY waypoints_select ON waypoints FOR SELECT USING (coop_can_view_group(group_id));
+DROP POLICY IF EXISTS waypoints_insert ON waypoints;
+CREATE POLICY waypoints_insert ON waypoints FOR INSERT WITH CHECK (coop_is_member(group_id));
+DROP POLICY IF EXISTS waypoints_update ON waypoints;
+CREATE POLICY waypoints_update ON waypoints FOR UPDATE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));
+DROP POLICY IF EXISTS waypoints_delete ON waypoints;
+CREATE POLICY waypoints_delete ON waypoints FOR DELETE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));

@@ -145,6 +145,10 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 -- Additive column for profiles created before preferences existed.
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferences jsonb NOT NULL DEFAULT '{}';
+-- The member's free-text "how do you want to help your community" answer — the
+-- offers side of the needs/offers matching (docs/design/weavers.md). Free-text
+-- now; structured tags when matching lands.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS offerings text;
 
 -- Roles as bundles of grants (the delegation model made concrete). A role is a
 -- named set of grants (capabilities); group_members.roles holds role NAMES that
@@ -237,6 +241,82 @@ CREATE TABLE IF NOT EXISTS telephony_resources (
   created_at         timestamptz NOT NULL DEFAULT now(),
   UNIQUE (group_id, resource_type, external_ref)
 );
+
+-- Geo (sovereign maps): tracks (paths), markers (points), waypoints (tour stops).
+-- PostGIS geometry (SRID 4326) holds precise shape; the geohash column is the coarse
+-- plaintext cell for "near" queries — the privacy/queryability split (precise
+-- geometry is client-encryptable for private records later; geohash stays
+-- indexable). Offline-first fields: owner_id (device-shard affinity), deleted_at
+-- (tombstone — never hard-delete), updated_at (LWW merge key; HLC layered later).
+-- Plain tables today (matches the stack); distributed by owner_id when Citus
+-- scales to device-hosted shards.
+
+CREATE TABLE IF NOT EXISTS tracks (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id      uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  owner_id      text NOT NULL,
+  kind          text NOT NULL DEFAULT 'trail' CHECK (kind IN ('trail','route','tour')),
+  title         text,
+  description   text,
+  category      text,
+  tags          text[] NOT NULL DEFAULT '{}',
+  geometry      geometry(LineString, 4326),
+  geohash       text,
+  timestamps    timestamptz[],
+  visibility    text NOT NULL DEFAULT 'private' CHECK (visibility IN ('private','contact','group','federated','public')),
+  review_status text NOT NULL DEFAULT 'draft' CHECK (review_status IN ('draft','submitted','approved','rejected')),
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  deleted_at    timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS markers (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id    uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  owner_id    text NOT NULL,
+  source      text NOT NULL DEFAULT 'pin',
+  title       text,
+  url         text,
+  category    text,
+  tags        text[] NOT NULL DEFAULT '{}',
+  point       geometry(Point, 4326),
+  geohash     text,
+  visibility  text NOT NULL DEFAULT 'private' CHECK (visibility IN ('private','contact','group','federated','public')),
+  occurs_at   timestamptz,
+  expires_at  timestamptz,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
+);
+
+-- waypoints denormalize group_id/owner_id so their RLS + future shard affinity
+-- match the parent track without a join.
+CREATE TABLE IF NOT EXISTS waypoints (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  track_id    uuid NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+  group_id    uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  owner_id    text NOT NULL,
+  seq         int NOT NULL,
+  point       geometry(Point, 4326),
+  geohash     text,
+  title       text,
+  description text,
+  media       jsonb NOT NULL DEFAULT '[]',
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz,
+  UNIQUE (track_id, seq)
+);
+
+-- "near" queries hit the coarse geohash; precise spatial queries hit the geometry
+-- GiST index (built only for public/federated rows — private geometry is
+-- client-encrypted later and never server-indexable).
+CREATE INDEX IF NOT EXISTS tracks_group_idx ON tracks (group_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS tracks_geom_gix ON tracks USING GIST (geometry) WHERE visibility IN ('federated','public');
+CREATE INDEX IF NOT EXISTS markers_group_idx ON markers (group_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS markers_geohash_idx ON markers (geohash) WHERE deleted_at IS NULL AND geohash IS NOT NULL;
+CREATE INDEX IF NOT EXISTS markers_geom_gix ON markers USING GIST (point) WHERE visibility IN ('federated','public');
+CREATE INDEX IF NOT EXISTS waypoints_track_idx ON waypoints (track_id) WHERE deleted_at IS NULL;
 `;
 
 const SEED = `
@@ -372,6 +452,27 @@ export async function getRelatedGroups(sub: string): Promise<string[]> {
       [sub],
     );
     return rows.map((r) => r.id);
+  });
+}
+
+// The member's coop-group SEATS as {slug, name, roles[]} — the source for the
+// OIDC `groups` claim (apps map each group to their own tenant, e.g. Formbricks
+// Team). Excludes the 1-of-1 personal seat (kind='personal'): that is the
+// self-group, not a coop team. RLS-scoped via withIdentity(sub).
+export async function getGroupSeats(
+  sub: string,
+): Promise<{ slug: string; name: string; roles: string[] }[]> {
+  return withIdentity(sub, async (client) => {
+    await client.query("SELECT coop_ensure_personal_group()");
+    const { rows } = await client.query<{ slug: string; name: string; roles: string[] }>(
+      `SELECT COALESCE(g.slug, g.id::text) AS slug, g.name, gm.roles
+         FROM group_members gm
+         JOIN groups g ON g.id = gm.group_id
+        WHERE gm.sub = $1 AND g.kind = 'coop'
+        ORDER BY g.created_at ASC`,
+      [sub],
+    );
+    return rows;
   });
 }
 

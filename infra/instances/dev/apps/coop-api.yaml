@@ -39,6 +39,12 @@ env:
   # Digest sender account (notifications@irl.coop) — password for the SMTP
   # XOAUTH2 submission the Temporal digest workflow uses to mail digests.
   KEYCLOAK_NOTIFICATIONS: ${SECRET:keycloak.notifications}
+  # SMTP relay (internal apps → Stalwart XOAUTH2) — the "coop-api SMTP passthrough".
+  # Apps that only speak standard SMTP LOGIN (Formbricks) point their SMTP at
+  # 172.17.0.1:1025 with these shared credentials. See src/smtp-relay.ts.
+  SMTP_RELAY_PORT: "1025"
+  SMTP_RELAY_USER: relay
+  SMTP_RELAY_PASSWORD: ${SECRET:smtp.relay}
   SAFE_SINGLETON_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
   SAFE_PROXY_FACTORY_ADDRESS: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
   SAFE_BACKEND_SIGNER_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"

@@ -1,0 +1,339 @@
+diff --git a/apps/web/Dockerfile b/apps/web/Dockerfile
+index 7ca5092..1af41b3 100644
+--- a/apps/web/Dockerfile
++++ b/apps/web/Dockerfile
+@@ -60,24 +60,15 @@ RUN touch apps/web/.env
+ RUN pnpm install --ignore-scripts --frozen-lockfile
+ 
+ # Build the database package first. `pnpm generate` loads prisma.config.ts, which
+-# resolves DATABASE_URL via Prisma's env() helper and throws when it is unset. Mount
+-# the secret and run through the secret reader so a build-time fallback is supplied
+-# (mirrors the web build below); prisma generate never connects to the database.
+-RUN --mount=type=secret,id=database_url \
+-    /tmp/read-secrets.sh pnpm build --filter=@formbricks/database
+-
+-# Build the project using our secret reader script
+-# This mounts the secrets only during this build step without storing them in layers
+-RUN --mount=type=secret,id=database_url \
+-    --mount=type=secret,id=encryption_key \
+-    --mount=type=secret,id=redis_url \
+-    --mount=type=secret,id=hub_api_url \
+-    --mount=type=secret,id=hub_api_key \
+-    --mount=type=secret,id=cubejs_api_url \
+-    --mount=type=secret,id=cubejs_api_secret \
+-    --mount=type=secret,id=sentry_auth_token \
+-    --mount=type=secret,id=posthog_key \
+-    /tmp/read-secrets.sh pnpm build --filter=@formbricks/web...
++# resolves DATABASE_URL via Prisma's env() helper and throws when it is unset. Run
++# through the secret reader so a build-time fallback is supplied; prisma generate
++# never connects to the database. (irl.coop fork: drop the --mount=type=secret
++# clauses — the host's legacy docker builder lacks --secret, and read-secrets.sh
++# already supplies placeholder defaults.)
++RUN /tmp/read-secrets.sh pnpm build --filter=@formbricks/database
++
++# Build the project using our secret reader script (fallback defaults supplied).
++RUN /tmp/read-secrets.sh pnpm build --filter=@formbricks/web...
+ 
+ #
+ ## step 3: setup production runner
+diff --git a/apps/web/app/api/auth/gate-sso/route.ts b/apps/web/app/api/auth/gate-sso/route.ts
+new file mode 100644
+index 0000000..d693e86
+--- /dev/null
++++ b/apps/web/app/api/auth/gate-sso/route.ts
+@@ -0,0 +1,235 @@
++import { createHmac } from "node:crypto";
++
++import { createId } from "@paralleldrive/cuid2";
++import { NextRequest, NextResponse } from "next/server";
++
++import { prisma } from "@formbricks/database";
++import { Prisma } from "@formbricks/database/prisma";
++import { SESSION_MAX_AGE, WEBAPP_URL } from "@/lib/constants";
++import { env } from "@/lib/env";
++import { getValidatedCallbackUrl } from "@/lib/utils/url";
++
++export const dynamic = "force-dynamic";
++
++/**
++ * irl.coop Gate-SSO endpoint.
++ *
++ * Reached only from the admin domain when the oauth2-proxy gate has already
++ * authenticated the member (the middleware redirects here instead of /auth/login
++ * when GATE_SSO_ENABLED=1 and `x-forwarded-email` is present). It find-or-creates
++ * the member by email, maps their coop groups to Formbricks teams (see
++ * docs/design/formbricks-group-mapping.md), mints a Better Auth session (DB row +
++ * the same signed cookie the rest of the app verifies — see
++ * modules/auth/lib/session-cookie.ts), then redirects to the callback URL.
++ */
++
++// The single coop Organization — every coop group becomes a Team under it.
++const COOP_ORG_NAME = "irl.coop";
++const DEFAULT_LOCALE = "en-US";
++
++// Copied from modules/workspaces/settings/lib/workspace.ts (not exported there).
++const DEFAULT_CONTACT_ATTRIBUTE_KEYS: Prisma.ContactAttributeKeyCreateWithoutWorkspaceInput[] = [
++  { key: "userId", name: "User Id", description: "The user id of a contact", type: "default", isUnique: true },
++  { key: "email", name: "Email", description: "The email of a contact", type: "default", isUnique: true },
++  { key: "firstName", name: "First Name", description: "Your contact's first name", type: "default" },
++  { key: "lastName", name: "Last Name", description: "Your contact's last name", type: "default" },
++  { key: "language", name: "Language", description: "The language preference of a contact", type: "default" },
++];
++
++type CoopGroup = { slug: string; name: string; roles: string[] };
++type MappedRoles = {
++  teamRole: "admin" | "contributor";
++  permission: "read" | "readWrite" | "manage";
++  orgRole: "owner" | "manager" | "member";
++};
++
++// The coop JWT `groups` claim is a JSON string of {slug,name,roles[]} — the
++// oauth2-proxy gate forwards it verbatim as x-forwarded-groups (see
++// --oidc-groups-claim). Parse it defensively: a bad value must never block login.
++function parseGroups(header: string | null): CoopGroup[] {
++  if (!header) return [];
++  try {
++    const parsed = JSON.parse(header);
++    if (!Array.isArray(parsed)) return [];
++    return parsed
++      .filter((g: any) => g && typeof g.name === "string" && typeof g.slug === "string")
++      .map((g: any) => ({
++        slug: g.slug,
++        name: g.name,
++        roles: Array.isArray(g.roles) ? g.roles.map(String) : [],
++      }));
++  } catch {
++    return [];
++  }
++}
++
++// coop role -> Formbricks roles. coop is the source of truth (overwritten every
++// login — see the design doc §3). Actual group roles today are owner/member/agent
++// (platform-admin / telephony-admin are platform-scoped, not group roles);
++// founder/admin/observer are forward-mapped for the richer taxonomy.
++function mapRoles(roles: string[]): MappedRoles {
++  if (roles.includes("owner") || roles.includes("founder"))
++    return { teamRole: "admin", permission: "manage", orgRole: "owner" };
++  if (roles.includes("admin")) return { teamRole: "admin", permission: "manage", orgRole: "manager" };
++  if (roles.includes("observer"))
++    return { teamRole: "contributor", permission: "read", orgRole: "member" };
++  return { teamRole: "contributor", permission: "readWrite", orgRole: "member" };
++}
++
++const ORG_RANK: Record<string, number> = { member: 0, manager: 1, owner: 2 };
++
++// Idempotent, convergent provisioning: one coop Organization, a Team + private
++// Workspace per coop group, and the member's seat (TeamUser + WorkspaceTeam +
++// Membership). Rerun on every SSO so coop role changes flow through. Returns a
++// coop-group-slug → workspaceId map for the ?group= clickthrough redirect.
++async function provisionGroups(userId: string, groups: CoopGroup[]): Promise<Map<string, string>> {
++  const workspaceBySlug = new Map<string, string>();
++
++  // Organization has no unique-on-name — find-then-create.
++  let org = await prisma.organization.findFirst({ where: { name: COOP_ORG_NAME } });
++  if (!org) {
++    org = await prisma.organization.create({ data: { name: COOP_ORG_NAME } });
++  }
++
++  // Org membership = the member's highest role across their group seats.
++  const orgRole = groups.reduce<"owner" | "manager" | "member">((acc, g) => {
++    const { orgRole: r } = mapRoles(g.roles);
++    return ORG_RANK[r] > ORG_RANK[acc] ? r : acc;
++  }, "member");
++
++  await prisma.membership.upsert({
++    where: { userId_organizationId: { userId, organizationId: org.id } },
++    update: { role: orgRole, accepted: true },
++    create: { userId, organizationId: org.id, role: orgRole, accepted: true },
++  });
++
++  for (const g of groups) {
++    const { teamRole, permission } = mapRoles(g.roles);
++
++    const team = await prisma.team.upsert({
++      where: { organizationId_name: { organizationId: org.id, name: g.name } },
++      update: {},
++      create: { name: g.name, organizationId: org.id },
++      select: { id: true },
++    });
++
++    const workspace = await prisma.workspace.upsert({
++      where: { organizationId_name: { organizationId: org.id, name: g.name } },
++      update: {},
++      create: {
++        name: g.name,
++        organizationId: org.id,
++        config: { channel: null, industry: null },
++        contactAttributeKeys: { create: DEFAULT_CONTACT_ATTRIBUTE_KEYS },
++        languages: { create: [{ code: DEFAULT_LOCALE, alias: null }] },
++      },
++      select: { id: true },
++    });
++    workspaceBySlug.set(g.slug, workspace.id);
++
++    await prisma.teamUser.upsert({
++      where: { teamId_userId: { teamId: team.id, userId } },
++      update: { role: teamRole },
++      create: { teamId: team.id, userId, role: teamRole },
++    });
++
++    await prisma.workspaceTeam.upsert({
++      where: { workspaceId_teamId: { workspaceId: workspace.id, teamId: team.id } },
++      update: { permission },
++      create: { workspaceId: workspace.id, teamId: team.id, permission },
++    });
++  }
++
++  return workspaceBySlug;
++}
++
++export const GET = async (request: NextRequest): Promise<NextResponse> => {
++  const loginUrl = `${WEBAPP_URL}/auth/login`;
++
++  if (env.GATE_SSO_ENABLED !== "1") {
++    return NextResponse.redirect(loginUrl);
++  }
++
++  const email = request.headers.get("x-forwarded-email")?.trim().toLowerCase();
++  if (!email) {
++    return NextResponse.redirect(loginUrl);
++  }
++
++  const forwardedUser = request.headers.get("x-forwarded-user")?.trim();
++  const name = forwardedUser || email.split("@")[0];
++
++  const callbackUrl = getValidatedCallbackUrl(
++    request.nextUrl.searchParams.get("callbackUrl"),
++    WEBAPP_URL
++  );
++
++  // find-or-create the member (email is the canonical identity; the oauth2-proxy
++  // gate has already asserted it, so mark it verified and tag the provider).
++  const user = await prisma.user.upsert({
++    where: { email },
++    create: {
++      email,
++      name,
++      emailVerified: true,
++      identityProvider: "openid",
++    },
++    update: {},
++    select: { id: true },
++  });
++
++  // Group → team mapping (coop groups ride x-forwarded-groups; best-effort —
++  // a provisioning failure must not block the member's login).
++  let workspaceBySlug = new Map<string, string>();
++  try {
++    const groups = parseGroups(request.headers.get("x-forwarded-groups"));
++    if (groups.length > 0) {
++      workspaceBySlug = await provisionGroups(user.id, groups);
++    }
++  } catch (err) {
++    console.error("[gate-sso] group provisioning failed:", err);
++  }
++
++  // Mint a session token (cuid2, matching Better Auth's generateId) and persist
++  // it. The forward-auth middleware resolves sessions from this table.
++  const sessionToken = createId();
++  await prisma.session.create({
++    data: {
++      sessionToken,
++      userId: user.id,
++      expires: new Date(Date.now() + SESSION_MAX_AGE * 1000),
++    },
++  });
++
++  // Sign the cookie exactly as Better Auth does: `${token}.${base64(HMAC-SHA256(token, secret))}`.
++  const secret = env.BETTER_AUTH_SECRET ?? env.NEXTAUTH_SECRET;
++  if (!secret) {
++    return NextResponse.redirect(loginUrl);
++  }
++  const signature = createHmac("sha256", secret).update(sessionToken).digest("base64");
++  const cookieValue = `${sessionToken}.${signature}`;
++
++  // Clickthrough: ?group=<slug> (on the callbackUrl, set by the dashboard's
++  // per-group nav) → land directly in that group's workspace instead of the
++  // generic app home.
++  let targetUrl = callbackUrl ?? `${WEBAPP_URL}/environments`;
++  try {
++    const cb = new URL(callbackUrl ?? `${WEBAPP_URL}/environments`);
++    const groupSlug = cb.searchParams.get("group");
++    if (groupSlug && workspaceBySlug.has(groupSlug)) {
++      targetUrl = `${WEBAPP_URL}/workspaces/${workspaceBySlug.get(groupSlug)}`;
++    }
++  } catch {
++    // keep targetUrl as the callbackUrl
++  }
++
++  const response = NextResponse.redirect(targetUrl);
++  response.cookies.set("__Secure-formbricks.session_token", cookieValue, {
++    httpOnly: true,
++    secure: true,
++    sameSite: "lax",
++    path: "/",
++    maxAge: SESSION_MAX_AGE,
++  });
++
++  return response;
++};
+diff --git a/apps/web/lib/env.ts b/apps/web/lib/env.ts
+index 9167e39..cc91d9c 100644
+--- a/apps/web/lib/env.ts
++++ b/apps/web/lib/env.ts
+@@ -374,6 +374,9 @@ const parsedEnv = createEnv({
+     USER_MANAGEMENT_MINIMUM_ROLE: z.enum(["owner", "manager", "disabled"]).optional(),
+     AUDIT_LOG_ENABLED: z.enum(["1", "0"]).optional(),
+     AUDIT_LOG_GET_USER_IP: z.enum(["1", "0"]).optional(),
++    // irl.coop Gate-SSO: opt-in auto-login from the oauth2-proxy forwarded identity
++    // (x-forwarded-email). Off unless explicitly set to "1".
++    GATE_SSO_ENABLED: z.enum(["1", "0"]).optional(),
+     SESSION_MAX_AGE: z
+       .string()
+       .transform((val) => Number.parseInt(val, 10))
+@@ -521,6 +524,7 @@ const parsedEnv = createEnv({
+     USER_MANAGEMENT_MINIMUM_ROLE: process.env.USER_MANAGEMENT_MINIMUM_ROLE,
+     AUDIT_LOG_ENABLED: process.env.AUDIT_LOG_ENABLED,
+     AUDIT_LOG_GET_USER_IP: process.env.AUDIT_LOG_GET_USER_IP,
++    GATE_SSO_ENABLED: process.env.GATE_SSO_ENABLED,
+     SESSION_MAX_AGE: process.env.SESSION_MAX_AGE,
+     SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
+   },
+diff --git a/apps/web/proxy.ts b/apps/web/proxy.ts
+index 4887635..1c62690 100644
+--- a/apps/web/proxy.ts
++++ b/apps/web/proxy.ts
+@@ -4,6 +4,7 @@ import { logger } from "@formbricks/logger";
+ import { isPublicDomainConfigured, isRequestFromPublicDomain } from "@/app/middleware/domain-utils";
+ import { isAuthProtectedRoute, isRouteAllowedForDomain } from "@/app/middleware/endpoint-validator";
+ import { TRUSTED_PROXY_HOP_COUNT, WEBAPP_URL } from "@/lib/constants";
++import { env } from "@/lib/env";
+ import { FORMBRICKS_WORKSPACE_ID_COOKIE } from "@/lib/localStorage";
+ import { FORMBRICKS_CLIENT_IP_HEADER, resolveClientIp } from "@/lib/utils/client-ip";
+ import { getValidatedCallbackUrl } from "@/lib/utils/url";
+@@ -12,7 +13,24 @@ import { getProxySession } from "@/modules/auth/lib/proxy-session";
+ const handleAuth = async (request: NextRequest): Promise<NextResponse | null> => {
+   const session = await getProxySession(request);
+ 
+-  if (isAuthProtectedRoute(request.nextUrl.pathname) && !session) {
++  // irl.coop: the bare root "/" must also auto-login. The / page (page.tsx) redirects
++  // to /auth/login when there's no session, but isAuthProtectedRoute only lists
++  // /environments, /setup/organization, /organizations — so without this, a gated
++  // user with an existing org lands on the native login form instead of SSO.
++  const needsAuth =
++    isAuthProtectedRoute(request.nextUrl.pathname) || request.nextUrl.pathname === "/";
++
++  if (needsAuth && !session) {
++    // irl.coop Gate-SSO: when the oauth2-proxy gate has authenticated the member
++    // (x-forwarded-email present) AND we are on the admin domain (never the public
++    // survey domain), auto-login from the forwarded identity instead of the native
++    // login form. Opt-in via GATE_SSO_ENABLED=1.
++    const gateEmail = request.headers.get("x-forwarded-email");
++    if (env.GATE_SSO_ENABLED === "1" && gateEmail && !isRequestFromPublicDomain(request)) {
++      const gateUrl = `${WEBAPP_URL}/api/auth/gate-sso?callbackUrl=${encodeURIComponent(WEBAPP_URL + request.nextUrl.pathname + request.nextUrl.search)}`;
++      return NextResponse.redirect(gateUrl);
++    }
++
+     const loginUrl = `${WEBAPP_URL}/auth/login?callbackUrl=${encodeURIComponent(WEBAPP_URL + request.nextUrl.pathname + request.nextUrl.search)}`;
+     return NextResponse.redirect(loginUrl);
+   }

@@ -102,6 +102,15 @@ const DOCS: DesignDoc[] = [
     file: "private-treasury-guards-ledgers.md",
   },
   {
+    slug: "published-items-as-groups",
+    title: "Published Items as Groups",
+    category: "Economy & treasury",
+    status: "design",
+    description:
+      "Every published work is a group: an encrypted file with minted session/viewing keys (rent, lend, re-lend, sell), owner/contributor/funder tiers, supply control, and a project-to-group ceremony.",
+    file: "published-items-as-groups.md",
+  },
+  {
     slug: "regenerative-vision-note",
     title: "Regenerative Score (Vision)",
     category: "Economy & treasury",
@@ -150,6 +159,15 @@ const DOCS: DesignDoc[] = [
     status: "live",
     description: "Fleet browser automation on Temporal — the Playwright runner fleet.",
     file: "browser-management.md",
+  },
+  {
+    slug: "android-mini-services-client",
+    title: "Android Mini-Services Client",
+    category: "Infrastructure",
+    status: "design",
+    description:
+      "The phone as a group node: SMS relay, offline files, a data shard, and offline maps over a Tailscale mesh — infrastructure held by members, not VPSes.",
+    file: "android-mini-services-client.md",
   },
   {
     slug: "handoff-2026-08-13",

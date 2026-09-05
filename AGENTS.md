@@ -107,6 +107,14 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 
 ### Known quirks
 
+- **The generator `rmtree`s `infra/out/` on every run** (`generator.py dev` deletes
+  the whole tree before regenerating). Never store a build artifact in `infra/out/`
+  that you can't cheaply rebuild — e.g. the ~10 GB `coverage.pmtiles` basemap lives in
+  `/opt/app/storage/geo-data/`, NOT `infra/out/dev/geo-data/` (a finished 9.9 GB build
+  was silently deleted this way).
+- **MinIO does NOT implement the S3 CORS API** — `PutBucketCors` returns 501 regardless
+  of client/headers. Cross-origin access is set ONLY via the server env
+  `MINIO_API_CORS_ALLOW_ORIGIN` in the minio app spec, then recreated.
 - **`docker ps --format '{{json .}}'` serializes `Labels` as a flattened
   `k=v,k=v` STRING** (not an object) on this docker version, and as the
   literal `<no value>` for containers created outside compose — both the

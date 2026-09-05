@@ -42,7 +42,7 @@ start() {
     return 0
   fi
   say "starting $name (:$port)"
-  ( cd "$ROOT/$dir" && eval "$NVM" && nohup "$@" </dev/null >>"$LOGDIR/$name.log" 2>&1 & )
+  ( cd "$ROOT/$dir" && eval "$NVM" && setsid nohup "$@" </dev/null >>"$LOGDIR/$name.log" 2>&1 & )
   return 1
 }
 
@@ -81,7 +81,7 @@ if pgrep -f 'ts-node src/temporal/worker.ts' >/dev/null 2>&1; then
   ok "temporal worker already up"
 else
   say "starting temporal worker"
-  ( cd "$ROOT/apps/coop-api" && eval "$NVM" && nohup npm run worker </dev/null >>"$LOGDIR/temporal-worker.log" 2>&1 & )
+  ( cd "$ROOT/apps/coop-api" && eval "$NVM" && setsid nohup npm run worker </dev/null >>"$LOGDIR/temporal-worker.log" 2>&1 & )
   ok "temporal worker started"
 fi
 

@@ -1,0 +1,123 @@
+# LiteFarm — farm-management vertical (GPL-3), the coop's agriculture/food app.
+#
+# Images built by infra/build/images/litefarm/build.sh (fork branch
+# irl-coop-integration). Multi-tenancy: farm = group (farm.farm_id <-> groups.id;
+# userFarm <-> group_members). SSO: the fleet gates forward X-Forwarded-User/Email
+# and LiteFarm's /gate_sso create-or-logins + mints its HS256 JWT.
+#
+# LiteFarm natively splits SPA + API onto sibling domains:
+#   farm.irl.coop     -> litefarm-gate     -> litefarm-web (nginx + SPA)
+#   farmapi.irl.coop  -> litefarm-api-gate -> litefarm     (node API :5000)
+#
+# DB: shared Citus via the docker gateway (cross-pillar). LiteFarm's knex
+# `production` env forces TLS, so we drive the `development` env (DEV_DATABASE_*,
+# no SSL) — NODE_ENV=development is the pragmatic no-fork-change path (CORS * +
+# no Sentry behind the gate is acceptable here).
+name: litefarm
+pillar: workflow
+type: image
+image: irlcoop/litefarm-api:2026.08.30
+enabled: true
+env:
+  NODE_ENV: development
+  DEV_DATABASE_HOST: 172.17.0.1
+  DEV_DATABASE: litefarm
+  DEV_DATABASE_USER: litefarm
+  DEV_DATABASE_PASSWORD: ${SECRET:postgres.litefarm}
+  DEV_DATABASE_PORT: "5432"
+  DATABASE_URL: postgresql://litefarm:${SECRET:postgres.litefarm}@172.17.0.1:5432/litefarm?sslmode=disable
+  # LiteFarm's HS256 token secrets (access minted by /gate_sso; the rest are
+  # invite/reset/farm/scheduler/dashboard token types — all required by the
+  # express-jwt middlewares or the API refuses to boot).
+  JWT_SECRET: ${SECRET:litefarm.jwt}
+  JWT_INVITE_SECRET: ${SECRET:litefarm.jwt-invite}
+  JWT_RESET_SECRET: ${SECRET:litefarm.jwt-reset}
+  JWT_FARM_SECRET: ${SECRET:litefarm.jwt-farm}
+  JWT_SCHEDULER_SECRET: ${SECRET:litefarm.jwt-scheduler}
+  JWT_DASHBOARD_SECRET: ${SECRET:litefarm.jwt-dashboard}
+  # coop-api identity bridge (Gate SSO group->farm membership sync + event emit)
+  COOP_API_URL: https://api.${DOMAIN}
+  KEYCLOAK_GROUPS_TOKEN: ${SECRET:keycloak.groups-token}
+  GATE_SSO_ENABLED: "true"
+  PORT: "5000"
+depends_on:
+  litefarm-migrate:
+    condition: service_completed_successfully
+# farmapi.irl.coop points here DIRECTLY (no gate): the API's own checkJwt auths
+# the webapp's cross-origin calls, and a gate in front would 302 the CORS
+# preflight and break every API call. /gate_sso stays behind the WEB gate
+# (farm.irl.coop/gate_sso via nginx), so its forwarded identity can't be spoofed.
+ports:
+  - "8090:5000"
+sidecars:
+  litefarm-db-setup:
+    image: postgres:15-alpine
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_roles WHERE rolname='litefarm'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE ROLE litefarm LOGIN PASSWORD '${SECRET:postgres.litefarm}'"
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='litefarm'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE DATABASE litefarm OWNER litefarm"
+        echo 'litefarm DB ready.'
+  litefarm-migrate:
+    image: irlcoop/litefarm-api:2026.08.30
+    restart: "no"
+    entrypoint: ["sh", "-c"]
+    command:
+      - npm run migrate:dev:db
+    environment:
+      NODE_ENV: development
+      DEV_DATABASE_HOST: 172.17.0.1
+      DEV_DATABASE: litefarm
+      DEV_DATABASE_USER: litefarm
+      DEV_DATABASE_PASSWORD: ${SECRET:postgres.litefarm}
+      DEV_DATABASE_PORT: "5432"
+    depends_on:
+      litefarm-db-setup:
+        condition: service_completed_successfully
+  litefarm-web:
+    image: irlcoop/litefarm-web:2026.08.30
+    restart: unless-stopped
+    # nginx proxies /gate_sso -> litefarm:5000, so it must start after the API
+    # (ordering is enough: Docker DNS resolves the name once the API is created).
+    depends_on:
+      - litefarm
+  litefarm-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    command:
+      - --provider=oidc
+      - --oidc-issuer-url=https://api.${DOMAIN}
+      - --client-id=litefarm-gate
+      - --client-secret=litefarm-gate-secret
+      - --redirect-url=https://farm.${DOMAIN}/oauth2/callback
+      - --email-domain=*
+      - --upstream=http://litefarm-web:80
+      - --http-address=0.0.0.0:4180
+      - --cookie-secret=irlcoop-litefarm-gate-dev-123456
+      - --cookie-secure=true
+      - --cookie-samesite=none
+      - --cookie-domain=.${DOMAIN}
+      # trust traefik's X-Forwarded-Proto=https so the Secure cookie is set
+      - --reverse-proxy=true
+      - --skip-provider-button=true
+      - --provider-display-name=irl.coop
+      - --banner=Sign in to irl.coop
+      - --pass-user-headers=true
+      # PWA + static assets are public (the gate would 302 them to Keycloak and
+      # break the manifest/service-worker fetches with a CORS error otherwise)
+      - --skip-auth-route=^/manifest\.json$
+      - --skip-auth-route=^/sw\.js$
+      - --skip-auth-route=^/workbox-
+      - --skip-auth-route=^/assets/
+    ports:
+      - "8089:4180"
+    depends_on:
+      - litefarm-web
+proxy:
+  - hostname: farm.${DOMAIN}
+    port: 8089
+    description: LiteFarm webapp — oauth2-proxy gate
+  - hostname: farmapi.${DOMAIN}
+    port: 8090
+    description: LiteFarm API (direct — checkJwt auth, no gate)

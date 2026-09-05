@@ -1,0 +1,18 @@
+# Maps — the sovereign self-hosted basemap ("OpenMapServer").
+# A tiny nginx static server serving the MapLibre embed + self-hosted Noto
+# glyphs + client libs from a durable host dir (/opt/app/storage/geo-data/web).
+# Tiles (coverage.pmtiles, 9.9GB) are served by MinIO byte-range requests
+# (s3api.irl.coop/maps/) — no tile server. Zero external mapping deps.
+name: maps
+pillar: maps
+type: image
+image: nginx:alpine
+ports:
+  - "3009:80"
+volumes:
+  - /opt/app/storage/geo-data/web:/usr/share/nginx/html:ro
+restart: unless-stopped
+proxy:
+  - hostname: maps.${DOMAIN}
+    port: 3009
+    description: sovereign basemap (PMTiles + self-hosted glyphs)

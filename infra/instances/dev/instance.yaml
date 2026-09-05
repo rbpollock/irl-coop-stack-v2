@@ -32,12 +32,17 @@ apps:
   - matrix
   - element-web
   - element-call
+  - cinny
+  - livekit
+  - lk-jwt
   - coturn
   - freeswitch
   - fusionpbx
   - mediamtx
   - onlyoffice
+  - maps
+  - litefarm
 
 # which pillars actually run on the dev box today (deployment concern — the
 # compose artifacts for all apps are generated regardless)
-enabled_pillars: [proxy, authentication, cache, storage, communication, workflow]
+enabled_pillars: [proxy, authentication, cache, storage, communication, workflow, maps]

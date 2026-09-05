@@ -20,3 +20,7 @@ proxy:
   hostname: element.${DOMAIN}
   port: 8086
   description: Element Web client (also the dashboard chat widget source)
+  # config.json must not be held in the browser's heuristic cache — otherwise
+  # theme/mobile-guide changes never reach a reloading client.
+  headers:
+    Cache-Control: "no-cache"

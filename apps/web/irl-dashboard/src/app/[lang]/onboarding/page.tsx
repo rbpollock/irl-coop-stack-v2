@@ -11,6 +11,19 @@ import { buttonVariants } from "@/components/ui/button"
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
 
+// Seed prompts for "how do you want to help your community" — the offers side
+// of the needs/offers matching (docs/design/weavers.md). Free-text, tappable.
+const OFFER_EXAMPLES = [
+  "I'm an artist",
+  "I drive",
+  "I'm a musician who works for tips",
+  "I help people organize and prettify things",
+  "I'm an interior designer",
+  "I'm a marketing guru",
+  "I'm a good photographer",
+  "I'm a good videographer",
+]
+
 export default function OnboardingPage() {
   const { data: session, status } = useSession()
   const params = useParams()
@@ -19,6 +32,7 @@ export default function OnboardingPage() {
 
   const [displayName, setDisplayName] = useState("")
   const [avatar, setAvatar] = useState("")
+  const [offerings, setOfferings] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,6 +60,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           displayName: displayName.trim(),
           avatar: avatar.trim() || null,
+          offerings: offerings.trim() || null,
         }),
       })
       if (!res.ok) throw new Error(`onboarding failed (${res.status})`)
@@ -90,6 +105,30 @@ export default function OnboardingPage() {
           onChange={(e) => setAvatar(e.target.value)}
           placeholder="https://…"
         />
+
+        <label className="mt-4 block text-sm font-medium" htmlFor="offerings">
+          How do you want to help your community?
+        </label>
+        <textarea
+          id="offerings"
+          className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          value={offerings}
+          onChange={(e) => setOfferings(e.target.value)}
+          placeholder="What can you offer? (artist, driver, musician, organizer…)"
+          rows={3}
+        />
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {OFFER_EXAMPLES.map((ex) => (
+            <button
+              key={ex}
+              type="button"
+              onClick={() => setOfferings(ex)}
+              className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition hover:border-ring hover:text-foreground"
+            >
+              {ex}
+            </button>
+          ))}
+        </div>
 
         {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
