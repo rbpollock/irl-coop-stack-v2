@@ -67,7 +67,7 @@ async function queryArea(token: string | undefined, areaId: string, question: st
       jsonrpc: "2.0",
       id: 1,
       method: "tools/call",
-      params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question } },
+      params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question, rerank: false } },
     }),
   })
   const data = await res.json()
