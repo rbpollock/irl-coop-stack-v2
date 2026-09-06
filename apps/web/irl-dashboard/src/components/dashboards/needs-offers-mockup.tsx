@@ -1,21 +1,126 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useState } from "react"
-import {
-  ArrowRight,
-  BadgeCheck,
-  CheckCircle2,
-  Clock,
-  Plus,
-  Repeat,
-} from "lucide-react"
+import { BadgeCheck, CheckCircle2, Clock, Plus, Repeat } from "lucide-react"
 
-// Needs/offers — three plain ideas, nothing else:
-//   1. what people have & need  2. put them together  3. did it happen
-// The machinery (bond, badge ceilings, arbitrar) stays in the spec, off-screen.
+// Needs/offers — a force-directed "solution space" + click popups. The layout
+// explains the shape (a loop emerges); text stays out of the graph and lives in
+// hover tooltips and the click popup that moves the action forward.
+
+const ForceGraph2D = dynamic(
+  () => import("react-force-graph").then((m) => m.ForceGraph2D),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[380px] items-center justify-center text-sm text-muted-foreground">
+        Loading the space…
+      </div>
+    ),
+  },
+)
+
+type GNode = { id: string; have: boolean; what: string; group: string; missing?: boolean }
+
+const NODES: GNode[] = [
+  { id: "cs-storage", have: true, what: "4 m³ cold storage", group: "Cold Storage Co-op" },
+  { id: "cs-compost", have: false, what: "compost", group: "Cold Storage Co-op" },
+  { id: "mg-compost", have: true, what: "2 t compost", group: "Market Garden" },
+  { id: "mg-seed", have: false, what: "seed", group: "Market Garden" },
+  { id: "sc-seed", have: true, what: "40 kg seed", group: "Seed Co-op" },
+  { id: "sc-storage", have: false, what: "winter storage", group: "Seed Co-op" },
+  { id: "tool-truck", have: true, what: "box truck", group: "Tool Share" },
+  { id: "missing-haul", have: false, what: "hauling help", group: "…", missing: true },
+]
+
+const LINKS = [
+  { source: "cs-storage", target: "sc-storage" },
+  { source: "sc-seed", target: "mg-seed" },
+  { source: "mg-compost", target: "cs-compost" },
+  { source: "tool-truck", target: "missing-haul" },
+]
+
+const LOOP = ["cs-storage", "sc-storage", "sc-seed", "mg-seed", "mg-compost", "cs-compost"]
+
+function Weave() {
+  const [selected, setSelected] = useState<GNode | null>(null)
+  const [mine, setMine] = useState<string[]>([])
+  const toggleMine = (id: string) => setMine((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]))
+  const closed = LOOP.every((id) => mine.includes(id))
+
+  return (
+    <div className="space-y-3">
+      <div className="relative overflow-hidden rounded-lg border bg-card shadow-sm">
+        <ForceGraph2D
+          graphData={{ nodes: NODES, links: LINKS }}
+          nodeId="id"
+          linkSource="source"
+          linkTarget="target"
+          width={760}
+          height={380}
+          nodeColor={(n: any) => (n.missing ? "#9ca3af" : n.have ? "#10b981" : "#0ea5e9")}
+          nodeVal={(n: any) => (n.missing ? 4 : 7)}
+          nodeLabel={(n: any) => `${n.have ? "We have" : "We need"} ${n.what} · ${n.group}`}
+          nodeRelSize={4}
+          linkColor={() => "rgba(148,163,184,0.35)"}
+          linkWidth={1.5}
+          linkDirectionalArrowLength={4}
+          linkDirectionalArrowRelPos={1}
+          linkDirectionalParticles={0}
+          onNodeClick={(n: any) => setSelected(n as GNode)}
+          onBackgroundClick={() => setSelected(null)}
+        />
+
+        {/* click popup — the only text, and it moves the action forward */}
+        {selected && (
+          <div className="absolute bottom-3 left-3 max-w-[260px] rounded-lg border bg-card/95 p-3 shadow-md backdrop-blur">
+            <p className="text-sm font-medium">
+              {selected.missing ? "Who can" : selected.have ? "We have" : "We need"} {selected.what}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{selected.group}</p>
+            <div className="mt-2 flex gap-2">
+              {selected.missing ? (
+                <button className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90">
+                  <Plus className="size-3" /> I can fill this
+                </button>
+              ) : (
+                <button
+                  onClick={() => toggleMine(selected.id)}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium ${
+                    mine.includes(selected.id) ? "bg-primary text-primary-foreground" : "border bg-background hover:bg-accent"
+                  }`}
+                >
+                  {mine.includes(selected.id) ? "Added" : "Add to my match"}
+                </button>
+              )}
+              <button className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent">
+                <Repeat className="size-3" /> 1-to-1
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-muted-foreground">{mine.length > 0 ? `${mine.length} in your match` : "tap nodes — hover to peek, click to add"}</span>
+        {closed && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
+            <CheckCircle2 className="size-3.5" /> Loop closed — everyone gets rewarded
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-500" /> have</span>
+        {" · "}
+        <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-sky-500" /> need</span>
+        {" · "}
+        <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-gray-400" /> gap</span>
+      </p>
+    </div>
+  )
+}
 
 type Item = { id: string; have: boolean; what: string; group: string; km: number; trusted: boolean }
-
 const ITEMS: Item[] = [
   { id: "a", have: true, what: "4 m³ cold storage", group: "Cold Storage Co-op", km: 12, trusted: true },
   { id: "b", have: false, what: "compost", group: "Cold Storage Co-op", km: 12, trusted: true },
@@ -27,29 +132,16 @@ const ITEMS: Item[] = [
 ]
 
 function Board() {
-  const [mine, setMine] = useState<string[]>([])
-  const toggle = (id: string) => setMine((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]))
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
           <Plus className="size-3.5" /> Post something
         </button>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {mine.length > 0 ? `${mine.length} in your match` : "tap things to build a match"}
-        </span>
       </div>
-
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {ITEMS.map((it) => (
-          <button
-            key={it.id}
-            onClick={() => toggle(it.id)}
-            className={`rounded-lg border bg-card p-3 text-left shadow-sm transition-colors ${
-              mine.includes(it.id) ? "border-primary ring-1 ring-primary/30" : "hover:bg-accent/40"
-            }`}
-          >
+          <div key={it.id} className="rounded-lg border bg-card p-3 shadow-sm">
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${it.have ? "bg-emerald-500/10 text-emerald-700" : "bg-sky-500/10 text-sky-700"}`}>
                 {it.have ? "have" : "need"}
@@ -60,85 +152,15 @@ function Board() {
               {it.have ? "We have " : "We need "}
               <span className="font-semibold">{it.what}</span>
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {it.group} · {it.km} km
-            </p>
-          </button>
+            <p className="mt-1 text-xs text-muted-foreground">{it.group} · {it.km} km</p>
+          </div>
         ))}
       </div>
     </div>
   )
 }
 
-function Match() {
-  const [missing, setMissing] = useState(false)
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <button onClick={() => setMissing(false)} className={`rounded-md px-2.5 py-1 text-xs font-medium ${!missing ? "bg-primary text-primary-foreground" : "border bg-background text-muted-foreground hover:bg-accent"}`}>
-          It fits
-        </button>
-        <button onClick={() => setMissing(true)} className={`rounded-md px-2.5 py-1 text-xs font-medium ${missing ? "bg-primary text-primary-foreground" : "border bg-background text-muted-foreground hover:bg-accent"}`}>
-          Something's missing
-        </button>
-      </div>
-
-      <div className="rounded-lg border bg-card p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">The loop</h3>
-          <button className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent">
-            <Repeat className="size-3.5" /> Simple 1-to-1 instead
-          </button>
-        </div>
-
-        {!missing ? (
-          <svg viewBox="0 0 600 180" className="mt-3 w-full">
-            <g>
-              <line x1="300" y1="40" x2="520" y2="130" stroke="var(--primary)" strokeWidth="2" />
-              <line x1="520" y1="130" x2="80" y2="130" stroke="var(--primary)" strokeWidth="2" />
-              <line x1="80" y1="130" x2="300" y2="40" stroke="var(--primary)" strokeWidth="2" />
-              <text x="420" y="80" textAnchor="middle" fontSize="9" className="fill-muted-foreground">gives</text>
-              <text x="300" y="150" textAnchor="middle" fontSize="9" className="fill-muted-foreground">gives</text>
-              <text x="180" y="78" textAnchor="middle" fontSize="9" className="fill-muted-foreground">gives</text>
-              {[
-                ["Cold Storage Co-op", "has storage", 300, 28],
-                ["Market Garden", "has compost", 540, 160],
-                ["Seed Co-op", "has seed", 60, 160],
-              ].map(([g, s, x, y]) => (
-                <g key={g as string}>
-                  <circle cx={x as number} cy={y as number} r={26} fill="var(--emerald-500, #10b981)" />
-                  <text x={x as number} y={y as number} textAnchor="middle" fontSize="9" fill="white" fontWeight={600}>{g as string}</text>
-                  <text x={x as number} y={(y as number) + 38} textAnchor="middle" fontSize="9" className="fill-foreground">{s as string}</text>
-                </g>
-              ))}
-            </g>
-          </svg>
-        ) : (
-          <div className="mt-3 rounded-md border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Something's missing</p>
-            <p className="mt-1">Tool Share has a truck, but nobody needs hauling yet.</p>
-            <button className="mt-3 inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent">
-              <Plus className="size-3.5" /> I can fill this
-            </button>
-          </div>
-        )}
-
-        {!missing && (
-          <div className="mt-3 rounded-lg border border-emerald-300/50 bg-emerald-500/5 p-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
-              <CheckCircle2 className="size-4" /> Everyone gets rewarded
-            </div>
-            <p className="mt-1 text-xs text-emerald-700/80">
-              When this closes, all three groups — and you for putting it together — get a reward from irl.coop.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function Track() {
+function Loops() {
   const legs = [
     { who: "Cold Storage → Market Garden", what: "cold storage", status: "done" },
     { who: "Market Garden → Seed Co-op", what: "compost", status: "stuck" },
@@ -153,12 +175,8 @@ function Track() {
             <div key={i} className="flex items-center gap-2 rounded-md border p-2.5">
               <span className="flex-1 text-xs font-medium">{l.who}</span>
               <span className="text-xs text-muted-foreground">{l.what}</span>
-              <span
-                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                  l.status === "done" ? "bg-emerald-500/10 text-emerald-700" : l.status === "stuck" ? "bg-red-500/10 text-red-700" : "bg-amber-500/10 text-amber-700"
-                }`}
-              >
-                {l.status === "done" ? <CheckCircle2 className="size-3" /> : l.status === "stuck" ? <Clock className="size-3" /> : <Clock className="size-3" />}
+              <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${l.status === "done" ? "bg-emerald-500/10 text-emerald-700" : l.status === "stuck" ? "bg-red-500/10 text-red-700" : "bg-amber-500/10 text-amber-700"}`}>
+                {l.status === "done" ? <CheckCircle2 className="size-3" /> : <Clock className="size-3" />}
                 {l.status}
               </span>
             </div>
@@ -175,11 +193,11 @@ function Track() {
 }
 
 export default function NeedsOffersMockup() {
-  const [view, setView] = useState<"board" | "match" | "track">("board")
+  const [view, setView] = useState<"board" | "weave" | "loops">("weave")
   const tabs = [
+    { id: "weave", label: "Weave" },
     { id: "board", label: "Have & need" },
-    { id: "match", label: "Match" },
-    { id: "track", label: "Track" },
+    { id: "loops", label: "Loops" },
   ] as const
   return (
     <div className="space-y-4">
@@ -190,9 +208,9 @@ export default function NeedsOffersMockup() {
           </button>
         ))}
       </div>
+      {view === "weave" && <Weave />}
       {view === "board" && <Board />}
-      {view === "match" && <Match />}
-      {view === "track" && <Track />}
+      {view === "loops" && <Loops />}
     </div>
   )
 }
