@@ -5,13 +5,14 @@ import { useState } from "react"
 import { AlertTriangle, BadgeCheck, CheckCircle2, Clock, Handshake, Plus, Repeat } from "lucide-react"
 
 // Needs/offers — a force-directed "solution space". Stress-test data spans
-// three shapes: physical (location-bound), remote (skill-bound), and financial
-// (sponsor-bound). Color = shape, fill = have (solid) vs need (hollow).
+// three shapes (physical / remote / financial) and multiple candidate matches
+// per need, weighted by fit. Link distance encodes match strength: a tight link
+// is a strong match, a long one a weak one.
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
+    <div className="flex h-[440px] items-center justify-center text-sm text-muted-foreground">
       Laying out the space…
     </div>
   ),
@@ -26,13 +27,23 @@ type GNode = {
   group: string
   shape: Shape
   km?: number
+  quantity?: string
+  condition?: string
+  timeframe?: string
+  undeclared?: string[]
   missing?: boolean
 }
 
+type GLink = {
+  source: string
+  target: string
+  weight: number // 0–1 match strength (fit)
+}
+
 const SHAPE_COLOR: Record<Shape, string> = {
-  physical: "#10b981", // emerald — bound to a place
-  remote: "#0ea5e9", // sky — bound to a skill
-  financial: "#f59e0b", // amber — bound to a project
+  physical: "#10b981",
+  remote: "#0ea5e9",
+  financial: "#f59e0b",
 }
 
 const SHAPE_LABEL: Record<Shape, string> = {
@@ -41,66 +52,81 @@ const SHAPE_LABEL: Record<Shape, string> = {
   financial: "funding",
 }
 
-// Offers (have) and needs, grouped by group so the "solution space" reads as
-// clusters. `km` is the literal distance for physical items; remote items have
-// no place; financial items are funding asks anchored to a project.
+// The details a posting may declare. `undeclared` marks the specifics the poster
+// hasn't filled in yet — these are exactly the gaps the validation story must
+// close before the loop can confirm.
 const NODES: GNode[] = [
-  // — physical: a tight give/get triangle (the canonical closed loop) —
-  { id: "cs-storage", have: true, what: "4 m³ cold storage", group: "Cold Storage Co-op", shape: "physical", km: 12 },
-  { id: "cs-compost", have: false, what: "compost", group: "Cold Storage Co-op", shape: "physical", km: 12 },
-  { id: "mg-compost", have: true, what: "2 t compost", group: "Market Garden", shape: "physical", km: 9 },
-  { id: "mg-seed", have: false, what: "seed", group: "Market Garden", shape: "physical", km: 9 },
-  { id: "sc-seed", have: true, what: "40 kg seed", group: "Seed Co-op", shape: "physical", km: 14 },
-  { id: "sc-storage", have: false, what: "winter storage", group: "Seed Co-op", shape: "physical", km: 14 },
+  // — physical: the surplus triangle —
+  { id: "cs-storage", have: true, what: "4 m³ cold storage", group: "Cold Storage Co-op", shape: "physical", km: 12, condition: "dry cold room", timeframe: "frees up by the 12th" },
+  { id: "cs-compost", have: false, what: "compost", group: "Cold Storage Co-op", shape: "physical", km: 12, quantity: "2–3 t", timeframe: "for spring beds", undeclared: ["transport", "timing"] },
+  { id: "mg-compost", have: true, what: "2 t compost", group: "Market Garden", shape: "physical", km: 9, condition: "organic", timeframe: "by the 18th" },
+  { id: "mg-seed", have: false, what: "seed", group: "Market Garden", shape: "physical", km: 9, quantity: "20 kg", timeframe: "by planting" },
+  { id: "sc-seed", have: true, what: "40 kg seed", group: "Seed Co-op", shape: "physical", km: 14, condition: "pristine", quantity: "40 kg" },
+  { id: "sc-storage", have: false, what: "winter storage", group: "Seed Co-op", shape: "physical", km: 14, condition: "dry + cold, root veg", undeclared: ["timing"] },
 
-  // — physical: bilateral pairs (offer ↔ need) —
-  { id: "hay", have: true, what: "surplus hay bales", group: "Meadow Farm", shape: "physical", km: 18 },
-  { id: "need-hay", have: false, what: "winter feed", group: "Livestock Co-op", shape: "physical", km: 18 },
-  { id: "greenhouse", have: true, what: "winter bench space", group: "Glasshouse Collective", shape: "physical", km: 7 },
-  { id: "need-greenhouse", have: false, what: "winter grow space", group: "Root Cellar", shape: "physical", km: 7 },
-  { id: "kiln", have: true, what: "community kiln", group: "Clay Works", shape: "physical", km: 31 },
-  { id: "need-kiln", have: false, what: "kiln firing", group: "Potters Guild", shape: "physical", km: 31 },
+  // — physical: contested needs — several candidates, different fit —
+  { id: "manure", have: true, what: "composted manure", group: "Meadow Farm", shape: "physical", km: 16, condition: "well-rotted" },
+  { id: "leaf-mulch", have: true, what: "leaf mulch", group: "Forest Commons", shape: "physical", km: 11, condition: "autumn leaves" },
+  { id: "saved-seed", have: true, what: "20 kg saved seed", group: "Root Cellar", shape: "physical", km: 13, condition: "open-pollinated" },
+  { id: "shed", have: true, what: "20 m² shed space", group: "Tool Library", shape: "physical", km: 8, condition: "humid, unheated" },
 
-  // — physical: a near-miss — a truck offer with no matching need yet —
-  { id: "tool-truck", have: true, what: "box truck", group: "Tool Share", shape: "physical", km: 22 },
-  { id: "missing-haul", have: false, what: "hauling help", group: "…", shape: "physical", km: 22, missing: true },
+  // — physical: bilateral pairs —
+  { id: "hay", have: true, what: "surplus hay bales", group: "Meadow Farm", shape: "physical", km: 18, condition: "barn-stored" },
+  { id: "need-hay", have: false, what: "winter feed", group: "Livestock Co-op", shape: "physical", km: 18, quantity: "2 t" },
+  { id: "greenhouse", have: true, what: "winter bench space", group: "Glasshouse Collective", shape: "physical", km: 7, condition: "heated, 6 benches" },
+  { id: "need-greenhouse", have: false, what: "winter grow space", group: "Root Cellar", shape: "physical", km: 7, timeframe: "for seedlings" },
+  { id: "kiln", have: true, what: "community kiln", group: "Clay Works", shape: "physical", km: 31, condition: "cone 6, 2 firings/mo" },
+  { id: "need-kiln", have: false, what: "kiln firing", group: "Potters Guild", shape: "physical", km: 31, timeframe: "bisque + glaze" },
+
+  // — physical: a near-miss gap —
+  { id: "tool-truck", have: true, what: "box truck", group: "Tool Share", shape: "physical", km: 22, timeframe: "weekends only" },
+  { id: "missing-haul", have: false, what: "hauling help", group: "…", shape: "physical", km: 22, quantity: "one load", missing: true },
 
   // — remote: skill-bound, no location —
-  { id: "marketing", have: true, what: "marketing expertise", group: "Comms Circle", shape: "remote" },
-  { id: "need-marketing", have: false, what: "marketing help", group: "Food Co-op", shape: "remote" },
-  { id: "va", have: true, what: "virtual assistant hours", group: "Admin Co-op", shape: "remote" },
-  { id: "need-va", have: false, what: "admin support", group: "Tool Library", shape: "remote" },
-  { id: "coaching", have: true, what: "facilitation coaching", group: "Weave Circle", shape: "remote" },
-  { id: "need-coaching", have: false, what: "facilitation help", group: "Housing Collective", shape: "remote" },
+  { id: "marketing", have: true, what: "marketing expertise", group: "Comms Circle", shape: "remote", condition: "co-op launch experience" },
+  { id: "need-marketing", have: false, what: "marketing help", group: "Food Co-op", shape: "remote", timeframe: "before autumn" },
+  { id: "va", have: true, what: "virtual assistant hours", group: "Admin Co-op", shape: "remote", quantity: "10 h/wk" },
+  { id: "need-va", have: false, what: "admin support", group: "Tool Library", shape: "remote", quantity: "5 h/wk" },
+  { id: "coaching", have: true, what: "facilitation coaching", group: "Weave Circle", shape: "remote", condition: "conflict + repair" },
+  { id: "need-coaching", have: false, what: "facilitation help", group: "Housing Collective", shape: "remote", timeframe: "for a tough AGM" },
 
-  // — financial: funding asks anchored to a project — no give/get loop, they
-  // seek a sponsor (vertical funds), not a counterparty —
+  // — financial: funding asks anchored to a project, seeking a sponsor —
   { id: "fund-solar", have: false, what: "solar array · $5k", group: "Energy Co-op · project", shape: "financial" },
   { id: "fund-tools", have: false, what: "tool library seed · $2k", group: "Tool Library · project", shape: "financial" },
   { id: "fund-kitchen", have: false, what: "community kitchen · $8k", group: "Kitchen Collective · project", shape: "financial" },
 ]
 
-// Potential matches: an offer that could satisfy a need. Physical edges are
-// weighted by km; remote edges have no distance; funding has no edge at all.
-const LINKS: { source: string; target: string }[] = [
-  { source: "cs-storage", target: "sc-storage" },
-  { source: "sc-seed", target: "mg-seed" },
-  { source: "mg-compost", target: "cs-compost" },
-  { source: "hay", target: "need-hay" },
-  { source: "greenhouse", target: "need-greenhouse" },
-  { source: "kiln", target: "need-kiln" },
-  { source: "tool-truck", target: "missing-haul" },
-  { source: "marketing", target: "need-marketing" },
-  { source: "va", target: "need-va" },
-  { source: "coaching", target: "need-coaching" },
+// Potential matches with a fit weight. Contested needs carry several candidates
+// at different weights so the graph shows *distance of likely weights*, not one
+// possible match each.
+const LINKS: GLink[] = [
+  // compost — three candidates, from strong to weak
+  { source: "mg-compost", target: "cs-compost", weight: 0.92 },
+  { source: "manure", target: "cs-compost", weight: 0.62 },
+  { source: "leaf-mulch", target: "cs-compost", weight: 0.38 },
+
+  // seed — right quantity beats pristine-but-surplus
+  { source: "sc-seed", target: "mg-seed", weight: 0.82 },
+  { source: "saved-seed", target: "mg-seed", weight: 0.95 },
+
+  // storage — dry cold room beats a humid shed
+  { source: "cs-storage", target: "sc-storage", weight: 0.95 },
+  { source: "shed", target: "sc-storage", weight: 0.44 },
+
+  // bilateral pairs
+  { source: "hay", target: "need-hay", weight: 0.9 },
+  { source: "greenhouse", target: "need-greenhouse", weight: 0.86 },
+  { source: "kiln", target: "need-kiln", weight: 0.8 },
+  { source: "tool-truck", target: "missing-haul", weight: 0.7 },
+
+  // remote
+  { source: "marketing", target: "need-marketing", weight: 0.9 },
+  { source: "va", target: "need-va", weight: 0.85 },
+  { source: "coaching", target: "need-coaching", weight: 0.8 },
 ]
 
-// The six nodes that close the canonical triangle loop.
 const LOOP_NODES = ["cs-storage", "sc-storage", "sc-seed", "mg-seed", "mg-compost", "cs-compost"]
 
-// The story a loop must graduate into: each leg carries who/what/how/when, a
-// coverage, and any gap the validation flags. A loop is a hypothesis until its
-// story is gap-free.
 type StoryLeg = { from: string; to: string; what: string; how: string; coverage: string; gap?: string }
 
 const STORY_LEGS: StoryLeg[] = [
@@ -129,7 +155,8 @@ export function NeedsOffersMockup() {
   const nodeLabel = (n: GNode) => {
     const verb = n.have ? "We have" : "We need"
     const place = n.km != null ? ` · ${n.km} km` : ""
-    return `${verb} ${n.what} · ${n.group}${place}`
+    const cond = n.condition ? ` · ${n.condition}` : ""
+    return `${verb} ${n.what} · ${n.group}${cond}${place}`
   }
 
   return (
@@ -178,6 +205,9 @@ export function NeedsOffersMockup() {
         <span className="flex items-center gap-1.5">
           <span className="size-2.5 rounded-full border-2 border-dashed border-muted-foreground/50" /> missing (gap)
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-0.5 w-6 bg-slate-400" /> stronger match = tighter link
+        </span>
       </div>
 
       {tab === "weave" && (
@@ -188,7 +218,7 @@ export function NeedsOffersMockup() {
             linkSource="source"
             linkTarget="target"
             width={760}
-            height={420}
+            height={440}
             nodeCanvasObject={(node: any, ctx: any, globalScale: number) => {
               const r = (node.missing ? 4.5 : node.have ? 6.5 : 5.5) / globalScale
               const color = node.missing ? "#9ca3af" : SHAPE_COLOR[node.shape as Shape]
@@ -206,8 +236,9 @@ export function NeedsOffersMockup() {
               }
             }}
             nodeLabel={(n: any) => nodeLabel(n)}
-            linkColor={() => "rgba(148,163,184,0.35)"}
-            linkWidth={1.5}
+            linkWidth={(l: any) => 1 + l.weight * 2.5}
+            linkColor={(l: any) => `rgba(100,116,139,${0.25 + l.weight * 0.55})`}
+            linkLabel={(l: any) => `${Math.round(l.weight * 100)}% fit`}
             linkDirectionalArrowLength={4}
             linkDirectionalArrowRelPos={1}
             linkDirectionalParticles={0}
@@ -238,6 +269,18 @@ export function NeedsOffersMockup() {
                   {SHAPE_LABEL[selected.shape]}
                 </span>
               </div>
+              {(selected.quantity || selected.condition || selected.timeframe) && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {selected.quantity && <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.quantity}</span>}
+                  {selected.condition && <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.condition}</span>}
+                  {selected.timeframe && <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.timeframe}</span>}
+                </div>
+              )}
+              {selected.undeclared && (
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  <span className="text-amber-600">not declared yet:</span> {selected.undeclared.join(" · ")}
+                </p>
+              )}
               {selected.shape === "financial" && (
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   A funding ask — it seeks a sponsor (vertical funds), not a give/get loop.
@@ -335,7 +378,11 @@ export function NeedsOffersMockup() {
               <p className="text-xs text-muted-foreground">
                 {n.group}
                 {n.km != null && ` · ${n.km} km`}
+                {n.quantity && ` · ${n.quantity}`}
               </p>
+              {n.undeclared && (
+                <p className="mt-1 text-[11px] text-amber-600">not declared: {n.undeclared.join(" · ")}</p>
+              )}
             </button>
           ))}
         </div>
