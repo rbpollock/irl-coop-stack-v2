@@ -138,6 +138,15 @@ const DOCS: DesignDoc[] = [
     file: "needs-offers-matching.md",
   },
   {
+    slug: "match-proposing",
+    title: "Match Proposing — anyone can weave",
+    category: "Economy & treasury",
+    status: "design",
+    description:
+      "Proposing a match is an action, not a role: any member may propose a matched-by edge, gated by a per-proposal bond and a decaying match-quality zk-badge — the trust floor and arbitration path for weaving.",
+    file: "match-proposing.md",
+  },
+  {
     slug: "world-doc-and-contacts",
     title: "World-Doc & Contacts",
     category: "Dashboard & world-doc",
