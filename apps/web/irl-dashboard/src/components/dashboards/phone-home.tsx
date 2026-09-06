@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { DocsSearch } from "@/components/docs-search"
 
 // The coop's home, as a phone/tablet home screen: apps on top, widgets on bottom.
 // Apps can have a green dot indicator for notifications.
@@ -242,6 +243,11 @@ export function PhoneHome() {
     <div className="flex gap-6 items-start relative">
       {/* Main content area */}
       <div className="flex-1 space-y-8 min-w-0">
+        {/* Search — docs, public groups and rooms */}
+        <section>
+          <DocsSearch className="max-w-none" prioritizeGroups />
+        </section>
+
         {/* Apps — the icon grid on top */}
         <section className="space-y-3">
           <SectionLabel>Apps</SectionLabel>

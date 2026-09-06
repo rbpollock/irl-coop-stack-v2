@@ -5,15 +5,9 @@ import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { ArrowUpRight, Loader2, Search } from "lucide-react"
 
-const COOP_API_URL =
-  process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
-// Public knowledge areas: the design docs + the public group profiles.
-const DOCS_AREA_ID =
-  process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ??
-  "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
-const GROUPS_AREA_ID =
-  process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ??
-  "ff498932-aae5-449a-a4db-13432cdf7e2b"
+const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+const DOCS_AREA_ID = process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ?? "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
+const GROUPS_AREA_ID = process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ?? "ff498932-aae5-449a-a4db-13432cdf7e2b"
 
 type Context = {
   document_id: string
@@ -23,32 +17,77 @@ type Context = {
   source: string
 }
 
-// file name → design-doc slug, so a result can link to its source doc.
-export function DocsSearch({ docs }: { docs: Record<string, string> }) {
+function resolveLink(documentName: string | null): { href: string; label: string } | null {
+  if (!documentName) return null
+  if (documentName.startsWith("group-")) {
+    const slug = documentName.slice("group-".length).replace(/\.md$/, "")
+    return { href: `/groups/${slug}`, label: "View group" }
+  }
+  const slug = documentName.replace(/\.md$/, "")
+  return { href: `/design/${slug}`, label: "Read more" }
+}
+
+function ResultCard({ context: c }: { context: Context }) {
+  const link = resolveLink(c.document_name)
+  const inner = (
+    <>
+      {c.heading && <p className="mb-1 text-xs font-semibold text-primary">{c.heading}</p>}
+      <p className="text-sm leading-relaxed text-foreground/85">{c.text.slice(0, 300)}</p>
+      <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+        {link ? (
+          <>
+            {link.label} <ArrowUpRight className="size-3" />
+          </>
+        ) : (
+          <>via {c.source}</>
+        )}
+      </p>
+    </>
+  )
+  if (!link) {
+    return <div className="rounded-xl border bg-card p-4">{inner}</div>
+  }
+  return (
+    <Link
+      href={link.href}
+      className="block rounded-xl border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+    >
+      {inner}
+    </Link>
+  )
+}
+
+async function queryArea(token: string | undefined, areaId: string, question: string): Promise<Context[]> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(`${COOP_API_URL}/mcp`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question } },
+    }),
+  })
+  const data = await res.json()
+  const text = data?.result?.content?.[0]?.text
+  if (!text) return []
+  try {
+    return (JSON.parse(text).contexts ?? []) as Context[]
+  } catch {
+    return []
+  }
+}
+
+export function DocsSearch({ className = "", prioritizeGroups = false }: { className?: string; prioritizeGroups?: boolean }) {
   const { data: session } = useSession()
+  const token = session?.accessToken as string | undefined
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [contexts, setContexts] = useState<Context[]>([])
   const [searched, setSearched] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const token = session?.accessToken as string | undefined
-
-  async function retrieve(areaId: string, question: string, headers: Record<string, string>) {
-    const res = await fetch(`${COOP_API_URL}/mcp`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/call",
-        params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question } },
-      }),
-    })
-    const data = await res.json()
-    const text = data?.result?.content?.[0]?.text
-    return text ? (JSON.parse(text).contexts ?? []) : []
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -58,13 +97,11 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
     setError(null)
     setSearched(true)
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" }
-      if (token) headers.Authorization = `Bearer ${token}`
-      const [groups, docPassages] = await Promise.all([
-        retrieve(GROUPS_AREA_ID, q, headers),
-        retrieve(DOCS_AREA_ID, q, headers),
+      const [groupCtx, docCtx] = await Promise.all([
+        queryArea(token, GROUPS_AREA_ID, q),
+        queryArea(token, DOCS_AREA_ID, q),
       ])
-      setContexts([...groups, ...docPassages].slice(0, 8))
+      setContexts([...groupCtx, ...docCtx].slice(0, 8))
     } catch {
       setError("Search failed — try again.")
       setContexts([])
@@ -73,25 +110,15 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
     }
   }
 
-  function resolveLink(name: string | null) {
-    if (!name) return null
-    if (name.startsWith("group-")) {
-      const slug = name.slice("group-".length).replace(/\.md$/, "")
-      return { href: `/groups/${slug}`, label: "View group" }
-    }
-    const slug = docs[name]
-    return slug ? { href: `/design/${slug}`, label: "Read more" } : null
-  }
-
   return (
-    <div className="mx-auto w-full max-w-2xl">
+    <div className={`mx-auto w-full max-w-2xl ${className}`}>
       <form onSubmit={onSubmit} className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask the docs — e.g. “how does a group Safe work?”"
+            placeholder="Search docs, groups and rooms…"
             className="h-11 w-full rounded-xl border bg-background pl-10 pr-3 text-sm shadow-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
@@ -105,7 +132,7 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
       </form>
 
       {loading && (
-        <div className="mt-8 flex justify-center">
+        <div className="mt-6 flex justify-center">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       )}
@@ -117,38 +144,33 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
       )}
 
       {!loading && contexts.length > 0 && (
-        <div className="mt-6 space-y-3">
-          {contexts.map((c, i) => {
-            const link = resolveLink(c.document_name)
-            const card = (
-              <div className="group rounded-xl border bg-card p-4 transition-colors hover:border-primary/50">
-                {c.heading && (
-                  <p className="mb-1 text-xs font-semibold text-primary">{c.heading}</p>
-                )}
-                <p className="text-sm leading-relaxed text-foreground/85">
-                  {c.text.slice(0, 420)}
-                </p>
-                <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-                  via {c.source}
-                  {link && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <span className="inline-flex items-center gap-0.5 font-medium text-primary group-hover:underline">
-                        {link.label} <ArrowUpRight className="size-3" />
-                      </span>
-                    </>
-                  )}
-                </p>
+        <div className="mt-6 space-y-4">
+          {prioritizeGroups ? (
+            <>
+              {contexts.some((c) => c.document_name?.startsWith("group-")) && (
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Groups</h3>
+              )}
+              <div className="space-y-3">
+                {contexts.filter((c) => c.document_name?.startsWith("group-")).map((c, i) => (
+                  <ResultCard key={`g-${i}`} context={c} />
+                ))}
               </div>
-            )
-            return link ? (
-              <Link key={i} href={link.href} className="block">
-                {card}
-              </Link>
-            ) : (
-              <div key={i}>{card}</div>
-            )
-          })}
+              {contexts.some((c) => !c.document_name?.startsWith("group-")) && (
+                <h3 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Docs</h3>
+              )}
+              <div className="space-y-3">
+                {contexts.filter((c) => !c.document_name?.startsWith("group-")).map((c, i) => (
+                  <ResultCard key={`d-${i}`} context={c} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              {contexts.map((c, i) => (
+                <ResultCard key={i} context={c} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

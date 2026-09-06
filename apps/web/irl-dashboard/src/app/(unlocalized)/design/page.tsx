@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowRight, BookOpen } from "lucide-react"
 
 import { DocsSearch } from "@/components/docs-search"
-import { getCategories, getDesignDocs, type DocStatus } from "@/lib/design-docs"
+import { getCategories, type DocStatus } from "@/lib/design-docs"
 
 export const metadata = {
   title: { absolute: "Design Docs — irl.coop" },
@@ -17,7 +17,6 @@ const STATUS_STYLE: Record<DocStatus, string> = {
 
 export default function DesignIndexPage() {
   const categories = getCategories()
-  const docSlugs = Object.fromEntries(getDesignDocs().map((d) => [d.file, d.slug]))
   return (
     <div className="container py-16">
       <div className="mx-auto mb-14 max-w-2xl text-center">
@@ -35,7 +34,7 @@ export default function DesignIndexPage() {
       </div>
 
       <div className="mb-14">
-        <DocsSearch docs={docSlugs} />
+        <DocsSearch />
       </div>
 
       <div className="mx-auto mb-10 flex max-w-2xl flex-col items-center gap-3 rounded-xl border bg-muted/40 p-5 text-center">
