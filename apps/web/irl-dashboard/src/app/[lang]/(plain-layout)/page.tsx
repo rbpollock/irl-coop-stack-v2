@@ -7,6 +7,7 @@ import {
   FileText,
   FolderKanban,
   FolderOpen,
+  Handshake,
   KeyRound,
   Mail,
   Map,
@@ -118,6 +119,14 @@ const APPS = [
     across: "Groups hold child groups; strip the edge, it stands alone.",
   },
   {
+    icon: Handshake,
+    name: "Needs & Offers",
+    brand: "irl.coop",
+    line: "Post what you have or need — and find who fits together.",
+    group: "Needs and offers scoped to the group; anyone can weave a match.",
+    across: "A loop can span groups — seed, compost, storage, in one circle.",
+  },
+  {
     icon: MessagesSquare,
     name: "Chat",
     brand: "Matrix · Element",
@@ -226,6 +235,7 @@ const APPS = [
 const APP_GRADIENTS: Record<string, string> = {
   Projects: "from-indigo-500 to-blue-600",
   Groups: "from-fuchsia-500 to-pink-600",
+  "Needs & Offers": "from-teal-500 to-emerald-600",
   Chat: "from-violet-500 to-purple-600",
   Maps: "from-teal-500 to-cyan-600",
   Farm: "from-emerald-500 to-green-600",

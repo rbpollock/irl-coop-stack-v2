@@ -30,6 +30,11 @@ const sections: NavigationType[] = [
         iconName: "Network",
       },
       {
+        title: "Needs & Offers",
+        href: "/dashboards/needs-offers",
+        iconName: "Handshake",
+      },
+      {
         title: "Maps",
         href: "/apps/map",
         iconName: "Map",
