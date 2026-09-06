@@ -80,14 +80,13 @@ function makeGroupGravity(getIds: () => Set<string>) {
   return force
 }
 
-// A force that pins the selected node to the center of the viewport, so the
-// rest of the graph moves around it.
-function makeFocusForce(getSelectedId: () => string | null, getSize: () => { width: number; height: number }) {
+// A force that pins the selected node to the center of the viewport. force-graph's
+// coordinate space is centered on (0,0) — the canvas center — so the pin is (0,0).
+function makeFocusForce(getSelectedId: () => string | null) {
   let nodes: any[] = []
   let prevId: string | null = null
   function force() {
     const id = getSelectedId()
-    const { width, height } = getSize()
     if (prevId && prevId !== id) {
       const prev = nodes.find((n) => n.id === prevId)
       if (prev) {
@@ -99,8 +98,8 @@ function makeFocusForce(getSelectedId: () => string | null, getSize: () => { wid
     if (!id) return
     const node = nodes.find((n) => n.id === id)
     if (!node) return
-    node.fx = width / 2
-    node.fy = height / 2
+    node.fx = 0
+    node.fy = 0
   }
   force.initialize = (ns: any[]) => {
     nodes = ns
@@ -138,8 +137,6 @@ export function NeedsOffersMockup() {
   const selectedRef = useRef<string | null>(null)
   selectedRef.current = selected?.id ?? null
 
-  const graphSizeRef = useRef({ width: 900, height: 620 })
-
   const appliedRef = useRef(false)
   const fgRef = useRef<any>(null)
 
@@ -147,14 +144,13 @@ export function NeedsOffersMockup() {
     const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
     fg.d3Force("link", forceLink().distance(fitDistance))
     fg.d3Force("group-gravity", makeGroupGravity(() => myWeaveRef.current))
-    fg.d3Force("focus", makeFocusForce(() => selectedRef.current, () => graphSizeRef.current))
+    fg.d3Force("focus", makeFocusForce(() => selectedRef.current))
     fg.d3ReheatSimulation()
   }, [])
 
   // Measure the container so the graph uses the visible viewport, not the window.
   const containerRef = useRef<HTMLDivElement>(null)
   const [graphSize, setGraphSize] = useState({ width: 900, height: 620 })
-  graphSizeRef.current = graphSize
 
   useEffect(() => {
     const el = containerRef.current
@@ -205,8 +201,8 @@ export function NeedsOffersMockup() {
     () =>
       visiblePostings.map((p, i) => ({
         ...p,
-        x: p.shape === "physical" ? 220 + (i % 5) * 70 : p.shape === "remote" ? 720 + (i % 3) * 70 : 480 + (i % 3) * 70,
-        y: p.shape === "physical" ? 140 + Math.floor((i % 15) / 5) * 90 : p.shape === "remote" ? 160 + (i % 4) * 90 : 520,
+        x: p.shape === "physical" ? -450 + (i % 5) * 90 : p.shape === "remote" ? 150 + (i % 3) * 90 : -90 + (i % 3) * 90,
+        y: p.shape === "physical" ? -280 + Math.floor((i % 15) / 5) * 95 : p.shape === "remote" ? -260 + (i % 4) * 95 : 240,
       })),
     [visiblePostings],
   )
