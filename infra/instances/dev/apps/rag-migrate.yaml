@@ -1,0 +1,12 @@
+# rag-migrate — one-shot Alembic migration for the RAG schema on the shared
+# Citus `rag` DB. Runs `alembic upgrade head` (idempotent) before the api/worker.
+name: rag-migrate
+pillar: workflow
+enabled: true
+type: image
+image: irlcoop/rag-api:0.1.0
+command: ["python", "-m", "app.db.migration_runner"]
+restart: "no"
+env:
+  DATABASE_URL: "postgresql://rag:${SECRET:postgres.rag}@172.17.0.1:5432/rag"
+  EMBEDDING_DIMENSIONS: "1536"

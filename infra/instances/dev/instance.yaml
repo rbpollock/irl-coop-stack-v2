@@ -44,6 +44,9 @@ apps:
   - litefarm
   - rag
   - rag-inference
+  - rag-migrate
+  - rag-api
+  - rag-worker
 
 # which pillars actually run on the dev box today (deployment concern — the
 # compose artifacts for all apps are generated regardless)
