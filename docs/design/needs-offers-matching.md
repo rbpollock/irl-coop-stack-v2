@@ -312,9 +312,11 @@ implicitly treats them as fields a poster *declares*. They mostly shouldn't be.
 The tension — too many fields and nobody posts, too few and matches are poor —
 resolves with a division of labour, not a compromise:
 
-- **Ask (2 things):** `what` (free text) + `shape` (the one genuine fork —
-  physical / remote / financial). Every required field costs people who walk
-  away; two is the floor.
+- **Ask (3 things):** `what` (free text) + `shape` (the one genuine fork —
+  physical / remote / financial) + `scope` (the group you're posting as, §16).
+  Every required field costs people who walk away; three is the floor — and
+  `scope` is *defaulted from context* (a group's page pre-selects that group;
+  the home pre-selects "myself / public"), so it's a confirm, not an entry.
 - **Infer (the AI):** type, quantity, condition — extracted from the free text,
   the same extraction the RAG pipeline already performs. The 15-way type
   taxonomy *stays*, but as an internal prior for the matcher, not a declared
@@ -329,10 +331,76 @@ resolves with a division of labour, not a compromise:
 **The posting is a derived view of work already in flight.** From a Plane issue
 ("we need 5 volunteers for the harvest on the 20th") or a Matrix message
 ("anyone have a truck this weekend?") the posting is *pre-seeded and confirmed*,
-not filled in. The wizard is two steps — *"What do you have or need?"* (the AI
-reads it) → *"What kind?"* (three shape cards) → done. Fewer fields up front
-isn't less data; it's the same five dimensions captured by inference instead of
-entry.
+not filled in. The wizard is three steps — *"What do you have or need?"* (the AI
+reads it) → *"What kind?"* (three shape cards) → *"Posting as?"* (your groups,
+defaulted) → done. Fewer fields up front isn't less data; it's the same five
+dimensions captured by inference instead of entry.
+
+## 16. Posting as — the scope and its audience
+
+A posting is not just *what* and *what kind* — it's **who you're posting as**,
+because a member belongs to many groups (and tiers of connected groups), and the
+group context decides who can even *see* the posting, let alone match it. The
+posting carries one more field:
+
+| scope | audience (who can see + match) |
+|---|---|
+| `public` | everyone — including anonymous search |
+| `group:<id>` | that group's members only |
+| `group:<id>` (connected) | the group + its parent / subgroups / federated |
+
+The audience is **not hand-picked** — it falls out of the relationship edges the
+group already has (`subgroup-of`, `sponsored-by`, `federated-with`). Posting in a
+subgroup is automatically visible to its parent; a federated post is visible to
+the federated groups. Composition-not-inheritance does the work, so there is no
+second form of audience checkboxes.
+
+Three consequences, all reusing settled mechanics:
+
+1. **Deny-by-default holds.** A need posted in a hidden care-circle group never
+   surfaces on the public graph. match-proposing.md §2 already says a proposer
+   can't reference a posting they can't see — the `scope` is what makes that tier
+   real *at post time*, not a check the matcher does later.
+2. **Matching scope = the world-doc union.** The set of postings a member can
+   weave is exactly the union their world-doc already computes (public + every
+   group they hold a seat in + direct grants). The `scope` decides which tier a
+   posting lands in; the matcher reads that same union. No new query.
+3. **The notification context.** `trade.match_proposed` fans out through the
+   *group's* delivery workflow — so the `scope` is also the notification context,
+   not just the visibility. A private group's match never pings the public bus.
+
+The UI is a **one-tap picker**, not a form: the wizard's third step is *"posting
+as"* — your groups, defaulted from context (a group's page pre-selects that
+group; the home pre-selects "myself / public"). It is the same shape as the
+`shape` fork — a choice you confirm, not a field you fill in. What is genuinely
+yours to declare at post time is four things: `what`, `shape`, `scope`, and — for
+exchanges — `seeks` (the return you want, §17); everything else is inferred or
+defaulted.
+
+## 17. The exchange — `seeks` (giving with a return expectation)
+
+Some postings are not a pure gift or need — they are an **exchange**: "I give X, I
+want Y in return." A posting may carry a `seeks` field for that:
+
+| posting | `have` | `what` | `seeks` |
+|---|---|---|---|
+| pure offer (a retired nurse) | offer | childcare | — (absent) |
+| babysitting swap | offer | babysitting | `"babysitting"` (same → swap) |
+| rolfing for housing | offer | rolfing | `"housing"` |
+| manual labor for money/services | offer | manual labor | `["money", "childcare", "repairs"]` |
+
+- **No `seeks`** → a pure gift or pure need (unchanged).
+- **`seeks` is a single string** → a specific return.
+- **`seeks` is an array** → flexible ("money OR these services").
+- **`seeks === what`** → a swap (the mirror-image case).
+
+A posting with `seeks` is a **two-leg participant**: its `what` must be consumed
+*and* its `seeks` must be produced. "Rolfing for housing" only closes when someone
+needs rolfing and someone offers housing — the loop needs both legs. A swap is the
+degenerate case: `seeks == what`, so two "babysitting swap" postings close a clean
+2-node cycle (each person is both an offer and a need for the same thing). This
+reuses the same `matched-by` edge and loop machinery — `seeks` adds a second
+requirement the matcher must satisfy, not a new primitive.
 
 ## Worked example — the surplus triangle
 
