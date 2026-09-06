@@ -1,0 +1,26 @@
+# rag — deep-agent-rag-stack knowledge base (NotebookLM-style RAG).
+# Intent-only for now: no app container or edge route yet. This spec bootstraps
+# the RAG database on the shared Citus (role + database + pgroonga/pgvector
+# extensions) via a one-shot db-setup sidecar, so the RAG stack can attach when
+# it is deployed. PGroonga is the Traditional-Chinese full-text index (see
+# infra/build/images/postgres-citus). The `rag` service itself is a no-op
+# placeholder until the real API/worker containers land.
+name: rag
+pillar: workflow
+enabled: true
+type: image
+image: postgres:16-alpine
+command: ["true"]
+restart: "no"
+sidecars:
+  rag-db-setup:
+    image: postgres:16-alpine
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_roles WHERE rolname='rag'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE ROLE rag LOGIN PASSWORD '${SECRET:postgres.rag}'"
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='rag'" | grep -q 1 || psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/postgres" -c "CREATE DATABASE rag OWNER rag"
+        psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/rag" -c "CREATE EXTENSION IF NOT EXISTS pgroonga" -c "CREATE EXTENSION IF NOT EXISTS vector"
+        echo 'rag DB ready.'
