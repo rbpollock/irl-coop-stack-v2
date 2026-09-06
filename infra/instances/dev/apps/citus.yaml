@@ -3,7 +3,7 @@ name: citus
 pillar: storage
 service_name: postgres
 type: image
-image: irlcoop/postgres-citus:12.1-vector-postgis
+image: irlcoop/postgres-citus:12.1-vector-postgis-pgroonga
 env:
   POSTGRES_PASSWORD: ${SECRET:postgres.irlcoop}
 volumes:

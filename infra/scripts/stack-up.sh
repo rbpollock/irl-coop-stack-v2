@@ -25,7 +25,7 @@ command -v docker >/dev/null || { fail "docker not found"; exit 1; }
 
 # Check and build missing custom images before bringing up pillars
 missing_images=0
-for img in "irlcoop/element-web:v1.12.18" "irlcoop/synapse-s3:v1.118.0" "irlcoop/postgres-citus:12.1-vector" "irlcoop/browser-runner:latest" "irlcoop/postiz:2026.08.3" "irlcoop/cinny:v4.12.6" "irlcoop/formbricks-gate-sso:5.4.0" "irlcoop/litefarm-api:2026.08.30" "irlcoop/litefarm-web:2026.08.30"; do
+for img in "irlcoop/element-web:v1.12.18" "irlcoop/synapse-s3:v1.118.0" "irlcoop/postgres-citus:12.1-vector-postgis-pgroonga" "irlcoop/browser-runner:latest" "irlcoop/postiz:2026.08.3" "irlcoop/cinny:v4.12.6" "irlcoop/formbricks-gate-sso:5.4.0" "irlcoop/litefarm-api:2026.08.30" "irlcoop/litefarm-web:2026.08.30"; do
   if ! docker image inspect "$img" >/dev/null 2>&1; then
     missing_images=1
     break
