@@ -83,6 +83,7 @@ export function NeedsOffersMockup() {
   const [postShape, setPostShape] = useState<Shape>("physical")
   const [search, setSearch] = useState("")
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(true)
 
   const myWeaveRef = useRef<Set<string>>(new Set())
   myWeaveRef.current = new Set(myWeave)
@@ -264,36 +265,10 @@ export function NeedsOffersMockup() {
         </div>
       )}
 
-      {/* how to use it */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
-        <span className="font-medium text-foreground">How it works</span>
-        <span>① pick a zone</span>
-        <span>② tap nodes to select them — they outline and draw together</span>
-        <span>③ Connect to tie them into a weave</span>
-      </div>
-
-      {/* shape legend */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-emerald-500" /> physical (place)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-sky-500" /> remote (skill)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-amber-500" /> funding (project)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full border-2 border-muted-foreground/50" /> need (hollow)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-6 border-t-2 border-dashed border-slate-400" /> shorter &amp; darker = better fit
-        </span>
-        <span className="text-muted-foreground/70">{visiblePostings.length} postings in view</span>
-      </div>
+      {/* the weave view — the graph fills the page, controls float on top */}
 
       {tab === "weave" && (
-        <div className="relative h-[70vh] rounded-lg border bg-card shadow-sm">
+        <div className="relative h-[calc(100vh-8rem)] overflow-hidden">
           <ForceGraph2D
             ref={(fg: any) => {
               if (fg && !appliedRef.current) {
@@ -348,7 +323,7 @@ export function NeedsOffersMockup() {
               onBackgroundClick={() => setSelected(null)}
             />
             {selected && (
-              <div className="absolute bottom-3 left-3 right-3 rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur">
+              <div className="absolute bottom-10 left-3 right-3 rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">
@@ -394,8 +369,26 @@ export function NeedsOffersMockup() {
                 Matched
               </div>
             )}
-          {/* the weave panel — floats over the graph */}
-          <div className="absolute right-3 top-3 bottom-3 w-72 overflow-auto rounded-lg border bg-background/90 p-3 shadow-md backdrop-blur">
+
+          {/* how-it-works floating chip */}
+          <div className="absolute left-3 top-3 rounded-lg border bg-background/85 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+            ① pick a zone · ② tap a node · ③ Connect
+          </div>
+
+          {/* drawer toggle */}
+          <button
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            className="absolute right-3 top-3 rounded-md border bg-background/85 px-2.5 py-1.5 text-xs font-medium shadow-sm backdrop-blur"
+          >
+            {drawerOpen ? "Hide" : "Weave"}
+          </button>
+
+          {/* the drawer */}
+          <div
+            className={`absolute bottom-9 right-0 top-0 w-80 transform overflow-auto border-l bg-background/95 p-3 shadow-xl backdrop-blur transition-transform duration-200 ${
+              drawerOpen ? "translate-x-0" : "translate-x-full"
+            }`}
+          >
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -470,6 +463,26 @@ export function NeedsOffersMockup() {
                 {connected.length} link{connected.length > 1 ? "s" : ""} tied into a weave.
               </p>
             )}
+          </div>
+
+          {/* legend — bottom edge */}
+          <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-t bg-background/85 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur">
+            <span className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full bg-emerald-500" /> physical
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full bg-sky-500" /> remote
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full bg-amber-500" /> funding
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full border-2 border-muted-foreground/50" /> need
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-0.5 w-6 border-t-2 border-dashed border-slate-400" /> fit
+            </span>
+            <span className="ml-auto">{visiblePostings.length} postings in view</span>
           </div>
         </div>
       )}
