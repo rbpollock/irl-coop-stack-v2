@@ -1,0 +1,41 @@
+# Declarative seed groups — the "recipes" as real groups, for exercising the
+# group model, the search, and the provisioning. Reloadable: infra/scripts/seed-groups.js
+# creates any group whose slug is free and indexes open groups' profiles into the RAG.
+#
+# privacy: open (public) | members | hidden — mirrors groups.ts PRIVACY.
+groups:
+  - slug: food-coop
+    name: "The Food Coop"
+    privacy: open
+    recipe: food
+    description: >
+      A neighborhood food cooperative — pooled bulk buying, a shared commercial
+      kitchen, and a weekly member market. Members combine orders and split costs.
+  - slug: care-circle
+    name: "Care Circle"
+    privacy: hidden
+    recipe: care
+    description: >
+      Mutual aid for elders and caregivers — errand runs, respite rotations, and a
+      meal train across the block.
+  - slug: housing-collective
+    name: "Housing Collective"
+    privacy: open
+    recipe: housing
+    description: >
+      Households co-managing shared property — maintenance, shared utilities, and a
+      repair fund decided by the residents themselves.
+  - slug: civic-voice
+    name: "Civic Voice"
+    privacy: open
+    recipe: civic
+    description: >
+      Neighborhood civic engagement — voter registration drives, know-your-rights
+      trainings, rides to the polls, and coordinated advocacy days.
+  - slug: media-coop
+    name: "Media Coop"
+    privacy: hidden
+    recipe: media
+    description: >
+      A member-owned publisher — newsletters, podcasts, and documentation for the
+      cooperative movement, funded by its readers.

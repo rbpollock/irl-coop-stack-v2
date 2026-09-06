@@ -7,10 +7,13 @@ import { ArrowUpRight, Loader2, Search } from "lucide-react"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
-// The coop-wide public knowledge area (the design docs), queryable by anyone.
+// Public knowledge areas: the design docs + the public group profiles.
 const DOCS_AREA_ID =
   process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ??
   "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
+const GROUPS_AREA_ID =
+  process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ??
+  "ff498932-aae5-449a-a4db-13432cdf7e2b"
 
 type Context = {
   document_id: string
@@ -31,6 +34,22 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
 
   const token = session?.accessToken as string | undefined
 
+  async function retrieve(areaId: string, question: string, headers: Record<string, string>) {
+    const res = await fetch(`${COOP_API_URL}/mcp`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question } },
+      }),
+    })
+    const data = await res.json()
+    const text = data?.result?.content?.[0]?.text
+    return text ? (JSON.parse(text).contexts ?? []) : []
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     const q = query.trim()
@@ -41,33 +60,27 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" }
       if (token) headers.Authorization = `Bearer ${token}`
-      const res = await fetch(`${COOP_API_URL}/mcp`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "tools/call",
-          params: {
-            name: "rag.retrieve_area_contexts",
-            arguments: { area_id: DOCS_AREA_ID, question: q },
-          },
-        }),
-      })
-      const data = await res.json()
-      const text = data?.result?.content?.[0]?.text
-      if (!text) {
-        setError(data?.error?.message ?? "No matches found.")
-        setContexts([])
-      } else {
-        setContexts((JSON.parse(text).contexts ?? []).slice(0, 6))
-      }
+      const [groups, docPassages] = await Promise.all([
+        retrieve(GROUPS_AREA_ID, q, headers),
+        retrieve(DOCS_AREA_ID, q, headers),
+      ])
+      setContexts([...groups, ...docPassages].slice(0, 8))
     } catch {
       setError("Search failed — try again.")
       setContexts([])
     } finally {
       setLoading(false)
     }
+  }
+
+  function resolveLink(name: string | null) {
+    if (!name) return null
+    if (name.startsWith("group-")) {
+      const slug = name.slice("group-".length).replace(/\.md$/, "")
+      return { href: `/groups/${slug}`, label: "View group" }
+    }
+    const slug = docs[name]
+    return slug ? { href: `/design/${slug}`, label: "Read more" } : null
   }
 
   return (
@@ -106,7 +119,7 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
       {!loading && contexts.length > 0 && (
         <div className="mt-6 space-y-3">
           {contexts.map((c, i) => {
-            const slug = c.document_name ? docs[c.document_name] : undefined
+            const link = resolveLink(c.document_name)
             const card = (
               <div className="group rounded-xl border bg-card p-4 transition-colors hover:border-primary/50">
                 {c.heading && (
@@ -117,19 +130,19 @@ export function DocsSearch({ docs }: { docs: Record<string, string> }) {
                 </p>
                 <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
                   via {c.source}
-                  {slug && (
+                  {link && (
                     <>
                       <span aria-hidden>·</span>
                       <span className="inline-flex items-center gap-0.5 font-medium text-primary group-hover:underline">
-                        Read more <ArrowUpRight className="size-3" />
+                        {link.label} <ArrowUpRight className="size-3" />
                       </span>
                     </>
                   )}
                 </p>
               </div>
             )
-            return slug ? (
-              <Link key={i} href={`/design/${slug}`} className="block">
+            return link ? (
+              <Link key={i} href={link.href} className="block">
                 {card}
               </Link>
             ) : (
