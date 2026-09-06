@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useCallback, useMemo, useRef, useState } from "react"
-import { BadgeCheck, CheckCircle2, ChevronRight, Clock, Handshake, Plus, Repeat, X } from "lucide-react"
+import { BadgeCheck, CheckCircle2, ChevronDown, ChevronRight, Clock, Handshake, Plus, Repeat, X } from "lucide-react"
 import { forceLink } from "d3-force-3d"
 
 import { buildLinks, buildPostings, REGIONS, type Posting, type Shape } from "@/lib/needs-offers.data"
@@ -83,6 +83,7 @@ export function NeedsOffersMockup() {
   const [search, setSearch] = useState("")
   const [expanded, setExpanded] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(true)
+  const [urgentOpen, setUrgentOpen] = useState(true)
 
   const myWeaveRef = useRef<Set<string>>(new Set())
   myWeaveRef.current = new Set(myWeave)
@@ -465,24 +466,39 @@ export function NeedsOffersMockup() {
             )}
             </div>
 
-            {/* urgent needs in this zone */}
-            <div className="flex-1 overflow-auto p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Urgent in this zone</p>
-              {highPriorityNeeds.length === 0 ? (
-                <p className="mt-1 text-xs text-muted-foreground">Nothing urgent here.</p>
-              ) : (
-                <div className="mt-1.5 space-y-1">
-                  {highPriorityNeeds.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
-                      <span className="truncate">{p.what}</span>
-                      <button
-                        onClick={() => toggle(p.id)}
-                        className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition hover:bg-primary/20"
-                      >
-                        {myWeave.includes(p.id) ? "remove" : "weave in"}
-                      </button>
+            {/* urgent needs in this zone — collapsible */}
+            <div className={`overflow-auto border-t ${urgentOpen ? "flex-1" : ""}`}>
+              <button
+                onClick={() => setUrgentOpen(!urgentOpen)}
+                className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
+              >
+                <span className="flex items-center gap-2">
+                  Urgent in this zone
+                  <span className="rounded-full bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-700">
+                    {highPriorityNeeds.length}
+                  </span>
+                </span>
+                <ChevronDown className={`size-3.5 transition-transform ${urgentOpen ? "" : "-rotate-90"}`} />
+              </button>
+              {urgentOpen && (
+                <div className="px-3 pb-3">
+                  {highPriorityNeeds.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nothing urgent here.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {highPriorityNeeds.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
+                          <span className="truncate">{p.what}</span>
+                          <button
+                            onClick={() => toggle(p.id)}
+                            className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition hover:bg-primary/20"
+                          >
+                            {myWeave.includes(p.id) ? "remove" : "weave in"}
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
