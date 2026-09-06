@@ -263,7 +263,7 @@ export function NeedsOffersMockup() {
       {/* the weave view — the graph fills the page, controls float on top */}
 
       {tab === "weave" && (
-        <div className="relative h-[calc(100vh-8rem)] overflow-hidden">
+        <div className="relative h-[calc(100vh-8rem)] overflow-hidden [&_canvas]:touch-none">
           <ForceGraph2D
             ref={(fg: any) => {
               if (fg && !appliedRef.current) {
@@ -277,7 +277,7 @@ export function NeedsOffersMockup() {
               linkTarget="target"
               nodeCanvasObject={(node: any, ctx: any, globalScale: number) => {
                 const inWeave = myWeave.includes(node.id)
-                const r = (node.have ? 5 : 4.5) / globalScale
+                const r = (node.have ? 7 : 6) / globalScale
                 const color = SHAPE_COLOR[node.shape as Shape]
                 if (inWeave) {
                   ctx.beginPath()
@@ -304,6 +304,12 @@ export function NeedsOffersMockup() {
                 ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
               }}
               nodeLabel={(n: any) => nodeLabel(n)}
+              nodePointerAreaPaint={(node: any, color: string, ctx: any) => {
+                ctx.beginPath()
+                ctx.arc(node.x, node.y, 12, 0, 2 * Math.PI)
+                ctx.fillStyle = color
+                ctx.fill()
+              }}
               linkWidth={(l: any) => (l.connected ? 1 : 0.6 + l.weight * 1.8)}
               linkColor={(l: any) =>
                 l.connected ? "rgba(99,102,241,0.7)" : `rgba(100,116,139,${0.18 + l.weight * 0.5})`
