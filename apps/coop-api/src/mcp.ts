@@ -134,7 +134,9 @@ async function callUpstream(u: Upstream, toolName: string, args: any, authHeader
 // ---- JSON-RPC dispatch ----
 
 async function listTools(sub: string, grants: string[], authHeader: string): Promise<McpTool[]> {
-  const local = LOCAL_TOOLS.filter((t) => !t.grant || grants.includes(t.grant))
+  // Anonymous guests: no member-local tools, only the aggregated upstream (public) tools.
+  const local =
+    sub === "anonymous" ? [] : LOCAL_TOOLS.filter((t) => !t.grant || grants.includes(t.grant))
   const proxied: McpTool[] = []
   for (const u of UPSTREAMS) {
     try {
@@ -156,22 +158,24 @@ function textContent(data: unknown) {
 
 export default async function mcpRoutes(fastify: FastifyInstance) {
   fastify.post("/mcp", async (request, reply) => {
-    const claims = verifyBearer(request, reply)
-    if (!claims) return // 401 already sent
-
-    const sub = String((claims as any).sub ?? "")
-    const authHeader = String(request.headers.authorization ?? "")
+    const rawAuth = request.headers.authorization
+    const authHeader = String(rawAuth ?? "")
+    let sub = "anonymous"
+    let grants: string[] = []
+    if (rawAuth) {
+      const claims = verifyBearer(request, reply)
+      if (!claims) return // 401 already sent
+      sub = String((claims as any).sub ?? "")
+      // Resolve grants once per request (for tool filtering + gate checks).
+      try {
+        grants = (await getRolesAndGrants(sub)).grants
+      } catch {
+        // grant lookup failed (DB down) — fall back to empty; RLS still guards data
+      }
+    }
     const body = (request.body ?? {}) as any
     const id = body.id
     const method = String(body.method ?? "")
-
-    // Resolve grants once per request (for tool filtering + gate checks).
-    let grants: string[] = []
-    try {
-      grants = (await getRolesAndGrants(sub)).grants
-    } catch {
-      // grant lookup failed (DB down) — fall back to empty; RLS still guards data
-    }
 
     // JSON-RPC notifications carry no id — ack and move on.
     if (id === undefined || id === null) {

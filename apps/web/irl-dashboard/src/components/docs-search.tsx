@@ -1,12 +1,13 @@
 "use client"
 
+import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { Loader2, Search } from "lucide-react"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
-// The coop-wide public knowledge area (the design docs), queryable by any member.
+// The coop-wide public knowledge area (the design docs), queryable by anyone.
 const DOCS_AREA_ID =
   process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ??
   "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
@@ -32,19 +33,15 @@ export function DocsSearch() {
     e.preventDefault()
     const q = query.trim()
     if (!q) return
-    if (!token) {
-      setSearched(true)
-      setError("Sign in to search the design docs.")
-      setContexts([])
-      return
-    }
     setLoading(true)
     setError(null)
     setSearched(true)
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch(`${COOP_API_URL}/mcp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers,
         body: JSON.stringify({
           jsonrpc: "2.0",
           id: 1,
@@ -118,6 +115,16 @@ export function DocsSearch() {
             </div>
           ))}
         </div>
+      )}
+
+      {!token && (
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Just browsing —{" "}
+          <Link href="/sign-in" className="font-semibold text-primary hover:underline">
+            sign in
+          </Link>{" "}
+          to ask follow-ups and see your group&apos;s knowledge.
+        </p>
       )}
     </div>
   )
