@@ -11,8 +11,6 @@ rtmp: true
 rtsp: true
 hls: true
 webrtc: true
-whip: true
-whap: true
 srt: false
 api: false
 metrics: false
@@ -34,11 +32,8 @@ authJWTIssuer: https://api.irl.coop
 # (multi-stream: each group publishes to its own path, e.g. live/<group>).
 paths:
   all_others:
-    # Auto-archive recordings of streams directly into MinIO S3 bucket `docs` (or streaming archive)
-    runOnInit: 
-    runOnPublish: 
-    # Record streams as MP4 chunks when published
+    # Record streams as MP4 chunks (local /data/recordings/...)
     record: true
-    recordPath: /data/recordings/%s/%y-%m-%d_%H-%M-%S.mp4
-    recordFormat: mp4
+    recordPath: /data/recordings/%path/%Y-%m-%d_%H-%M-%S.mp4
+    recordFormat: fmp4
 
