@@ -193,7 +193,7 @@ export function NeedsOffersMockup() {
         </div>
         <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
           <BadgeCheck className="size-3.5 text-emerald-500" />
-          {myMatch.length} in your match{loopClosed && " · loop closed"}
+          {myMatch.length} in your weave{loopClosed && " · loop closed"}
         </span>
       </div>
 
@@ -201,8 +201,8 @@ export function NeedsOffersMockup() {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
         <span className="font-medium text-foreground">How it works</span>
         <span>① hover a node to see what someone has or needs</span>
-        <span>② tap a node → “Add to my match”</span>
-        <span>③ build a closed loop → clear its gaps</span>
+        <span>② tap a node → “Weave in”</span>
+        <span>③ a pair matches right away · three+ close a loop → clear its gaps</span>
       </div>
 
       {/* shape legend — the stress-test key */}
@@ -319,7 +319,7 @@ export function NeedsOffersMockup() {
                   onClick={() => toggle(selected.id)}
                   className="flex-1 rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground"
                 >
-                  {myMatch.includes(selected.id) ? "Remove" : "Add to my match"}
+                  {myMatch.includes(selected.id) ? "Remove" : "Weave in"}
                 </button>
                 {selected.missing && (
                   <button className="flex-1 rounded-md border px-2 py-1.5 text-xs font-medium">
