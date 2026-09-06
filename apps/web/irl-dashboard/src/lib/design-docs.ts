@@ -170,6 +170,15 @@ const DOCS: DesignDoc[] = [
     file: "android-mini-services-client.md",
   },
   {
+    slug: "mautic-calcom-mcp-inference",
+    title: "Stack Additions — Mautic, Cal.com, MCP, Edge Inference",
+    category: "Infrastructure",
+    status: "design",
+    description:
+      "Intent: Mautic (marketing automation) + Cal.com (scheduling/booking) apps, an MCP server + knowledgebase as the scoped AI gateway, and client-side inference calling the MCP tools — inference at the edge, acting through the coop.",
+    file: "mautic-calcom-mcp-inference.md",
+  },
+  {
     slug: "handoff-2026-08-13",
     title: "Session Handoff (2026-08-13)",
     category: "Working notes",
