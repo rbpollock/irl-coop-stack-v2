@@ -33,6 +33,17 @@ function redirect(pathname: string, request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Machine-readable design docs: /design/<slug>.md -> raw markdown; every
+  // other /design path passes through (unlocalized, public) unchanged.
+  if (pathname === "/design" || pathname.startsWith("/design/")) {
+    const md = pathname.match(/^\/design\/([^/]+)\.md$/)
+    if (md) {
+      return NextResponse.rewrite(new URL(`/design/raw/${md[1]}`, request.url))
+    }
+    return NextResponse.next()
+  }
+
   const locale = getLocaleFromPathname(pathname)
   const pathnameWithoutLocale = ensureWithoutPrefix(pathname, `/${locale}`)
   const isNotPublic = !isPublicRoute(pathnameWithoutLocale)
@@ -94,5 +105,6 @@ export const config = {
      * - docs
      */
     "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|images|fonts|videos|docs|design|phone|group-).*)",
+    "/design/:path*",
   ],
 }
