@@ -172,6 +172,15 @@ const DOCS: DesignDoc[] = [
     file: "files-panel.md",
   },
   {
+    slug: "local-ai-chat",
+    title: "Local AI Chat",
+    category: "Apps & files",
+    status: "design",
+    description:
+      "The coop's conversational assistant: retrieve-then-generate over the MCP gateway with a self-hosted generation model, grounded answers with citations, and the search's visibility tiers.",
+    file: "local-ai-chat.md",
+  },
+  {
     slug: "infra-management-monitoring",
     title: "Infrastructure Management & Monitoring",
     category: "Infrastructure",
