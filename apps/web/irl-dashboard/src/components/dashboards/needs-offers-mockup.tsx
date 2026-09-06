@@ -96,6 +96,15 @@ const NODES: GNode[] = [
   { id: "fund-kitchen", have: false, what: "community kitchen · $8k", group: "Kitchen Collective · project", shape: "financial" },
 ]
 
+// Seed each node with an initial position grouped by shape, so the layout
+// starts spatially organized — physical left, remote right, funding bottom —
+// before the force simulation refines it into matched clusters.
+const GRAPH_NODES = NODES.map((n, i) => ({
+  ...n,
+  x: n.shape === "physical" ? 170 + (i % 4) * 42 : n.shape === "remote" ? 520 + (i % 3) * 42 : 340 + (i % 3) * 60,
+  y: n.shape === "physical" ? 130 + Math.floor(i / 4) * 52 : n.shape === "remote" ? 150 + (i % 3) * 60 : 398,
+}))
+
 // Potential matches with a fit weight. Contested needs carry several candidates
 // at different weights so the graph shows *distance of likely weights*, not one
 // possible match each.
@@ -188,6 +197,14 @@ export function NeedsOffersMockup() {
         </span>
       </div>
 
+      {/* how to use it — the interaction, spelled out */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
+        <span className="font-medium text-foreground">How it works</span>
+        <span>① hover a node to see what someone has or needs</span>
+        <span>② tap a node → “Add to my match”</span>
+        <span>③ build a closed loop → clear its gaps</span>
+      </div>
+
       {/* shape legend — the stress-test key */}
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
@@ -213,7 +230,7 @@ export function NeedsOffersMockup() {
       {tab === "weave" && (
         <div className="relative rounded-lg border bg-card shadow-sm">
           <ForceGraph2D
-            graphData={{ nodes: NODES, links: LINKS }}
+            graphData={{ nodes: GRAPH_NODES, links: LINKS }}
             nodeId="id"
             linkSource="source"
             linkTarget="target"
@@ -234,6 +251,12 @@ export function NeedsOffersMockup() {
                 ctx.stroke()
                 ctx.setLineDash([])
               }
+              const label = node.what.length > 16 ? `${node.what.slice(0, 15)}…` : node.what
+              ctx.font = `${10 / globalScale}px system-ui, sans-serif`
+              ctx.textAlign = "center"
+              ctx.textBaseline = "top"
+              ctx.fillStyle = "rgba(90,100,120,0.95)"
+              ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
             }}
             nodeLabel={(n: any) => nodeLabel(n)}
             linkWidth={(l: any) => 1 + l.weight * 2.5}
