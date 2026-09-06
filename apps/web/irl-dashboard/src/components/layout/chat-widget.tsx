@@ -12,20 +12,30 @@ const CINNY_URL =
   process.env.NEXT_PUBLIC_CINNY_URL ?? "https://cinny.irl.coop"
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+const AUTHED_KEY = "irlcoop-chat-authed"
 
-// The coop chat: a Cinny embed that logs in with a server-minted Matrix login
-// token. coop-api drives the Synapse SSO flow server-side (it is the OIDC
-// issuer), so the member's browser never hits the SSO consent screen — the
-// iframe just consumes ?loginToken= and lands in the client.
+// The coop chat: a Cinny embed. On first open we mint a Matrix login token
+// server-side (coop-api is the OIDC issuer) and hand it to Cinny via
+// ?loginToken= so the browser never sees the SSO consent screen; Cinny then
+// holds its session in its own IndexedDB. Subsequent opens skip the mint and
+// just load Cinny, which restores that session.
 export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
   const [open, setOpen] = useState(false)
   const [loginToken, setLoginToken] = useState<string | null>(null)
+  const [authed, setAuthed] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || !token) return
+    // Already handed Cinny a token once — let the iframe restore its session.
+    if (localStorage.getItem(AUTHED_KEY)) {
+      setAuthed(true)
+      setLoginToken(null)
+      return
+    }
+    setAuthed(false)
     setError(null)
     setLoginToken(null)
     fetch(`${COOP_API_URL}/api/v1/chat/login`, {
@@ -34,11 +44,21 @@ export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("login failed"))))
       .then((data: { loginToken?: string }) => {
-        setLoginToken(data.loginToken ?? null)
-        if (!data.loginToken) setError("Could not start chat")
+        if (data.loginToken) {
+          setLoginToken(data.loginToken)
+          localStorage.setItem(AUTHED_KEY, "1")
+        } else {
+          setError("Could not start chat")
+        }
       })
       .catch(() => setError("Could not start chat"))
   }, [open, token])
+
+  const src = loginToken
+    ? `${CINNY_URL}/?loginToken=${encodeURIComponent(loginToken)}`
+    : authed
+      ? CINNY_URL
+      : null
 
   return (
     <>
@@ -71,9 +91,9 @@ export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
             </Button>
           </div>
 
-          {loginToken ? (
+          {src ? (
             <iframe
-              src={`${CINNY_URL}/?loginToken=${encodeURIComponent(loginToken)}`}
+              src={src}
               title={dictionary.navigation.coopChat}
               className="h-full w-full flex-1 border-0 bg-background"
               allow="clipboard-read; clipboard-write; microphone; camera; display-capture"
