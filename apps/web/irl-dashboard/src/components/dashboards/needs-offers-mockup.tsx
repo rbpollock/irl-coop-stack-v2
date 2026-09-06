@@ -100,6 +100,36 @@ function makeGravityForce(getIds: () => Set<string>) {
   return force
 }
 
+// A force that pins the selected node to the center of the viewport, so the
+// rest of the graph moves around it.
+function makeFocusForce(getSelectedId: () => string | null, getContainer: () => HTMLDivElement | null) {
+  let nodes: any[] = []
+  let prevId: string | null = null
+  function force() {
+    const id = getSelectedId()
+    const el = getContainer()
+    const width = el?.clientWidth ?? 800
+    const height = el?.clientHeight ?? 600
+    if (prevId && prevId !== id) {
+      const prev = nodes.find((n) => n.id === prevId)
+      if (prev) {
+        prev.fx = null
+        prev.fy = null
+      }
+    }
+    prevId = id
+    if (!id) return
+    const node = nodes.find((n) => n.id === id)
+    if (!node) return
+    node.fx = width / 2
+    node.fy = height / 2
+  }
+  force.initialize = (ns: any[]) => {
+    nodes = ns
+  }
+  return force
+}
+
 type Zone = "near" | (typeof REGIONS)[number] | "all"
 
 const ZONES: { value: Zone; label: string }[] = [
@@ -126,6 +156,9 @@ export function NeedsOffersMockup() {
   const myWeaveRef = useRef<Set<string>>(new Set())
   myWeaveRef.current = new Set(myWeave)
 
+  const selectedRef = useRef<string | null>(null)
+  selectedRef.current = selected?.id ?? null
+
   const appliedRef = useRef(false)
   const fgRef = useRef<any>(null)
 
@@ -133,6 +166,7 @@ export function NeedsOffersMockup() {
     const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
     fg.d3Force("link", forceLink().distance(fitDistance))
     fg.d3Force("weave-gravity", makeGravityForce(() => myWeaveRef.current))
+    fg.d3Force("focus", makeFocusForce(() => selectedRef.current, () => containerRef.current))
     fg.d3ReheatSimulation()
   }, [])
 
@@ -194,13 +228,6 @@ export function NeedsOffersMockup() {
       })),
     [visiblePostings],
   )
-
-  // Center the view on a node — used when an urgent need is picked in the drawer.
-  const centerOn = (id: string) => {
-    const node = graphNodes.find((n) => n.id === id)
-    const fg = fgRef.current
-    if (node && fg) fg.centerAt(node.x, node.y, 600)
-  }
 
   // Solid links between the selected nodes (in selection order) — the weave.
   const weaveLinks = useMemo(() => {
@@ -608,10 +635,7 @@ export function NeedsOffersMockup() {
                       {highPriorityNeeds.map((p) => (
                         <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
                           <button
-                            onClick={() => {
-                              setSelected(p)
-                              centerOn(p.id)
-                            }}
+                            onClick={() => setSelected(p)}
                             className="truncate text-left hover:text-foreground"
                           >
                             {p.what}
