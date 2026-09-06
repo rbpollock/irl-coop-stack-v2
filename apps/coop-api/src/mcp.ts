@@ -92,10 +92,14 @@ function parseUpstreams(raw?: string): Upstream[] {
 
 const UPSTREAMS: Upstream[] = parseUpstreams(process.env.MCP_UPSTREAMS)
 
-async function fetchUpstreamTools(u: Upstream): Promise<McpTool[]> {
+async function fetchUpstreamTools(u: Upstream, authHeader: string): Promise<McpTool[]> {
   const res = await fetch(u.url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
   })
   const data = (await res.json()) as any
@@ -109,10 +113,14 @@ async function fetchUpstreamTools(u: Upstream): Promise<McpTool[]> {
   }))
 }
 
-async function callUpstream(u: Upstream, toolName: string, args: any): Promise<any> {
+async function callUpstream(u: Upstream, toolName: string, args: any, authHeader: string): Promise<any> {
   const res = await fetch(u.url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
     body: JSON.stringify({
       jsonrpc: "2.0",
       id: 2,
@@ -125,12 +133,12 @@ async function callUpstream(u: Upstream, toolName: string, args: any): Promise<a
 
 // ---- JSON-RPC dispatch ----
 
-async function listTools(sub: string, grants: string[]): Promise<McpTool[]> {
+async function listTools(sub: string, grants: string[], authHeader: string): Promise<McpTool[]> {
   const local = LOCAL_TOOLS.filter((t) => !t.grant || grants.includes(t.grant))
   const proxied: McpTool[] = []
   for (const u of UPSTREAMS) {
     try {
-      proxied.push(...(await fetchUpstreamTools(u)))
+      proxied.push(...(await fetchUpstreamTools(u, authHeader)))
     } catch {
       // upstream down — skip it rather than fail the whole list
     }
@@ -152,6 +160,7 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
     if (!claims) return // 401 already sent
 
     const sub = String((claims as any).sub ?? "")
+    const authHeader = String(request.headers.authorization ?? "")
     const body = (request.body ?? {}) as any
     const id = body.id
     const method = String(body.method ?? "")
@@ -184,7 +193,7 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
         case "ping":
           return respond({})
         case "tools/list": {
-          const tools = await listTools(sub, grants)
+          const tools = await listTools(sub, grants, authHeader)
           return respond({ tools: tools.map(toolToSchema) })
         }
         case "tools/call": {
@@ -195,7 +204,7 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           const upstream = UPSTREAMS.find((u) => name.startsWith(`${u.name}.`))
           if (upstream) {
             const localName = name.slice(upstream.name.length + 1)
-            const res = await callUpstream(upstream, localName, args)
+            const res = await callUpstream(upstream, localName, args, authHeader)
             if (res?.error) return error(-32000, `upstream error: ${res.error.message}`)
             return respond(res?.result ?? {})
           }
