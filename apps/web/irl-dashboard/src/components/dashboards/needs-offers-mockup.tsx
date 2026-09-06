@@ -102,14 +102,12 @@ function makeGravityForce(getIds: () => Set<string>) {
 
 // A force that pins the selected node to the center of the viewport, so the
 // rest of the graph moves around it.
-function makeFocusForce(getSelectedId: () => string | null, getContainer: () => HTMLDivElement | null) {
+function makeFocusForce(getSelectedId: () => string | null, getSize: () => { width: number; height: number }) {
   let nodes: any[] = []
   let prevId: string | null = null
   function force() {
     const id = getSelectedId()
-    const el = getContainer()
-    const width = el?.clientWidth ?? 800
-    const height = el?.clientHeight ?? 600
+    const { width, height } = getSize()
     if (prevId && prevId !== id) {
       const prev = nodes.find((n) => n.id === prevId)
       if (prev) {
@@ -159,6 +157,8 @@ export function NeedsOffersMockup() {
   const selectedRef = useRef<string | null>(null)
   selectedRef.current = selected?.id ?? null
 
+  const graphSizeRef = useRef({ width: 900, height: 620 })
+
   const appliedRef = useRef(false)
   const fgRef = useRef<any>(null)
 
@@ -166,13 +166,14 @@ export function NeedsOffersMockup() {
     const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
     fg.d3Force("link", forceLink().distance(fitDistance))
     fg.d3Force("weave-gravity", makeGravityForce(() => myWeaveRef.current))
-    fg.d3Force("focus", makeFocusForce(() => selectedRef.current, () => containerRef.current))
+    fg.d3Force("focus", makeFocusForce(() => selectedRef.current, () => graphSizeRef.current))
     fg.d3ReheatSimulation()
   }, [])
 
   // Measure the container so the graph uses the visible viewport, not the window.
   const containerRef = useRef<HTMLDivElement>(null)
   const [graphSize, setGraphSize] = useState({ width: 900, height: 620 })
+  graphSizeRef.current = graphSize
 
   useEffect(() => {
     const el = containerRef.current
