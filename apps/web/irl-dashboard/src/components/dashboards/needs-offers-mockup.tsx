@@ -293,21 +293,18 @@ export function NeedsOffersMockup() {
       </div>
 
       {tab === "weave" && (
-        <div className="flex gap-3">
-          <div className="relative flex-1 rounded-lg border bg-card shadow-sm">
-            <ForceGraph2D
-              ref={(fg: any) => {
-                if (fg && !appliedRef.current) {
-                  appliedRef.current = true
-                  applyForces(fg)
-                }
-              }}
+        <div className="relative h-[70vh] rounded-lg border bg-card shadow-sm">
+          <ForceGraph2D
+            ref={(fg: any) => {
+              if (fg && !appliedRef.current) {
+                appliedRef.current = true
+                applyForces(fg)
+              }
+            }}
               graphData={{ nodes: graphNodes, links: graphLinks }}
               nodeId="id"
               linkSource="source"
               linkTarget="target"
-              width={620}
-              height={460}
               nodeCanvasObject={(node: any, ctx: any, globalScale: number) => {
                 const inWeave = myWeave.includes(node.id)
                 const r = (node.have ? 5 : 4.5) / globalScale
@@ -397,10 +394,8 @@ export function NeedsOffersMockup() {
                 Matched
               </div>
             )}
-          </div>
-
-          {/* the weave panel — selected cards + connect */}
-          <div className="w-72 shrink-0 rounded-lg border bg-card p-3 shadow-sm">
+          {/* the weave panel — floats over the graph */}
+          <div className="absolute right-3 top-3 bottom-3 w-72 overflow-auto rounded-lg border bg-background/90 p-3 shadow-md backdrop-blur">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
