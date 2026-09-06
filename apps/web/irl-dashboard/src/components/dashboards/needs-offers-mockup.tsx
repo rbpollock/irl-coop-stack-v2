@@ -299,7 +299,7 @@ export function NeedsOffersMockup() {
                 ctx.font = `${11 / globalScale}px system-ui, sans-serif`
                 ctx.textAlign = "center"
                 ctx.textBaseline = "top"
-                ctx.fillStyle = "rgba(24,30,50,0.95)"
+                ctx.fillStyle = "rgba(255,255,255,0.95)"
                 ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
               }}
               nodeLabel={(n: any) => nodeLabel(n)}
