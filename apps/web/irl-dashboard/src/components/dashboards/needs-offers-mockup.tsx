@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BadgeCheck, CheckCircle2, ChevronDown, ChevronRight, Clock, Handshake, Plus, Repeat, X } from "lucide-react"
 import { forceLink } from "d3-force-3d"
 
@@ -50,11 +50,12 @@ function makeGravityForce(getIds: () => Set<string>) {
     const sel = nodes.filter((n) => ids.has(n.id))
     if (sel.length < 1) return
 
-    // 1. selected nodes → their centroid
+    const cx = sel.reduce((s, n) => s + n.x, 0) / sel.length
+    const cy = sel.reduce((s, n) => s + n.y, 0) / sel.length
+
+    // 1. selected nodes → their centroid (strong)
     if (sel.length >= 2) {
-      const cx = sel.reduce((s, n) => s + n.x, 0) / sel.length
-      const cy = sel.reduce((s, n) => s + n.y, 0) / sel.length
-      const g = alpha * 0.5
+      const g = alpha * 0.7
       for (const n of sel) {
         n.vx += (cx - n.x) * g
         n.vy += (cy - n.y) * g
@@ -80,6 +81,17 @@ function makeGravityForce(getIds: () => Set<string>) {
         m.vx += (nearest.x - m.x) * g2
         m.vy += (nearest.y - m.y) * g2
       }
+    }
+
+    // 3. unrelated nodes → push outward from the selected cluster
+    const unrelated = nodes.filter((n) => !ids.has(n.id) && !selGroups.has(n.group))
+    const g3 = alpha * 0.12
+    for (const u of unrelated) {
+      const dx = u.x - cx
+      const dy = u.y - cy
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1
+      u.vx += (dx / dist) * 220 * g3
+      u.vy += (dy / dist) * 220 * g3
     }
   }
   force.initialize = (ns: any[]) => {
@@ -123,6 +135,22 @@ export function NeedsOffersMockup() {
     fg.d3ReheatSimulation()
   }, [])
 
+  // Measure the container so the graph uses the visible viewport, not the window.
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [graphSize, setGraphSize] = useState({ width: 900, height: 620 })
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const measure = () => setGraphSize({ width: el.clientWidth, height: el.clientHeight })
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Measure the container and feed its real size to the graph, so the force
+  // simulation centers on the visible viewport rather than a stale fixed size.
   const allPostings = useMemo(() => buildPostings(), [])
   const allLinks = useMemo(() => buildLinks(allPostings), [allPostings])
 
@@ -175,13 +203,15 @@ export function NeedsOffersMockup() {
     return links
   }, [myWeave])
 
-  // Group reveal: when a node is selected, thin solid lines to its group's
-  // offers (yellow) and needs (red), so the rest of the group surfaces.
+  // Group reveal: a NEED highlights its group's OFFERS (yellow); an OFFER
+  // highlights its group's NEEDS (red).
   const groupLinks = useMemo(() => {
     if (!selected) return []
+    const targetHave = !selected.have
     const links: { source: string; target: string; weight: number; kind: "offer" | "need" }[] = []
     for (const p of visiblePostings) {
       if (p.id === selected.id || p.group !== selected.group) continue
+      if (p.have !== targetHave) continue
       links.push({ source: selected.id, target: p.id, weight: 0.5, kind: p.have ? "offer" : "need" })
     }
     return links
@@ -301,8 +331,10 @@ export function NeedsOffersMockup() {
       {/* the weave view — the graph fills the page, controls float on top */}
 
       {tab === "weave" && (
-        <div className="relative h-[calc(100vh-8rem)] overflow-hidden [&_canvas]:touch-none">
+        <div ref={containerRef} className="relative h-[calc(100vh-8rem)] overflow-hidden [&_canvas]:touch-none">
           <ForceGraph2D
+            width={graphSize.width}
+            height={graphSize.height}
             ref={(fg: any) => {
               if (fg && !appliedRef.current) {
                 appliedRef.current = true
