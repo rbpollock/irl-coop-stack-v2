@@ -8,17 +8,14 @@ import { BadgeCheck, CheckCircle2, Clock, Plus, Repeat } from "lucide-react"
 // explains the shape (a loop emerges); text stays out of the graph and lives in
 // hover tooltips and the click popup that moves the action forward.
 
-const ForceGraph2D = dynamic(
-  () => import("react-force-graph").then((m) => m.ForceGraph2D),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-[380px] items-center justify-center text-sm text-muted-foreground">
-        Loading the space…
-      </div>
-    ),
-  },
-)
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[380px] items-center justify-center text-sm text-muted-foreground">
+      Loading the space…
+    </div>
+  ),
+})
 
 type GNode = { id: string; have: boolean; what: string; group: string; missing?: boolean }
 
