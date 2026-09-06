@@ -1,0 +1,21 @@
+# rag-inference — self-hosted CPU embedding + rerank server backing the RAG
+# retrieval pipeline. Internal-only (no edge route): the RAG api/worker reach it
+# over the host bridge (172.17.0.1:8001). Exposes the OpenAI-compatible
+# /v1/embeddings and the RAG's /v1/rerank contract, gated by a Bearer key.
+name: rag-inference
+pillar: workflow
+enabled: true
+type: image
+image: irlcoop/embed-rerank:0.1.0
+ports:
+  - "8001:8000"
+env:
+  EMBED_MODEL: "BAAI/bge-small-en-v1.5"
+  RERANK_MODEL: "BAAI/bge-reranker-v2-m3"
+  INFERENCE_API_KEY: "${SECRET:rag.inference}"
+restart: unless-stopped
+healthcheck:
+  test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 5).close()"]
+  interval: 30s
+  timeout: 10s
+  retries: 5

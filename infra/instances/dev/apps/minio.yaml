@@ -86,6 +86,29 @@ sidecars:
         mc admin policy create local formbricks-bucket /tmp/formbricks-bucket-policy.json >/dev/null 2>&1 || true
         mc admin policy attach local formbricks-bucket --user formbricks-s3
         echo 'formbricks MinIO bucket ready.'
+  # RAG knowledge-base store: dedicated `rag` bucket + `rag-s3` service user,
+  # scoped to that bucket only. The RAG api/worker put raw uploads + parsed
+  # artifacts here.
+  rag-minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 minioadmin "${SECRET:minio.root}"
+        for i in $(seq 1 30); do
+          mc admin info local >/dev/null 2>&1 && break
+          sleep 2
+        done
+        mc mb --ignore-existing local/rag
+        mc admin user info local rag-s3 >/dev/null 2>&1 || mc admin user add local rag-s3 "${SECRET:minio.rag-s3}"
+        cat > /tmp/rag-bucket-policy.json << 'POLICY'
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::rag","arn:aws:s3:::rag/*"]}]}
+        POLICY
+        mc admin policy create local rag-bucket /tmp/rag-bucket-policy.json >/dev/null 2>&1 || true
+        mc admin policy attach local rag-bucket --user rag-s3
+        echo 'rag MinIO bucket ready.'
   # coop SSO → console bridge. Sits between the s3-gate (oauth2-proxy, which
   # enforces platform-admin and passes the coop JWT as X-Forwarded-Access-Token)
   # and the MinIO console. Exchanges the coop JWT for MinIO STS credentials and
