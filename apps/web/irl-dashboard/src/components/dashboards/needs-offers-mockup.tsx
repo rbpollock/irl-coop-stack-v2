@@ -1,14 +1,16 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useMemo, useState } from "react"
-import { AlertTriangle, BadgeCheck, CheckCircle2, Clock, Handshake, Plus, Repeat } from "lucide-react"
+import { useCallback, useMemo, useRef, useState } from "react"
+import { BadgeCheck, CheckCircle2, Clock, Handshake, Link2, Plus, Repeat } from "lucide-react"
+import { forceLink } from "d3-force-3d"
 
 import { buildLinks, buildPostings, REGIONS, type Posting, type Shape } from "@/lib/needs-offers.data"
 
-// Needs/offers — a force-directed "solution space" fed by a generated corpus
-// (recipes × regions). Color = shape; line weight = fit; the zone lens decides
-// which slice of the ~500 postings is in view.
+// Needs/offers — a force-directed "solution space". Color = shape; line length =
+// fit (shorter = stronger); dashed links are loose connections. Selecting nodes
+// outlines them and pulls them together (gravity); "Connect" ties them into a
+// dashed weave.
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
@@ -37,11 +39,34 @@ const URGENCY_LABEL: Record<string, string> = {
   low: "anytime",
 }
 
+// A force that pulls selected nodes toward their shared centroid — the "gravity"
+// that keeps the pieces you've chosen near each other.
+function makeGravityForce(getIds: () => Set<string>) {
+  let nodes: any[] = []
+  function force(alpha: number) {
+    const ids = getIds()
+    if (ids.size < 2) return
+    const sel = nodes.filter((n) => ids.has(n.id))
+    if (sel.length < 2) return
+    const cx = sel.reduce((s, n) => s + n.x, 0) / sel.length
+    const cy = sel.reduce((s, n) => s + n.y, 0) / sel.length
+    const g = alpha * 0.5
+    for (const n of sel) {
+      n.vx += (cx - n.x) * g
+      n.vy += (cy - n.y) * g
+    }
+  }
+  force.initialize = (ns: any[]) => {
+    nodes = ns
+  }
+  return force
+}
+
 type Zone = "near" | (typeof REGIONS)[number] | "all"
 
 const ZONES: { value: Zone; label: string }[] = [
   { value: "near", label: `Near me (${REGIONS[0]})` },
-  ...REGIONS.map((r) => ({ value: r as Zone, label: r })),
+  ...REGIONS.slice(0, 12).map((r) => ({ value: r as Zone, label: r })),
   { value: "all", label: "All regions" },
 ]
 
@@ -52,9 +77,22 @@ export function NeedsOffersMockup() {
   const [zone, setZone] = useState<Zone>("near")
   const [selected, setSelected] = useState<Posting | null>(null)
   const [myWeave, setMyWeave] = useState<string[]>([])
+  const [connected, setConnected] = useState<string[]>([])
   const [postOpen, setPostOpen] = useState(false)
   const [postText, setPostText] = useState("")
   const [postShape, setPostShape] = useState<Shape>("physical")
+
+  const myWeaveRef = useRef<Set<string>>(new Set())
+  myWeaveRef.current = new Set(myWeave)
+
+  const appliedRef = useRef(false)
+
+  const applyForces = useCallback((fg: any) => {
+    const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
+    fg.d3Force("link", forceLink().distance(fitDistance))
+    fg.d3Force("weave-gravity", makeGravityForce(() => myWeaveRef.current))
+    fg.d3ReheatSimulation()
+  }, [])
 
   const allPostings = useMemo(() => buildPostings(), [])
   const allLinks = useMemo(() => buildLinks(allPostings), [allPostings])
@@ -82,11 +120,31 @@ export function NeedsOffersMockup() {
     [visiblePostings],
   )
 
+  // User-created weave links (dashed) merged with the potential matches.
+  const graphLinks = useMemo(
+    () => [
+      ...visibleLinks,
+      ...connected.map((pair) => {
+        const [source, target] = pair.split("|")
+        return { source, target, weight: 1, connected: true }
+      }),
+    ],
+    [visibleLinks, connected],
+  )
+
   const isMatched =
-    myWeave.length >= 2 && visibleLinks.some((l) => myWeave.includes(l.source) && myWeave.includes(l.target))
+    myWeave.length >= 2 && graphLinks.some((l) => myWeave.includes(l.source) && myWeave.includes(l.target))
 
   const toggle = (id: string) =>
     setMyWeave((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+
+  const connect = () => {
+    const pairs: string[] = []
+    for (let i = 0; i < myWeave.length - 1; i++) {
+      pairs.push(`${myWeave[i]}|${myWeave[i + 1]}`)
+    }
+    setConnected(pairs)
+  }
 
   const nodeLabel = (n: Posting) => {
     const verb = n.have ? "We have" : "We need"
@@ -137,10 +195,6 @@ export function NeedsOffersMockup() {
               </option>
             ))}
           </select>
-          <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
-            <BadgeCheck className="size-3.5 text-emerald-500" />
-            {myWeave.length} in your weave{isMatched && " · matched"}
-          </span>
         </div>
       </div>
 
@@ -199,8 +253,8 @@ export function NeedsOffersMockup() {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
         <span className="font-medium text-foreground">How it works</span>
         <span>① pick a zone</span>
-        <span>② hover a node to see what someone has or needs</span>
-        <span>③ tap → “Weave in” — a linked pair matches right away</span>
+        <span>② tap nodes to select them — they outline and draw together</span>
+        <span>③ Connect to tie them into a weave</span>
       </div>
 
       {/* shape legend */}
@@ -218,110 +272,157 @@ export function NeedsOffersMockup() {
           <span className="size-2.5 rounded-full border-2 border-muted-foreground/50" /> need (hollow)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-6 bg-slate-400" /> thicker = better fit
+          <span className="h-0.5 w-6 border-t-2 border-dashed border-slate-400" /> shorter &amp; darker = better fit
         </span>
         <span className="text-muted-foreground/70">{visiblePostings.length} postings in view</span>
       </div>
 
       {tab === "weave" && (
-        <div className="relative rounded-lg border bg-card shadow-sm">
-          <ForceGraph2D
-            graphData={{ nodes: graphNodes, links: visibleLinks }}
-            nodeId="id"
-            linkSource="source"
-            linkTarget="target"
-            width={760}
-            height={440}
-            nodeCanvasObject={(node: any, ctx: any, globalScale: number) => {
-              const r = (node.have ? 5 : 4.5) / globalScale
-              const color = SHAPE_COLOR[node.shape as Shape]
-              ctx.beginPath()
-              ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
-              if (node.have) {
-                ctx.fillStyle = color
-                ctx.fill()
-              } else {
-                ctx.strokeStyle = color
-                ctx.lineWidth = 1.8 / globalScale
-                ctx.stroke()
+        <div className="flex gap-3">
+          <div className="relative flex-1 rounded-lg border bg-card shadow-sm">
+            <ForceGraph2D
+              ref={(fg: any) => {
+                if (fg && !appliedRef.current) {
+                  appliedRef.current = true
+                  applyForces(fg)
+                }
+              }}
+              graphData={{ nodes: graphNodes, links: graphLinks }}
+              nodeId="id"
+              linkSource="source"
+              linkTarget="target"
+              width={620}
+              height={460}
+              nodeCanvasObject={(node: any, ctx: any, globalScale: number) => {
+                const inWeave = myWeave.includes(node.id)
+                const r = (node.have ? 5 : 4.5) / globalScale
+                const color = SHAPE_COLOR[node.shape as Shape]
+                if (inWeave) {
+                  ctx.beginPath()
+                  ctx.arc(node.x, node.y, r + 3 / globalScale, 0, 2 * Math.PI)
+                  ctx.strokeStyle = "rgba(99,102,241,0.7)"
+                  ctx.lineWidth = 2 / globalScale
+                  ctx.stroke()
+                }
+                ctx.beginPath()
+                ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
+                if (node.have) {
+                  ctx.fillStyle = color
+                  ctx.fill()
+                } else {
+                  ctx.strokeStyle = color
+                  ctx.lineWidth = 1.8 / globalScale
+                  ctx.stroke()
+                }
+                const label = node.what.length > 14 ? `${node.what.slice(0, 13)}…` : node.what
+                ctx.font = `${9 / globalScale}px system-ui, sans-serif`
+                ctx.textAlign = "center"
+                ctx.textBaseline = "top"
+                ctx.fillStyle = "rgba(90,100,120,0.9)"
+                ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
+              }}
+              nodeLabel={(n: any) => nodeLabel(n)}
+              linkWidth={(l: any) => (l.connected ? 1 : 0.6 + l.weight * 1.8)}
+              linkColor={(l: any) =>
+                l.connected ? "rgba(99,102,241,0.7)" : `rgba(100,116,139,${0.18 + l.weight * 0.5})`
               }
-              const label = node.what.length > 14 ? `${node.what.slice(0, 13)}…` : node.what
-              ctx.font = `${9 / globalScale}px system-ui, sans-serif`
-              ctx.textAlign = "center"
-              ctx.textBaseline = "top"
-              ctx.fillStyle = "rgba(90,100,120,0.9)"
-              ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
-            }}
-            nodeLabel={(n: any) => nodeLabel(n)}
-            linkWidth={(l: any) => 1 + l.weight * 2.5}
-            linkColor={(l: any) => `rgba(100,116,139,${0.2 + l.weight * 0.5})`}
-            linkLabel={(l: any) => `${Math.round(l.weight * 100)}% fit`}
-            linkDirectionalArrowLength={3.5}
-            linkDirectionalArrowRelPos={1}
-            linkDirectionalParticles={0}
-            onNodeClick={(n: any) => setSelected(n as Posting)}
-            onBackgroundClick={() => setSelected(null)}
-          />
-          {selected && (
-            <div className="absolute bottom-3 left-3 right-3 rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur sm:left-auto sm:w-80">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium">
-                    {selected.have ? "We have" : "We need"} {selected.what}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {selected.group}
-                    {selected.km != null && ` · ${selected.km} km`}
-                  </p>
+              linkLineDash={[3, 3]}
+              linkLabel={(l: any) => (l.connected ? "weave" : `${Math.round(l.weight * 100)}% fit`)}
+              linkDirectionalParticles={0}
+              onNodeClick={(n: any) => {
+                setSelected(n as Posting)
+                toggle(n.id)
+              }}
+              onBackgroundClick={() => setSelected(null)}
+            />
+            {selected && (
+              <div className="absolute bottom-3 left-3 right-3 rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {selected.have ? "We have" : "We need"} {selected.what}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selected.group}
+                      {selected.km != null && ` · ${selected.km} km`}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      selected.shape === "physical"
+                        ? "bg-emerald-500/10 text-emerald-700"
+                        : selected.shape === "remote"
+                          ? "bg-sky-500/10 text-sky-700"
+                          : "bg-amber-500/10 text-amber-700"
+                    }`}
+                  >
+                    {SHAPE_LABEL[selected.shape]}
+                  </span>
                 </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                    selected.shape === "physical"
-                      ? "bg-emerald-500/10 text-emerald-700"
-                      : selected.shape === "remote"
-                        ? "bg-sky-500/10 text-sky-700"
-                        : "bg-amber-500/10 text-amber-700"
-                  }`}
-                >
-                  {SHAPE_LABEL[selected.shape]}
-                </span>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.type}</span>
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.temporality}</span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                      selected.urgency === "high"
+                        ? "bg-red-500/10 text-red-600"
+                        : selected.urgency === "medium"
+                          ? "bg-amber-500/10 text-amber-600"
+                          : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {URGENCY_LABEL[selected.urgency]}
+                  </span>
+                </div>
               </div>
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.type}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.temporality}</span>
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                    selected.urgency === "high"
-                      ? "bg-red-500/10 text-red-600"
-                      : selected.urgency === "medium"
-                        ? "bg-amber-500/10 text-amber-600"
-                        : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {URGENCY_LABEL[selected.urgency]}
-                </span>
+            )}
+            {isMatched && (
+              <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-medium text-white">
+                <CheckCircle2 className="size-3.5" />
+                Matched
               </div>
-              {selected.shape === "financial" && (
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  A funding ask — it seeks a sponsor (vertical funds), not a give/get loop.
-                </p>
-              )}
-              <div className="mt-2 flex gap-2">
-                <button
-                  onClick={() => toggle(selected.id)}
-                  className="flex-1 rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground"
-                >
-                  {myWeave.includes(selected.id) ? "Remove" : "Weave in"}
-                </button>
+            )}
+          </div>
+
+          {/* the weave panel — selected cards + connect */}
+          <div className="w-72 shrink-0 rounded-lg border bg-card p-3 shadow-sm">
+            <p className="text-sm font-medium">Your weave</p>
+            {myWeave.length === 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Tap nodes on the left — they&apos;ll outline and draw together here.
+              </p>
+            ) : (
+              <div className="mt-2 space-y-1.5">
+                {myWeave.map((id) => {
+                  const p = visiblePostings.find((x) => x.id === id)
+                  if (!p) return null
+                  return (
+                    <div key={id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
+                      <span className="truncate">
+                        <span className="text-muted-foreground">{p.have ? "have" : "need"}</span> {p.what}
+                      </span>
+                      <button onClick={() => toggle(id)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                        ✕
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
-            </div>
-          )}
-          {isMatched && (
-            <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-medium text-white">
-              <CheckCircle2 className="size-3.5" />
-              Matched — a give/get pair
-            </div>
-          )}
+            )}
+            <button
+              onClick={connect}
+              disabled={myWeave.length < 2}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-2 py-2 text-xs font-medium text-primary-foreground disabled:opacity-40"
+            >
+              <Link2 className="size-3.5" />
+              {connected.length ? "Connected" : "Connect"}
+            </button>
+            {connected.length > 0 && (
+              <p className="mt-1.5 text-[11px] text-emerald-600">
+                {connected.length} link{connected.length > 1 ? "s" : ""} tied into a weave.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
