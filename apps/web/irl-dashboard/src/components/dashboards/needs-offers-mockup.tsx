@@ -80,26 +80,23 @@ function makeGroupGravity(getIds: () => Set<string>) {
   return force
 }
 
-// A force that pins the selected node to the center of the viewport. force-graph's
-// coordinate space is centered on (0,0) — the canvas center — so the pin is (0,0).
-function makeFocusForce(getSelectedId: () => string | null) {
+// Centering: pull the selected group's centroid toward (0,0) — the canvas center.
+// With one node selected it pins that node; with several it keeps the whole group
+// centered as new nodes are added.
+function makeCenteringForce(getIds: () => Set<string>) {
   let nodes: any[] = []
-  let prevId: string | null = null
-  function force() {
-    const id = getSelectedId()
-    if (prevId && prevId !== id) {
-      const prev = nodes.find((n) => n.id === prevId)
-      if (prev) {
-        prev.fx = null
-        prev.fy = null
-      }
+  function force(alpha: number) {
+    const ids = getIds()
+    if (ids.size < 1) return
+    const sel = nodes.filter((n) => ids.has(n.id))
+    if (sel.length < 1) return
+    const cx = sel.reduce((s, n) => s + n.x, 0) / sel.length
+    const cy = sel.reduce((s, n) => s + n.y, 0) / sel.length
+    const k = alpha * 0.5
+    for (const n of sel) {
+      n.vx -= cx * k
+      n.vy -= cy * k
     }
-    prevId = id
-    if (!id) return
-    const node = nodes.find((n) => n.id === id)
-    if (!node) return
-    node.fx = 0
-    node.fy = 0
   }
   force.initialize = (ns: any[]) => {
     nodes = ns
@@ -134,9 +131,6 @@ export function NeedsOffersMockup() {
   const myWeaveRef = useRef<Set<string>>(new Set())
   myWeaveRef.current = new Set(myWeave)
 
-  const selectedRef = useRef<string | null>(null)
-  selectedRef.current = selected?.id ?? null
-
   const appliedRef = useRef(false)
   const fgRef = useRef<any>(null)
 
@@ -144,7 +138,7 @@ export function NeedsOffersMockup() {
     const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
     fg.d3Force("link", forceLink().distance(fitDistance))
     fg.d3Force("group-gravity", makeGroupGravity(() => myWeaveRef.current))
-    fg.d3Force("focus", makeFocusForce(() => selectedRef.current))
+    fg.d3Force("focus", makeCenteringForce(() => myWeaveRef.current))
     fg.d3ReheatSimulation()
   }, [])
 
@@ -221,18 +215,21 @@ export function NeedsOffersMockup() {
   }, [myWeave, commenced])
 
   // Group reveal: a NEED highlights its group's OFFERS (yellow); an OFFER
-  // highlights its group's NEEDS (red).
+  // highlights its group's NEEDS (red). Every selected node keeps its own reveal.
   const groupLinks = useMemo(() => {
-    if (!selected) return []
-    const targetHave = !selected.have
     const links: { source: string; target: string; weight: number; kind: "offer" | "need" }[] = []
-    for (const p of visiblePostings) {
-      if (p.id === selected.id || p.group !== selected.group) continue
-      if (p.have !== targetHave) continue
-      links.push({ source: selected.id, target: p.id, weight: 0.5, kind: p.have ? "offer" : "need" })
+    for (const selId of myWeave) {
+      const sel = visiblePostings.find((p) => p.id === selId)
+      if (!sel) continue
+      const targetHave = !sel.have
+      for (const p of visiblePostings) {
+        if (p.id === selId || p.group !== sel.group) continue
+        if (p.have !== targetHave) continue
+        links.push({ source: selId, target: p.id, weight: 0.5, kind: p.have ? "offer" : "need" })
+      }
     }
     return links
-  }, [selected, visiblePostings])
+  }, [myWeave, visiblePostings])
 
   const graphLinks = useMemo(() => [...visibleLinks, ...weaveLinks, ...groupLinks], [visibleLinks, weaveLinks, groupLinks])
 
