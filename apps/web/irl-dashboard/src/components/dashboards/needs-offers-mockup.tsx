@@ -168,6 +168,11 @@ export function NeedsOffersMockup() {
   }, [zone, allPostings])
 
   const visibleIds = useMemo(() => new Set(visiblePostings.map((p) => p.id)), [visiblePostings])
+
+  // Keep the selection in sync with the visible zone — drop nodes that no longer exist.
+  useEffect(() => {
+    setMyWeave((prev) => (prev.length ? prev.filter((id) => visibleIds.has(id)) : prev))
+  }, [visibleIds])
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return []
@@ -205,14 +210,15 @@ export function NeedsOffersMockup() {
   const weaveLinks = useMemo(() => {
     const links: { source: string; target: string; weight: number; connected: boolean; closing?: boolean }[] = []
     for (let i = 0; i < myWeave.length - 1; i++) {
+      if (!visibleIds.has(myWeave[i]) || !visibleIds.has(myWeave[i + 1])) continue
       links.push({ source: myWeave[i], target: myWeave[i + 1], weight: 1, connected: true })
     }
     // Commencing closes the loop — the last piece links back to the first.
-    if (commenced && myWeave.length >= 3) {
+    if (commenced && myWeave.length >= 3 && visibleIds.has(myWeave[myWeave.length - 1]) && visibleIds.has(myWeave[0])) {
       links.push({ source: myWeave[myWeave.length - 1], target: myWeave[0], weight: 1, connected: true, closing: true })
     }
     return links
-  }, [myWeave, commenced])
+  }, [myWeave, commenced, visibleIds])
 
   // Group reveal: a NEED highlights its group's OFFERS (yellow); an OFFER
   // highlights its group's NEEDS (red). Every selected node keeps its own reveal.
