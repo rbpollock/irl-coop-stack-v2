@@ -129,6 +129,15 @@ const DOCS: DesignDoc[] = [
     file: "regenerative-vision-note.md",
   },
   {
+    slug: "needs-offers-matching",
+    title: "Needs & Offers Matching",
+    category: "Economy & treasury",
+    status: "design",
+    description:
+      "Multi-party trade chains: post needs/offers, discover A→B→C→…→A cycles, and track each leg through a declared/actual/drift reconciler to settlement and arbitration.",
+    file: "needs-offers-matching.md",
+  },
+  {
     slug: "world-doc-and-contacts",
     title: "World-Doc & Contacts",
     category: "Dashboard & world-doc",
