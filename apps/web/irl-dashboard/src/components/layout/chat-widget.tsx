@@ -8,18 +8,17 @@ import type { DictionaryType } from "@/lib/get-dictionary"
 
 import { Button } from "@/components/ui/button"
 
-const ELEMENT_URL =
-  process.env.NEXT_PUBLIC_ELEMENT_URL ?? "https://element.irl.coop"
+const CINNY_URL =
+  process.env.NEXT_PUBLIC_CINNY_URL ?? "https://cinny.irl.coop"
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 
 type Room = { id: string; name: string }
 
-// The coop chat: a room-scoped Element embed. The room list comes from
-// coop-api (GET /api/v1/chat/rooms — it mints the member's Matrix token via
-// the SSO bounce and proxies joined_rooms); selecting a room deep-links
-// Element into that room instead of loading the whole shell. Element still
-// holds the E2EE keys and the homeserver session (one consent the first time).
+// The coop chat: a room-scoped Cinny embed. The room list comes from coop-api
+// (GET /api/v1/chat/rooms — it mints the member's Matrix token via the SSO
+// bounce and proxies joined_rooms); selecting a room deep-links Cinny into that
+// room instead of loading the whole shell.
 export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
@@ -96,7 +95,7 @@ export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
 
           {roomId ? (
             <iframe
-              src={`${ELEMENT_URL}/#/room/${encodeURIComponent(roomId)}`}
+              src={`${CINNY_URL}/#/room/${encodeURIComponent(roomId)}`}
               title={dictionary.navigation.coopChat}
               className="h-full w-full flex-1 border-0 bg-background"
               allow="clipboard-read; clipboard-write; microphone; camera; display-capture"

@@ -4,6 +4,10 @@ export const linksData = [
     title: "General",
   },
   {
+    href: "/pages/account/settings/appearance",
+    title: "Appearance",
+  },
+  {
     href: "/pages/account/settings/security",
     title: "Security",
   },
