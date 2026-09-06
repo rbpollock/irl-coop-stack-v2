@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { useState } from "react"
-import { Loader2, Search } from "lucide-react"
+import { ArrowUpRight, Loader2, Search } from "lucide-react"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
@@ -14,12 +14,14 @@ const DOCS_AREA_ID =
 
 type Context = {
   document_id: string
+  document_name: string | null
   heading: string | null
   text: string
   source: string
 }
 
-export function DocsSearch() {
+// file name → design-doc slug, so a result can link to its source doc.
+export function DocsSearch({ docs }: { docs: Record<string, string> }) {
   const { data: session } = useSession()
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
@@ -90,7 +92,9 @@ export function DocsSearch() {
       </form>
 
       {loading && (
-        <p className="mt-4 text-center text-sm text-muted-foreground">Searching…</p>
+        <div className="mt-8 flex justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
       )}
 
       {error && <p className="mt-4 text-center text-sm text-muted-foreground">{error}</p>}
@@ -99,21 +103,39 @@ export function DocsSearch() {
         <p className="mt-4 text-center text-sm text-muted-foreground">No matching passages.</p>
       )}
 
-      {contexts.length > 0 && (
+      {!loading && contexts.length > 0 && (
         <div className="mt-6 space-y-3">
-          {contexts.map((c, i) => (
-            <div key={i} className="rounded-xl border bg-card p-4">
-              {c.heading && (
-                <p className="mb-1 text-xs font-semibold text-primary">{c.heading}</p>
-              )}
-              <p className="text-sm leading-relaxed text-foreground/85">
-                {c.text.slice(0, 420)}
-              </p>
-              <p className="mt-2 text-[11px] text-muted-foreground">
-                via {c.source} · doc {c.document_id.slice(0, 8)}
-              </p>
-            </div>
-          ))}
+          {contexts.map((c, i) => {
+            const slug = c.document_name ? docs[c.document_name] : undefined
+            const card = (
+              <div className="group rounded-xl border bg-card p-4 transition-colors hover:border-primary/50">
+                {c.heading && (
+                  <p className="mb-1 text-xs font-semibold text-primary">{c.heading}</p>
+                )}
+                <p className="text-sm leading-relaxed text-foreground/85">
+                  {c.text.slice(0, 420)}
+                </p>
+                <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                  via {c.source}
+                  {slug && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span className="inline-flex items-center gap-0.5 font-medium text-primary group-hover:underline">
+                        Read more <ArrowUpRight className="size-3" />
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
+            )
+            return slug ? (
+              <Link key={i} href={`/design/${slug}`} className="block">
+                {card}
+              </Link>
+            ) : (
+              <div key={i}>{card}</div>
+            )
+          })}
         </div>
       )}
 
