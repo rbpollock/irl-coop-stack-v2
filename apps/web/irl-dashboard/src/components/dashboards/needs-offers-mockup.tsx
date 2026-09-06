@@ -175,7 +175,19 @@ export function NeedsOffersMockup() {
     return links
   }, [myWeave])
 
-  const graphLinks = useMemo(() => [...visibleLinks, ...weaveLinks], [visibleLinks, weaveLinks])
+  // Group reveal: when a node is selected, thin solid lines to its group's
+  // offers (yellow) and needs (red), so the rest of the group surfaces.
+  const groupLinks = useMemo(() => {
+    if (!selected) return []
+    const links: { source: string; target: string; weight: number; kind: "offer" | "need" }[] = []
+    for (const p of visiblePostings) {
+      if (p.id === selected.id || p.group !== selected.group) continue
+      links.push({ source: selected.id, target: p.id, weight: 0.5, kind: p.have ? "offer" : "need" })
+    }
+    return links
+  }, [selected, visiblePostings])
+
+  const graphLinks = useMemo(() => [...visibleLinks, ...weaveLinks, ...groupLinks], [visibleLinks, weaveLinks, groupLinks])
 
   const isMatched =
     myWeave.length >= 2 && visibleLinks.some((l) => myWeave.includes(l.source) && myWeave.includes(l.target))
@@ -356,12 +368,26 @@ export function NeedsOffersMockup() {
                 ctx.fillStyle = color
                 ctx.fill()
               }}
-              linkWidth={(l: any) => (l.connected ? 1 : 0.6 + l.weight * 1.8)}
+              linkWidth={(l: any) => (l.connected || l.kind ? 1 : 0.6 + l.weight * 1.8)}
               linkColor={(l: any) =>
-                l.connected ? "rgba(99,102,241,0.7)" : `rgba(100,116,139,${0.18 + l.weight * 0.5})`
+                l.connected
+                  ? "rgba(99,102,241,0.7)"
+                  : l.kind === "offer"
+                    ? "rgba(250,204,21,0.85)"
+                    : l.kind === "need"
+                      ? "rgba(239,68,68,0.85)"
+                      : `rgba(100,116,139,${0.18 + l.weight * 0.5})`
               }
-              linkLineDash={(l: any) => (l.connected ? null : [3, 3])}
-              linkLabel={(l: any) => (l.connected ? "weave" : `${Math.round(l.weight * 100)}% fit`)}
+              linkLineDash={(l: any) => (l.connected || l.kind ? null : [3, 3])}
+              linkLabel={(l: any) =>
+                l.connected
+                  ? "weave"
+                  : l.kind === "offer"
+                    ? "same group — offers"
+                    : l.kind === "need"
+                      ? "same group — needs"
+                      : `${Math.round(l.weight * 100)}% fit`
+              }
               linkDirectionalParticles={0}
               onNodeClick={(n: any) => {
                 setSelected(n as Posting)
