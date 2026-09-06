@@ -58,26 +58,32 @@ function ResultCard({ context: c }: { context: Context }) {
 }
 
 async function queryArea(token: string | undefined, areaId: string, question: string): Promise<Context[]> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" }
-  if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(`${COOP_API_URL}/mcp`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "tools/call",
-      params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question, rerank: false } },
-    }),
-  })
-  const data = await res.json()
-  const text = data?.result?.content?.[0]?.text
-  if (!text) return []
-  try {
-    return (JSON.parse(text).contexts ?? []) as Context[]
-  } catch {
-    return []
+  const doFetch = async (withToken: boolean): Promise<Context[]> => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    if (withToken && token) headers.Authorization = `Bearer ${token}`
+    const res = await fetch(`${COOP_API_URL}/mcp`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question, rerank: false } },
+      }),
+    })
+    // A stale/expired session token is rejected (401) — fall back to the
+    // anonymous principal, which can still search anything public.
+    if (res.status === 401 && withToken) return doFetch(false)
+    const data = await res.json()
+    const text = data?.result?.content?.[0]?.text
+    if (!text) return []
+    try {
+      return (JSON.parse(text).contexts ?? []) as Context[]
+    } catch {
+      return []
+    }
   }
+  return doFetch(Boolean(token))
 }
 
 export function DocsSearch({ className = "", prioritizeGroups = false }: { className?: string; prioritizeGroups?: boolean }) {
