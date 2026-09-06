@@ -127,6 +127,7 @@ export function NeedsOffersMockup() {
   myWeaveRef.current = new Set(myWeave)
 
   const appliedRef = useRef(false)
+  const fgRef = useRef<any>(null)
 
   const applyForces = useCallback((fg: any) => {
     const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
@@ -193,6 +194,13 @@ export function NeedsOffersMockup() {
       })),
     [visiblePostings],
   )
+
+  // Center the view on a node — used when an urgent need is picked in the drawer.
+  const centerOn = (id: string) => {
+    const node = graphNodes.find((n) => n.id === id)
+    const fg = fgRef.current
+    if (node && fg) fg.centerAt(node.x, node.y, 600)
+  }
 
   // Solid links between the selected nodes (in selection order) — the weave.
   const weaveLinks = useMemo(() => {
@@ -336,6 +344,7 @@ export function NeedsOffersMockup() {
             width={graphSize.width}
             height={graphSize.height}
             ref={(fg: any) => {
+              fgRef.current = fg
               if (fg && !appliedRef.current) {
                 appliedRef.current = true
                 applyForces(fg)
@@ -598,7 +607,15 @@ export function NeedsOffersMockup() {
                     <div className="space-y-1">
                       {highPriorityNeeds.map((p) => (
                         <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
-                          <span className="truncate">{p.what}</span>
+                          <button
+                            onClick={() => {
+                              setSelected(p)
+                              centerOn(p.id)
+                            }}
+                            className="truncate text-left hover:text-foreground"
+                          >
+                            {p.what}
+                          </button>
                           <button
                             onClick={() => toggle(p.id)}
                             className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition hover:bg-primary/20"
