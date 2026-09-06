@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useState } from "react"
-import { BadgeCheck, CheckCircle2, Clock, Handshake, Plus, Repeat } from "lucide-react"
+import { AlertTriangle, BadgeCheck, CheckCircle2, Clock, Handshake, Plus, Repeat } from "lucide-react"
 
 // Needs/offers — a force-directed "solution space". Stress-test data spans
 // three shapes: physical (location-bound), remote (skill-bound), and financial
@@ -97,6 +97,22 @@ const LINKS: { source: string; target: string }[] = [
 
 // The six nodes that close the canonical triangle loop.
 const LOOP_NODES = ["cs-storage", "sc-storage", "sc-seed", "mg-seed", "mg-compost", "cs-compost"]
+
+// The story a loop must graduate into: each leg carries who/what/how/when, a
+// coverage, and any gap the validation flags. A loop is a hypothesis until its
+// story is gap-free.
+type StoryLeg = { from: string; to: string; what: string; how: string; coverage: string; gap?: string }
+
+const STORY_LEGS: StoryLeg[] = [
+  { from: "Cold Storage Co-op", to: "Seed Co-op", what: "winter storage", how: "frees up by the 12th", coverage: "covered" },
+  { from: "Seed Co-op", to: "Market Garden", what: "40 kg seed", how: "no transport yet", coverage: "50% surplus", gap: "transport" },
+  { from: "Market Garden", to: "Cold Storage Co-op", what: "2 t compost", how: "coop truck · by the 18th", coverage: "covered" },
+]
+
+const GAPS = [
+  "Leg 2 (seed) has no transport — who moves it?",
+  "40 kg offered, 20 kg needed — route the surplus.",
+]
 
 type Tab = "weave" | "board" | "loops"
 
@@ -248,10 +264,44 @@ export function NeedsOffersMockup() {
             </div>
           )}
           {loopClosed && (
-            <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-medium text-white">
-              <CheckCircle2 className="size-3.5" />
-              Loop closed — everyone gets rewarded
-            </div>
+            <>
+              <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-amber-500/90 px-3 py-1 text-xs font-medium text-white">
+                <Clock className="size-3.5" />
+                Validating — {GAPS.length} gaps
+              </div>
+              <div className="absolute inset-x-3 bottom-3 rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur">
+                <p className="text-sm font-medium">The surplus triangle — does it hold?</p>
+                <div className="mt-2 space-y-1.5">
+                  {STORY_LEGS.map((leg) => (
+                    <div key={leg.from} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate text-muted-foreground">
+                        {leg.from} → {leg.to} · <span className="text-foreground">{leg.what}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <span className="text-emerald-600">{leg.coverage}</span>
+                        {leg.gap && <span className="text-amber-600">· {leg.gap}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 space-y-1 border-t pt-2">
+                  {GAPS.map((g) => (
+                    <p key={g} className="flex items-center gap-1.5 text-xs text-amber-700">
+                      <AlertTriangle className="size-3.5 shrink-0" />
+                      {g}
+                    </p>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    On settle, the anonymized story joins the Solutions library.
+                  </p>
+                  <button className="shrink-0 rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground">
+                    Close the gaps
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}

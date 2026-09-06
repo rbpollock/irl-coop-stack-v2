@@ -190,6 +190,121 @@ rails.
 - **Automatic settlement** — v0 legs settle when parties confirm + the ledger entry is
   written; standing-order auto-settlement is the treasury keeper's job, not the chain's.
 
+## 9. The shape of a need — physical / remote / financial
+
+A need is not one kind of thing; it has a **shape** that changes everything
+downstream. Three shapes, mirroring what the resource is bound to:
+
+| shape | bound to | matches on | graph |
+|---|---|---|---|
+| **physical** (compost, storage, transport) | a place | semantic + literal distance | range ring |
+| **remote** (coaching, VA, marketing) | a skill / deliverable | semantic only | no location |
+| **financial** (funding) | a project / group | vertical + purpose | coin |
+
+Location is a **constraint on the physical shape**, not a universal field. Shape
+is selected at post time (the "class selection" of the wizard) and drives the
+form, the matcher, and the graph encoding (color = shape).
+
+The load-bearing consequence: **physical and remote needs participate in cycles
+(give/get); financial needs do not.** A funding ask is a one-way flow — it uses
+`sponsored-by` (not `matched-by`) and routes to the vertical funds, whose
+priority is *computed, not declared*. A funding node never tries to close a
+loop; it seeks a sponsor.
+
+## 10. Coverage — partial matches, surplus, shortfall
+
+A match is a **degree**, not a boolean. A posting carries `quantity` + `unit` +
+a `flexible` flag / tolerance, and the matcher computes **coverage**:
+
+- offer ≥ need → covered, with a **surplus** (40 kg vs 20 kg → 100%, +20 spare);
+- offer < need → **partial**, with a **shortfall** (20 vs 40 → 50%, −20 short).
+
+Both are surfaced with their coverage, never discarded. The `flexible` flag gates
+whether partials surface at all — default is **exact** (only exact/fully-covered
+matches), `flexible` opts into "open to partial / will negotiate". Same instinct
+as privacy-by-default: don't surface ambiguity to parties who didn't ask for it.
+
+A partial match enters a **`negotiating` leg state** between `proposed` and
+`confirmed`: the parties converse to agree the actual quantity and timing, and the
+*negotiated* quantity becomes the leg's **declared** state. The conversation is a
+scoped thread on the proposal (a per-chain Matrix DM is the escalation), never a
+new group, never a standing room.
+
+## 11. Satisfaction — fitness for purpose
+
+Coverage answers "is the amount there?"; **satisfaction** answers "does it
+actually work for them?" — condition, timing, fit, quality. A need can be 100%
+covered and 0% satisfied: "dry cold room" vs "humid shed" are both storage, same
+quantity, wrong thing.
+
+Satisfaction has two sides:
+
+- **At match time** — richer posting attributes (condition, timeframe, hard
+  requirements) plus the semantic vectors; the RAG embeddings rank *fit*, not
+  just *availability*. This is where the vector-informed graph earns its keep.
+- **After settle** — the parties' actual satisfaction is a signal feeding the
+  match-quality badge's `false_match_rate` (a closed match that didn't satisfy
+  *is* a false match — see match-proposing.md §7).
+
+Satisfaction is the axis that keeps the system honest: it's what the parties
+themselves feel, and what separates a good weaver from a prolific one.
+
+## 12. Fan-out / fan-in — matching is a flow, not cycles
+
+Quantity makes surplus and shortfall *routable*:
+
+- **Surplus** → one offer satisfies several needs (40 kg split across 20 + 15).
+- **Shortfall** → one need is filled by several offers (20 + 20 = 40).
+
+So the matcher is a **flow assignment** (offers fan out, needs fan in), not a set
+of pairwise cycles. The AI's real job here is proposing the *split*: "this 40 kg
+offer covers these two needs — 20 + 15, 5 spare."
+
+## 13. The validated story — a loop is a plan, not a hypothesis
+
+A geometric cycle (A→B→C→A) is a *candidate*, not a trade. It must graduate to a
+**story**: each leg carries who-gives-what-how-much-when-plus-how, and a
+contingency; the loop carries timing and dependencies. The story is a
+**machine-checkable plan object** (rendered as a narrative for humans), not free
+text — otherwise neither the AI nor the reconciler can use it.
+
+The AI validates the story against concrete **gap types**: transport, timing,
+quantity, contingency, availability, commitment. Validation is a state-machine
+gate:
+
+```
+proposed → validating → confirmed → in-flight → settled
+```
+
+The loop cannot confirm until the story is gap-free; gaps stay visible as a
+checklist until closed (by the parties, or by the AI proposing fills).
+
+**The story *is* the declared state.** Drift detection is only meaningful against
+a rich declared. "Declared: compost arrives by the 12th via the coop truck" →
+actual "not arrived by the 14th" → drift, surfaced. Without the story, the
+reconciler has nothing to reconcile.
+
+This is the weave, steps 3–4, made explicit and machine-checkable: *determines
+any missing gaps and seeks to fill them* + *establishes communication, protection
+for the exchange, contingencies*.
+
+## 14. Anonymized story logs — the Solutions library
+
+A settled chain's story, **anonymized**, is logged to a story-log collection —
+the "Solutions library" (§landing recipes: "anonymized stories of how a need got
+met, together"). Two consumers:
+
+- **Humans browse it** — "how did another coop meet a compost need?" A searchable
+  knowledge surface, and the closest thing to a wiki of practice.
+- **The AI draws on it** — past stories are precedents the validation step reasons
+  over ("last time a compost leg had no transport, they used the coop truck").
+
+This closes the loop of the whole design: **validation stories become the
+knowledge for future validation.** Story logs are a RAG area (a knowledge area,
+never a store of record) and inherit the visibility tiers — a story is
+public / group / private like any knowledge area, so a hidden group's settlement
+isn't broadcast.
+
 ## Worked example — the surplus triangle
 
 Three groups in the same region, each with a different surplus (the farm-coalition
@@ -250,3 +365,11 @@ the arbitration path is the same rails as a chargeback — just a lighter ruling
 6. **What survives the chain.** If a chain dissolves mid-flight (a party leaves), does
    the projection persist for the audit/arbitration record, and for how long — or is it
    dropped like any projection and rebuilt from events?
+7. **Satisfaction vs coverage weighting.** When the matcher ranks candidate matches,
+   how much does satisfaction (fit) weigh against coverage (quantity) — and is the
+   weight a party preference or a system constant?
+8. **Story-log anonymization degree.** How coarse must an anonymized story be before it
+   joins the Solutions library — group name stripped? geography coarse-grained? — and
+   who redacts, the parties or the system?
+9. **Negotiation deadlines.** Does a `negotiating` leg hang until the parties agree, or
+   does it also have a window (and if the window lapses, does it dissolve or drift)?
