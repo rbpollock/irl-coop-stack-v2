@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useCallback, useMemo, useRef, useState } from "react"
-import { BadgeCheck, CheckCircle2, ChevronRight, Clock, Handshake, Link2, Plus, Repeat, X } from "lucide-react"
+import { BadgeCheck, CheckCircle2, ChevronRight, Clock, Handshake, Plus, Repeat, X } from "lucide-react"
 import { forceLink } from "d3-force-3d"
 
 import { buildLinks, buildPostings, REGIONS, type Posting, type Shape } from "@/lib/needs-offers.data"
@@ -77,7 +77,6 @@ export function NeedsOffersMockup() {
   const [zone, setZone] = useState<Zone>("near")
   const [selected, setSelected] = useState<Posting | null>(null)
   const [myWeave, setMyWeave] = useState<string[]>([])
-  const [connected, setConnected] = useState<string[]>([])
   const [postOpen, setPostOpen] = useState(false)
   const [postText, setPostText] = useState("")
   const [postShape, setPostShape] = useState<Shape>("physical")
@@ -140,31 +139,22 @@ export function NeedsOffersMockup() {
     [visiblePostings],
   )
 
-  // User-created weave links (dashed) merged with the potential matches.
-  const graphLinks = useMemo(
-    () => [
-      ...visibleLinks,
-      ...connected.map((pair) => {
-        const [source, target] = pair.split("|")
-        return { source, target, weight: 1, connected: true }
-      }),
-    ],
-    [visibleLinks, connected],
-  )
+  // Solid links between the selected nodes (in selection order) — the weave.
+  const weaveLinks = useMemo(() => {
+    const links: { source: string; target: string; weight: number; connected: boolean }[] = []
+    for (let i = 0; i < myWeave.length - 1; i++) {
+      links.push({ source: myWeave[i], target: myWeave[i + 1], weight: 1, connected: true })
+    }
+    return links
+  }, [myWeave])
+
+  const graphLinks = useMemo(() => [...visibleLinks, ...weaveLinks], [visibleLinks, weaveLinks])
 
   const isMatched =
-    myWeave.length >= 2 && graphLinks.some((l) => myWeave.includes(l.source) && myWeave.includes(l.target))
+    myWeave.length >= 2 && visibleLinks.some((l) => myWeave.includes(l.source) && myWeave.includes(l.target))
 
   const toggle = (id: string) =>
     setMyWeave((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-
-  const connect = () => {
-    const pairs: string[] = []
-    for (let i = 0; i < myWeave.length - 1; i++) {
-      pairs.push(`${myWeave[i]}|${myWeave[i + 1]}`)
-    }
-    setConnected(pairs)
-  }
 
   const nodeLabel = (n: Posting) => {
     const verb = n.have ? "We have" : "We need"
@@ -290,9 +280,9 @@ export function NeedsOffersMockup() {
                 const color = SHAPE_COLOR[node.shape as Shape]
                 if (inWeave) {
                   ctx.beginPath()
-                  ctx.arc(node.x, node.y, r + 3 / globalScale, 0, 2 * Math.PI)
-                  ctx.strokeStyle = "rgba(99,102,241,0.7)"
-                  ctx.lineWidth = 2 / globalScale
+                  ctx.arc(node.x, node.y, r + 6 / globalScale, 0, 2 * Math.PI)
+                  ctx.strokeStyle = "rgba(79,70,229,1)"
+                  ctx.lineWidth = 3.5 / globalScale
                   ctx.stroke()
                 }
                 ctx.beginPath()
@@ -306,10 +296,10 @@ export function NeedsOffersMockup() {
                   ctx.stroke()
                 }
                 const label = node.what.length > 14 ? `${node.what.slice(0, 13)}…` : node.what
-                ctx.font = `${9 / globalScale}px system-ui, sans-serif`
+                ctx.font = `${11 / globalScale}px system-ui, sans-serif`
                 ctx.textAlign = "center"
                 ctx.textBaseline = "top"
-                ctx.fillStyle = "rgba(90,100,120,0.9)"
+                ctx.fillStyle = "rgba(24,30,50,0.95)"
                 ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
               }}
               nodeLabel={(n: any) => nodeLabel(n)}
@@ -317,7 +307,7 @@ export function NeedsOffersMockup() {
               linkColor={(l: any) =>
                 l.connected ? "rgba(99,102,241,0.7)" : `rgba(100,116,139,${0.18 + l.weight * 0.5})`
               }
-              linkLineDash={[3, 3]}
+              linkLineDash={(l: any) => (l.connected ? null : [3, 3])}
               linkLabel={(l: any) => (l.connected ? "weave" : `${Math.round(l.weight * 100)}% fit`)}
               linkDirectionalParticles={0}
               onNodeClick={(n: any) => {
@@ -468,17 +458,9 @@ export function NeedsOffersMockup() {
                 })}
               </div>
             )}
-            <button
-              onClick={connect}
-              disabled={myWeave.length < 2}
-              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-2 py-2 text-xs font-medium text-primary-foreground disabled:opacity-40"
-            >
-              <Link2 className="size-3.5" />
-              {connected.length ? "Connected" : "Connect"}
-            </button>
-            {connected.length > 0 && (
-              <p className="mt-1.5 text-[11px] text-emerald-600">
-                {connected.length} link{connected.length > 1 ? "s" : ""} tied into a weave.
+            {myWeave.length >= 2 && (
+              <p className="mt-2 text-[11px] text-indigo-600">
+                {myWeave.length - 1} solid link{myWeave.length > 2 ? "s" : ""} drawn — ✕ a card to unlink.
               </p>
             )}
             </div>
