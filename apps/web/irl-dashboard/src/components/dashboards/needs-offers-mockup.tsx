@@ -42,30 +42,21 @@ const URGENCY_LABEL: Record<string, string> = {
 // A force that (1) pulls selected nodes toward their shared centroid, and
 // (2) pulls each selected node's group-mates toward it — so the rest of what a
 // group has or needs surfaces when the first connection is made.
-function makeGravityForce(getIds: () => Set<string>) {
+// Gravity (audited + simplified): the only custom force left is the group-mates
+// pull — when you select a node, its group's other offers/needs drift toward it.
+// The focus force pins the selected node to center and the weave links pull the
+// selected nodes together, which covers what the old centroid + repulsion forces
+// were trying to do — with less noise.
+function makeGroupGravity(getIds: () => Set<string>) {
   let nodes: any[] = []
   function force(alpha: number) {
     const ids = getIds()
     if (ids.size < 1) return
     const sel = nodes.filter((n) => ids.has(n.id))
     if (sel.length < 1) return
-
-    const cx = sel.reduce((s, n) => s + n.x, 0) / sel.length
-    const cy = sel.reduce((s, n) => s + n.y, 0) / sel.length
-
-    // 1. selected nodes → their centroid (strong)
-    if (sel.length >= 2) {
-      const g = alpha * 0.7
-      for (const n of sel) {
-        n.vx += (cx - n.x) * g
-        n.vy += (cy - n.y) * g
-      }
-    }
-
-    // 2. group-mates → the nearest selected node of the same group
     const selGroups = new Set(sel.map((n) => n.group))
     const mates = nodes.filter((n) => !ids.has(n.id) && selGroups.has(n.group))
-    const g2 = alpha * 0.12
+    const g = alpha * 0.12
     for (const m of mates) {
       let nearest = sel[0]
       let best = Infinity
@@ -78,20 +69,9 @@ function makeGravityForce(getIds: () => Set<string>) {
         }
       }
       if (nearest) {
-        m.vx += (nearest.x - m.x) * g2
-        m.vy += (nearest.y - m.y) * g2
+        m.vx += (nearest.x - m.x) * g
+        m.vy += (nearest.y - m.y) * g
       }
-    }
-
-    // 3. unrelated nodes → push outward from the selected cluster
-    const unrelated = nodes.filter((n) => !ids.has(n.id) && !selGroups.has(n.group))
-    const g3 = alpha * 0.12
-    for (const u of unrelated) {
-      const dx = u.x - cx
-      const dy = u.y - cy
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1
-      u.vx += (dx / dist) * 220 * g3
-      u.vy += (dy / dist) * 220 * g3
     }
   }
   force.initialize = (ns: any[]) => {
@@ -150,6 +130,7 @@ export function NeedsOffersMockup() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [urgentOpen, setUrgentOpen] = useState(true)
+  const [commenced, setCommenced] = useState(false)
 
   const myWeaveRef = useRef<Set<string>>(new Set())
   myWeaveRef.current = new Set(myWeave)
@@ -165,7 +146,7 @@ export function NeedsOffersMockup() {
   const applyForces = useCallback((fg: any) => {
     const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
     fg.d3Force("link", forceLink().distance(fitDistance))
-    fg.d3Force("weave-gravity", makeGravityForce(() => myWeaveRef.current))
+    fg.d3Force("group-gravity", makeGroupGravity(() => myWeaveRef.current))
     fg.d3Force("focus", makeFocusForce(() => selectedRef.current, () => graphSizeRef.current))
     fg.d3ReheatSimulation()
   }, [])
@@ -232,12 +213,16 @@ export function NeedsOffersMockup() {
 
   // Solid links between the selected nodes (in selection order) — the weave.
   const weaveLinks = useMemo(() => {
-    const links: { source: string; target: string; weight: number; connected: boolean }[] = []
+    const links: { source: string; target: string; weight: number; connected: boolean; closing?: boolean }[] = []
     for (let i = 0; i < myWeave.length - 1; i++) {
       links.push({ source: myWeave[i], target: myWeave[i + 1], weight: 1, connected: true })
     }
+    // Commencing closes the loop — the last piece links back to the first.
+    if (commenced && myWeave.length >= 3) {
+      links.push({ source: myWeave[myWeave.length - 1], target: myWeave[0], weight: 1, connected: true, closing: true })
+    }
     return links
-  }, [myWeave])
+  }, [myWeave, commenced])
 
   // Group reveal: a NEED highlights its group's OFFERS (yellow); an OFFER
   // highlights its group's NEEDS (red).
@@ -608,8 +593,25 @@ export function NeedsOffersMockup() {
             )}
             {myWeave.length >= 2 && (
               <p className="mt-2 text-[11px] text-indigo-600">
-                {myWeave.length - 1} solid link{myWeave.length > 2 ? "s" : ""} drawn — ✕ a card to unlink.
+                {myWeave.length - 1} link{myWeave.length > 2 ? "s" : ""} drawn — ✕ a card to unlink.
               </p>
+            )}
+            {myWeave.length >= 2 && !commenced && (
+              <button
+                onClick={() => setCommenced(true)}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+              >
+                <Repeat className="size-4" />
+                {myWeave.length >= 3 ? "Close this loop →" : "Match this pair →"}
+              </button>
+            )}
+            {commenced && (
+              <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-700">
+                <p className="font-semibold">Validating — checking the story for gaps</p>
+                <p className="mt-1 text-amber-700/80">
+                  Loop closed. The AI is checking transport, timing, quantity and commitment before it settles.
+                </p>
+              </div>
             )}
             </div>
 
