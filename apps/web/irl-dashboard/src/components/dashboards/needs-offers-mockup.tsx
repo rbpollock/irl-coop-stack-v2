@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useCallback, useMemo, useRef, useState } from "react"
-import { BadgeCheck, CheckCircle2, Clock, Handshake, Link2, Plus, Repeat } from "lucide-react"
+import { BadgeCheck, CheckCircle2, ChevronRight, Clock, Handshake, Link2, Plus, Repeat, X } from "lucide-react"
 import { forceLink } from "d3-force-3d"
 
 import { buildLinks, buildPostings, REGIONS, type Posting, type Shape } from "@/lib/needs-offers.data"
@@ -120,6 +120,10 @@ export function NeedsOffersMockup() {
       )
       .slice(0, 6)
   }, [search, visiblePostings])
+  const highPriorityNeeds = useMemo(
+    () => visiblePostings.filter((p) => !p.have && p.urgency === "high").slice(0, 8),
+    [visiblePostings],
+  )
   const visibleLinks = useMemo(
     () => allLinks.filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target)),
     [allLinks, visibleIds],
@@ -375,20 +379,34 @@ export function NeedsOffersMockup() {
             ① pick a zone · ② tap a node · ③ Connect
           </div>
 
-          {/* drawer toggle */}
-          <button
-            onClick={() => setDrawerOpen(!drawerOpen)}
-            className="absolute right-3 top-3 rounded-md border bg-background/85 px-2.5 py-1.5 text-xs font-medium shadow-sm backdrop-blur"
-          >
-            {drawerOpen ? "Hide" : "Weave"}
-          </button>
+          {/* drawer toggle — summon the drawer when closed */}
+          {!drawerOpen && (
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-md border bg-background/85 px-2.5 py-1.5 text-xs font-medium shadow-sm backdrop-blur"
+            >
+              <ChevronRight className="size-3.5" />
+              Weave
+            </button>
+          )}
 
           {/* the drawer */}
           <div
-            className={`absolute bottom-9 right-0 top-0 w-80 transform overflow-auto border-l bg-background/95 p-3 shadow-xl backdrop-blur transition-transform duration-200 ${
+            className={`absolute bottom-9 right-0 top-0 flex w-80 transform flex-col border-l bg-background/95 shadow-xl backdrop-blur transition-transform duration-200 ${
               drawerOpen ? "translate-x-0" : "translate-x-full"
             }`}
           >
+            <div className="flex items-center justify-between border-b p-3">
+              <span className="text-sm font-medium">Your weave</span>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="rounded-md border p-1 text-muted-foreground transition hover:text-foreground"
+                aria-label="Close"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto border-b p-3">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -427,7 +445,7 @@ export function NeedsOffersMockup() {
                 )}
               </div>
             )}
-            <p className="mt-3 text-sm font-medium">Your weave</p>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">In your weave</p>
             {myWeave.length === 0 ? (
               <p className="mt-1 text-xs text-muted-foreground">
                 Tap nodes on the left — they&apos;ll outline and draw together here.
@@ -463,6 +481,29 @@ export function NeedsOffersMockup() {
                 {connected.length} link{connected.length > 1 ? "s" : ""} tied into a weave.
               </p>
             )}
+            </div>
+
+            {/* urgent needs in this zone */}
+            <div className="flex-1 overflow-auto p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Urgent in this zone</p>
+              {highPriorityNeeds.length === 0 ? (
+                <p className="mt-1 text-xs text-muted-foreground">Nothing urgent here.</p>
+              ) : (
+                <div className="mt-1.5 space-y-1">
+                  {highPriorityNeeds.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
+                      <span className="truncate">{p.what}</span>
+                      <button
+                        onClick={() => toggle(p.id)}
+                        className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition hover:bg-primary/20"
+                      >
+                        {myWeave.includes(p.id) ? "remove" : "weave in"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* legend — bottom edge */}
