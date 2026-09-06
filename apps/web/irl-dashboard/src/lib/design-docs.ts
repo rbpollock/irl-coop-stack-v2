@@ -49,6 +49,15 @@ const DOCS: DesignDoc[] = [
     file: "group-scoping.md",
   },
   {
+    slug: "knowledge-aggregation",
+    title: "Knowledge Aggregation",
+    category: "Groups & governance",
+    status: "design",
+    description:
+      "The world-doc of knowledge: public + connected-group + direct-grant knowledge areas behind one aggregated query — three visibility tiers (public/group/private), and the RAG-side + provisioning pieces.",
+    file: "knowledge-aggregation.md",
+  },
+  {
     slug: "matrix-chat-and-notifications",
     title: "Matrix Chat & Notifications",
     category: "Groups & governance",
