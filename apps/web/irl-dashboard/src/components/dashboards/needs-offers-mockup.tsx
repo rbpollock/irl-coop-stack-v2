@@ -81,6 +81,8 @@ export function NeedsOffersMockup() {
   const [postOpen, setPostOpen] = useState(false)
   const [postText, setPostText] = useState("")
   const [postShape, setPostShape] = useState<Shape>("physical")
+  const [search, setSearch] = useState("")
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   const myWeaveRef = useRef<Set<string>>(new Set())
   myWeaveRef.current = new Set(myWeave)
@@ -104,6 +106,19 @@ export function NeedsOffersMockup() {
   }, [zone, allPostings])
 
   const visibleIds = useMemo(() => new Set(visiblePostings.map((p) => p.id)), [visiblePostings])
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return []
+    return visiblePostings
+      .filter(
+        (p) =>
+          p.what.toLowerCase().includes(q) ||
+          p.group.toLowerCase().includes(q) ||
+          p.type.toLowerCase().includes(q) ||
+          p.location.toLowerCase().includes(q),
+      )
+      .slice(0, 6)
+  }, [search, visiblePostings])
   const visibleLinks = useMemo(
     () => allLinks.filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target)),
     [allLinks, visibleIds],
@@ -386,7 +401,45 @@ export function NeedsOffersMockup() {
 
           {/* the weave panel — selected cards + connect */}
           <div className="w-72 shrink-0 rounded-lg border bg-card p-3 shadow-sm">
-            <p className="text-sm font-medium">Your weave</p>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search the space…"
+              className="w-full rounded-md border bg-background px-2.5 py-1.5 text-xs shadow-sm"
+            />
+            {search.trim() && (
+              <div className="mt-2 space-y-1">
+                {searchResults.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No matches in this zone.</p>
+                ) : (
+                  searchResults.map((p) => (
+                    <div key={p.id} className="rounded-md border p-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+                          className="min-w-0 flex-1 truncate text-left hover:text-foreground"
+                        >
+                          <span className="text-muted-foreground">{p.have ? "have" : "need"}</span> {p.what}
+                        </button>
+                        <button
+                          onClick={() => toggle(p.id)}
+                          className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition hover:bg-primary/20"
+                        >
+                          {myWeave.includes(p.id) ? "remove" : "weave in"}
+                        </button>
+                      </div>
+                      {expanded === p.id && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {p.group} · {p.type} · {p.temporality}
+                          {p.km != null ? ` · ${p.km} km` : ""}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+            <p className="mt-3 text-sm font-medium">Your weave</p>
             {myWeave.length === 0 ? (
               <p className="mt-1 text-xs text-muted-foreground">
                 Tap nodes on the left — they&apos;ll outline and draw together here.
