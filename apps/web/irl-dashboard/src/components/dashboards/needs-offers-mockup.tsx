@@ -39,21 +39,47 @@ const URGENCY_LABEL: Record<string, string> = {
   low: "anytime",
 }
 
-// A force that pulls selected nodes toward their shared centroid — the "gravity"
-// that keeps the pieces you've chosen near each other.
+// A force that (1) pulls selected nodes toward their shared centroid, and
+// (2) pulls each selected node's group-mates toward it — so the rest of what a
+// group has or needs surfaces when the first connection is made.
 function makeGravityForce(getIds: () => Set<string>) {
   let nodes: any[] = []
   function force(alpha: number) {
     const ids = getIds()
-    if (ids.size < 2) return
+    if (ids.size < 1) return
     const sel = nodes.filter((n) => ids.has(n.id))
-    if (sel.length < 2) return
-    const cx = sel.reduce((s, n) => s + n.x, 0) / sel.length
-    const cy = sel.reduce((s, n) => s + n.y, 0) / sel.length
-    const g = alpha * 0.5
-    for (const n of sel) {
-      n.vx += (cx - n.x) * g
-      n.vy += (cy - n.y) * g
+    if (sel.length < 1) return
+
+    // 1. selected nodes → their centroid
+    if (sel.length >= 2) {
+      const cx = sel.reduce((s, n) => s + n.x, 0) / sel.length
+      const cy = sel.reduce((s, n) => s + n.y, 0) / sel.length
+      const g = alpha * 0.5
+      for (const n of sel) {
+        n.vx += (cx - n.x) * g
+        n.vy += (cy - n.y) * g
+      }
+    }
+
+    // 2. group-mates → the nearest selected node of the same group
+    const selGroups = new Set(sel.map((n) => n.group))
+    const mates = nodes.filter((n) => !ids.has(n.id) && selGroups.has(n.group))
+    const g2 = alpha * 0.12
+    for (const m of mates) {
+      let nearest = sel[0]
+      let best = Infinity
+      for (const s of sel) {
+        if (s.group !== m.group) continue
+        const d = (s.x - m.x) ** 2 + (s.y - m.y) ** 2
+        if (d < best) {
+          best = d
+          nearest = s
+        }
+      }
+      if (nearest) {
+        m.vx += (nearest.x - m.x) * g2
+        m.vy += (nearest.y - m.y) * g2
+      }
     }
   }
   force.initialize = (ns: any[]) => {
@@ -134,8 +160,8 @@ export function NeedsOffersMockup() {
     () =>
       visiblePostings.map((p, i) => ({
         ...p,
-        x: p.shape === "physical" ? 160 + (i % 5) * 40 : p.shape === "remote" ? 520 + (i % 3) * 40 : 340 + (i % 3) * 60,
-        y: p.shape === "physical" ? 120 + Math.floor((i % 15) / 5) * 60 : p.shape === "remote" ? 140 + (i % 4) * 55 : 400,
+        x: p.shape === "physical" ? 220 + (i % 5) * 70 : p.shape === "remote" ? 720 + (i % 3) * 70 : 480 + (i % 3) * 70,
+        y: p.shape === "physical" ? 140 + Math.floor((i % 15) / 5) * 90 : p.shape === "remote" ? 160 + (i % 4) * 90 : 520,
       })),
     [visiblePostings],
   )
