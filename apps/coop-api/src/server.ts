@@ -36,6 +36,7 @@ import geoRoutes from './geo'
 import avatarRoutes from './avatars'
 import internalRoutes from './internal'
 import weatherRoutes from './weather'
+import mcpRoutes from './mcp'
 import { startSmtpRelay } from './smtp-relay'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
@@ -97,6 +98,7 @@ const API_TAGS = [
   { name: "chat", description: "Matrix chat rooms" },
   { name: "matrix", description: "Matrix appservice transaction endpoints (Synapse → coop-api)" },
   { name: "internal", description: "Server-to-server (Keycloak groups mapper, app event ingest)" },
+  { name: "mcp", description: "MCP aggregator/proxy (AI tools, scoped by coop JWT)" },
 ]
 
 const TAG_RULES: [RegExp, string][] = [
@@ -114,6 +116,7 @@ const TAG_RULES: [RegExp, string][] = [
   [/^\/api\/v1\/chat/, "chat"],
   [/^\/_matrix|\/transactions/, "matrix"],
   [/^\/api\/internal/, "internal"],
+  [/^\/mcp/, "mcp"],
 ]
 
 const VERBS: Record<string, string> = { GET: "Get", POST: "Create", PUT: "Update", PATCH: "Update", DELETE: "Delete" }
@@ -174,6 +177,7 @@ fastify.register(livestreamStateRoutes);
 fastify.register(avatarRoutes)
 fastify.register(internalRoutes)
 fastify.register(weatherRoutes)
+fastify.register(mcpRoutes)
 
 // Graceful shutdown — releases :3001 deterministically so ts-node-dev's
 // `--respawn` (and any external restart) can rebind immediately. Without this,
