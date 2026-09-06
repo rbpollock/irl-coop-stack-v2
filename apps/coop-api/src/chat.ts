@@ -43,7 +43,10 @@ function queryParam(location: string, key: string): string | null {
   }
 }
 
-async function mintMatrixAccessToken(sub: string, email: string): Promise<string> {
+// Drive the Synapse OIDC SSO flow server-side to mint a single-use login token
+// (the m.login.token type). coop-api is the OIDC issuer, so it issues the code
+// itself — the member's browser never touches the SSO/consent screen.
+async function mintMatrixLoginToken(sub: string, email: string): Promise<string> {
   const redirectUrl = `${COOP_API_BASE}/_matrix/login/callback`;
 
   // 1. Synapse SSO redirect -> the `state` it will expect back, plus the
@@ -85,7 +88,11 @@ async function mintMatrixAccessToken(sub: string, email: string): Promise<string
     );
   }
 
-  // 4. Exchange the login token for the access token.
+  return loginToken;
+}
+
+// Exchange a login token for the access token.
+async function exchangeLoginToken(loginToken: string): Promise<string> {
   const login = await fetch(`${SYNAPSE_BASE}/_matrix/client/v3/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -96,7 +103,28 @@ async function mintMatrixAccessToken(sub: string, email: string): Promise<string
   return body.access_token;
 }
 
+// Convenience: mint + exchange in one step (for the server-side room proxy).
+async function mintMatrixAccessToken(sub: string, email: string): Promise<string> {
+  return exchangeLoginToken(await mintMatrixLoginToken(sub, email));
+}
+
 export default async function chatRoutes(fastify: FastifyInstance): Promise<void> {
+  // Mint a single-use login token for the chat widget. The dashboard iframe
+  // hands it to Cinny (?loginToken=…) so the member logs in without the
+  // browser-side SSO/consent screen.
+  fastify.get("/api/v1/chat/login", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+
+    try {
+      const loginToken = await mintMatrixLoginToken(claims.sub, claims.email ?? "");
+      return reply.send({ loginToken });
+    } catch (err) {
+      request.log.error({ err: (err as Error).message }, "chat login failed");
+      return reply.code(502).send({ error: "chat_login_failed" });
+    }
+  });
+
   // The member's joined rooms (id + name) for the room-scoped chat widget.
   fastify.get("/api/v1/chat/rooms", async (request, reply) => {
     const claims = verifyBearer(request, reply);

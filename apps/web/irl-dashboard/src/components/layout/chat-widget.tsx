@@ -13,34 +13,31 @@ const CINNY_URL =
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 
-type Room = { id: string; name: string }
-
-// The coop chat: a room-scoped Cinny embed. The room list comes from coop-api
-// (GET /api/v1/chat/rooms — it mints the member's Matrix token via the SSO
-// bounce and proxies joined_rooms); selecting a room deep-links Cinny into that
-// room instead of loading the whole shell.
+// The coop chat: a Cinny embed that logs in with a server-minted Matrix login
+// token. coop-api drives the Synapse SSO flow server-side (it is the OIDC
+// issuer), so the member's browser never hits the SSO consent screen — the
+// iframe just consumes ?loginToken= and lands in the client.
 export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
   const [open, setOpen] = useState(false)
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [roomId, setRoomId] = useState<string | null>(null)
+  const [loginToken, setLoginToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || !token) return
     setError(null)
-    fetch(`${COOP_API_URL}/api/v1/chat/rooms`, {
+    setLoginToken(null)
+    fetch(`${COOP_API_URL}/api/v1/chat/login`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("rooms failed"))))
-      .then((data: { rooms?: Room[] }) => {
-        const list = data.rooms ?? []
-        setRooms(list)
-        setRoomId((cur) => cur ?? list[0]?.id ?? null)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("login failed"))))
+      .then((data: { loginToken?: string }) => {
+        setLoginToken(data.loginToken ?? null)
+        if (!data.loginToken) setError("Could not start chat")
       })
-      .catch(() => setError("Could not load rooms"))
+      .catch(() => setError("Could not start chat"))
   }, [open, token])
 
   return (
@@ -74,35 +71,16 @@ export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
             </Button>
           </div>
 
-          {rooms.length > 0 && (
-            <div className="flex flex-wrap gap-1 border-b px-2 py-1.5">
-              {rooms.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => setRoomId(r.id)}
-                  className={
-                    "truncate rounded-full px-2.5 py-1 text-xs font-medium transition-colors " +
-                    (r.id === roomId
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80")
-                  }
-                >
-                  {r.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {roomId ? (
+          {loginToken ? (
             <iframe
-              src={`${CINNY_URL}/#/room/${encodeURIComponent(roomId)}`}
+              src={`${CINNY_URL}/?loginToken=${encodeURIComponent(loginToken)}`}
               title={dictionary.navigation.coopChat}
               className="h-full w-full flex-1 border-0 bg-background"
               allow="clipboard-read; clipboard-write; microphone; camera; display-capture"
             />
           ) : (
             <div className="flex flex-1 items-center justify-center p-4 text-sm text-muted-foreground">
-              {error ?? "No rooms yet"}
+              {error ?? "Loading…"}
             </div>
           )}
         </div>
