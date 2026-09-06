@@ -50,7 +50,7 @@ const APPS: App[] = [
   { title: "Webmail", href: "/apps/webmail", icon: Mail, gradient: "from-sky-500 to-blue-600", hasNotification: true },
   { title: "Calls", href: "/apps/calls", icon: Phone, gradient: "from-rose-500 to-red-600" },
   { title: "Files", href: "/apps/files", icon: FolderOpen, gradient: "from-amber-500 to-orange-600" },
-  { title: "Documents", href: "/apps/docs", icon: FileText, gradient: "from-zinc-500 to-slate-600" },
+  { title: "Docs", href: "/design", icon: FileText, gradient: "from-zinc-500 to-slate-600" },
   { title: "Groups", href: "/apps/groups", icon: Network, gradient: "from-fuchsia-500 to-pink-600" },
   { title: "Databases", href: "https://nocodb.irl.coop", icon: Database, gradient: "from-cyan-500 to-sky-600", external: true },
   { title: "Surveys", href: "https://forms.irl.coop", icon: ClipboardList, gradient: "from-orange-500 to-amber-600", external: true },

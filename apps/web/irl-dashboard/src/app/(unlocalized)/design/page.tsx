@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ArrowRight, BookOpen } from "lucide-react"
 
+import { DocsSearch } from "@/components/docs-search"
 import { getCategories, type DocStatus } from "@/lib/design-docs"
 
 export const metadata = {
@@ -30,6 +31,10 @@ export default function DesignIndexPage() {
           communications, and the event bus that ties them together. Open for
           review.
         </p>
+      </div>
+
+      <div className="mb-14">
+        <DocsSearch />
       </div>
 
       <div className="mx-auto mb-10 flex max-w-2xl flex-col items-center gap-3 rounded-xl border bg-muted/40 p-5 text-center">
