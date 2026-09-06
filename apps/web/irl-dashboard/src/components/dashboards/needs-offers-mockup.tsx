@@ -302,6 +302,26 @@ export function NeedsOffersMockup() {
                 ctx.textBaseline = "top"
                 ctx.fillStyle = "rgba(255,255,255,0.95)"
                 ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
+
+                // persistent tooltip while this node is selected
+                if (node.id === selected?.id) {
+                  const title = `${node.have ? "We have" : "We need"} ${node.what}`
+                  const sub = `${node.group}${node.km != null ? ` · ${node.km} km` : ""}`
+                  ctx.font = `600 ${12 / globalScale}px system-ui, sans-serif`
+                  const w = Math.max(ctx.measureText(title).width, ctx.measureText(sub).width) + 16 / globalScale
+                  const h = 38 / globalScale
+                  const x = node.x - w / 2
+                  const y = node.y - r - h - 8 / globalScale
+                  ctx.fillStyle = "rgba(15,23,42,0.92)"
+                  ctx.fillRect(x, y, w, h)
+                  ctx.textAlign = "center"
+                  ctx.textBaseline = "middle"
+                  ctx.fillStyle = "#fff"
+                  ctx.fillText(title, node.x, y + h / 2 - 8 / globalScale)
+                  ctx.font = `${10 / globalScale}px system-ui, sans-serif`
+                  ctx.fillStyle = "rgba(255,255,255,0.65)"
+                  ctx.fillText(sub, node.x, y + h / 2 + 8 / globalScale)
+                }
               }}
               nodeLabel={(n: any) => nodeLabel(n)}
               nodePointerAreaPaint={(node: any, color: string, ctx: any) => {
