@@ -14,10 +14,11 @@ import * as nocodbRead from "./journeys/nocodb-read.mjs"
 import * as nocodbWrite from "./journeys/nocodb-write.mjs"
 import * as nocodbApp from "./journeys/nocodb-app.mjs"
 import * as roundcubeMail from "./journeys/roundcube-mail.mjs"
+import * as search from "./journeys/search.mjs"
 
 // Order matters: sign-in first (establishes identity), browser last.
 const apiJourneys = [signIn, groupsScope, membership, anonymous]
-const browserJourneys = [nocodbRead, nocodbWrite, nocodbApp, roundcubeMail]
+const browserJourneys = [nocodbRead, nocodbWrite, nocodbApp, roundcubeMail, search]
 
 const runs = [] // [{ journey, ctx }]
 let browser = null
@@ -34,6 +35,7 @@ try {
   for (const journey of browserJourneys) {
     const ctx = makeCtx()
     ctx.nocodb = session
+    ctx.browser = browser
     await journey.run(ctx)
     runs.push({ journey, ctx })
   }

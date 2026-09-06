@@ -96,18 +96,14 @@ export function DocsSearch({ className = "", prioritizeGroups = false }: { class
     setLoading(true)
     setError(null)
     setSearched(true)
-    try {
-      const [groupCtx, docCtx] = await Promise.all([
-        queryArea(token, GROUPS_AREA_ID, q),
-        queryArea(token, DOCS_AREA_ID, q),
-      ])
-      setContexts([...groupCtx, ...docCtx].slice(0, 8))
-    } catch {
-      setError("Search failed — try again.")
-      setContexts([])
-    } finally {
-      setLoading(false)
-    }
+    setContexts([])
+    // Groups first (fast area) — render immediately so the search feels responsive.
+    const groupCtx = await queryArea(token, GROUPS_AREA_ID, q).catch(() => [])
+    setContexts(groupCtx)
+    setLoading(false)
+    // Docs (slower — CPU rerank over the full corpus) merge in when ready.
+    const docCtx = await queryArea(token, DOCS_AREA_ID, q).catch(() => [])
+    setContexts((prev) => [...prev, ...docCtx].slice(0, 8))
   }
 
   return (
