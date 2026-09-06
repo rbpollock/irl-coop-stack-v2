@@ -305,6 +305,35 @@ never a store of record) and inherit the visibility tiers — a story is
 public / group / private like any knowledge area, so a hidden group's settlement
 isn't broadcast.
 
+## 15. The posting form — declare the minimum, infer the rest
+
+§9 gives the dimensions (shape, type, temporality, urgency, location) but
+implicitly treats them as fields a poster *declares*. They mostly shouldn't be.
+The tension — too many fields and nobody posts, too few and matches are poor —
+resolves with a division of labour, not a compromise:
+
+- **Ask (2 things):** `what` (free text) + `shape` (the one genuine fork —
+  physical / remote / financial). Every required field costs people who walk
+  away; two is the floor.
+- **Infer (the AI):** type, quantity, condition — extracted from the free text,
+  the same extraction the RAG pipeline already performs. The 15-way type
+  taxonomy *stays*, but as an internal prior for the matcher, not a declared
+  field — a user should never classify their own need.
+- **Default (the source):** temporality and urgency come from the work item the
+  posting derives from (a Plane issue's due date, a Matrix thread's season);
+  location comes from the group's registered place or the device. Urgency is
+  unstable and subjective — it must not be a manual field.
+- **Defer (later):** the story details (how, when, transport) surface at
+  *match / validation* time, when a concrete leg needs them — never at post time.
+
+**The posting is a derived view of work already in flight.** From a Plane issue
+("we need 5 volunteers for the harvest on the 20th") or a Matrix message
+("anyone have a truck this weekend?") the posting is *pre-seeded and confirmed*,
+not filled in. The wizard is two steps — *"What do you have or need?"* (the AI
+reads it) → *"What kind?"* (three shape cards) → done. Fewer fields up front
+isn't less data; it's the same five dimensions captured by inference instead of
+entry.
+
 ## Worked example — the surplus triangle
 
 Three groups in the same region, each with a different surplus (the farm-coalition

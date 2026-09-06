@@ -52,6 +52,9 @@ export function NeedsOffersMockup() {
   const [zone, setZone] = useState<Zone>("near")
   const [selected, setSelected] = useState<Posting | null>(null)
   const [myWeave, setMyWeave] = useState<string[]>([])
+  const [postOpen, setPostOpen] = useState(false)
+  const [postText, setPostText] = useState("")
+  const [postShape, setPostShape] = useState<Shape>("physical")
 
   const allPostings = useMemo(() => buildPostings(), [])
   const allLinks = useMemo(() => buildLinks(allPostings), [allPostings])
@@ -115,6 +118,13 @@ export function NeedsOffersMockup() {
           ))}
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPostOpen(!postOpen)}
+            className="flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-sm transition hover:border-primary/40"
+          >
+            <Plus className="size-4" />
+            Post
+          </button>
           <label className="text-xs text-muted-foreground">Zone</label>
           <select
             value={zone}
@@ -133,6 +143,57 @@ export function NeedsOffersMockup() {
           </span>
         </div>
       </div>
+
+      {postOpen && (
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Post a need or offer</p>
+            <button onClick={() => setPostOpen(false)} className="text-muted-foreground transition hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          <label className="mt-3 block text-xs font-medium text-muted-foreground">What do you have or need?</label>
+          <input
+            value={postText}
+            onChange={(e) => setPostText(e.target.value)}
+            placeholder="e.g. 20 kg seed for spring, or five volunteers for the harvest"
+            className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm"
+          />
+          <label className="mt-3 block text-xs font-medium text-muted-foreground">What kind?</label>
+          <div className="mt-1 flex gap-2">
+            {(
+              [
+                ["physical", "📍", "something physical"],
+                ["remote", "🌐", "help or expertise"],
+                ["financial", "⚖️", "funding"],
+              ] as const
+            ).map(([s, emoji, label]) => (
+              <button
+                key={s}
+                onClick={() => setPostShape(s)}
+                className={`flex-1 rounded-md border p-2 text-xs font-medium transition ${
+                  postShape === s ? "border-primary bg-primary/5" : "hover:border-primary/40"
+                }`}
+              >
+                <span className="block text-base">{emoji}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 rounded-md border border-dashed bg-muted/40 p-2.5 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">The AI fills the rest</p>
+            <p className="mt-0.5">
+              type · temporality · urgency · location — read from your words, your group, and your device.
+            </p>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Or start from a Plane issue or Matrix message — the posting is pre-seeded from work you&apos;re already doing.
+          </p>
+          <button className="mt-3 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
+            Post it
+          </button>
+        </div>
+      )}
 
       {/* how to use it */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
