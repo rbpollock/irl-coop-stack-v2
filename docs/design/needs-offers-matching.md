@@ -55,8 +55,9 @@ head.
 
 - `resource_scopes`: `app = "needs"`, `resource_key = <need_id>`, `scoped_by = sub`
   (or the group Safe), plus a `kind` (need/offer), a free-text `title`/`description`,
-  a `category` (produce, space, labor, tools, transport…), and a `visibility` tier
-  that mirrors the group privacy tiers (open / members / hidden).
+  a `category` (produce, space, labor, tools, transport…), and a `scope` + `visibility`
+  — who you're posting as and to (§16: "as myself" is always public; "as the group"
+  carries the group's tier).
 - The need/offer itself is **bound to a group** (the poster's group Safe is the
   counterparty identity), but it is *not* a group of its own.
 
@@ -354,6 +355,18 @@ group already has (`subgroup-of`, `sponsored-by`, `federated-with`). Posting in 
 subgroup is automatically visible to its parent; a federated post is visible to
 the federated groups. Composition-not-inheritance does the work, so there is no
 second form of audience checkboxes.
+
+**"As yourself" is always public.** The group's tier governs the *group*, not the
+member. A member of a hidden group can post `scope: public` — as *themselves*, not
+as the group — regardless of the group's privacy. The group's tier bounds only the
+"as the group" scope (a hidden group's internal voice is hidden); a member's own
+public voice is unbounded.
+
+This is the **discovery surface, not a leak**: a 1-of-1 private caretaker posts a
+public need ("looking for shared land"), the wider community sees it, matches or
+reaches out, and the introduction ceremony is what brings that person *into* the
+hidden group. Public postings are the front door — how people find their way into
+hidden groups — not a spill of their internal state.
 
 Three consequences, all reusing settled mechanics:
 
