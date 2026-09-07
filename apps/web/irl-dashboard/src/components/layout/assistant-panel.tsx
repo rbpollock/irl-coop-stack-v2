@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { Brain, Loader2, Plus, Trash2, X } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Brain, Loader2, Plus, Send, Trash2, X } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+const DOCS_AREA_ID =
+  process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ?? "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
+const GROUPS_AREA_ID =
+  process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ?? "ff498932-aae5-449a-a4db-13432cdf7e2b"
 
 type MemoryFact = {
   id: string
@@ -17,6 +21,14 @@ type MemoryFact = {
   kind: string
   created_at: string
 }
+type Context = {
+  document_id?: string
+  document_name?: string | null
+  heading?: string | null
+  text?: string
+  source?: string
+}
+type Message = { role: "user" | "assistant"; text: string; sources?: Context[] }
 
 // Call a coop-api MCP tool and unwrap the JSON text content it returns.
 async function callTool(
@@ -48,22 +60,85 @@ async function callTool(
   }
 }
 
-// The assistant's explicit-memory surface: the member sees everything the
-// harness remembers, adds facts directly, and erases any of them. The
-// retrieve→generate chat loop hangs off this once the local model lands.
+async function retrieve(
+  token: string | undefined,
+  areaId: string,
+  question: string,
+): Promise<Context[]> {
+  try {
+    const data = (await callTool(token, "rag.retrieve_area_contexts", {
+      area_id: areaId,
+      question,
+      rerank: false,
+    })) as { contexts?: Context[] }
+    return data.contexts ?? []
+  } catch {
+    return []
+  }
+}
+
+// On-device generation via Chrome's built-in Prompt API. Throws when the model
+// isn't available so the caller can degrade to retrieval-only.
+async function generate(prompt: string): Promise<string> {
+  const w = window as any
+  if (!w.ai || typeof w.ai.createTextSession !== "function") {
+    throw new Error("window.ai unavailable")
+  }
+  const session = await w.ai.createTextSession()
+  return await session.prompt(prompt)
+}
+
+function buildPrompt(
+  memory: MemoryFact[],
+  contexts: Context[],
+  question: string,
+): string {
+  const facts =
+    memory.map((m) => `- ${m.fact}`).join("\n") || "(nothing remembered yet)"
+  const ctx = contexts.length
+    ? contexts
+        .map(
+          (c, i) =>
+            `[${i + 1}] ${c.document_name ?? "doc"}${c.heading ? ` — ${c.heading}` : ""}: ${(c.text ?? "").slice(0, 600)}`,
+        )
+        .join("\n\n")
+    : "(no relevant coop knowledge retrieved)"
+  return [
+    "You are the irl.coop assistant — a member-owned helper for a cooperative network.",
+    "Answer ONLY from the member's memory and the retrieved coop knowledge below. Cite sources as [n].",
+    "If neither is relevant, say you don't have it in the coop's knowledge.",
+    "",
+    `Member memory:\n${facts}`,
+    "",
+    `Relevant coop knowledge:\n${ctx}`,
+    "",
+    `Question: ${question}`,
+  ].join("\n")
+}
+
 export function AssistantPanel() {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
   const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<"chat" | "memory">("chat")
+
+  // memory
   const [memories, setMemories] = useState<MemoryFact[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [memLoading, setMemLoading] = useState(false)
   const [draft, setDraft] = useState("")
 
-  const load = useCallback(async () => {
+  // chat
+  const [messages, setMessages] = useState<Message[]>([])
+  const [question, setQuestion] = useState("")
+  const [thinking, setThinking] = useState(false)
+  const [proposal, setProposal] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [noAi, setNoAi] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const loadMemories = useCallback(async () => {
     if (!token) return
-    setLoading(true)
-    setError(null)
+    setMemLoading(true)
     try {
       const data = (await callTool(token, "memory.recall", {})) as {
         memories?: MemoryFact[]
@@ -72,21 +147,24 @@ export function AssistantPanel() {
     } catch {
       setError("Could not load memory")
     } finally {
-      setLoading(false)
+      setMemLoading(false)
     }
   }, [token])
 
   useEffect(() => {
-    if (open) load()
-  }, [open, load])
+    if (open) loadMemories()
+  }, [open, loadMemories])
 
-  const remember = async () => {
-    const fact = draft.trim()
-    if (!fact || !token) return
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [messages, thinking])
+
+  const remember = async (fact: string, source: "member" | "assistant") => {
+    if (!fact.trim() || !token) return
     try {
-      await callTool(token, "memory.remember", { fact })
+      await callTool(token, "memory.remember", { fact: fact.trim(), source })
       setDraft("")
-      await load()
+      await loadMemories()
     } catch {
       setError("Could not save")
     }
@@ -102,6 +180,76 @@ export function AssistantPanel() {
     }
   }
 
+  const ask = async () => {
+    const q = question.trim()
+    if (!q || !token || thinking) return
+    setQuestion("")
+    setMessages((prev) => [...prev, { role: "user", text: q }])
+    setThinking(true)
+    setError(null)
+    setProposal(null)
+    try {
+      // 1. recall memory
+      const mem = (await callTool(token, "memory.recall", {})) as {
+        memories?: MemoryFact[]
+      }
+      // 2. retrieve context (docs + groups, the union)
+      const [docs, groups] = await Promise.all([
+        retrieve(token, DOCS_AREA_ID, q),
+        retrieve(token, GROUPS_AREA_ID, q),
+      ])
+      const contexts = [...groups, ...docs]
+
+      // 3+4. generate (on-device), degrading to retrieval-only
+      let answer = ""
+      let usedAi = false
+      try {
+        answer = await generate(buildPrompt(mem.memories ?? [], contexts, q))
+        usedAi = true
+      } catch {
+        setNoAi(true)
+      }
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: answer, sources: contexts },
+      ])
+
+      // 5. propose one durable fact, surfaced for the member to keep/discard
+      if (usedAi) {
+        try {
+          const fact = await generate(
+            [
+              "From this exchange, extract ONE durable fact to remember about the member",
+              '(a group they belong to, a need, a preference, or a decision).',
+              'Reply with just the fact, or the single word "nothing".',
+              "",
+              `Member: ${q}`,
+              answer ? `Assistant: ${answer.slice(0, 500)}` : "",
+            ].join("\n"),
+          )
+          const clean = fact.trim().replace(/^["']|["']$/g, "")
+          if (
+            clean &&
+            clean.toLowerCase() !== "nothing" &&
+            !clean.toLowerCase().startsWith("nothing")
+          ) {
+            setProposal(clean)
+          }
+        } catch {
+          /* no proposal */
+        }
+      }
+    } catch {
+      setError("Something went wrong")
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: "Something went wrong — please try again." },
+      ])
+    } finally {
+      setThinking(false)
+    }
+  }
+
   return (
     <>
       <Button
@@ -114,69 +262,190 @@ export function AssistantPanel() {
         {open ? <X className="size-5" /> : <Brain className="size-5" />}
       </Button>
       {open && (
-        <div className="fixed bottom-32 end-4 z-50 flex h-[60vh] w-[min(92vw,360px)] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
+        <div className="fixed bottom-32 end-4 z-50 flex h-[70vh] w-[min(92vw,380px)] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
           <div className="flex items-center justify-between border-b px-3 py-2">
-            <span className="text-sm font-semibold">Assistant memory</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Close"
-              onClick={() => setOpen(false)}
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-
-          <p className="border-b px-3 py-2 text-[11px] text-muted-foreground">
-            Everything I remember about you — visible, and yours to erase.
-          </p>
-
-          <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
-            {loading && (
-              <div className="flex justify-center py-6">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!loading && memories.length === 0 && (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nothing remembered yet.
-              </p>
-            )}
-            {memories.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-start justify-between gap-2 rounded-md border p-2 text-xs"
-              >
-                <div className="min-w-0">
-                  <p className="break-words">{m.fact}</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {m.kind}
-                    {m.source === "assistant" ? " · proposed by assistant" : ""}
-                  </p>
-                </div>
+            <span className="text-sm font-semibold">Assistant</span>
+            <div className="flex items-center gap-1">
+              {(["chat", "memory"] as const).map((t) => (
                 <button
-                  aria-label="Forget"
-                  onClick={() => forget(m.id)}
-                  className="shrink-0 rounded p-1 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`rounded px-2 py-0.5 text-xs capitalize ${
+                    tab === t
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
-                  <Trash2 className="size-3.5" />
+                  {t}
                 </button>
-              </div>
-            ))}
+              ))}
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Close"
+                onClick={() => setOpen(false)}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 border-t p-2">
-            <Input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && remember()}
-              placeholder="Add a fact to remember…"
-              className="h-9 text-sm"
-            />
-            <Button size="icon" onClick={remember} aria-label="Remember">
-              <Plus className="size-4" />
-            </Button>
-          </div>
+          {tab === "chat" ? (
+            <>
+              <div
+                ref={scrollRef}
+                className="flex-1 space-y-3 overflow-y-auto p-3"
+              >
+                {messages.length === 0 && !thinking && (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Ask the coop a question — I answer from what I remember about
+                    you and the coop&apos;s knowledge.
+                  </p>
+                )}
+                {messages.map((m, i) => (
+                  <div
+                    key={i}
+                    className={`max-w-[88%] rounded-lg px-3 py-2 text-sm ${
+                      m.role === "user"
+                        ? "ms-auto bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap break-words">
+                      {m.text ||
+                        (m.sources && m.sources.length > 0
+                          ? "(on-device model unavailable — here's what I retrieved)"
+                          : "(no answer)")}
+                    </p>
+                    {m.sources && m.sources.length > 0 && (
+                      <div className="mt-2 space-y-1 border-t pt-1.5 text-[10px] text-muted-foreground">
+                        {m.sources.slice(0, 4).map((s, j) => (
+                          <p key={j} className="truncate">
+                            [{j + 1}] {s.document_name ?? "doc"}
+                            {s.heading ? ` — ${s.heading}` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {thinking && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    thinking…
+                  </div>
+                )}
+                {noAi && (
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    On-device model (Chrome Prompt API) isn&apos;t available —
+                    showing retrieved sources only.
+                  </p>
+                )}
+              </div>
+
+              {proposal && (
+                <div className="border-t px-3 py-2 text-xs">
+                  <p className="mb-1.5 text-muted-foreground">
+                    Remember this?
+                  </p>
+                  <p className="mb-2 rounded-md border p-2">{proposal}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => remember(proposal, "assistant")}
+                    >
+                      Keep
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => setProposal(null)}
+                    >
+                      Discard
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 border-t p-2">
+                <Input
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && ask()}
+                  placeholder="Ask the coop…"
+                  className="h-9 text-sm"
+                />
+                <Button
+                  size="icon"
+                  onClick={ask}
+                  aria-label="Ask"
+                  disabled={thinking || !question.trim()}
+                >
+                  <Send className="size-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="border-b px-3 py-2 text-[11px] text-muted-foreground">
+                Everything I remember about you — visible, and yours to erase.
+              </p>
+              <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
+                {memLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {!memLoading && memories.length === 0 && (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Nothing remembered yet.
+                  </p>
+                )}
+                {memories.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-start justify-between gap-2 rounded-md border p-2 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <p className="break-words">{m.fact}</p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        {m.kind}
+                        {m.source === "assistant"
+                          ? " · proposed by assistant"
+                          : ""}
+                      </p>
+                    </div>
+                    <button
+                      aria-label="Forget"
+                      onClick={() => forget(m.id)}
+                      className="shrink-0 rounded p-1 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 border-t p-2">
+                <Input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && remember(draft, "member")}
+                  placeholder="Add a fact to remember…"
+                  className="h-9 text-sm"
+                />
+                <Button
+                  size="icon"
+                  onClick={() => remember(draft, "member")}
+                  aria-label="Remember"
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </>
+          )}
+
           {error && (
             <p className="px-3 pb-2 text-[11px] text-destructive">{error}</p>
           )}
