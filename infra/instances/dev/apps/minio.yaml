@@ -109,6 +109,23 @@ sidecars:
         mc admin policy create local rag-bucket /tmp/rag-bucket-policy.json >/dev/null 2>&1 || true
         mc admin policy attach local rag-bucket --user rag-s3
         echo 'rag MinIO bucket ready.'
+  # AI-assistant chat transcript store: dedicated `chat` bucket, NO service user
+  # — access is per-member MinIO STS (scoped to chat/{sub}/*), minted by coop-api,
+  # so the coop holds no key that reads every member's chat.
+  chat-minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 minioadmin "${SECRET:minio.root}"
+        for i in $(seq 1 30); do
+          mc admin info local >/dev/null 2>&1 && break
+          sleep 2
+        done
+        mc mb --ignore-existing local/chat
+        echo 'chat MinIO bucket ready.'
   # coop SSO → console bridge. Sits between the s3-gate (oauth2-proxy, which
   # enforces platform-admin and passes the coop JWT as X-Forwarded-Access-Token)
   # and the MinIO console. Exchanges the coop JWT for MinIO STS credentials and

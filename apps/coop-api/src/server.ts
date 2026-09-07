@@ -28,6 +28,7 @@ import filesRoutes from './files'
 import statusRoutes from './status'
 import matrixAppserviceRoutes from './matrix'
 import chatRoutes from './chat'
+import chatStsRoutes from './chat-sts'
 import eventRoutes from './events'
 import notificationRoutes from './notifications'
 import mailWebhookRoutes from './mail'
@@ -168,6 +169,7 @@ fastify.register(filesRoutes)
 fastify.register(statusRoutes)
 fastify.register(matrixAppserviceRoutes)
 fastify.register(chatRoutes)
+fastify.register(chatStsRoutes)
 fastify.register(eventRoutes)
 fastify.register(notificationRoutes)
 fastify.register(mailWebhookRoutes)
