@@ -14,7 +14,7 @@ The coop's assistant is a **memory-stateful harness**, not a Q&A box: a loop of
 they're working on, what they've decided — in an **explicit, per-member, private-tier
 memory** that the member can see, edit, and erase. Each turn it recalls that memory,
 retrieves from the same union the search reads, generates a grounded answer with
-Chrome's on-device model (the Prompt API, `window.ai`), and then *proposes* new durable facts back into memory for the member
+Chrome's on-device model (the Prompt API, `LanguageModel`), and then *proposes* new durable facts back into memory for the member
 to keep or discard. A stateless "ask a question, get an answer" surface is exactly what
 the docs search already is; the harness — the memory and the loop — is what makes the
 assistant worth building at all.
@@ -82,7 +82,7 @@ each turn — one object per session, not per turn. Lifecycle is **resume last**
 - "New session" mints a fresh `sessionId`; the old object stays as history (a future
   "past conversations" list).
 - The transcript *is* the short-term memory — recall's short-term tier is the last N
-  messages of the current session, already in the shape `window.ai` consumes.
+  messages of the current session, already in the shape `LanguageModel` consumes.
 
 Explicitness is enforced at the write boundary, not trusted to the model: a fact only
 becomes memory after the member lets it through, and any fact can be inspected or
@@ -95,7 +95,7 @@ question
   → memory.recall                    // short-term thread + long-term facts
   → rag.retrieve_area_contexts       // the union + the member's memory area
   → prompt = memory + contexts + question
-  → Chrome Prompt API (window.ai)      // on-device, grounded answer
+  → Chrome Prompt API (LanguageModel)      // on-device, grounded answer
   → memory.remember (propose)        // surfaced, member-gated
   → answer + citations + memory proposals
 ```
@@ -107,19 +107,19 @@ discards inline. Nothing about the loop is stateless except the retrieval itself
 ## 4. The generation model — Chrome's on-device Prompt API
 
 Generation runs **in the member's browser**, not on a server: Chrome's built-in Prompt
-API (`window.ai`, the on-device model) turns the assembled prompt into the answer. The
-harness opens a text session (`await window.ai.createTextSession()`) and prompts it with
+API (`LanguageModel`, the on-device model) turns the assembled prompt into the answer. The
+harness opens a text session (`await LanguageModel.create()`) and prompts it with
 memory + retrieved contexts + question; the reply streams back client-side. The
 embeddings and reranker stay on `rag-inference` (shared retrieval infrastructure), but
 the *answer* is produced on the member's own device — coop knowledge never leaves the
 browser for the generation step.
 
-- **No model to pin or serve.** The harness depends only on the `window.ai` interface;
+- **No model to pin or serve.** The harness depends only on the `LanguageModel` interface;
   whatever Chrome ships locally is the model. No GGUF, no vLLM, no `rag-inference`
   generation endpoint.
 - **Streaming comes free** from the Prompt API's streaming surface — no deferred
   inference-service work.
-- **Capability check** — `if (!window.ai)` the chat degrades to retrieval-only (shows the
+- **Capability check** — `if (!("LanguageModel" in globalThis))` the chat degrades to retrieval-only (shows the
   cited contexts, no answer) and says the on-device model isn't available.
 - **Client-side means client-side.** The token, the memory, and the retrieved contexts
   stay in the browser's JS context for the generation step; nothing round-trips a server

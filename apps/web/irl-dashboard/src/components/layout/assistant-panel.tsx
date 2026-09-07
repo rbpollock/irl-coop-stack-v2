@@ -100,14 +100,19 @@ async function retrieve(
   return doFetch(Boolean(token))
 }
 
-// On-device generation via Chrome's built-in Prompt API. Throws when the model
-// isn't available so the caller can degrade to retrieval-only.
+// On-device generation via Chrome's built-in Prompt API. The current global is
+// `LanguageModel` (the old window.ai.createTextSession() is deprecated). Throws
+// when unavailable so the caller degrades to retrieval-only.
 async function generate(prompt: string): Promise<string> {
-  const w = window as any
-  if (!w.ai || typeof w.ai.createTextSession !== "function") {
-    throw new Error("window.ai unavailable")
+  if (!("LanguageModel" in globalThis)) {
+    throw new Error("LanguageModel unavailable")
   }
-  const session = await w.ai.createTextSession()
+  const session = await (globalThis as any).LanguageModel.create({
+    systemPrompt:
+      "You are the irl.coop assistant — a member-owned helper for a cooperative network. " +
+      "Answer ONLY from the member's memory and the retrieved coop knowledge. Cite sources as [n]. " +
+      "If neither is relevant, say you don't have it in the coop's knowledge.",
+  })
   return await session.prompt(prompt)
 }
 
@@ -127,10 +132,6 @@ function buildPrompt(
         .join("\n\n")
     : "(no relevant coop knowledge retrieved)"
   return [
-    "You are the irl.coop assistant — a member-owned helper for a cooperative network.",
-    "Answer ONLY from the member's memory and the retrieved coop knowledge below. Cite sources as [n].",
-    "If neither is relevant, say you don't have it in the coop's knowledge.",
-    "",
     `Member memory:\n${facts}`,
     "",
     `Relevant coop knowledge:\n${ctx}`,
@@ -182,7 +183,7 @@ export function AssistantPanel() {
 
   // Detect the on-device model up front so the note shows before the first ask.
   useEffect(() => {
-    if (open && typeof (window as any).ai?.createTextSession !== "function") {
+    if (open && !("LanguageModel" in globalThis)) {
       setNoAi(true)
     }
   }, [open])
