@@ -64,6 +64,26 @@ The MCP tools (`memory.recall` / `remember` / `forget`) cover the facts; the tra
 append/history is a separate object-store path (browser-direct to MinIO with the scoped
 STS credentials), same per-member scoping.
 
+### The transcript — format and lifecycle
+
+One session = one object at `chat/{sub}/{sessionId}.json`, a `messages` array in the
+Claude/OpenAI shape, plus the coop's extras:
+
+- `role` / `content` — the question or the answer (the canonical LLM transcript shape).
+- `sources` (assistant) — the retrieved contexts that grounded the answer (the tool-result).
+- `proposals` (assistant) — the facts the harness proposed for the member to keep/discard.
+- `ts` — ISO-8601.
+
+MinIO objects are immutable (no append), so a session is written **read-modify-write**
+each turn — one object per session, not per turn. Lifecycle is **resume last**:
+
+- On open: LIST `chat/{sub}/`, load the most recent session (by `updatedAt`), replay its
+  `messages` into the panel.
+- "New session" mints a fresh `sessionId`; the old object stays as history (a future
+  "past conversations" list).
+- The transcript *is* the short-term memory — recall's short-term tier is the last N
+  messages of the current session, already in the shape `window.ai` consumes.
+
 Explicitness is enforced at the write boundary, not trusted to the model: a fact only
 becomes memory after the member lets it through, and any fact can be inspected or
 erased at any time.
