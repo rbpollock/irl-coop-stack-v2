@@ -177,7 +177,7 @@ const DOCS: DesignDoc[] = [
     category: "Apps & files",
     status: "design",
     description:
-      "The coop's memory-stateful assistant: a harness of memory → retrieval → generation → memory, with an explicit per-member private memory, a self-hosted generation model, and grounded cited answers.",
+      "The coop's memory-stateful assistant: a harness of memory → retrieval → generation → memory, with an explicit per-member private memory, Chrome's on-device Prompt API for generation, and grounded cited answers.",
     file: "local-ai-chat.md",
   },
   {

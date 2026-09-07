@@ -13,8 +13,8 @@ The coop's assistant is a **memory-stateful harness**, not a Q&A box: a loop of
 *memory → retrieval → generation → memory*. It remembers the member — their groups, what
 they're working on, what they've decided — in an **explicit, per-member, private-tier
 memory** that the member can see, edit, and erase. Each turn it recalls that memory,
-retrieves from the same union the search reads, generates a grounded answer with a
-self-hosted model, and then *proposes* new durable facts back into memory for the member
+retrieves from the same union the search reads, generates a grounded answer with
+Chrome's on-device model (the Prompt API, `window.ai`), and then *proposes* new durable facts back into memory for the member
 to keep or discard. A stateless "ask a question, get an answer" surface is exactly what
 the docs search already is; the harness — the memory and the loop — is what makes the
 assistant worth building at all.
@@ -32,8 +32,9 @@ assistant worth building at all.
 4. **Same visibility, same union — plus the private memory.** The retrieval union is
    unchanged (public for guests, the member's union when authed), and the memory is a
    per-member private-tier area that only that member's harness reads and writes.
-5. **Local generation.** The generation model is self-hosted, on the same inference
-   path as the embeddings and reranker.
+5. **On-device generation.** The answer is produced by Chrome's built-in Prompt API on
+   the member's own machine — the only server-side inference is the retrieval
+   (embeddings + reranker). No generation tokens leave the device.
 
 ## 2. Memory — the harness's state
 
@@ -64,7 +65,7 @@ question
   → memory.recall                    // short-term thread + long-term facts
   → rag.retrieve_area_contexts       // the union + the member's memory area
   → prompt = memory + contexts + question
-  → local LLM                        // grounded answer
+  → Chrome Prompt API (window.ai)      // on-device, grounded answer
   → memory.remember (propose)        // surfaced, member-gated
   → answer + citations + memory proposals
 ```
@@ -73,22 +74,30 @@ The write-back is the harness part: a turn may end with one or more proposed fac
 ("I'll remember you're part of the care-circle — keep it?"), which the member accepts or
 discards inline. Nothing about the loop is stateless except the retrieval itself.
 
-## 4. The generation model — the one new inference piece
+## 4. The generation model — Chrome's on-device Prompt API
 
-The RAG stack already serves embeddings (bge-small) and the reranker (bge-reranker-v2-m3)
-from `rag-inference`. Generation is a **second model on the same inference service** — a
-self-hosted instruction model (a GGUF via llama.cpp, or a vLLM-served model), exposed as
-a plain OpenAI-compatible `POST /v1/chat/completions`. The chat client calls it directly
-after retrieval; coop-api does not proxy generation — it stays the *retrieval + memory*
-gateway.
+Generation runs **in the member's browser**, not on a server: Chrome's built-in Prompt
+API (`window.ai`, the on-device model) turns the assembled prompt into the answer. The
+harness opens a text session (`await window.ai.createTextSession()`) and prompts it with
+memory + retrieved contexts + question; the reply streams back client-side. The
+embeddings and reranker stay on `rag-inference` (shared retrieval infrastructure), but
+the *answer* is produced on the member's own device — coop knowledge never leaves the
+browser for the generation step.
 
-- **Interface:** the same OpenAI-compatible shape the stack already uses for embeddings
-  (`{"model", "messages"}` → `{"choices":[{"message":{"content"}}]}`).
-- **Model choice is deliberately un-pinned** (the local GPU/CPU budget decides it) — the
-  contract is what matters: anything serving that endpoint works, and it can be swapped
-  without touching the chat.
-- **Streaming** is the one open question — token-by-token streaming is expected UX for a
-  chat, but it is an inference-service capability, not a chat-logic decision.
+- **No model to pin or serve.** The harness depends only on the `window.ai` interface;
+  whatever Chrome ships locally is the model. No GGUF, no vLLM, no `rag-inference`
+  generation endpoint.
+- **Streaming comes free** from the Prompt API's streaming surface — no deferred
+  inference-service work.
+- **Capability check** — `if (!window.ai)` the chat degrades to retrieval-only (shows the
+  cited contexts, no answer) and says the on-device model isn't available.
+- **Client-side means client-side.** The token, the memory, and the retrieved contexts
+  stay in the browser's JS context for the generation step; nothing round-trips a server
+  for the answer.
+
+The chat queries the MCP with `fetch` from the browser — the token rides in the session
+and CORS already allows `https://irl.coop`, so no Next.js API-route wrapper is needed;
+there is nothing server-side to proxy or hide.
 
 ## 5. The surface
 
@@ -135,7 +144,6 @@ machine-enforced at the boundary, not trusted to the model.
   model.
 - **Per-group model fine-tuning** — personalization is the memory + the union, not a
   tuned model.
-- **Streaming** — desirable, deferred until the inference service exposes it.
 
 ## Worked example
 
