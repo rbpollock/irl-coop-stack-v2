@@ -60,21 +60,43 @@ async function callTool(
   }
 }
 
+// Retrieve contexts for one area, with the same 401 → anonymous fallback the
+// docs search uses — a stale session token shouldn't blank the retrieval.
 async function retrieve(
   token: string | undefined,
   areaId: string,
   question: string,
 ): Promise<Context[]> {
-  try {
-    const data = (await callTool(token, "rag.retrieve_area_contexts", {
-      area_id: areaId,
-      question,
-      rerank: false,
-    })) as { contexts?: Context[] }
-    return data.contexts ?? []
-  } catch {
-    return []
+  const doFetch = async (withToken: boolean): Promise<Context[]> => {
+    const res = await fetch(`${COOP_API_URL}/mcp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(withToken && token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: {
+          name: "rag.retrieve_area_contexts",
+          arguments: { area_id: areaId, question, rerank: false },
+        },
+      }),
+    })
+    if (res.status === 401 && withToken) return doFetch(false)
+    if (!res.ok) return []
+    const data = (await res.json()) as any
+    if (data?.error) return []
+    const text = data?.result?.content?.[0]?.text
+    if (!text) return []
+    try {
+      return ((JSON.parse(text) as any).contexts ?? []) as Context[]
+    } catch {
+      return []
+    }
   }
+  return doFetch(Boolean(token))
 }
 
 // On-device generation via Chrome's built-in Prompt API. Throws when the model
@@ -154,6 +176,13 @@ export function AssistantPanel() {
   useEffect(() => {
     if (open) loadMemories()
   }, [open, loadMemories])
+
+  // Detect the on-device model up front so the note shows before the first ask.
+  useEffect(() => {
+    if (open && typeof (window as any).ai?.createTextSession !== "function") {
+      setNoAi(true)
+    }
+  }, [open])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
@@ -314,8 +343,8 @@ export function AssistantPanel() {
                     <p className="whitespace-pre-wrap break-words">
                       {m.text ||
                         (m.sources && m.sources.length > 0
-                          ? "(on-device model unavailable — here's what I retrieved)"
-                          : "(no answer)")}
+                          ? "Retrieved below — the on-device model isn't available."
+                          : "Nothing relevant found in the coop's knowledge.")}
                     </p>
                     {m.sources && m.sources.length > 0 && (
                       <div className="mt-2 space-y-1 border-t pt-1.5 text-[10px] text-muted-foreground">
