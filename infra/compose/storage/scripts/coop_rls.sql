@@ -311,6 +311,16 @@ CREATE POLICY profiles_all ON profiles
   USING (sub = coop_current_sub())
   WITH CHECK (sub = coop_current_sub());
 
+-- Member AI-assistant memory — user-scoped like read-state/profiles: a member
+-- may read/write/delete only their own facts, enforced here in Postgres.
+ALTER TABLE member_memory FORCE ROW LEVEL SECURITY;
+ALTER TABLE member_memory ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS member_memory_all ON member_memory;
+CREATE POLICY member_memory_all ON member_memory
+  USING (sub = coop_current_sub())
+  WITH CHECK (sub = coop_current_sub());
+GRANT SELECT, INSERT, UPDATE, DELETE ON member_memory TO coop_rls;
+
 -- ---------------------------------------------------------------------------
 -- Roles-as-bundles-of-grants + telephony (added with the FreeSWITCH pillar).
 -- ---------------------------------------------------------------------------

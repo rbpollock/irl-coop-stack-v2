@@ -150,6 +150,22 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferences jsonb NOT NULL DEFAULT
 -- now; structured tags when matching lands.
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS offerings text;
 
+-- The member's AI-assistant memory — durable, explicit facts the assistant has
+-- remembered or the member has saved. User-scoped (NOT group-scoped): the memory
+-- is personal to the member. RLS (member_memory_all) is applied in coop_rls.sql.
+-- 'source' = 'assistant' (harness-proposed, member-confirmed) or 'member' (saved
+-- directly). 'kind' is a free-form tag (fact/decision/group/preference) the
+-- surface uses to group.
+CREATE TABLE IF NOT EXISTS member_memory (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sub        text NOT NULL,
+  fact       text NOT NULL,
+  source     text NOT NULL DEFAULT 'member' CHECK (source IN ('member','assistant')),
+  kind       text NOT NULL DEFAULT 'fact',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS member_memory_sub_idx ON member_memory (sub, created_at DESC);
+
 -- Roles as bundles of grants (the delegation model made concrete). A role is a
 -- named set of grants (capabilities); group_members.roles holds role NAMES that
 -- resolve through roles/role_grants. Builtin roles (owner/member) are seeded in

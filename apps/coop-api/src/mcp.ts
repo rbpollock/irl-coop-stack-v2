@@ -71,6 +71,90 @@ const LOCAL_TOOLS: McpTool[] = [
       })
     },
   },
+  {
+    name: "memory.recall",
+    description:
+      "Recall the caller's own assistant memory — durable, explicit facts the assistant has remembered or the member has saved. Member-owned and erasable.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Optional free-text filter" },
+      },
+    },
+    handler: async (sub, args) => {
+      const q = String(args?.query ?? "").trim()
+      return withIdentity(sub, async (client) => {
+        const { rows } = q
+          ? await client.query(
+              `SELECT id, fact, source, kind, created_at FROM member_memory
+                WHERE sub = $1 AND fact ILIKE '%' || $2 || '%'
+                ORDER BY created_at DESC LIMIT 200`,
+              [sub, q],
+            )
+          : await client.query(
+              `SELECT id, fact, source, kind, created_at FROM member_memory
+                WHERE sub = $1 ORDER BY created_at DESC LIMIT 200`,
+              [sub],
+            )
+        return { memories: rows }
+      })
+    },
+  },
+  {
+    name: "memory.remember",
+    description:
+      "Write a durable fact to the caller's own memory. Explicit: the caller confirms each fact (nothing is written silently), and every fact is erasable.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        fact: { type: "string", description: "The fact to remember" },
+        kind: {
+          type: "string",
+          description: "Optional tag: fact / decision / group / preference",
+        },
+        source: {
+          type: "string",
+          enum: ["member", "assistant"],
+          description: "Who authored it (member-saved vs harness-proposed-and-confirmed)",
+        },
+      },
+      required: ["fact"],
+    },
+    handler: async (sub, args) => {
+      const fact = String(args?.fact ?? "").trim()
+      if (!fact) return { error: "fact is required" }
+      const kind = String(args?.kind ?? "fact")
+      const source = args?.source === "assistant" ? "assistant" : "member"
+      return withIdentity(sub, async (client) => {
+        const { rows } = await client.query(
+          `INSERT INTO member_memory (sub, fact, source, kind) VALUES ($1, $2, $3, $4)
+           RETURNING id, fact, source, kind, created_at`,
+          [sub, fact, source, kind],
+        )
+        return { memory: rows[0] }
+      })
+    },
+  },
+  {
+    name: "memory.forget",
+    description: "Erase one fact from the caller's own memory by id.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string", description: "The memory id to erase" } },
+      required: ["id"],
+    },
+    handler: async (sub, args) => {
+      const id = String(args?.id ?? "").trim()
+      if (!id) return { error: "id is required" }
+      return withIdentity(sub, async (client) => {
+        const res = await client.query(
+          `DELETE FROM member_memory WHERE sub = $1 AND id = $2`,
+          [sub, id],
+        )
+        return { erased: (res.rowCount ?? 0) > 0 }
+      })
+    },
+  },
 ]
 
 // ---- upstream MCP servers (the aggregator/proxy part) ----
