@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { getObject, listObjects, putObject, type StsCreds } from "@/lib/s3-browser"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
@@ -156,6 +157,8 @@ export function AssistantPanel() {
   const [proposal, setProposal] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [noAi, setNoAi] = useState(false)
+  const [creds, setCreds] = useState<StsCreds | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const loadMemories = useCallback(async () => {
@@ -184,6 +187,43 @@ export function AssistantPanel() {
     }
   }, [open])
 
+  // Resume the last session: fetch scoped STS creds, LIST the member's prefix,
+  // load the most recent transcript, and replay its messages.
+  useEffect(() => {
+    if (!open || !token) return
+    ;(async () => {
+      try {
+        const res = await fetch(`${COOP_API_URL}/api/v1/chat/sts`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        })
+        if (!res.ok) return
+        const c = (await res.json()) as StsCreds
+        setCreds(c)
+        const objs = await listObjects(c, `${c.prefix}/`)
+        const sessions = objs
+          .filter((o) => o.key.endsWith(".json"))
+          .sort((a, b) => b.lastModified.localeCompare(a.lastModified))
+        if (sessions.length === 0) {
+          setSessionId(crypto.randomUUID())
+          setMessages([])
+          return
+        }
+        const last = sessions[0]
+        const id =
+          last.key.split("/").pop()?.replace(/\.json$/, "") ?? crypto.randomUUID()
+        setSessionId(id)
+        const gres = await getObject(c, last.key)
+        if (gres.ok) {
+          const session = (await gres.json()) as { messages?: Message[] }
+          setMessages(session.messages ?? [])
+        }
+      } catch {
+        // transcript unavailable — chat still works, it just won't persist
+      }
+    })()
+  }, [open, token])
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [messages, thinking])
@@ -209,11 +249,35 @@ export function AssistantPanel() {
     }
   }
 
+  // Persist the current conversation to the member's chat prefix (read-modify-
+  // write one session object). Non-fatal — the chat works without persistence.
+  const saveTranscript = async (msgs: Message[]) => {
+    if (!creds || !sessionId) return
+    try {
+      const body = JSON.stringify({
+        version: 1,
+        sessionId,
+        updatedAt: new Date().toISOString(),
+        messages: msgs,
+      })
+      await putObject(creds, `${creds.prefix}/${sessionId}.json`, body)
+    } catch {
+      // persist failure — non-fatal
+    }
+  }
+
+  const newSession = () => {
+    setSessionId(crypto.randomUUID())
+    setMessages([])
+    setProposal(null)
+  }
+
   const ask = async () => {
     const q = question.trim()
     if (!q || !token || thinking) return
     setQuestion("")
-    setMessages((prev) => [...prev, { role: "user", text: q }])
+    const base: Message[] = [...messages, { role: "user", text: q }]
+    setMessages(base)
     setThinking(true)
     setError(null)
     setProposal(null)
@@ -238,10 +302,12 @@ export function AssistantPanel() {
       } catch {
         setNoAi(true)
       }
-      setMessages((prev) => [
-        ...prev,
+      const full: Message[] = [
+        ...base,
         { role: "assistant", text: answer, sources: contexts },
-      ])
+      ]
+      setMessages(full)
+      saveTranscript(full)
 
       // 5. propose one durable fact, surfaced for the member to keep/discard
       if (usedAi) {
@@ -270,10 +336,12 @@ export function AssistantPanel() {
       }
     } catch {
       setError("Something went wrong")
-      setMessages((prev) => [
-        ...prev,
+      const full: Message[] = [
+        ...base,
         { role: "assistant", text: "Something went wrong — please try again." },
-      ])
+      ]
+      setMessages(full)
+      saveTranscript(full)
     } finally {
       setThinking(false)
     }
@@ -399,6 +467,15 @@ export function AssistantPanel() {
               )}
 
               <div className="flex items-center gap-2 border-t p-2">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={newSession}
+                  aria-label="New session"
+                  title="New session"
+                >
+                  <Plus className="size-4" />
+                </Button>
                 <Input
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
