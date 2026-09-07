@@ -61,8 +61,9 @@ async function callTool(
   }
 }
 
-// Retrieve contexts for one area, with the same 401 → anonymous fallback the
-// docs search uses — a stale session token shouldn't blank the retrieval.
+// Retrieve contexts for one area, falling back to the anonymous (public-tier)
+// principal whenever the token-based attempt fails or returns nothing — a stale
+// or rag-rejected token must not blank the retrieval.
 async function retrieve(
   token: string | undefined,
   areaId: string,
@@ -88,11 +89,17 @@ async function retrieve(
     if (res.status === 401 && withToken) return doFetch(false)
     if (!res.ok) return []
     const data = (await res.json()) as any
-    if (data?.error) return []
+    if (data?.error) {
+      // upstream (rag) rejected the token or errored — fall back to public
+      return withToken ? doFetch(false) : []
+    }
     const text = data?.result?.content?.[0]?.text
     if (!text) return []
     try {
-      return ((JSON.parse(text) as any).contexts ?? []) as Context[]
+      const contexts = ((JSON.parse(text) as any).contexts ?? []) as Context[]
+      // token-based retrieval returned nothing → fall back to the public tier
+      if (withToken && contexts.length === 0) return doFetch(false)
+      return contexts
     } catch {
       return []
     }
@@ -108,10 +115,15 @@ async function generate(prompt: string): Promise<string> {
     throw new Error("LanguageModel unavailable")
   }
   const session = await (globalThis as any).LanguageModel.create({
-    systemPrompt:
-      "You are the irl.coop assistant — a member-owned helper for a cooperative network. " +
-      "Answer ONLY from the member's memory and the retrieved coop knowledge. Cite sources as [n]. " +
-      "If neither is relevant, say you don't have it in the coop's knowledge.",
+    initialPrompts: [
+      {
+        role: "system",
+        content:
+          "You are the irl.coop assistant — a member-owned helper for a cooperative network. " +
+          "Answer ONLY from the member's memory and the retrieved coop knowledge. Cite sources as [n]. " +
+          "If neither is relevant, say you don't have it in the coop's knowledge.",
+      },
+    ],
   })
   return await session.prompt(prompt)
 }
@@ -283,9 +295,15 @@ export function AssistantPanel() {
     setError(null)
     setProposal(null)
     try {
-      // 1. recall memory
-      const mem = (await callTool(token, "memory.recall", {})) as {
-        memories?: MemoryFact[]
+      // 1. recall memory (degrade to empty on a stale token / recall failure —
+      //    the retrieval + generation should still run on the public tier)
+      let mem: { memories?: MemoryFact[] } = { memories: [] }
+      try {
+        mem = (await callTool(token, "memory.recall", {})) as {
+          memories?: MemoryFact[]
+        }
+      } catch {
+        // keep going without memory
       }
       // 2. retrieve context (docs + groups, the union)
       const [docs, groups] = await Promise.all([
