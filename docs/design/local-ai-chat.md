@@ -46,13 +46,23 @@ Two tiers, both explicit:
   land", "the compost leg went through the coop truck". These persist across sessions
   and are what personalize the assistant.
 
-The memory is a **per-member, private-tier RAG area** (scoped by `sub`), so it is
-indexed and retrieved by the same machinery as every other knowledge area — the memory
-is a knowledge area, not a new subsystem. Two tools expose it on the MCP hub:
+The two tiers live in two stores, split by their shape:
 
-- **`memory.recall`** — read the member's short-term thread + relevant long-term facts.
-- **`memory.remember`** — propose a durable fact. The proposal is surfaced to the member
-  (accept / edit / discard); nothing is written silently.
+- **Durable facts** → Postgres (`member_memory`, RLS-scoped to `sub`) — short, queryable,
+  the "everything I remember" list the member curates and erases.
+- **The conversation transcript** → MinIO `chat/{sub}/…` — append-only, bigger, survives
+  reloads. Object storage for the write-shaped data; Postgres for the query-shaped data.
+
+The transcript is **the member's own object, written with their own credentials** — no
+shared service user. Access is a *session key*: MinIO STS (`AssumeRoleWithWebIdentity`
+against the member's OIDC identity, via the existing s3-bridge) mints short-lived,
+scoped credentials for `chat/{sub}/*`, and the browser uses them to read/write its own
+prefix directly. That is delegation, not custody — the coop holds no key that can read
+every member's chat.
+
+The MCP tools (`memory.recall` / `remember` / `forget`) cover the facts; the transcript
+append/history is a separate object-store path (browser-direct to MinIO with the scoped
+STS credentials), same per-member scoping.
 
 Explicitness is enforced at the write boundary, not trusted to the model: a fact only
 becomes memory after the member lets it through, and any fact can be inspected or
