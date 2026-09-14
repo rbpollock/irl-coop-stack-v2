@@ -3,9 +3,13 @@
 **Goal (Robbie, Sep 2026).** Stand up irl.coop and have it register its own **Instagram** and
 **YouTube** accounts, verifying from **its own DID phone number**.
 
-Recorded because it decomposes into three parts with very different feasibility, and only a
-clear-eyed split gets the goal met. Two parts are infrastructure the coop should own anyway;
-one part is a platform-terms problem that automation makes *worse*, not better.
+**And the point of the platform (Robbie, same day).** *"The point of the platform is to help
+groups run accounts."* irl.coop is **group #0** — the first user of a capability every group
+gets. So the deliverable is not one org's Instagram account: it is that **any group can hold and
+operate its own accounts**, and irl.coop proves it by doing it first.
+
+That reframing matters, because it changes what has to be built. The interesting artefact is not
+an account — it is the machinery by which a *collective* holds one.
 
 ## Where things actually stand (verified, not assumed)
 
@@ -62,8 +66,10 @@ blocks a goal, which is itself a signal about sequencing.
 
 ### So the honest shape of the goal
 
-The coop **owns the number and the code path**; **one member completes each signup at the
-console** with the code displayed from the coop's own number. Two minutes per platform, once.
+The group **owns the number and the code path**; **one member completes each signup at the
+console** with the code displayed from the group's own number, and the resulting credential goes
+straight into the group's vault. Two minutes per platform, once — a *guided, group-owned act*
+rather than a member's personal account standing in for an organisation.
 Everything except the literal "no human touched it" — and the resulting account is one the coop
 can account for, created in a session a human consented to, instead of one that appeared from a
 flagged bulk signup and might be removed without notice.
@@ -72,6 +78,39 @@ Once the accounts exist, **publishing is legitimately automatable** through the 
 official APIs — and the stack already runs **Postiz** (live) for exactly that. So the durable
 answer to "the coop posting to its own accounts" is Postiz + real accounts, not a bot that
 creates them.
+
+## What a group needs to RUN an account (the real requirement)
+
+Derived from the group's side, not the platform's. Each line is a capability, and the last column
+is whether it exists:
+
+| the group needs | why | state |
+|---|---|---|
+| **a number it controls** | signup, and every future 2FA or recovery text | modelled (`did`), none held |
+| **its codes to land somewhere its people can see** | otherwise the account is hostage to one member's phone | designed (TextBee → bus), not built |
+| **a home for the credentials** | an org's account secret is exactly a *group secret* | **already in the vault's designed scope** — "Postiz per-group apps, a group's webhook token" |
+| **people to act on it WITHOUT sharing a password** | shared credentials are unaccountable and un-revocable | **use the PLATFORM's own role model** (Meta business roles, YouTube brand-account managers), and track the mapping in the coop's grants model |
+| **the account to outlive any member** | a departing member must lose access while the group keeps the account | not modelled |
+| **governed publishing** | "the group posted" must mean something | Postiz — live, per-group |
+
+**The insight worth keeping:** after setup, the group should not share a login at all. Meta and
+YouTube both have first-class multi-user models (business roles, brand-account managers). A group
+is better served by *using those* and having the coop record **which member holds which platform
+role, since when, granted by whom** — because that is revocable, auditable, and survives
+departures, whereas a shared password is none of those things. The credential is then needed only
+for API publishing, which is a machine act and belongs in the vault.
+
+So the missing concept is a **group-owned account as a first-class resource**: which platform,
+which handle, which number verifies it, where its credential lives, who holds which role on it,
+and its lifecycle (created → active → rotated → retired). Nothing models that today.
+
+## Consequence: per-group numbers become load-bearing
+
+A number cannot be reused across groups for verification — platforms block a number that has
+already verified an account, so one shared number serves exactly one signup. That turns
+`did-inventory-forecasting.md` from a forecast exercise into a **direct dependency of this
+capability**: to let N groups run accounts, the coop needs N numbers, each with a phone or a
+carrier API behind it to receive its texts.
 
 ## What I would build first
 
