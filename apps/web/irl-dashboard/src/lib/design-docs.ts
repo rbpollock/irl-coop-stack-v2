@@ -579,6 +579,15 @@ function resolveDesignDir(): string | null {
   const candidates = [
     path.resolve(process.cwd(), "docs/design"),
     path.resolve(process.cwd(), "../../../docs/design"),
+  {
+    slug: "did-provider-comparison",
+    title: "DID + SMS providers, compared for cost and \"unlimited\"",
+    category: "Infrastructure",
+    status: "design",
+    description:
+      "List rates for Telnyx / Twilio / VoIP.ms / Callcentric / prepaid SIM, sourced and dated — and the finding that decides the choice: a wholesale DID cannot verify an Instagram or YouTube account, because the platform runs a line-type lookup before it sends anything.",
+    file: "did-provider-comparison.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
