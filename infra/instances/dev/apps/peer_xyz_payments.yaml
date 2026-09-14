@@ -1,0 +1,38 @@
+# peer_xyz_payments — the payment RAIL service. The Peer.xyz (zkp2p) implementation of a
+# neutral rail contract (see apps/peer_xyz_payments/src/rail.ts).
+#
+# Its own app on purpose:
+#   - the provider's SDK and its native dependency tree never enter the member-facing API;
+#   - a provider being taken down, blocked or shipping a broken build kills ONE process;
+#   - swapping providers is a new app behind the same contract, not an edit to coop-api.
+#
+# INTERNAL ONLY: no proxy route, no OIDC client, no nav entry. coop-api calls it on
+# 127.0.0.1 with a derived bearer token and it holds NO coop state — coop-api owns the
+# intent record; this service only translates.
+name: peer_xyz_payments
+pillar: workflow
+type: source
+source: /home/service/development/irl-coop-stack-v2/apps/peer_xyz_payments
+enabled: true
+env:
+  PEER_XYZ_PAYMENTS_PORT: "3010"
+  # Derived (HKDF) and shared with coop-api: the token the rail requires on every call.
+  RAIL_AUTH_TOKEN: ${SECRET:payments.rail-token}
+  # The provider key is an external secret we cannot derive -> ansible vault.
+  PEER_PAY_API_KEY: ${VAULT:peerpay.api_key}
+  PEER_PAY_API_BASE_URL: https://api.pay.peer.xyz
+  PEER_PAY_CHECKOUT_BASE_URL: https://pay.peer.xyz
+  # The provider posts webhooks to us. Its types expose no signature scheme, so authenticity
+  # comes from a CUSTOM HEADER carrying a derived secret, configured on the provider side as a
+  # customHeaders entry. Fails closed if unset.
+  PEER_PAY_WEBHOOK_SECRET: ${SECRET:payments.webhook-secret}
+  # Where to forward a translated settlement. The coop-api route is authenticated with the
+  # same rail token the rail presents on outbound calls (one trust boundary, both directions).
+  COOP_API_URL: http://127.0.0.1:3001
+# ONLY the webhook path is public. The intent API, the capability declaration and the provider
+# SDK stay internal: a payment provider must not be able to reach the rail's control plane.
+proxy:
+  hostname: pay.${DOMAIN}
+  port: 3010
+  path: /webhooks
+  description: payment rail webhook receiver (provider -> coop)

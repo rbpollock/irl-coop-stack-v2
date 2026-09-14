@@ -18,6 +18,9 @@ import onboardingRoutes from './onboarding'
 import safeRoutes from './safe'
 import groupRoutes from './groups'
 import decisionRoutes from './decisions'
+import duesRoutes from './dues'
+import tier2Routes from './tier2-routes'
+import paymentRoutes from './payments'
 import socialRoutes from './social'
 import profileRoutes from './profile'
 import { initDb } from './db'
@@ -36,6 +39,7 @@ import telephonyRoutes from './telephony'
 import geoRoutes from './geo'
 import avatarRoutes from './avatars'
 import internalRoutes from './internal'
+import hiEventsRoutes from './hi-events'
 import weatherRoutes from './weather'
 import mcpRoutes from './mcp'
 import { startSmtpRelay } from './smtp-relay'
@@ -99,6 +103,7 @@ const API_TAGS = [
   { name: "chat", description: "Matrix chat rooms" },
   { name: "matrix", description: "Matrix appservice transaction endpoints (Synapse → coop-api)" },
   { name: "internal", description: "Server-to-server (Keycloak groups mapper, app event ingest)" },
+  { name: "hi-events", description: "Hi.Events → event bus webhook (sales, attendees, check-ins)" },
   { name: "mcp", description: "MCP aggregator/proxy (AI tools, scoped by coop JWT)" },
 ]
 
@@ -161,6 +166,9 @@ fastify.register(onboardingRoutes)
 fastify.register(safeRoutes)
 fastify.register(groupRoutes)
 fastify.register(decisionRoutes)
+fastify.register(duesRoutes)
+fastify.register(tier2Routes)
+fastify.register(paymentRoutes)
 fastify.register(socialRoutes)
 fastify.register(profileRoutes)
 fastify.register(usernameRoutes)
@@ -178,6 +186,7 @@ import livestreamStateRoutes from "./livestream-state";
 fastify.register(livestreamStateRoutes);
 fastify.register(avatarRoutes)
 fastify.register(internalRoutes)
+fastify.register(hiEventsRoutes)
 fastify.register(weatherRoutes)
 fastify.register(mcpRoutes)
 

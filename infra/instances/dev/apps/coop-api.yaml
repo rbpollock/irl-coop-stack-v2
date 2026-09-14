@@ -36,6 +36,11 @@ env:
   E2E_PASSWORD: ${SECRET:keycloak.e2e-test}
   # Stalwart webhook bearer token (mail.received events -> event bus).
   STALWART_WEBHOOK: ${SECRET:stalwart.webhook}
+  # Hi.Events → event bus: the bearer token its auto-provisioned webhooks present
+  # (the app container gets the SAME derived value as COOP_EVENT_BUS_SECRET), and
+  # the app's public URL for notification deep links.
+  HI_EVENTS_WEBHOOK: ${SECRET:hi-events.webhook}
+  HI_EVENTS_URL: https://events.${DOMAIN}
   # Digest sender account (notifications@irl.coop) — password for the SMTP
   # XOAUTH2 submission the Temporal digest workflow uses to mail digests.
   KEYCLOAK_NOTIFICATIONS: ${SECRET:keycloak.notifications}
@@ -73,3 +78,18 @@ env:
   # calls GET /api/internal/groups?sub=<sub> (CoopGroupsMapper SPI JAR) to
   # resolve a user's groups live from coop-api. Server-to-server only.
   KEYCLOAK_GROUPS_TOKEN: ${SECRET:keycloak.groups-token}
+
+  # --- payment rails: coop-api holds the CONTRACT and the coop's POLICY, never a vendor SDK ---
+  # The rail service (apps/peer_xyz_payments) owns the provider; this side owns the rules.
+  # NOTE the naming: the URL and the id are neutral. The provider's name belongs in the
+  # rail service, not in coop-api's configuration — otherwise "swap the provider" means
+  # renaming config in the core.
+  RAIL_URL: http://127.0.0.1:3010
+  RAIL_ID: peer
+  RAIL_AUTH_TOKEN: ${SECRET:payments.rail-token}
+  # RULE 1 lives here now: the COOP decides where money goes, and the rail only executes.
+  # Refuses if unset — and the rail independently refuses a call with no destination, because
+  # the provider's own default is the merchant's wallet (verified by experiment 2026-09-13).
+  PAYMENTS_DESTINATION: "0x7E11a683193830a7bc24E08029aF1AaFABB7EAEa"
+  PAYMENTS_CHAIN_ID: "8453"
+  PAYMENTS_CURRENCY: USDC

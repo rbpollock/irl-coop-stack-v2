@@ -91,6 +91,11 @@ async function main(): Promise<void> {
   const digestWindow = process.env.DIGEST_WINDOW ?? "1 hour";
   await ensureSweep(client, "digestSweep", "digest-sweep", [digestWindow, digestInterval]);
 
+  // Tier-2 lane: materialise contribution.* events into ledger entries. Runs alongside the
+  // delivery sweep over the SAME outbox, partitioned by event type (coop_sweep_undelivered
+  // excludes contribution.*), so the two consumers never race for a row.
+  await ensureSweep(client, "tier2Sweep", "tier2-sweep", [100]);
+
   // Postiz sync: project opted-in groups into Postiz orgs + membership.
   await ensureSweep(client, "postizSyncSweep", "postiz-sync-sweep", [30]);
 

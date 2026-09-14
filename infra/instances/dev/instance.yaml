@@ -47,6 +47,9 @@ apps:
   - rag-migrate
   - rag-api
   - rag-worker
+  - erpnext
+  - wordpress
+  - peer_xyz_payments
 
 # which pillars actually run on the dev box today (deployment concern — the
 # compose artifacts for all apps are generated regardless)

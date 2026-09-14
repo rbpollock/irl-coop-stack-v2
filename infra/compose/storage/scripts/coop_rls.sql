@@ -204,6 +204,80 @@ END;
 $$ LANGUAGE plpgsql;
 ALTER FUNCTION coop_ingest_event(text,text,text,text,jsonb,timestamptz) OWNER TO coop_rls;
 
+-- Emit a contribution event for a TARGET group (not the sender's personal group). `events`
+-- has no user INSERT policy — ingestion is a system write — so the human path cannot insert one
+-- directly, which is what a naive `INSERT INTO events` in recordContribution discovered. This is
+-- the narrow sibling of coop_ingest_event: same shape, but the event belongs to the group the
+-- WORK belongs to (so the group sees it and the Tier-2 lane shards by it), and it refuses a
+-- caller who is not a member of that group.
+CREATE OR REPLACE FUNCTION coop_emit_contribution(
+  p_group_id uuid, p_source text, p_source_event_id text, p_payload jsonb
+) RETURNS uuid
+SECURITY DEFINER SET search_path = public AS $$
+DECLARE eid uuid;
+BEGIN
+  IF NOT coop_is_member(p_group_id) THEN
+    RAISE EXCEPTION 'coop_emit_contribution: not a member of the target group';
+  END IF;
+  INSERT INTO events (group_id, source, source_event_id, type, payload)
+  VALUES (p_group_id, p_source, p_source_event_id, 'contribution.logged', p_payload)
+  ON CONFLICT DO NOTHING
+  RETURNING id INTO eid;
+  -- a dedup hit returns NULL; hand back the existing row instead of nothing, so a retry is
+  -- idempotent at this layer too and not only in the ledger
+  IF eid IS NULL THEN
+    SELECT id INTO eid FROM events
+     WHERE source = p_source AND source_event_id = p_source_event_id LIMIT 1;
+  END IF;
+  RETURN eid;
+END;
+$$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_emit_contribution(uuid,text,text,jsonb) OWNER TO coop_rls;
+
+-- Ingest one event for an explicit GROUP target (system write): the activity
+-- belongs to a group (a group workspace's ticket sales), not to a person, so it
+-- lands on the GROUP's stream and RLS shows it to every member. The target is a
+-- `groups.slug` (or the id as text) resolved here, because `groups` is RLS-forced
+-- and a system source is not a member. Same dedupe as the personal variant —
+-- `source_event_id` MUST therefore be unique across groups for a given source
+-- (compose it with the group ref). Returns the event id + the resolved group.
+CREATE OR REPLACE FUNCTION coop_ingest_group_event(
+  p_group_ref text, p_source text, p_source_event_id text,
+  p_type text, p_payload jsonb, p_occurred_at timestamptz
+) RETURNS TABLE (id uuid, group_id uuid)
+SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  gid uuid;
+  eid uuid;
+BEGIN
+  IF p_group_ref IS NULL THEN RETURN; END IF;
+
+  SELECT g.id INTO gid FROM groups g
+   WHERE (g.slug = p_group_ref OR g.id::text = p_group_ref) AND g.kind <> 'personal'
+   LIMIT 1;
+  IF gid IS NULL THEN RETURN; END IF;
+
+  INSERT INTO events (group_id, source, source_event_id, type, payload, occurred_at)
+  VALUES (gid, p_source, p_source_event_id, p_type, p_payload, p_occurred_at)
+  ON CONFLICT DO NOTHING
+  RETURNING events.id INTO eid;
+
+  RETURN QUERY SELECT eid, gid;
+END;
+$$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_ingest_group_event(text,text,text,text,jsonb,timestamptz) OWNER TO coop_rls;
+
+-- The members of a group (system-level read, BYPASSRLS as coop_rls): the live
+-- lane needs to fan a group-targeted event out to every member, and targeting
+-- resolves here — server-side — so it can never be spoofed by a client.
+CREATE OR REPLACE FUNCTION coop_group_member_subs(p_group uuid)
+RETURNS SETOF text
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT gm.sub FROM group_members gm
+   WHERE gm.group_id = p_group AND gm.sub IS NOT NULL
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_group_member_subs(uuid) OWNER TO coop_rls;
+
 -- Delivery outbox (option A): the Temporal deliverySweep claims undelivered
 -- events and stamps delivered_at once a delivery channel accepts them. System-
 -- level (SECURITY DEFINER, BYPASSRLS as coop_rls) — the sweep is a system
@@ -213,7 +287,14 @@ ALTER FUNCTION coop_ingest_event(text,text,text,text,jsonb,timestamptz) OWNER TO
 CREATE OR REPLACE FUNCTION coop_sweep_undelivered(p_limit int DEFAULT 100)
 RETURNS SETOF uuid
 SECURITY DEFINER SET search_path = public AS $$
-  SELECT id FROM events WHERE delivered_at IS NULL ORDER BY occurred_at LIMIT p_limit
+  -- EXCLUDES contribution.* — those are records to materialise, not notifications to
+  -- deliver. Both lanes claim from the same `events` pool and both mark rows delivered, so
+  -- without this partition the delivery lane wins the race and the ledger never sees the
+  -- work. One pool, two disjoint consumers.
+  SELECT id FROM events
+   WHERE delivered_at IS NULL
+     AND type NOT LIKE 'contribution.%'
+   ORDER BY occurred_at LIMIT p_limit
 $$ LANGUAGE sql STABLE;
 ALTER FUNCTION coop_sweep_undelivered(int) OWNER TO coop_rls;
 
@@ -222,6 +303,36 @@ SECURITY DEFINER SET search_path = public AS $$
   UPDATE events SET delivered_at = now() WHERE id = p_id
 $$ LANGUAGE sql;
 ALTER FUNCTION coop_mark_event_delivered(uuid) OWNER TO coop_rls;
+
+-- ---------------------------------------------------------------------------
+-- The Tier-2 lane (docs/design/tier2-entry-model.md §5.6). `contribution.*` events are
+-- the durable interface by which work becomes a ledger entry: a machine source writes only
+-- the event, and this lane is the consumer. appendTier2Entry stays the ONLY writer.
+--
+-- Claim returns ids AND group_id so the sweep can keep a group's appends in order; the
+-- read is type-guarded so it cannot be used to fetch an arbitrary event.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION coop_sweep_contributions(p_limit int DEFAULT 100)
+RETURNS TABLE(id uuid, group_id uuid)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT e.id, e.group_id
+    FROM events e
+   WHERE e.delivered_at IS NULL
+     AND e.type LIKE 'contribution.%'
+   ORDER BY e.occurred_at, e.id
+   LIMIT p_limit
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_sweep_contributions(int) OWNER TO coop_rls;
+
+CREATE OR REPLACE FUNCTION coop_contribution_event(p_id uuid)
+RETURNS TABLE(id uuid, group_id uuid, source text, source_event_id text, type text, payload jsonb)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT e.id, e.group_id, e.source, e.source_event_id, e.type, e.payload
+    FROM events e
+   WHERE e.id = p_id
+     AND e.type LIKE 'contribution.%'
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_contribution_event(uuid) OWNER TO coop_rls;
 
 -- Read-state (user-scoped, not group-scoped). A user may read/clear only their
 -- own rows — enforced here in Postgres, not the app. FORCE RLS so the coop
@@ -477,6 +588,20 @@ ALTER FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) 
 REVOKE EXECUTE ON FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION coop_provision_telephony_resource(uuid, uuid, text, text, jsonb) TO coop_ops;
 
+-- MGCP phone directory: the MAC→extension map for ShoreTel/MGCP phones, served
+-- to FreeSWITCH's mod_xml_curl directory gateway so a phone resolves its
+-- extension from the coop DB (MAC in the resource's config jsonb) instead of
+-- hand-edited directory XML. SECURITY DEFINER (BYPASSRLS as coop_rls) so the
+-- gateway can read every member's extension regardless of RLS.
+CREATE OR REPLACE FUNCTION coop_mgcp_directory() RETURNS TABLE(extension text, mac text)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT tr.external_ref, tr.config->>'mgcp_mac'
+    FROM telephony_resources tr
+   WHERE tr.resource_type = 'extension'
+     AND tr.config->>'mgcp_mac' IS NOT NULL
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_mgcp_directory() OWNER TO coop_rls;
+
 -- ---------------------------------------------------------------------------
 -- Geo (sovereign maps): tracks / markers / waypoints — group-scoped like
 -- resource_scopes. SELECT = a member/owner/creator of the group (public and
@@ -518,3 +643,276 @@ DROP POLICY IF EXISTS waypoints_update ON waypoints;
 CREATE POLICY waypoints_update ON waypoints FOR UPDATE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));
 DROP POLICY IF EXISTS waypoints_delete ON waypoints;
 CREATE POLICY waypoints_delete ON waypoints FOR DELETE USING (owner_id = coop_current_sub() OR coop_is_owner(group_id));
+
+-- ---------------------------------------------------------------------------
+-- Tier-2 contribution ledger (docs/design/tier2-entry-model.md).
+--   SELECT = member/owner/creator of the group (coop_can_view_group)
+--   INSERT = any member of the group
+--   UPDATE = any member (it carries the state transitions: proposed ->
+--            countersigned -> ratified/rejected/superseded/expired)
+--   DELETE = NO POLICY, ON PURPOSE. With FORCE RLS and no delete policy the app
+--            role cannot delete an entry at all — "entries are never edited and
+--            never deleted" (§7 invariant 8) is enforced HERE, not by convention.
+-- Content immutability is cryptographic rather than policy: entry_id IS the hash
+-- of the signed body, so an edited body stops matching the id every counterparty
+-- already holds, and the counter-signatures stop verifying.
+-- Signatures are append-only: INSERT as a member, and NO update/delete policy at
+-- all. group_id is denormalized onto tier2_signature so these policies can match
+-- the waypoint pattern.
+-- anchors — ONE stream for every family that asks for a periodic root (tier2,
+-- custody, coverage). System/operator-written (no user write policy, like
+-- telephony_resources); readable where the group is viewable, and federation-wide
+-- rows (group_id IS NULL) are readable by any authenticated member: they are
+-- PUBLISHED roots, not group content.
+-- ---------------------------------------------------------------------------
+GRANT SELECT, INSERT, UPDATE ON tier2_entry TO coop_rls;
+GRANT SELECT, INSERT ON tier2_signature TO coop_rls;
+GRANT SELECT, INSERT, UPDATE ON anchors TO coop_rls;
+
+ALTER TABLE tier2_entry FORCE ROW LEVEL SECURITY;
+ALTER TABLE tier2_entry ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tier2_entry_select ON tier2_entry;
+CREATE POLICY tier2_entry_select ON tier2_entry FOR SELECT USING (coop_can_view_group(group_id));
+DROP POLICY IF EXISTS tier2_entry_insert ON tier2_entry;
+CREATE POLICY tier2_entry_insert ON tier2_entry FOR INSERT WITH CHECK (coop_is_member(group_id));
+DROP POLICY IF EXISTS tier2_entry_update ON tier2_entry;
+CREATE POLICY tier2_entry_update ON tier2_entry FOR UPDATE USING (coop_is_member(group_id));
+
+ALTER TABLE tier2_signature FORCE ROW LEVEL SECURITY;
+ALTER TABLE tier2_signature ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tier2_signature_select ON tier2_signature;
+CREATE POLICY tier2_signature_select ON tier2_signature FOR SELECT USING (coop_can_view_group(group_id));
+DROP POLICY IF EXISTS tier2_signature_insert ON tier2_signature;
+CREATE POLICY tier2_signature_insert ON tier2_signature FOR INSERT WITH CHECK (coop_is_member(group_id));
+
+ALTER TABLE anchors FORCE ROW LEVEL SECURITY;
+ALTER TABLE anchors ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS anchors_select ON anchors;
+CREATE POLICY anchors_select ON anchors FOR SELECT USING (group_id IS NULL OR coop_can_view_group(group_id));
+
+-- ---------------------------------------------------------------------------
+-- Anchoring (docs/design/sharded-ledgers-and-anchors.md §5). anchors has NO user
+-- write policy, so neither the app role nor a member can mint or alter a root: the
+-- three functions below are SECURITY DEFINER, owned by coop_rls (BYPASSRLS), locked
+-- to coop_ops, and reachable only by the operator pool — the same shape as
+-- coop_provision_telephony_resource.
+--
+-- Why a read function at all: the anchoring job is a node-operator task, not a member
+-- request, so it holds no app.sub and RLS would hide the ledger from it. It reads
+-- ENTRY IDS ONLY — commitments, never content — which is all a tree needs.
+-- ---------------------------------------------------------------------------
+
+-- The period's entry ids, in seq order. Order is part of the commitment, so the
+-- ORDER BY is load-bearing: the same rows in another order produce another root.
+CREATE OR REPLACE FUNCTION coop_tier2_period_ids(p_group_id uuid, p_period date)
+RETURNS TABLE(entry_id text, seq bigint)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT e.entry_id, e.seq
+    FROM tier2_entry e
+   WHERE e.group_id = p_group_id
+     AND e.period = p_period
+   ORDER BY e.seq
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_tier2_period_ids(uuid, date) OWNER TO coop_rls;
+REVOKE EXECUTE ON FUNCTION coop_tier2_period_ids(uuid, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_tier2_period_ids(uuid, date) TO coop_ops;
+
+-- Every group root already anchored for a period, excluding the federation row
+-- itself (which must never be a leaf of its own tree).
+CREATE OR REPLACE FUNCTION coop_tier2_roots_for_period(p_period date)
+RETURNS TABLE(scope_id text, root text)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT a.scope_id, a.root
+    FROM anchors a
+   WHERE a.family = 'tier2'
+     AND a.period = p_period
+     AND a.scope_id <> 'federation'
+   ORDER BY a.scope_id
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_tier2_roots_for_period(date) OWNER TO coop_rls;
+REVOKE EXECUTE ON FUNCTION coop_tier2_roots_for_period(date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_tier2_roots_for_period(date) TO coop_ops;
+
+-- Claim an anchor slot. IDEMPOTENT and first-writer-wins: re-anchoring the same root
+-- is a no-op returning conflict=false, while a DIFFERENT root for the same
+-- (family, scope, period) comes back flagged conflict=true. A conflicting anchor is
+-- an alarm, not a race — it means two parties disagree about a period's history.
+CREATE OR REPLACE FUNCTION coop_anchor_slot(
+  p_family     text,
+  p_group_id   uuid,
+  p_scope_id   text,
+  p_period     date,
+  p_root       text,
+  p_leaf_count int
+) RETURNS TABLE(root text, leaf_count int, conflict boolean)
+SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF session_user NOT IN ('postgres', 'coop_ops') THEN
+    RAISE EXCEPTION 'coop_anchor_slot: operator-only (session_user=%)', session_user;
+  END IF;
+  IF p_leaf_count < 1 THEN
+    RAISE EXCEPTION 'coop_anchor_slot: refusing an empty root (leaf_count=%)', p_leaf_count;
+  END IF;
+  INSERT INTO anchors (family, group_id, scope_id, period, root, leaf_count)
+  VALUES (p_family, p_group_id, p_scope_id, p_period, p_root, p_leaf_count)
+  ON CONFLICT (family, scope_id, period) DO NOTHING;
+  RETURN QUERY
+    SELECT a.root, a.leaf_count, (a.root IS DISTINCT FROM p_root)
+      FROM anchors a
+     WHERE a.family = p_family AND a.scope_id = p_scope_id AND a.period = p_period;
+END;
+$$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_anchor_slot(text, uuid, text, date, text, int) OWNER TO coop_rls;
+REVOKE EXECUTE ON FUNCTION coop_anchor_slot(text, uuid, text, date, text, int) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_anchor_slot(text, uuid, text, date, text, int) TO coop_ops;
+
+-- ---------------------------------------------------------------------------
+-- Dues (docs/design/tier2-entry-model.md §5.1). The load-bearing rule is the WAIVER
+-- policy below: "this member was waived" is a MODE LEAK, so a waiver row is readable
+-- only by the member it concerns and by holders of the bookkeeping grant — never by
+-- the group at large. The group sees the count, which the API derives separately.
+--
+-- dues_policy has NO user write policy: a policy is adopted by a decision, and letting
+-- a member INSERT one directly would let a treasurer change what everyone owes without
+-- a vote. Writes go through the decision path.
+-- ---------------------------------------------------------------------------
+GRANT SELECT ON dues_policy TO coop_rls;
+GRANT SELECT, INSERT, DELETE ON dues_waiver TO coop_rls;
+
+ALTER TABLE dues_policy FORCE ROW LEVEL SECURITY;
+ALTER TABLE dues_policy ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS dues_policy_select ON dues_policy;
+CREATE POLICY dues_policy_select ON dues_policy FOR SELECT USING (coop_can_view_group(group_id));
+
+
+-- ---------------------------------------------------------------------------
+ALTER TABLE dues_policy ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS dues_policy_select ON dues_policy;
+CREATE POLICY dues_policy_select ON dues_policy FOR SELECT USING (coop_can_view_group(group_id));
+
+
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- coop_rails_settle — the ONLY writer for a rail webhook. A webhook is untrusted input from
+-- outside, and the intent row is RLS-protected, so a system write with no member identity must
+-- go through a definer function rather than being handed an RLS exemption. It dedupes on
+-- (rail, event_id) so a provider retry is a no-op, and it refuses to move an intent backwards.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION coop_rails_settle(
+  p_rail text, p_provider_ref text, p_status text, p_received numeric,
+  p_event_id text, p_event_type text
+) RETURNS TABLE (dup boolean, intent_id uuid, group_id uuid, payer_sub text, cur_status text, received numeric)
+SECURITY DEFINER SET search_path = public AS $settle$
+DECLARE v_intent payment_intent%ROWTYPE; v_ins int;
+BEGIN
+  INSERT INTO rail_event (rail, event_id, event_type, provider_ref, status, received)
+  VALUES (p_rail, p_event_id, p_event_type, p_provider_ref, p_status, p_received)
+  ON CONFLICT (rail, event_id) DO NOTHING;
+  GET DIAGNOSTICS v_ins = ROW_COUNT;
+  IF v_ins = 0 THEN
+    RETURN QUERY SELECT true, NULL::uuid, NULL::uuid, NULL::text, NULL::text, NULL::numeric;
+    RETURN;
+  END IF;
+
+  SELECT * INTO v_intent FROM payment_intent
+   WHERE rail = p_rail AND provider_ref = p_provider_ref LIMIT 1;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::text, NULL::text, NULL::numeric;
+    RETURN;
+  END IF;
+  IF v_intent.status = 'reversed' THEN
+    -- already taken back; a later settle notice must not resurrect it
+    RETURN QUERY SELECT false, v_intent.id, v_intent.group_id, v_intent.payer_sub, v_intent.status, v_intent.received_amount;
+    RETURN;
+  END IF;
+
+  IF p_status IN ('settled','partial') THEN
+    UPDATE payment_intent
+       SET status = p_status,
+           received_amount = COALESCE(p_received, received_amount),
+           settled_at = COALESCE(settled_at, now()),
+           updated_at = now()
+     WHERE id = v_intent.id;
+  ELSIF p_status = 'reversed' THEN
+    UPDATE payment_intent SET status = 'reversed', updated_at = now() WHERE id = v_intent.id;
+  ELSE
+    -- cancelled / failed only ever apply to something that has not settled
+    UPDATE payment_intent SET status = p_status, updated_at = now()
+     WHERE id = v_intent.id AND status = 'pending';
+  END IF;
+
+  UPDATE rail_event SET intent_id = v_intent.id WHERE rail = p_rail AND event_id = p_event_id;
+  RETURN QUERY SELECT false, v_intent.id, v_intent.group_id, v_intent.payer_sub,
+    (SELECT status FROM payment_intent WHERE id = v_intent.id), p_received;
+END;
+$settle$ LANGUAGE plpgsql;
+ALTER FUNCTION coop_rails_settle(text, text, text, numeric, text, text) OWNER TO coop_rls;
+REVOKE EXECUTE ON FUNCTION coop_rails_settle(text, text, text, numeric, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_rails_settle(text, text, text, numeric, text, text) TO coop;
+
+-- ---------------------------------------------------------------------------
+-- rail_event — the provider's own words about a payment, and the dedupe behind it.
+-- FORCE RLS with NO user policies on purpose: a webhook log is not something any application
+-- role should read, and the settlement function (owned by coop_rls, BYPASSRLS) is the only
+-- reader and writer. The GRANT matters as much as the policy: a SECURITY DEFINER function
+-- runs as its OWNER, so without it the function cannot write the table it exists to write.
+-- ---------------------------------------------------------------------------
+ALTER TABLE rail_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rail_event FORCE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE ON rail_event TO coop_rls;
+
+-- payment_intent — payment attribution. Deliberately NOT group-readable: the dues rule
+-- is that which mode satisfied an obligation, how much, and from whom are visible to
+-- NOBODY, and a card payment is the loudest of those modes. The payer sees their own;
+-- the bookkeeper grant sees the group's; the group sees neither.
+-- ---------------------------------------------------------------------------
+ALTER TABLE payment_intent ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_intent FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS payment_intent_select ON payment_intent;
+CREATE POLICY payment_intent_select ON payment_intent
+  FOR SELECT USING (payer_sub = coop_current_sub() OR coop_has_grant(group_id, 'dues.bookkeep'));
+DROP POLICY IF EXISTS payment_intent_insert ON payment_intent;
+CREATE POLICY payment_intent_insert ON payment_intent
+  FOR INSERT WITH CHECK (payer_sub = coop_current_sub() AND coop_is_member(group_id));
+DROP POLICY IF EXISTS payment_intent_update ON payment_intent;
+CREATE POLICY payment_intent_update ON payment_intent
+  FOR UPDATE USING (payer_sub = coop_current_sub() OR coop_has_grant(group_id, 'dues.bookkeep'));
+GRANT SELECT, INSERT, UPDATE ON payment_intent TO coop_rls;
+
+ALTER TABLE dues_waiver FORCE ROW LEVEL SECURITY;
+ALTER TABLE dues_waiver ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS dues_waiver_select ON dues_waiver;
+CREATE POLICY dues_waiver_select ON dues_waiver FOR SELECT
+  USING (sub = coop_current_sub() OR coop_has_grant(group_id, 'dues.bookkeep'));
+DROP POLICY IF EXISTS dues_waiver_insert ON dues_waiver;
+CREATE POLICY dues_waiver_insert ON dues_waiver FOR INSERT
+  WITH CHECK (coop_has_grant(group_id, 'dues.bookkeep'));
+DROP POLICY IF EXISTS dues_waiver_delete ON dues_waiver;
+CREATE POLICY dues_waiver_delete ON dues_waiver FOR DELETE
+  USING (coop_has_grant(group_id, 'dues.bookkeep'));
+
+-- The group sees the COUNT, never the mode. A per-row read is impossible for a plain
+-- member (the RLS policy above), so the aggregate is its own function rather than a
+-- query — count-only, and guarded by `coop_can_view_group` so a non-member gets nothing.
+--
+-- NOTE the deliberate asymmetry with every other definer function in this file: this one
+-- is NOT revoked from PUBLIC, because it is meant to be callable by an ordinary member.
+-- It is safe to do so precisely because it returns a number of waivers per obligation and
+-- nothing else — no sub, no reason, no period detail.
+CREATE OR REPLACE FUNCTION coop_dues_waiver_counts(p_group_id uuid, p_from date, p_to date)
+RETURNS TABLE(obligation text, n int)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT w.obligation, count(*)::int
+    FROM dues_waiver w
+   WHERE w.group_id = p_group_id
+     AND w.period >= p_from
+     AND w.period <= p_to
+     -- MEMBERSHIP, not viewability: coop_can_view_group is true for ANYONE on a group
+     -- with privacy='open', which would publish the waiver count to outsiders. §5.1 gives
+     -- the aggregate to THE GROUP.
+     AND coop_is_member(p_group_id)
+   GROUP BY w.obligation
+   ORDER BY w.obligation
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_dues_waiver_counts(uuid, date, date) OWNER TO coop_rls;

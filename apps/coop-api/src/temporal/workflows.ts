@@ -15,6 +15,8 @@ const {
   markDigested,
   userEmail,
   sendDigestEmail,
+  sweepContributions,
+  materializeContribution,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "30 seconds",
   retry: { maximumAttempts: 3, initialInterval: "1 second", backoffCoefficient: 2 },
@@ -195,6 +197,43 @@ export async function postizSyncSweep(intervalSeconds = 30): Promise<void> {
     await sleep(intervalSeconds);
     if (++iterations >= 100) {
       await continueAsNew<typeof postizSyncSweep>(intervalSeconds);
+    }
+  }
+}
+
+// --- Tier-2 lane (docs/design/tier2-entry-model.md §5.6) ---
+//
+// contribution.* events are the durable interface by which WORK becomes a ledger entry. A
+// machine source writes the event and nothing else; this lane materialises it.
+//
+// SERIAL, in occurred_at order — deliberately not fanned out like deliverySweep. A group's
+// chain must be appended in order, and concurrent children would collide on the head: the
+// advisory lock stops them FORKING the chain, but the losers would retry, which is a retry
+// storm rather than a queue. The batch is small and each item is one insert.
+// The child WORKFLOW the sweep starts, one per event. It exists because startChild takes a
+// workflow, not an activity: passing the activity proxy directly makes Temporal look for a
+// workflow named "activityProxyFunction" and fail every task — a retry storm with no entry and
+// no obvious error. Same wrapper shape as deliverNotification.
+export async function materializeContributionWorkflow(eventId: string): Promise<void> {
+  await materializeContribution(eventId);
+}
+
+export async function tier2Sweep(batchSize = 100): Promise<void> {
+  let iterations = 0;
+  for (;;) {
+    const pending = await sweepContributions(batchSize);
+    for (const p of pending) {
+      const handle = await startChild(materializeContributionWorkflow, {
+        // per EVENT, not per group: a shared `tier2-{group}` id would make a second start
+        // while the first runs fail as already-started, and the event would be skipped.
+        workflowId: `tier2-${p.id}`,
+        args: [p.id],
+      });
+      await handle.result();
+    }
+    await sleep("10 seconds");
+    if (++iterations >= 100) {
+      await continueAsNew<typeof tier2Sweep>(batchSize);
     }
   }
 }
