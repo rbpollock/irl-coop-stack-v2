@@ -95,6 +95,61 @@ bring-your-own-device registration), and carriers publish approved modules for e
 | SMS serving | `ModemManager`/`gammu` → TextBee → `POST /api/v1/internal/sms/inbound` (already built) |
 | the constraint | a **registered** gateway on an **M2M/business** plan; phone-class numbers stay in phones |
 
+## Who to call, and what to say
+
+Four kinds of supplier, easiest first.
+
+**1. Telnyx Wireless — self-serve, no conversation needed.** Order SIMs from their API. Every SIM is
+eUICC-enabled (physical, eSIM or MFF2). One API call turns voice on for a SIM, and that **assigns a
+real phone number** (`POST /sim_cards/{id}/actions/enable_voice`, with a bulk version). SMS, MMS and
+RCS work on the same number. Multi-IMSI means the SIM can attach as T-Mobile or US Cellular rather
+than roam. **$1 per SIM, then $2 per month per active SIM.** This is the first thing to test precisely
+because nobody has to approve it.
+
+**2. T-Mobile IoT — a real conversation, with the mechanism written down.** They sell device
+connectivity under an *IoT Services Addendum*. It names the permitted purpose ("device-to-application
+and/or device-to-device connectivity, SIM states and associated account management") and says any
+change to that purpose **needs written approval from a vice-president or higher**. So the person who
+can say yes is named in the contract. They also require the modem to pass **network certification** —
+free if the module is already on their certified list, which the approved-module lists publish.
+Starter kits need a referral code.
+
+**3. Rural telephone cooperatives — the peer option.** NTCA (the rural broadband association) lists
+hundreds of member companies and most are consumer-owned cooperatives: Paul Bunyan (MN), Ben Lomand
+(TN), Pioneer (OK), HTC (SC), YK Communications (TX), Kalona (IA), Wes-Tex (TX), Twin Lakes (TN) and
+so on. A cooperative buying from a cooperative is a different conversation from a startup asking a
+national carrier for an exception, and their public member and Smart Rural Community lists are a free
+directory. Worth a call on principle as much as on product.
+
+**4. M2M / IoT MVNOs — the device lane.** 1NCE (flat rate, ~10 years, very low data), Hologram
+(published prices, developer-friendly), EMnify and Soracom (API-first, mostly quote-only), Onomondo,
+floLIVE. These SIMs are made for machines and their numbers are IoT-class, so treat them as
+infrastructure numbers, not verification numbers.
+
+**Not this lane:** consumer MVNOs such as Tello. Their terms ban unattended and automated use.
+
+### The script
+
+**Ask for:** N SIMs, each with a real phone number, voice and SMS enabled, on a plan that permits
+**unattended automated use**, in hardware you name, with the gateway **registered** with them.
+
+**They will ask:** what the device is (make, model, IMEI, whether it is certified), where it sits, how
+much traffic, what it is for, who is responsible for it, whether you will resell, and what legal entity
+is signing.
+
+**Your answers:** a member-owned cooperative; a small number of fixed devices in our own premises; low
+volume; we receive verification codes and send occasional notices to our own members; no resale; no
+dialing, no bulk or marketing traffic; we will register the devices and name them.
+
+**Get this in writing:** that the number is **mobile-class**; that **unattended automated use is
+permitted**; that the gateway is registered or approved; that you **keep the number** if you leave or
+change supplier; and the price, term and termination terms.
+
+**The catch:** signing a business or M2M contract usually requires a legal entity. Until irl.coop
+exists, such a contract goes into a person's name — and then the numbers, and the accounts they
+verify, belong to that person. That is the ownership problem again, and it is a reason to settle the
+entity before committing numbers.
+
 ## Open decisions
 
 1. **Ask a carrier the real question** — "business/M2M SIM with SMS enabled, in approved hardware, on a
@@ -114,3 +169,7 @@ bring-your-own-device registration), and carriers publish approved modules for e
 | SIM boxing: consumer terms quoted; detection; remote SIM association as the signature | sipnex.ca/blog/sim-gateway-vs-sip-trunk, GSMA FS.01.1, ndss-symposium.org *Preventing SIM Box Fraud*, arxiv.org/html/2502.01193 (SigN) | 2026-09-13 |
 | M.2 modules with built-in eSIM + SMS on a carrier approved list | opendevelopment.verizonwireless.com approved modules (Quectel EM060K-GL) | 2026-09-13 |
 | 16/64-slot LTE SMS gateways | madcom.uk multichannel modems | 2026-09-13 |
+| Telnyx Wireless: eUICC SIMs, enable_voice → real number, SMS/MMS/RCS, multi-IMSI, $1 + $2/mo | developers.telnyx.com/docs/iot-sim (wireless-overview, get-started, mobile-phone-numbers), telnyx.com/resources/programmable-sim | 2026-09-13 |
+| T-Mobile IoT Services Addendum: permitted purpose, VP-level written approval, network certification | t-mobile.com IoT Addendum PDF, T-Mobile Control Center whitepaper, spilma.com T-Mobile IoT certification guide | 2026-09-13 |
+| Rural telephone cooperatives: NTCA member and Smart Rural Community lists | ntca.org/about-us/our-members, ntca.org Smart Rural Community provider list | 2026-09-13 |
+| IoT SIM providers compared | pelion.com/blog/best-iot-esim-providers, simplexwireless.com, switchlabs.dev, onomondo.com | 2026-09-13 |
