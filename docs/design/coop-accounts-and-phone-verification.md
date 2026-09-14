@@ -28,7 +28,7 @@ creation — is the thing standing in the way, and it is entirely buildable.
 
 ### 1. The coop owns a DID — buildable
 Ordinary telephony work: acquire a number, land it on the coop's own carrier relationship
-(the `did-inventory-forecasting.md` model; the carrier relationship is settled as *aggregate*),
+(the `did-inventory-forecasting.md` model; the DID carrier is **Telnyx**, one number per group),
 provision it as a `did` resource, and point its calls at the coop's voice stack. No platform's
 terms are involved yet.
 
@@ -109,8 +109,57 @@ and its lifecycle (created → active → rotated → retired). Nothing models t
 A number cannot be reused across groups for verification — platforms block a number that has
 already verified an account, so one shared number serves exactly one signup. That turns
 `did-inventory-forecasting.md` from a forecast exercise into a **direct dependency of this
-capability**: to let N groups run accounts, the coop needs N numbers, each with a phone or a
-carrier API behind it to receive its texts.
+capability**: to let N groups run accounts, the coop needs N numbers, each with a phone at a coop node
+behind it to receive its texts — the settled node shape, next section.
+
+## The settled shape (Sep 2026) — the coop node
+
+How a group holds its number, decided after working through the alternatives (wholesale DIDs are
+VoIP-class and fail Instagram's line-type check at entry; SIM banks / GSM gateways are the detected
+SIM-box fraud signature; a eSIM-in-a-VM does not exist because a carrier only provisions to a secure
+element). Each line carries a reason.
+
+| decision | what | why |
+|---|---|---|
+| **device** | cheap, carrier-unlocked Android | the cheapest thing the network classifies as a real mobile line |
+| **app** | the coop's own app on the device, with TextBee **integrated** (not a side-loaded third party) | one app is both the phone's brain and the SMS relay; the node is coop-run |
+| **where it lives** | a **nearby coop node** — coop infrastructure, physically distributed | custody moves off a member's person and onto the coop |
+| **calls in** | forward to the **Telnyx number assigned to that group** | a Telnyx DID terminates in FreeSWITCH (already wired); per-group DID keeps routing unambiguous |
+| **calls out** | through the group's Telnyx number | one outward identity, PBX-side |
+| **texts out** | TextBee or the Telnyx number | both available for different jobs |
+
+**The inversion that removes the single point.** The SIM in the node is a **radio, not the
+identity**. The **Telnyx number is the identity**, and it is coop-held. A node's phone can be lost,
+stolen, or its keeper can vanish, and the group is unharmed: drop another SIM in, forward it to the
+same Telnyx number, done. This is the same move as Safe-as-deployer and the member-split vault —
+custody by the group/coop, not by whoever is physically near the key material.
+
+**Node keeper is caretaker, not owner.** Whoever runs the node holds a phone, not the number; they
+can be rotated or replaced without the number moving. The control surface (Telnyx account, port and
+forward authority) lives with the group/coop, so a hostile or absent keeper cannot hold the group's
+identity hostage.
+
+**Two numbers, two roles.** The SIM and the Telnyx DID are different surfaces and should not blur:
+
+- **SIM number = identity / bootstrap.** What Instagram texts. One-time verification codes, 2FA. This
+  is why it must be mobile-class and why it sits in a phone.
+- **Telnyx DID = operations.** Member calls in/out, IVR, the number the group *shows*. VoIP-class is
+  fine here because nothing checks its line type.
+
+Both still land in the one spine (`sms/inbound` → `phone_message`), so the two roles differ only in
+what they are *for*, not in how their traffic reaches the platform.
+
+**The honest seams, left open on purpose:**
+
+1. **SMS does not ride the call-forward.** `*72` moves voice; the verification code arrives at the
+   node's SIM and must be relayed by the app (TextBee) — a human-timed, one-time event, not
+   continuous uptime. That is the one reason the phone must exist at all.
+2. **The node is a single point until a node is defined.** "Held at a coop node" is the right
+   direction but not yet a specification: what a node is, who is keeper, and how it is replaced is
+   *wonky at the start and easier later* (Robbie) — worth writing down before the first node exists,
+   not after.
+3. **The app is deliberately out of scope here** (huge; its own project). The shape above needs only
+   the *interface* of that app (SIM SMS listener → `sms/inbound`, alive-check), not the app itself.
 
 ## Built (Sep 2026) — the spine, and only the spine
 
