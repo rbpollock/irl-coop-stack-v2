@@ -21,6 +21,7 @@ import decisionRoutes from './decisions'
 import duesRoutes from './dues'
 import tier2Routes from './tier2-routes'
 import paymentRoutes from './payments'
+import smsRoutes from './sms'
 import socialRoutes from './social'
 import profileRoutes from './profile'
 import { initDb } from './db'
@@ -169,6 +170,7 @@ fastify.register(decisionRoutes)
 fastify.register(duesRoutes)
 fastify.register(tier2Routes)
 fastify.register(paymentRoutes)
+  fastify.register(smsRoutes)
 fastify.register(socialRoutes)
 fastify.register(profileRoutes)
 fastify.register(usernameRoutes)

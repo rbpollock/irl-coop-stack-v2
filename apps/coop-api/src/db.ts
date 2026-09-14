@@ -498,6 +498,31 @@ ALTER TABLE rail_event ALTER COLUMN status DROP NOT NULL; -- rail_event_status_n
 ALTER TABLE payment_intent DROP CONSTRAINT IF EXISTS payment_intent_status_check;
 ALTER TABLE payment_intent ADD CONSTRAINT payment_intent_status_check
   CHECK (status IS NOT NULL AND status IN ('pending','partial','settled','cancelled','failed','reversed'));
+-- phone_message — SMS that ARRIVED at a number the coop controls.
+--
+-- This is the spine of group-owned accounts: a verification code has to land somewhere the
+-- group's people can see it, or the account is hostage to one member's handset. The number
+-- maps to a group through telephony_resources (resource_type 'did'), so the gateway never has
+-- to say which group a text belongs to.
+--
+-- The RAW BODY is always kept and the extracted code is a CONVENIENCE, never an authority: a
+-- wrong guess must never lose the truth. external_id is the gateway's own message id, and
+-- together with the number it makes a gateway retry harmless (NULL external_id cannot collide,
+-- which is the honest behaviour when a gateway sends none).
+CREATE TABLE IF NOT EXISTS phone_message (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id     uuid REFERENCES groups(id) ON DELETE SET NULL,
+  number_e164  text NOT NULL,
+  peer_e164    text,
+  body         text NOT NULL,
+  code         text,
+  code_kind    text,
+  external_id  text,
+  received_at  timestamptz NOT NULL DEFAULT now(),
+  expires_at   timestamptz,
+  UNIQUE (number_e164, external_id)
+);
+CREATE INDEX IF NOT EXISTS phone_message_group_idx ON phone_message (group_id, received_at DESC);
 CREATE INDEX IF NOT EXISTS rail_event_ref_idx ON rail_event (rail, provider_ref);
 -- A settled payment can be taken back. The CHECK is widened idempotently, like the
 -- signature class before it: CREATE TABLE IF NOT EXISTS can never add a constraint.

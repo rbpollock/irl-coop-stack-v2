@@ -794,6 +794,53 @@ CREATE POLICY dues_policy_select ON dues_policy FOR SELECT USING (coop_can_view_
 -- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
+-- coop_ingest_sms — the ONLY writer for an inbound text. A gateway webhook is untrusted input
+-- from outside, so the write goes through a definer function rather than an RLS exemption.
+-- Returns the row id (null when the number is not a provisioned DID and the message is
+-- dropped... it is NOT dropped: an unprovisioned number still received a message an operator
+-- should see, so it is recorded with a null group).
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION coop_ingest_sms(
+  p_number text, p_peer text, p_body text, p_external_id text,
+  p_code text, p_code_kind text, p_expires_at timestamptz
+) RETURNS TABLE (id uuid, group_id uuid, duplicate boolean)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $sms$
+DECLARE gid uuid; mid uuid; ins int;
+BEGIN
+  SELECT tr.group_id INTO gid
+    FROM telephony_resources tr
+   WHERE tr.resource_type = 'did' AND tr.external_ref = p_number
+   LIMIT 1;
+
+  INSERT INTO phone_message (group_id, number_e164, peer_e164, body, code, code_kind, external_id, expires_at)
+  VALUES (gid, p_number, p_peer, p_body, p_code, p_code_kind, p_external_id, p_expires_at)
+  ON CONFLICT (number_e164, external_id) DO NOTHING;
+  GET DIAGNOSTICS ins = ROW_COUNT;
+
+  SELECT m.id INTO mid FROM phone_message m
+   WHERE m.number_e164 = p_number AND m.external_id IS NOT DISTINCT FROM p_external_id
+   LIMIT 1;
+
+  RETURN QUERY SELECT mid, gid, (ins = 0);
+END;
+$sms$;
+ALTER FUNCTION coop_ingest_sms(text,text,text,text,text,text,timestamptz) OWNER TO coop_rls;
+REVOKE EXECUTE ON FUNCTION coop_ingest_sms(text,text,text,text,text,text,timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_ingest_sms(text,text,text,text,text,text,timestamptz) TO coop;
+
+-- phone_message is FORCE RLS. A text is among the most sensitive things the coop could store,
+-- so there is no blanket read: a member of the OWNING group may read its messages (the account
+-- is the group's), and nobody else may. A platform-owned number (group_id null) is readable by
+-- no application role — the operator-only case, which is an open decision, not a default.
+ALTER TABLE phone_message ENABLE ROW LEVEL SECURITY;
+ALTER TABLE phone_message FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS phone_message_select ON phone_message;
+CREATE POLICY phone_message_select ON phone_message
+  FOR SELECT USING (group_id IS NOT NULL AND coop_is_member(group_id));
+-- NO insert/update/delete policy: ingestion is a system write, via the definer function above.
+GRANT SELECT, INSERT, UPDATE ON phone_message TO coop_rls;
+
+-- ---------------------------------------------------------------------------
 -- coop_rail_event_count — "has a verified delivery EVER arrived?" as a fact.
 -- rail_event is FORCE RLS with NO policies on purpose (nobody should read the provider's own
 -- words about payments), so the app role sees zero rows and a plain count is blind to its own

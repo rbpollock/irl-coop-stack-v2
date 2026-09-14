@@ -40,6 +40,8 @@ env:
   # (the app container gets the SAME derived value as COOP_EVENT_BUS_SECRET), and
   # the app's public URL for notification deep links.
   HI_EVENTS_WEBHOOK: ${SECRET:hi-events.webhook}
+  # the SMS gateway presents this (derived; rotate by regenerating)
+  SMS_WEBHOOK_TOKEN: ${SECRET:sms.webhook}
   HI_EVENTS_URL: https://events.${DOMAIN}
   # Digest sender account (notifications@irl.coop) — password for the SMTP
   # XOAUTH2 submission the Temporal digest workflow uses to mail digests.

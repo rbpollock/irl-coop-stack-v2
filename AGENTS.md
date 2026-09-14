@@ -219,6 +219,18 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
   admin API (webui PKCE flow), not the wizard (its secret-reference dropdown is
   un-drivable and the OIDC step had a validation bug).
 
+- **SMS spine (Sep 2026)**: `POST /api/v1/internal/sms/inbound` (derived
+  `SMS_WEBHOOK_TOKEN`) records a text that arrives at a number the coop controls and
+  extracts its verification code; `GET /api/v1/groups/:id/sms` + `.../sms/code` serve it
+  to the owning group's members (`phone_message`, FORCE RLS, system-write only — a
+  SECURITY DEFINER function, no user INSERT policy). The NUMBER maps to a group via
+  `telephony_resources` (`resource_type='did'`), so a caller cannot attribute a message
+  by claiming a group. **No gateway is deployed and no DID is held** — nothing can arrive
+  except from a caller with the token. **Deliberately NOT emitted to the event bus**: the
+  delivery lane is type-agnostic, so `sms.received` would mean one email per text — the
+  notification policy is an open decision, recorded in
+  `docs/design/coop-accounts-and-phone-verification.md`.
+
 ## Recent completed (see STATUS.md for the full picture)
 
 - Canonical identity switch (KC_HOSTNAME, api.irl.coop route, ALLOWED_REDIRECTS,

@@ -17,8 +17,8 @@ an account — it is the machinery by which a *collective* holds one.
 |---|---|
 | DIDs as a modelled resource | **yes** — `telephony_resources.resource_type` includes `'did'`, provisioned via `coop_provision_telephony_resource` (operator-only) |
 | a DID the coop actually holds | **no** — the table has 6 `extension` rows and **zero `did` rows** |
-| SMS ingress (receive a text programmatically) | **no** — no inbound endpoint, no app spec, no container |
-| SMS storage / code extraction | **no** — no `phone_message`-like table exists |
+| SMS ingress (receive a text programmatically) | **built, Sep 2026** — endpoint + table + RLS; the GATEWAY is still absent (no app spec, no container) |
+| SMS storage / code extraction | **built, Sep 2026** — `phone_message`, code extraction, group-scoped RLS |
 | the ingress mechanism, designed | **yes** — `android-mini-services-client.md`: *"TextBee is an open-source Android SMS gateway: a foreground service that exposes an HTTP API and webhooks for send/receive"*, and it names **"two-factor codes"** as a use case, routed through the event bus like every other channel |
 
 So the coop currently **has no number and no way to receive a text**. That — not the account
@@ -112,9 +112,39 @@ already verified an account, so one shared number serves exactly one signup. Tha
 capability**: to let N groups run accounts, the coop needs N numbers, each with a phone or a
 carrier API behind it to receive its texts.
 
+## Built (Sep 2026) — the spine, and only the spine
+
+`POST /api/v1/internal/sms/inbound`, authenticated with a derived `SMS_WEBHOOK_TOKEN`, records a
+message and extracts its code; `GET /api/v1/groups/:id/sms` and `…/sms/code` serve it to members.
+Verified 16/16, including: a gateway RETRY is deduped on (number, external_id); an EXPIRED code stops
+being offered; the ingest response does **not** echo the code back to the gateway; and RLS holds — a
+member of the owning group reads it, a member of no group reads nothing, and the app role with no
+identity reads nothing *while the row demonstrably exists*.
+
+Two properties worth keeping:
+
+- **The gateway never says which group a text belongs to.** The NUMBER maps to a group through
+  `telephony_resources`, so a caller cannot attribute a message to a group by claiming it. An
+  unprovisioned number is still RECORDED, with no group, because a text that arrived is a fact.
+- **The extracted code is a convenience, never an authority.** The raw body is always stored, so a
+  wrong guess cannot lose the truth, and nothing may treat `code` as authoritative.
+
+**What this does NOT do.** No gateway is deployed (TextBee still has no app spec) and no DID is held,
+so nothing can arrive except from a caller holding the token; there is no read UI; and no bus event
+is emitted yet — see the decision below.
+
+### Open decision — the notification policy
+
+The delivery lane claims every event whose type is not `contribution.%` and attempts one delivery per
+event. Emitting `sms.received` today would therefore mean **one email attempt per text**, on a lane
+whose SMTP path is already failing. That is a policy the lane does not express, so the spine does not
+emit yet: a verification code wants a **targeted** surface for the person doing the signup, not a
+broadcast message per SMS. Decide the policy (which types notify, through which channel) before
+wiring SMS to the bus.
+
 ## What I would build first
 
-1. **The SMS ingress** (`/api/v1/internal/sms/inbound` + `phone_message` + RLS + `sms.received`
+1. **The SMS ingress** — *built, Sep 2026; see above* — (`/api/v1/internal/sms/inbound` + `phone_message` + RLS + `sms.received`
    on the bus). Buildable now, useful for every future service, and it is the piece the goal is
    actually missing.
 2. **Code extraction + surface**: pull a 4–8 digit code out of the body, store it with a TTL,
