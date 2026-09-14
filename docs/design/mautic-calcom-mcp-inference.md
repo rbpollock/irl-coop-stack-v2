@@ -58,8 +58,25 @@ the stack: reading group state, drafting a proposal, acting on governance.
 
 - Mautic: which fork/version, and does it need the same Gate-SSO auto-login
   treatment as NocoDB/Formbricks?
+- ~~Cal.com: which fork/version?~~ — **ANSWERED 2026-09-13: use `cal.diy`, not
+  Cal.com.** Cal.com's main repository went closed-source; `cal.diy` is the
+  community-driven fork with **all enterprise/commercial code removed and a
+  100% MIT licence**. For a project whose core claims are "open source reduces
+  costs" and "no proprietary dependency", upstream Cal.com is now the wrong
+  side of that line. It is also the *self-hostable community edition*, which is
+  the deployment shape this doc assumes.
 - Cal.com paid bookings: does the group treasury need a booking→ledger
-  integration before this is useful?
+  integration before this is useful? — **and note the BYO decision
+  (`money-in-and-out.md` §5.2): a paid-booking path must land in a GROUP
+  TREASURY, never a member's personal payment account.**
+- **Is Twenty CRM redundant?** `local-ai-chat.md` parks a CRM (Twenty) and a CMS
+  (Payload) as the "member/relationship layer". **ERPNext already ships a CRM** —
+  Lead, Opportunity, Sales Pipeline, Appointments, Quotation → Customer → Sales
+  Order (docs.frappe.io/erpnext/CRM) — and ERPNext is already live at
+  `accounting.irl.coop`. Note the shape difference before deciding: ERPNext's CRM
+  is *sales-pipeline* shaped, while "member/relationship layer" may want something
+  broader. Resolve by asking what the relationship layer must actually do, not by
+  which app is nicer.
 - MCP auth: read-only vs. write tools (governance, treasury) — and how to keep a
   write path provable and revocable.
 - Client-side inference: which quantized models actually run on a phone, and the

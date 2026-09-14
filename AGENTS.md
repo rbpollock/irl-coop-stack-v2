@@ -44,8 +44,10 @@ appservice fanning metadata into that bus — is in
 |---|---|---|---|
 | irl-dashboard | https://irl.coop | :3000 | host `npm run dev` |
 | coop-api | https://api.irl.coop | :3001 | host dev; canonical issuer + redirects |
+| peer_xyz_payments | (internal only) | :3010 | host dev; the payment RAIL service — owns the provider SDK so a vendor cannot take the API down; no proxy route, auth = derived `rail-token` |
 | Plane | https://plane.irl.coop | :3002 (Caddy) | OIDC client `plane`; zero-click SSO (sign-in auto-redirects to the fleet gateway); dashboard embed (`/apps/projects` iframe, `?embed=1` hides plane chrome); nav submenu via `/api/plane/projects`; god-mode `/god-mode/` |
 | NocoDB | https://nocodb.irl.coop | gate→container | custom image (see below) |
+| Hi.Events | https://events.irl.coop | :3007 (app) / :8099 (gate) | custom image `irlcoop/hievents-gate-sso`; PUBLIC events/checkout/tickets served directly, `/manage` + `/oauth2` through the coop gate (coop-SSO login screen, native signup closed — members provision from the fleet identity) |
 | Keycloak | https://auth.irl.coop | :8081 | realm irl-coop; admin console master |
 | Stalwart | :8083 | containers | mail; also 25/587/143/993 |
 | Citus | 172.17.0.1:5432 | containers | roles: irlcoop, nocodb, stalwart |
@@ -73,6 +75,9 @@ infra/out/dev/MANIFEST.md              ← what was generated from what
 ```
 
 Generate:  `uv run --with pyyaml python infra/build/generator.py dev`
+(`out/dev/secrets.env` carries the derived `${SECRET:...}` values **and** the resolved
+`env:` block of host (`type: source`) apps, so `${VAULT:...}` reaches host processes
+like coop-api — it was silently dropped before 2026-09-13.)
 Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml config`
 
 ### App spec schema (fields the generator consumes — see apps/*.yaml for examples)
@@ -84,8 +89,10 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
 | `type` | `image` (compose emitted) or `source` (app ships its own compose — plane) |
 | `image`, `command`, `ports`, `env`, `volumes`, `depends_on`, `labels`, `healthcheck`, `extra_hosts`, `restart` | passed through to the compose service |
 | `sidecars`, `named_volumes` | extra services / named volumes in the same compose file |
+| `service_name` | the app's compose service when it differs from the app `name` (citus → `postgres`). The status report reads it to attribute a service to its app |
+| `role` | `core` (default) / `support` / `dev` — drives the declared-vs-running headline: only `role: core` **services** are counted in "core services healthy". **Unknown is core**, so nothing is silently ignorable |
 | `dev.volumes` | host paths relative to the instance dir — absolutized at generation into the `.override.yml` |
-| `proxy` | `{hostname, port, description}` (or a list) → edge route `https://<hostname>` → `172.17.0.1:<port>` |
+| `proxy` | `{hostname, port, description}` (or a list) → edge route `https://<hostname>` → `172.17.0.1:<port>`. Optional `path: /manage` narrows the router to `Host(…) && PathPrefix(…)` (route name suffixed), and `priority` decides between a narrowed router and the bare-host fallback — how one host splits across two upstreams (Hi.Events: `/manage` + `/oauth2` → the coop gate, everything else → the app) |
 | `oidc` | `{client_id, redirect \| redirects, public}` → keycloak/clients.yaml registry entry |
 | `web` | base URL combined with `oidc.redirect` to form the redirect URI |
 | `data` | `{scoped_by: sub, views: [...]}` → plane data-scoping view scripts |
@@ -127,6 +134,17 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
   if coop-api is mid-restart it gets a 502 and Synapse *crashes* (not retried).
   Restarting coop-api and matrix in the same window bites this — bring coop-api
   up and healthy first, then `--force-recreate matrix`.
+  Same quirk for every oauth2-proxy gate (nocodb/formbricks/webstudio/litefarm
+  gates do OIDC discovery once at startup; a 502 kills them). All gate sidecars
+  therefore carry `restart: unless-stopped`/`always` — keep the policy; it is the
+  self-heal for a coop-api-restart window.
+- **Every oauth2-proxy gate needs a UNIQUE `--cookie-name`** (`_irlformbricks`,
+  `_irlnocodb`, `_irlminio`, `_irlstudio`, `_irllitefarm`, `_irlfusionpbx`): the
+  default `_oauth2_proxy` collides across apps, and with fleet-scoped cookies
+  (`.irl.coop`) a browser carries another app's ticket — the gate then logs
+  `session ticket cookie failed validation: <nil>`, re-loops the login, and the
+  app *looks* down while fresh sessions work fine. Renaming also self-heals
+  already-poisoned browsers (the stale cookie stops being read).
 - **Keycloak service-account roles are not declared in the tree**: coop-api's
   admin lookups (canonical identity: `/api/v1/me`, username claiming) rely on
   the `coop-api` client's service account holding realm-management
@@ -221,6 +239,24 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
   the one-cookie instant path awaits a fresh session in a real browser.
 - Federation / takedown-resilient DNS+edge design session — PARKED; do not
   design/build until Robbie raises it.
+- Coop launch + infrastructure handoff — PARKED wish list; do not design/build
+  until Robbie raises it. Starting the coop itself, handing it infrastructure
+  control, and mapping roadmap development to a Plane project owned by an
+  irl.coop group. Note: `docs/design/coop-launch-and-roadmap-handoff.md`. Key
+  dependency recorded there: the handoff is only meaningful AFTER the
+  non-custodial vault fix (a Safe transfer with a platform-held vault key hands
+  over the deed and keeps a copy of the keys).
+- Parked app integrations (intent recorded, not built) — **5 across 3 docs**:
+  **Mautic** (marketing automation) + **cal.diy** (scheduling — use the MIT fork,
+  NOT upstream Cal.com, which went closed-source; see
+  `mautic-calcom-mcp-inference.md`) and **Twenty** (CRM) + **Payload** (CMS) as
+  the member/relationship + content layers (`local-ai-chat.md`). Open question
+  before adding Twenty: **ERPNext already ships a CRM** and is already live.
+  **Frappe Insights** (BI/reporting) — modify it to integrate with the stack and/or
+  ERPNext (`frappe-insights-integration.md`); same bench as ERPNext, so the cheap leg
+  is free — the hazard is that a direct Postgres data source BYPASSES RLS.
+  Open question before adding it: does the reporting need row-level coop data, or
+  only aggregates?
 - Not in final form: Temporal, Formbricks, Webstudio, Postiz, CryptPad.
 
 ## Do not

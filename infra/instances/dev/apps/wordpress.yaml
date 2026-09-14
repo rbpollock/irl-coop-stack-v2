@@ -1,0 +1,45 @@
+# WordPress — Joni Schwartz-Chaney author site (jonischwartz.irl.coop).
+# Public site: WordPress (Apache) + MySQL 8.4 sidecar. No OIDC gate — publicly
+# readable. MySQL (not MariaDB) to match the LocalWP export origin (MySQL 8.0,
+# utf8mb4_unicode_520_ci).
+name: wordpress
+pillar: workflow
+type: image
+service_name: wordpress
+image: wordpress:7.1-php8.2-apache
+env:
+  WORDPRESS_DB_HOST: wordpress-db:3306
+  WORDPRESS_DB_USER: wordpress
+  WORDPRESS_DB_PASSWORD: ${SECRET:wordpress.db}
+  WORDPRESS_DB_NAME: wordpress
+ports:
+  - "8098:80"
+volumes:
+  - wordpress-html:/var/www/html
+restart: always
+depends_on:
+  - wordpress-db
+proxy:
+  - hostname: jonischwartz.${DOMAIN}
+    port: 8098
+    priority: 10
+    description: Joni Schwartz-Chaney author site (WordPress)
+sidecars:
+  wordpress-db:
+    image: mysql:8.4
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SECRET:wordpress.dbroot}
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: ${SECRET:wordpress.db}
+    volumes:
+      - wordpress-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+named_volumes:
+  wordpress-html: {}
+  wordpress-db-data: {}

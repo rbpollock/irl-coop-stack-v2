@@ -1,0 +1,548 @@
+diff --git a/apps/web/app/lib/irlcoop-templates.ts b/apps/web/app/lib/irlcoop-templates.ts
+new file mode 100644
+index 0000000..11f2f62
+--- /dev/null
++++ b/apps/web/app/lib/irlcoop-templates.ts
+@@ -0,0 +1,366 @@
++import { createId } from "@paralleldrive/cuid2";
++import type { TFunction } from "i18next";
++import { TSurveyElementTypeEnum } from "@formbricks/types/surveys/elements";
++import type { TSurveyEndScreenCard } from "@formbricks/types/surveys/types";
++import type { TTemplate } from "@formbricks/types/templates";
++import {
++  buildBlock,
++  buildMultipleChoiceElement,
++  buildOpenTextElement,
++  createBlockChoiceJumpLogic,
++} from "@/app/lib/survey-block-builder";
++import { hiddenFieldsDefault } from "@/app/lib/survey-builder";
++import { createI18nString } from "@/lib/i18n/utils";
++
++/**
++ * irl.coop — Cooperation Starter Pack.
++ *
++ * Surveys for groups that are forming, running, or repairing a cooperative
++ * venture. Written for first-timers: plain language, no facilitation jargon,
++ * every instrument ends in a shared artifact (a charter seed, a working
++ * agreement, a diagnosis) rather than a score.
++ *
++ * Two deliberate deviations from the shipped templates:
++ *
++ * 1. These are `TTemplate` literals rather than `buildSurvey(...)` — buildSurvey
++ *    requires a B2B `role` (productManager | customerSuccess | marketing | sales |
++ *    peopleManager) that no coop template honestly has.
++ * 2. Names, descriptions and copy are plain strings instead of `t()` keys. The
++ *    pack is authored in English; translating it is a later problem, and a
++ *    missing key would render as an empty headline.
++ *
++ * Design rules encoded here (see docs/design/cooperation-survey-templates.md):
++ * no scoring of people, individual-then-shared for forming surveys, anonymous
++ * pulse, and every reflection states the cost of cooperating as plainly as the
++ * benefit.
++ */
++
++const FUNNEL_URL = "https://irl.coop/signup?intent=formbricks";
++
++const endScreen = (headline: string, subheader: string): TSurveyEndScreenCard => ({
++  id: createId(),
++  type: "endScreen",
++  headline: createI18nString(headline, []),
++  subheader: createI18nString(subheader, []),
++  buttonLabel: createI18nString("Where this goes next", []),
++  buttonLink: FUNNEL_URL,
++});
++
++/**
++ * #0 — "Is cooperation for you?"
++ *
++ * Interrogates the hidden value system behind wanting to be rich: safety,
++ * freedom, time, a real place, being needed, being respected. Each branch names
++ * the want back, gives the accumulation route honestly, gives the cooperative
++ * route to the same end, and states the price of the cooperative one.
++ *
++ * The branch key is the final required question (a single-select over the five
++ * wants) because block logic fires when its own element is answered — a
++ * multi-select opener is ambiguous (safety *and* freedom?) and an optional
++ * question would silently fall through to the generic ending.
++ */
++export const isCooperationForYou = (t: TFunction): TTemplate => {
++  const q1 = createId();
++  const q2 = createId();
++  const q3 = createId();
++  const q4 = createId();
++  const q5 = createId();
++  const q6 = createId();
++  const q7 = createId();
++  const q8 = createId();
++  const q9 = createId();
++  const q10 = createId();
++  const q11 = createId();
++  const q12 = createId();
++
++  const generic = endScreen(
++    "Read this one out loud to your people",
++    "The point was never the score — it was to get the true answer in the open early. Compare your answers with everyone else's, honestly. The gaps are the whole conversation, and having it now costs far less than having it in month six. Wherever you land: cooperation is one good route to a good life, not the only one. If the costs look worse than the gains for you, that's a real answer too."
++  );
++
++  const safety = endScreen(
++    "You named safety — never having to worry about the basics",
++    "The accumulation route: one big pile, and you stand between it and the world alone. It works, sometimes. It asks for years of your life, and it depends on systems you don't control — a market, a landlord, an insurer, an employer. The coordination route to the same end: many small interdependencies instead of one pile. A shared pantry, a tool library, a group that covers a bad month, neighbours who notice when you're gone. Safety from many directions, none of them able to take it all away, and you don't have to hold it up by yourself. The price: you're known, and being known means being asked. That's the cost, and it's real."
++  );
++
++  const freedom = endScreen(
++    "You named freedom — and time that's yours",
++    "The accumulation route: buy your way out of obligations, and buy a lot, because every obligation has a price. It works until it doesn't — and the exit costs years you don't get back. The coordination route to the same end: share the things that eat your time and money. One van, one kitchen, one workshop, one person on the phone to the utility company instead of five. Shared capacity buys hours nobody has to sell. The irony worth sitting with: the freedom you're buying with money is mostly freedom from things a group could simply have taken off your plate. The price: you don't get to decide alone any more. You get consulted, and sometimes outvoted. If that trade is worse than the hours you'd buy back, say so — this isn't for everyone."
++  );
++
++  const belonging = endScreen(
++    "You named not being alone — people who show up",
++    "This is the one money is worst at. Money can hire help, and hired help is real help — but it arrives on a schedule and leaves when the invoice clears. Nobody checks on you because they want to. The coordination route: relationships with obligations built in. Being needed is not a burden here; it's the mechanism. You show up for someone's harvest or their bad week, and the same is owed to you when yours comes — which it will. The price: mutual obligation, people who know your business, and the conflict that comes with caring. Sitting out the obligations also means sitting out the support; that's a legitimate thing to choose, and worth naming out loud rather than discovering later."
++  );
++
++  const place = endScreen(
++    "You named a real place — good food, real gatherings, culture that's ours",
++    "Money buys a good table as a transaction: sourced from anywhere, eaten by anyone, remembered by no one. It buys culture as packaging — someone else's version of where you live, sold back to you. The coordination route to the same end: food from nearby, cooked in quantity, eaten together; gatherings where people aren't jockeying for position because nobody's climbing anything; a culture made by the people who live there instead of imported and re-labelled. This is the route where cooperation beats hoarding most obviously — richness of life, not quantity of money. The price: it only exists if people show up and do the unglamorous parts. Someone has to wash the dishes."
++  );
++
++  const recognition = endScreen(
++    "You named respect — and something that outlasts you",
++    "The accumulation route: respect from above — being looked up to, holding the most, being the one who decides. It's real, and it's fragile: it lasts exactly as long as the pile does, and it makes you a target rather than a member. The coordination route: respect from beside. Being counted on, having been there when it mattered, building something that keeps working when you're not in the room. That kind of regard is slower and much harder to take away. It also can't be bought, which is precisely what makes it worth having. The price: credit gets shared, and the thing that outlasts you won't have your name on the side."
++  );
++
++  return {
++    id: "irlcoop-is-cooperation-for-you",
++    name: "Is cooperation for you?",
++    description:
++      "A learning tool, not a test. Asks what you're actually after — safety, freedom, time, real company, being needed or respected — then tells you the truth about two routes to each: accumulating alone, or coordinating with people. Every branch states the cost of cooperating as plainly as the benefit. No score, no ranking.",
++    channels: ["link"],
++    industries: ["cooperative"],
++    // "Group organizer" is the coop role added to ZTemplateRole; it makes the pack
++    // filterable in the gallery and eligible for the featured row's role filter.
++    role: "cooperativeOrganizer",
++    preset: {
++      name: "Is cooperation for you?",
++      welcomeCard: {
++        enabled: true,
++        headline: createI18nString("Is cooperation for you?", []),
++        subheader: createI18nString(
++          "Six minutes, no wrong answers, nobody sees this but you. It asks what you're actually after — safety, freedom, time, good food and real company, being needed, being respected — and tells you the truth about two very different routes to each one.",
++          []
++        ),
++        buttonLabel: createI18nString("Start", []),
++        timeToFinish: false,
++        showResponseCount: false,
++      },
++      blocks: [
++        buildBlock({
++          name: "What the money buys",
++          t,
++          elements: [
++            buildMultipleChoiceElement({
++              id: q1,
++              type: TSurveyElementTypeEnum.MultipleChoiceMulti,
++              headline: "When you picture being rich, what does the money actually buy?",
++              subheader: "Pick up to three. Answer for the version of you that isn't performing.",
++              required: true,
++              choiceIds: ["safety", "freedom", "time", "place", "respect", "covered", "real", "legacy"],
++              choices: [
++                "Safety — never having to worry about the basics again",
++                "Freedom — doing what I want without asking anyone's permission",
++                "Time — hours that belong to me and nobody else",
++                "A good life — a beautiful place, good food, people I actually like",
++                "Respect — being looked up to, being someone who matters",
++                "My people being covered — knowing the ones I love are all right",
++                "Making something real — work I'd point at",
++                "Something that outlasts me",
++              ],
++            }),
++          ],
++        }),
++        buildBlock({
++          name: "What you'd be sorry to give up",
++          t,
++          elements: [
++            buildMultipleChoiceElement({
++              id: q2,
++              type: TSurveyElementTypeEnum.MultipleChoiceMulti,
++              headline: "Which of these would you genuinely be sorry to give up?",
++              subheader:
++                "Be honest — these are the real costs, and pretending they aren't is how groups break later.",
++              required: true,
++              choiceIds: [
++                "solo_decide",
++                "no_orders",
++                "separate",
++                "not_depend",
++                "privacy",
++                "looked_to",
++                "no_obligation",
++              ],
++              choices: [
++                "Deciding alone, quickly",
++                "Nobody being able to tell me what to do",
++                "Keeping my money separate from other people's",
++                "Not depending on anyone",
++                "My privacy",
++                "Being the one others look to",
++                "Not having obligations to people",
++              ],
++            }),
++          ],
++        }),
++        buildBlock({
++          name: "A time you felt well",
++          t,
++          elements: [
++            buildMultipleChoiceElement({
++              id: q3,
++              type: TSurveyElementTypeEnum.MultipleChoiceMulti,
++              headline: "Think of a time you felt genuinely well. What made it good?",
++              subheader: "Not happy. Well.",
++              required: true,
++              choiceIds: [
++                "showed_up",
++                "table",
++                "needed",
++                "made_real",
++                "seen",
++                "own_pace",
++                "unobligated",
++                "outside",
++              ],
++              choices: [
++                "People showed up for me",
++                "The food, the table, the place",
++                "I was needed and could actually help",
++                "I was making something real with my hands or my head",
++                "I was seen without having to perform",
++                "I was moving at my own pace",
++                "I owed nobody anything for a while",
++                "I was outside, in a place that felt like itself",
++              ],
++            }),
++          ],
++        }),
++        buildBlock({
++          name: "How you get what you can't get alone",
++          t,
++          elements: [
++            buildMultipleChoiceElement({
++              id: q4,
++              type: TSurveyElementTypeEnum.MultipleChoiceSingle,
++              headline: "You need something you can't get on your own. What do you do?",
++              required: true,
++              choiceIds: ["ask_owe", "pay", "go_without", "join", "build", "depends"],
++              choices: [
++                "Ask someone and owe them one",
++                "Pay for it and stay even",
++                "Go without it",
++                "Look for a group that already has it",
++                "Build it myself, slowly",
++                "Depends on the thing",
++              ],
++            }),
++            buildMultipleChoiceElement({
++              id: q5,
++              type: TSurveyElementTypeEnum.MultipleChoiceSingle,
++              headline: "Right now, how much coordinating with other people sounds good?",
++              required: true,
++              choiceIds: ["alone", "mostly_alone", "mixed", "mostly_together", "together"],
++              choices: [
++                "I want to decide alone",
++                "Mostly alone, with a couple of people I trust",
++                "Mixed — some things shared, some mine",
++                "Mostly together, with my own corner",
++                "Decide together, all the way",
++              ],
++            }),
++            buildMultipleChoiceElement({
++              id: q6,
++              type: TSurveyElementTypeEnum.MultipleChoiceSingle,
++              headline: "How much do you actually have to give a group right now?",
++              subheader: "Hours, energy, attention — measured honestly, not aspirationally.",
++              required: true,
++              choiceIds: ["none", "little", "steady", "a_lot", "all_in"],
++              choices: [
++                "Almost nothing — I'm stretched thin",
++                "A little, in bursts",
++                "A steady few hours a week",
++                "A lot — this is a priority for me",
++                "This is my main work right now",
++              ],
++            }),
++          ],
++        }),
++        buildBlock({
++          name: "Scarcity or enough",
++          t,
++          elements: [
++            buildMultipleChoiceElement({
++              id: q7,
++              type: TSurveyElementTypeEnum.MultipleChoiceSingle,
++              headline: "Money:",
++              required: true,
++              choiceIds: ["more", "enough_better"],
++              choices: ["I need more of it", "I need enough, and better living with it"],
++            }),
++            buildMultipleChoiceElement({
++              id: q8,
++              type: TSurveyElementTypeEnum.MultipleChoiceSingle,
++              headline: "Time:",
++              required: true,
++              choiceIds: ["never_enough", "unclaimed"],
++              choices: [
++                "I never have enough",
++                "I want more of it unclaimed — not more of it sold",
++              ],
++            }),
++            buildMultipleChoiceElement({
++              id: q9,
++              type: TSurveyElementTypeEnum.MultipleChoiceSingle,
++              headline: "Other people:",
++              required: true,
++              choiceIds: ["drain", "sustain"],
++              choices: [
++                "Obligations to people drain me",
++                "Being needed sustains me",
++              ],
++            }),
++          ],
++        }),
++        buildBlock({
++          name: "What would break it, and who you'd want there",
++          t,
++          elements: [
++            buildOpenTextElement({
++              id: q10,
++              headline: "What would make this not work for you?",
++              subheader:
++                "The most useful answer anyone gives. Say the thing you'd normally keep polite.",
++              placeholder: "e.g. I hate meetings that could have been a message",
++              inputType: "text",
++              longAnswer: true,
++              required: false,
++            }),
++            buildOpenTextElement({
++              id: q11,
++              headline: "Who came to mind while you were answering?",
++              subheader: "Cooperation starts with the people who are already in your life.",
++              placeholder: "A name, or a kind of person",
++              inputType: "text",
++              required: false,
++            }),
++          ],
++        }),
++        buildBlock({
++          name: "What matters most (routes the reflection)",
++          t,
++          elements: [
++            buildMultipleChoiceElement({
++              id: q12,
++              type: TSurveyElementTypeEnum.MultipleChoiceSingle,
++              headline: "Of everything you just said — which one matters most?",
++              subheader: "This shapes what you read next.",
++              required: true,
++              choiceIds: ["w_safety", "w_freedom", "w_belonging", "w_place", "w_recognition"],
++              choices: [
++                "Never having to worry about the basics",
++                "Freedom and time that's mine",
++                "Not being alone — people who show up",
++                "A real place: good food, real gatherings, culture that's ours",
++                "Respect, and something that outlasts me",
++              ],
++            }),
++          ],
++          // The reflection is routed here, on the last required question.
++          logic: [
++            createBlockChoiceJumpLogic(q12, "w_safety", safety.id),
++            createBlockChoiceJumpLogic(q12, "w_freedom", freedom.id),
++            createBlockChoiceJumpLogic(q12, "w_belonging", belonging.id),
++            createBlockChoiceJumpLogic(q12, "w_place", place.id),
++            createBlockChoiceJumpLogic(q12, "w_recognition", recognition.id),
++          ],
++        }),
++      ],
++      endings: [generic, safety, freedom, belonging, place, recognition],
++      hiddenFields: hiddenFieldsDefault,
++    },
++  };
++};
++
++/** The pack, as the templates gallery consumes it. */
++export const irlcoopTemplates = (t: TFunction): TTemplate[] => [isCooperationForYou(t)];
+diff --git a/apps/web/app/lib/templates.ts b/apps/web/app/lib/templates.ts
+index 11e56c0..2a23f10 100644
+--- a/apps/web/app/lib/templates.ts
++++ b/apps/web/app/lib/templates.ts
+@@ -18,6 +18,7 @@ import {
+ } from "@/app/lib/survey-block-builder";
+ import { buildSurvey, getDefaultSurveyPreset, hiddenFieldsDefault } from "@/app/lib/survey-builder";
+ import { createI18nString } from "@/lib/i18n/utils";
++import { irlcoopTemplates } from "./irlcoop-templates";
+ 
+ export const CUSTOM_SURVEY_TEMPLATE_ID = "custom";
+ 
+@@ -4796,6 +4797,9 @@ const supportiveWorkCulture = (t: TFunction): TTemplate => {
+ };
+ 
+ export const templates = (t: TFunction): TTemplate[] => [
++  // irl.coop's Cooperation Starter Pack leads the gallery: groups forming for the
++  // first time should meet these before the B2B product templates.
++  ...irlcoopTemplates(t),
+   cartAbandonmentSurvey(t),
+   siteAbandonmentSurvey(t),
+   productMarketFitSuperhuman(t),
+diff --git a/apps/web/locales/en-US.json b/apps/web/locales/en-US.json
+index 9dde412..0e9c962 100644
+--- a/apps/web/locales/en-US.json
++++ b/apps/web/locales/en-US.json
+@@ -269,6 +269,7 @@
+     "duplicate": "Duplicate",
+     "duplicate_copy": "(copy)",
+     "duplicate_copy_number": "(copy {copyNumber})",
++    "cooperative": "Cooperative",
+     "e_commerce": "E-Commerce",
+     "edit": "Edit",
+     "editor": "Editor",
+@@ -420,6 +421,7 @@
+     "preview": "Preview",
+     "privacy": "Privacy Policy",
+     "product_manager": "Product Manager",
++    "group_organizer": "Group organizer",
+     "profile": "Profile",
+     "profile_id": "Profile ID",
+     "progress": "Progress",
+diff --git a/apps/web/modules/survey/components/template-list/components/template-tags.tsx b/apps/web/modules/survey/components/template-list/components/template-tags.tsx
+index d3b684c..2f7cff8 100644
+--- a/apps/web/modules/survey/components/template-list/components/template-tags.tsx
++++ b/apps/web/modules/survey/components/template-list/components/template-tags.tsx
+@@ -29,6 +29,8 @@ const getRoleBasedStyling = (role: TTemplateRole | undefined): string => {
+       return "border-violet-300 bg-violet-50 text-violet-500";
+     case "peopleManager":
+       return "border-pink-300 bg-pink-50 text-pink-500";
++    case "cooperativeOrganizer":
++      return "border-teal-300 bg-teal-50 text-teal-500";
+     default:
+       return "border-slate-300 bg-slate-50 text-slate-500";
+   }
+diff --git a/apps/web/modules/survey/components/template-list/lib/utils.test.ts b/apps/web/modules/survey/components/template-list/lib/utils.test.ts
+index 014fbf1..855bac0 100644
+--- a/apps/web/modules/survey/components/template-list/lib/utils.test.ts
++++ b/apps/web/modules/survey/components/template-list/lib/utils.test.ts
+@@ -76,6 +76,7 @@ describe("Template utils", () => {
+     expect(result).toEqual([
+       { value: "eCommerce", label: "common.e_commerce" },
+       { value: "saas", label: "common.saas" },
++      { value: "cooperative", label: "common.cooperative" },
+       { value: "other", label: "common.other" },
+     ]);
+     expect(mockT).toHaveBeenCalledWith("common.e_commerce");
+@@ -94,6 +95,7 @@ describe("Template utils", () => {
+       { value: "customerSuccess", label: "common.customer_success" },
+       { value: "peopleManager", label: "common.people_manager" },
+       { value: "sales", label: "common.sales" },
++      { value: "cooperativeOrganizer", label: "common.group_organizer" },
+     ]);
+     expect(mockT).toHaveBeenCalledWith("common.product_manager");
+     expect(mockT).toHaveBeenCalledWith("common.customer_success");
+diff --git a/apps/web/modules/survey/components/template-list/lib/utils.ts b/apps/web/modules/survey/components/template-list/lib/utils.ts
+index 309d3f1..6988668 100644
+--- a/apps/web/modules/survey/components/template-list/lib/utils.ts
++++ b/apps/web/modules/survey/components/template-list/lib/utils.ts
+@@ -11,6 +11,7 @@ export const getChannelMapping = (t: TFunction): { value: TWorkspaceConfigChanne
+ export const getIndustryMapping = (t: TFunction): { value: TWorkspaceConfigIndustry; label: string }[] => [
+   { value: "eCommerce", label: t("common.e_commerce") },
+   { value: "saas", label: t("common.saas") },
++  { value: "cooperative", label: t("common.cooperative") },
+   { value: "other", label: t("common.other") },
+ ];
+ 
+@@ -20,4 +21,5 @@ export const getRoleMapping = (t: TFunction): { value: TTemplateRole; label: str
+   { value: "customerSuccess", label: t("common.customer_success") },
+   { value: "peopleManager", label: t("common.people_manager") },
+   { value: "sales", label: t("common.sales") },
++  { value: "cooperativeOrganizer", label: t("common.group_organizer") },
+ ];
+diff --git a/apps/web/modules/survey/list/components/featured-templates.tsx b/apps/web/modules/survey/list/components/featured-templates.tsx
+index 84fa5e7..1f54970 100644
+--- a/apps/web/modules/survey/list/components/featured-templates.tsx
++++ b/apps/web/modules/survey/list/components/featured-templates.tsx
+@@ -26,6 +26,7 @@ import type { TSurveyType } from "@formbricks/types/surveys/types";
+ import type { TTemplateRole } from "@formbricks/types/templates";
+ import type { TUserLocale } from "@formbricks/types/user";
+ import { templates } from "@/app/lib/templates";
++import { isCooperationForYou } from "@/app/lib/irlcoop-templates";
+ import { getV3ApiErrorMessage } from "@/modules/api/lib/v3-client";
+ import type { TAIUnavailableReason } from "@/modules/ee/analysis/charts/lib/ai-availability";
+ import { CreateWithAIDialog } from "@/modules/survey/components/template-list/components/create-with-ai-dialog";
+@@ -48,6 +49,7 @@ const ROLE_ICONS: Record<TTemplateRole, LucideIcon> = {
+   marketing: MegaphoneIcon,
+   sales: TrendingUpIcon,
+   peopleManager: UsersIcon,
++  cooperativeOrganizer: HeartHandshakeIcon,
+ };
+ 
+ const ROLE_COLORS: Record<TTemplateRole, string> = {
+@@ -56,6 +58,7 @@ const ROLE_COLORS: Record<TTemplateRole, string> = {
+   marketing: "text-orange-500",
+   sales: "text-emerald-500",
+   peopleManager: "text-pink-500",
++  cooperativeOrganizer: "text-teal-500",
+ };
+ 
+ type TDefaultTemplate = { id: string; icon: LucideIcon; title: string; description: string };
+@@ -75,7 +78,18 @@ export const FeaturedTemplates = ({
+ }: Readonly<FeaturedTemplatesProps>) => {
+   const { t } = useTranslation();
+ 
++  // irl.coop: the coop pack leads this row. It is the first surface a member sees when
++  // they land in a fresh workspace, and its name/description are read from the pack
++  // itself so the two can't drift apart.
++  const cooperationTemplate = isCooperationForYou(t);
++
+   const defaultTemplates: TDefaultTemplate[] = [
++    {
++      id: cooperationTemplate.id,
++      icon: HeartHandshakeIcon,
++      title: cooperationTemplate.name,
++      description: cooperationTemplate.description,
++    },
+     {
+       id: "nps",
+       icon: SmileIcon,
+diff --git a/packages/types/templates.ts b/packages/types/templates.ts
+index 47a8de8..a5823f0 100644
+--- a/packages/types/templates.ts
++++ b/packages/types/templates.ts
+@@ -15,6 +15,9 @@ export const ZTemplateRole = z.enum([
+   "marketing",
+   "sales",
+   "peopleManager",
++  // irl.coop: groups forming a cooperative venture are organised by a person, not by a
++  // job title — the pack's templates carry this role so they can be filtered to.
++  "cooperativeOrganizer",
+ ]);
+ export type TTemplateRole = z.infer<typeof ZTemplateRole>;
+ 
+@@ -30,7 +33,7 @@ export const ZTemplate = z.object({
+   icon: z.any().optional(),
+   role: ZTemplateRole.optional(),
+   channels: z.array(z.enum(["link", "app", "website"])).optional(),
+-  industries: z.array(z.enum(["eCommerce", "saas", "other"])).optional(),
++  industries: z.array(z.enum(["eCommerce", "saas", "cooperative", "other"])).optional(),
+   preset: z.object({
+     name: z.string(),
+     welcomeCard: ZSurveyWelcomeCard,
+diff --git a/packages/types/workspace.ts b/packages/types/workspace.ts
+index 65f1172..0a7c4d0 100644
+--- a/packages/types/workspace.ts
++++ b/packages/types/workspace.ts
+@@ -8,7 +8,7 @@ export const ZWorkspaceStyling = ZBaseStyling.extend({
+ 
+ export type TWorkspaceStyling = z.infer<typeof ZWorkspaceStyling>;
+ 
+-export const ZWorkspaceConfigIndustry = z.enum(["eCommerce", "saas", "other"]).nullable();
++export const ZWorkspaceConfigIndustry = z.enum(["eCommerce", "saas", "cooperative", "other"]).nullable();
+ export type TWorkspaceConfigIndustry = z.infer<typeof ZWorkspaceConfigIndustry>;
+ 
+ export const ZWorkspaceConfigChannel = z.enum(["link", "app", "website"]).nullable();

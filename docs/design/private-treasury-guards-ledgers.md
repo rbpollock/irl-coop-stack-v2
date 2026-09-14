@@ -53,7 +53,7 @@ Guards are data-driven (terms from the relationship registry), versioned, and up
 | Tier | What | Where | Integrity |
 |---|---|---|---|
 | 1 | Money: savings, shares, capital, distributions, DAO funds | **Shielded on-chain** (ZK treasury) | conservation in-circuit + nullifiers + chain consensus |
-| 2 | Participation: time-bank hours, labor swaps, quest credits | Off-chain (Postgres), hash-chained, periodically anchored | double-entry invariant + idempotency keys + sequence numbers + hash chain + Merkle anchors on-chain |
+| 2 | Participation: time-bank hours, labor swaps, quest credits | Off-chain (Postgres), hash-chained, periodically anchored | double-entry invariant + idempotency keys + sequence numbers + hash chain + Merkle anchors on-chain. **Why not on a zk chain — answered 2026-09-13: `money-in-and-out.md` §3.3** (proving needs a commitment, not a copy; ~120:1 fewer on-chain writes; consensus buys T2 nothing) |
 | 3 | Badges/stats: zk-badge predicates | Off-chain commitments | proof binds to Tier-2 hash chain / provenance hashes |
 
 Rule unchanged: **money stays auditable — Tier 1 is never public, but it is always provable.** ZK covers everything; cash flows are never invisible to the OWNER or to authorized reporters, only to third parties.
@@ -100,7 +100,7 @@ Privacy is non-negotiable, so the phasing question is scope, not whether. The v0
 ## 9. Open questions
 
 1. **Mobile proving at launch scale (now a v0 gate):** circuit size vs. latency on phones for 1-of-1 Safes; recursive proofs if needed. The prover runs client-side by principle — v0 must prove at v0 transaction volume.
-2. **Chain choice under the day-1 constraint:** Base-class EVM with on-chain verifier vs. a purpose-built shielded chain — costs, finality, tooling. This decision blocks the treasury contract and must be made first.
+2. **~~Chain choice under the day-1 constraint~~ — DECIDED 2026-09-13 (Robbie): BASE MAINNET**, with Hardhat retained in dev until it is ready to switch over. Consequences recorded in `money-in-and-out.md` §5.1: (a) the treasury contract targets Base with an on-chain verifier; (b) **any group created in the dev/Hardhat stage is scaffolding and will be REDEPLOYED** at the switch — which is already §8's position ("v0 dev-stage contracts are scaffolding, not production state"), now with a concrete date-shaped consequence; (c) chain transaction costs (gas) become a real out-flow that the cost model does not yet carry.
 3. Note encryption & receive UX: stealth addresses, encrypted note delivery without exposing the whole balance.
 4. Recovery: how the custodian/recovery path interacts with shielded notes (viewing-key custody in the threshold vault; note secrets recoverable by custodian quorum?).
 5. Legal: which jurisdictions accept ZK-verified books; statutory escheatment interactions (residual-heir default must still work over shielded state).

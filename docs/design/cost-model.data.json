@@ -1,0 +1,1855 @@
+{
+  "_about": "irl.coop cost model \u2014 the single source for the V3 (side-by-side) and V8 (self-sustaining) videos, any landing-page pricing section, and the /api cost readout. Consumed by infra/scripts/cost-model.py (stdlib only). EVERY price carries a source and a verified_on date; the emitter refuses to put an unverified price into a total and lists it as an open item instead. Two editorial judgements are EXPLICIT here rather than hidden in code: `tiers` (which product represents each column \u2014 see _tiers_help) and `slice_scope` (who needs a seat \u2014 see _scope_help). Re-verify prices at record time \u2014 date-stamp them on screen.",
+  "_pricing_basis": "Commercial side uses ANNUAL-BILLING list prices (the cheapest published rate) so the comparison stays conservative. Per-user items are counted at scenario.members. Per-org items are counted once each \u2014 and the mid-tier argument is that a co-op needs SEVERAL of them, which is why they are summed by slice rather than presented as one subscription.",
+  "_common_cost_noted": "Card processing (~2.9% + $0.30) exists in BOTH worlds and is excluded from the comparison. The ticketing delta is the platform fee only.",
+  "_scope_help": "Who needs a paid seat for each slice. `members` ONLY where access cannot reasonably be granted as a free guest/viewer (identity, mail, chat) \u2014 everyone has an account there. `organizers` = charged at the organizer count: a 40-member co-op does not buy 40 CRM or 40 project-management seats. `per_org` = the products in this slice are billed per organization (no seat math; scope is informational). Counting every member for every slice would inflate the commercial column by roughly 3x.",
+  "slice_scope": {
+    "identity": "members",
+    "mail_calendar_docs": "members",
+    "chat": "members",
+    "docs_wiki": "organizers",
+    "video_calls": "organizers",
+    "project_management": "organizers",
+    "databases": "organizers",
+    "erp_crm": "organizers",
+    "forms_surveys": "organizers",
+    "websites": "organizers",
+    "social_publishing": "organizers",
+    "workflow_automation": "organizers",
+    "events_ticketing": "organizers",
+    "community": "per_org",
+    "membership_management": "per_org",
+    "telephony": "organizers",
+    "accounting": "per_org",
+    "maps": "organizers",
+    "storage": "per_org",
+    "storage_egress": "per_org"
+  },
+  "scenario": {
+    "members": 40,
+    "organizers": 6,
+    "groups_on_node": 1,
+    "ticket_revenue_monthly": 4000,
+    "ticket_price_avg": 20,
+    "avg_tickets_per_order": 1.0,
+    "_notes": "members = people with an account at the org. organizers = people who actually do admin. ticket_revenue_monthly drives the per-ticket (Eventbrite-shaped) comparison. map_loads_monthly drives the map-tile comparison; phone_numbers drives the PSTN side of telephony (a NUMBER is rented in every world, and the node does not change that). egress_gb_monthly drives the data-transfer comparison \u2014 for a group sharing media, egress is the cost that actually grows.",
+    "map_loads_monthly": 25000,
+    "phone_numbers": 3,
+    "egress_gb_monthly": 200
+  },
+  "revenue": {
+    "illustrative": true,
+    "_warning": "irl.coop's own pricing is a governance decision, not an arithmetic one. These are placeholders so the emitter can compute a crossover point; replace them with settled numbers before on-screen use.",
+    "member_monthly": 3.0,
+    "group_monthly": 25.0,
+    "grant_or_donation_monthly": 0.0,
+    "_notes": "member_monthly \u00d7 members + group_monthly \u00d7 groups = the node's recurring inflow. Deliberately modest: the argument is that a shared node needs much less per person than a per-seat stack."
+  },
+  "node": {
+    "illustrative": true,
+    "_warning": "ILLUSTRATIVE PLACEHOLDER \u2014 replace hosting_monthly with the real figure before any of this appears on screen. While illustrative is true, the emitter watermarks every node-derived number.",
+    "hosting_monthly": 40.0,
+    "hardware_amortized_monthly": 25.0,
+    "dns_domain_monthly": 3.0,
+    "backup_storage_monthly": 5.0,
+    "_line_notes": {
+      "hosting": "the v4 node (192.168.18.20) \u2014 cloud VPS equivalent or amortized owned hardware",
+      "hardware_amortized_monthly": "purchase price \u00f7 36 months, if the node is owned",
+      "dns_domain_monthly": "Gandi LiveDNS registration amortized",
+      "backup_storage_monthly": "off-node backup target"
+    }
+  },
+  "stewardship": {
+    "illustrative": true,
+    "_warning": "The REAL cost of running this is a person's time, not compute. Keep it as its own line \u2014 folding it into 'infrastructure' is the dishonest move that makes every 'self-sustaining' claim collapse later.",
+    "hours_per_month": 8.0,
+    "hourly_rate": 45.0,
+    "_notes": "hours to keep the node healthy, update images, help member groups. Rate = the opportunity cost of the steward's time, not a salary claim."
+  },
+  "comparables": [
+    {
+      "slice": "identity",
+      "irl": "Keycloak \u2014 one identity realm, every app an OIDC client",
+      "vendor": "Okta",
+      "product": "Workforce Identity \u2014 Core Essentials",
+      "unit": "per_user_month",
+      "price": 14.0,
+      "verified_on": "2026-09-13",
+      "source": "okta.com/pricing",
+      "status": "verified",
+      "note": "Starter tier is $6/user/mo; Essentials $17. This is the comparable almost nobody budgets for.",
+      "tiers": [
+        "standard"
+      ]
+    },
+    {
+      "slice": "identity",
+      "irl": "Keycloak \u2014 one identity realm, every app an OIDC client",
+      "vendor": "Okta",
+      "product": "Workforce Identity \u2014 Starter",
+      "unit": "per_user_month",
+      "price": 6.0,
+      "verified_on": "2026-09-13",
+      "source": "okta.com/pricing",
+      "status": "verified",
+      "note": "Low end of the range ($1,500/yr contract minimum).",
+      "tiers": [
+        "lean"
+      ]
+    },
+    {
+      "slice": "mail_calendar_docs",
+      "irl": "Stalwart + Roundcube + OnlyOffice \u2014 mail, calendar, documents",
+      "vendor": "Google",
+      "product": "Workspace Business Standard",
+      "unit": "per_user_month",
+      "price": 14.0,
+      "verified_on": "2026-09-13",
+      "source": "knowledge.workspace.google.com (annual plan)",
+      "status": "verified",
+      "note": "Flexible plan is $16.80. 300-user cap on Business tiers.",
+      "tiers": [
+        "lean",
+        "standard"
+      ]
+    },
+    {
+      "slice": "mail_calendar_docs",
+      "irl": "Stalwart + Roundcube + OnlyOffice \u2014 mail, calendar, documents",
+      "vendor": "Microsoft",
+      "product": "365 Business Premium",
+      "unit": "per_user_month",
+      "price": 22.0,
+      "verified_on": "2026-09-13",
+      "source": "microsoft.com 2026 pricing/packaging update",
+      "status": "verified",
+      "note": "$18.79 without Teams. Business Standard $14 (no Teams $10.79).",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "chat",
+      "irl": "Synapse + Element/Cinny \u2014 group chat, rooms, federation-ready",
+      "vendor": "Slack",
+      "product": "Pro",
+      "unit": "per_user_month",
+      "price": 7.25,
+      "verified_on": "2026-09-13",
+      "source": "usecarly.com 2026 Slack pricing roundup",
+      "status": "verified",
+      "note": "Low end \u2014 no SSO, no compliance.",
+      "tiers": [
+        "lean"
+      ]
+    },
+    {
+      "slice": "chat",
+      "irl": "Synapse + Element/Cinny \u2014 group chat, rooms, federation-ready",
+      "vendor": "Slack",
+      "product": "Business+",
+      "unit": "per_user_month",
+      "price": 15.0,
+      "verified_on": "2026-09-13",
+      "source": "usecarly.com 2026 (annual billing)",
+      "status": "verified",
+      "note": "The SSO tier \u2014 the fair comparison, since irl.coop ships SSO.",
+      "tiers": [
+        "standard"
+      ]
+    },
+    {
+      "slice": "chat",
+      "irl": "Synapse + Element/Cinny \u2014 group chat, rooms, federation-ready",
+      "vendor": "Slack",
+      "product": "Enterprise+",
+      "unit": "per_user_month",
+      "price": 26.18,
+      "verified_on": "2026-09-13",
+      "source": "Vendr \u2014 535 verified purchases, median",
+      "status": "verified",
+      "note": "Custom-quoted; no list price. Median of REAL purchases, not a quote.",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "docs_wiki",
+      "irl": "OnlyOffice + files panel \u2014 shared documents and folders",
+      "vendor": "Notion",
+      "product": "Business",
+      "unit": "per_user_month",
+      "price": 20.0,
+      "verified_on": "2026-09-13",
+      "source": "notion.com/pricing via review roundup",
+      "status": "verified",
+      "note": "$24 billed monthly.",
+      "tiers": [
+        "lean",
+        "standard",
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "events_ticketing",
+      "irl": "Hi.Events \u2014 public event pages, checkout, tickets, check-in",
+      "vendor": "Eventbrite",
+      "product": "Flex",
+      "unit": "per_ticket_pct_plus_flat",
+      "pct": 3.7,
+      "flat_per_ticket": 1.79,
+      "order_pct": 2.9,
+      "verified_on": "2026-09-13",
+      "source": "simpletix + eventcloud 2026 Eventbrite fee explainers",
+      "status": "verified",
+      "note": "3.7% + $1.79 per paid ticket, plus 2.9% per order processing. On a $20 ticket \u2248 $3.11 (15.5%). Free tickets cost nothing. This is a per-TRANSACTION fee \u2014 it grows with the group's success, which is the sharpest contrast in the whole model."
+    },
+    {
+      "slice": "community",
+      "irl": "groups + seats + chat + events, as one thing",
+      "vendor": "Circle",
+      "product": "Professional (entry)",
+      "unit": "per_org_month",
+      "price": 89.0,
+      "verified_on": "2026-09-13",
+      "source": "ruzuku + group.app 2026 comparisons",
+      "status": "verified",
+      "note": "Plus a 2% transaction fee at this tier. Covers ONE slice.",
+      "mid_tier_pick": true
+    },
+    {
+      "slice": "community",
+      "irl": "groups + seats + chat + events, as one thing",
+      "vendor": "Mighty Networks",
+      "product": "entry plan",
+      "unit": "per_org_month",
+      "price": 95.0,
+      "verified_on": "2026-09-13",
+      "source": "group.app 2026 (the $49 tier was removed in 2025)",
+      "status": "verified",
+      "note": "Covers ONE slice."
+    },
+    {
+      "slice": "membership_management",
+      "irl": "coop groups \u2014 seats, roles, membership, invitations",
+      "vendor": "Wild Apricot",
+      "product": "Basic (100 contacts)",
+      "unit": "per_org_month",
+      "price": 53.55,
+      "verified_on": "2026-09-13",
+      "source": "toolradar 2026 (2-year prepay rate)",
+      "status": "verified",
+      "note": "itqlick lists $48/mo for the same tier \u2014 a range, not one number.",
+      "mid_tier_pick": true
+    },
+    {
+      "slice": "membership_management",
+      "irl": "coop groups \u2014 seats, roles, membership, invitations",
+      "vendor": "Wild Apricot",
+      "product": "Unlimited Plus (50,000 contacts)",
+      "unit": "per_org_month",
+      "price": 350.0,
+      "verified_on": "2026-09-13",
+      "source": "itqlick 2026",
+      "status": "verified",
+      "note": "THE tier-ceiling: the price is tied to how many people you serve. A growing co-op is punished for growing."
+    },
+    {
+      "slice": "video_calls",
+      "irl": "LiveKit + Element Call + coturn + mediamtx",
+      "vendor": "Zoom",
+      "product": "Workplace Pro",
+      "unit": "per_user_month",
+      "price": 13.33,
+      "verified_on": "2026-09-13",
+      "source": "itqlick 2026 Zoom pricing (annual)",
+      "status": "verified",
+      "note": "40-min limit removed; no SSO.",
+      "tiers": [
+        "lean"
+      ]
+    },
+    {
+      "slice": "video_calls",
+      "irl": "LiveKit + Element Call + coturn + mediamtx",
+      "vendor": "Zoom",
+      "product": "Workplace Business",
+      "unit": "per_user_month",
+      "price": 18.32,
+      "verified_on": "2026-09-13",
+      "source": "itqlick + trustradius 2026 (annual; $18.33 on trustradius)",
+      "status": "verified",
+      "note": "The SSO tier. $22.49/mo Business Plus above it; Enterprise custom.",
+      "tiers": [
+        "standard"
+      ]
+    },
+    {
+      "slice": "project_management",
+      "irl": "Plane \u2014 projects, issues, cycles",
+      "vendor": "Asana",
+      "product": "Starter",
+      "unit": "per_user_month",
+      "price": 10.99,
+      "verified_on": "2026-09-13",
+      "source": "rock.so + gend.co 2026 (annual; asana.com/pricing)",
+      "status": "verified",
+      "note": "$13.49 billed monthly.",
+      "tiers": [
+        "lean",
+        "standard"
+      ]
+    },
+    {
+      "slice": "project_management",
+      "irl": "Plane \u2014 projects, issues, cycles",
+      "vendor": "Asana",
+      "product": "Advanced",
+      "unit": "per_user_month",
+      "price": 24.99,
+      "verified_on": "2026-09-13",
+      "source": "rock.so + gend.co 2026 (annual)",
+      "status": "verified",
+      "note": "$30.49 billed monthly. Includes AI + Gantt \u2014 feature-parity caveat applies.",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "databases",
+      "irl": "NocoDB \u2014 databases and views for members",
+      "vendor": "Airtable",
+      "product": "Team",
+      "unit": "per_user_month",
+      "price": 20.0,
+      "verified_on": "2026-09-13",
+      "source": "airtable.com/pricing + support.airtable.com (annual)",
+      "status": "verified",
+      "note": "$24 billed monthly. NOTE: the nonprofit rate is $12/collaborator/mo \u2014 see caveats.",
+      "tiers": [
+        "lean",
+        "standard"
+      ]
+    },
+    {
+      "slice": "databases",
+      "irl": "NocoDB \u2014 databases and views for members",
+      "vendor": "Airtable",
+      "product": "Business",
+      "unit": "per_user_month",
+      "price": 45.0,
+      "verified_on": "2026-09-13",
+      "source": "airtable.com/pricing (annual; $54 monthly)",
+      "status": "verified",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "forms_surveys",
+      "irl": "Formbricks \u2014 surveys, feedback, group-scoped templates",
+      "vendor": "Typeform",
+      "product": "Business",
+      "unit": "per_org_month",
+      "price": 83.0,
+      "verified_on": "2026-09-13",
+      "source": "tinycommand 2026 (annual; a second roundup lists $91)",
+      "status": "verified",
+      "note": "A range, not one number: $83\u201391/mo annual. Metered by RESPONSES \u2014 the cap, not the seat, is the ceiling."
+    },
+    {
+      "slice": "websites",
+      "irl": "Webstudio + WordPress \u2014 public group sites",
+      "vendor": "Squarespace",
+      "product": "Basic",
+      "unit": "per_org_month",
+      "price": 19.0,
+      "verified_on": "2026-09-13",
+      "source": "emergent.sh Wix-vs-Squarespace 2026 (annual)",
+      "status": "verified",
+      "note": "$25 billed monthly.",
+      "mid_tier_pick": true
+    },
+    {
+      "slice": "websites",
+      "irl": "Webstudio + WordPress \u2014 public group sites",
+      "vendor": "Wix",
+      "product": "Core (can sell)",
+      "unit": "per_org_month",
+      "price": 29.0,
+      "verified_on": "2026-09-13",
+      "source": "emergent.sh 2026 (annual)",
+      "status": "verified",
+      "note": "Wix Light is $17 but cannot take payments."
+    },
+    {
+      "slice": "social_publishing",
+      "irl": "Postiz \u2014 scheduling and federation distribution",
+      "vendor": "Buffer",
+      "product": "Essentials \u2014 4 channels",
+      "unit": "per_org_month",
+      "price": 24.0,
+      "verified_on": "2026-09-13",
+      "source": "buffer.com + turrboo 2026 ($6/channel/mo; 7 channels = $42)",
+      "status": "verified",
+      "derived": "4 channels \u00d7 $6/channel/mo \u2014 the channel count is an assumption, stated on screen",
+      "note": "Priced PER CHANNEL: cost grows with how many places you publish, not how many people you are.",
+      "mid_tier_pick": true
+    },
+    {
+      "slice": "social_publishing",
+      "irl": "Postiz \u2014 scheduling and federation distribution",
+      "vendor": "Hootsuite",
+      "product": "Professional",
+      "unit": "per_org_month",
+      "price": 99.0,
+      "verified_on": "2026-09-13",
+      "source": "buffer.com Buffer-vs-Hootsuite 2026",
+      "status": "verified",
+      "note": "No free tier; entry price $99 per user/mo."
+    },
+    {
+      "slice": "workflow_automation",
+      "irl": "Temporal \u2014 durable workflows behind the event bus",
+      "vendor": "Zapier",
+      "product": "Professional (750 tasks/mo)",
+      "unit": "per_org_month",
+      "price": 19.99,
+      "verified_on": "2026-09-13",
+      "source": "zapier.com/pricing (annual)",
+      "status": "verified",
+      "note": "$29.99 billed monthly. Metered by TASKS \u2014 more activity costs more.",
+      "mid_tier_pick": true
+    },
+    {
+      "slice": "workflow_automation",
+      "irl": "Temporal \u2014 durable workflows behind the event bus",
+      "vendor": "Zapier",
+      "product": "Team (2,000 tasks/mo, 25 users)",
+      "unit": "per_org_month",
+      "price": 69.0,
+      "verified_on": "2026-09-13",
+      "source": "zapier.com/pricing (annual)",
+      "status": "verified",
+      "note": "$103.50 billed monthly. The SAML SSO tier \u2014 the fair comparison."
+    },
+    {
+      "slice": "erp_crm",
+      "irl": "ERPNext \u2014 accounts, inventory, CRM",
+      "vendor": "HubSpot",
+      "product": "Sales Hub Starter",
+      "unit": "per_user_month",
+      "price": 15.0,
+      "verified_on": "2026-09-13",
+      "source": "docket.io 2026 HubSpot Sales Hub pricing research",
+      "status": "verified",
+      "note": "A second source (realcostlabs) lists $20/seat/hub \u2014 treat $15\u201320 as the range. Professional is $100/seat + $1,500 onboarding.",
+      "tiers": [
+        "lean",
+        "standard"
+      ]
+    },
+    {
+      "slice": "erp_crm",
+      "irl": "ERPNext \u2014 accounts, inventory, CRM",
+      "vendor": "HubSpot",
+      "product": "Sales Hub Professional",
+      "unit": "per_user_month",
+      "price": 100.0,
+      "verified_on": "2026-09-13",
+      "source": "docket.io 2026",
+      "status": "verified",
+      "note": "Plus a $1,500 one-time onboarding fee \u2014 the classic hidden line.",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "identity",
+      "irl": "Keycloak \u2014 one identity realm, every app an OIDC client",
+      "vendor": "Okta",
+      "product": "Workforce Identity \u2014 Essentials",
+      "unit": "per_user_month",
+      "price": 17.0,
+      "verified_on": "2026-09-13",
+      "source": "okta.com/pricing",
+      "status": "verified",
+      "note": "The tier most orgs land on. Professional/Enterprise are custom-quoted.",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "video_calls",
+      "irl": "LiveKit + Element Call + coturn + mediamtx",
+      "vendor": "Zoom",
+      "product": "Workplace Business Plus",
+      "unit": "per_user_month",
+      "price": 22.49,
+      "verified_on": "2026-09-13",
+      "source": "itqlick 2026 Zoom pricing (annual)",
+      "status": "verified",
+      "note": "Plus = 300 participants + extras; Enterprise is custom.",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "forms_surveys",
+      "irl": "Formbricks \u2014 surveys, feedback, group-scoped templates",
+      "vendor": "Typeform",
+      "product": "Plus",
+      "unit": "per_org_month",
+      "price": 50.0,
+      "verified_on": "2026-09-13",
+      "source": "tinycommand 2026 (annual)",
+      "status": "verified",
+      "note": "1,000 responses/mo. The entry paid tier \u2014 included so the mid-tier column uses the cheapest credible option, not the priciest.",
+      "mid_tier_pick": true
+    },
+    {
+      "slice": "telephony",
+      "irl": "FreeSWITCH + FusionPBX \u2014 self-hosted softswitch, per-group numbers",
+      "vendor": "Google",
+      "product": "Voice \u2014 Standard",
+      "unit": "per_user_month",
+      "price": 10.0,
+      "verified_on": "2026-09-13",
+      "source": "dialphone.com VoIP pricing calculator 2026-04-22",
+      "status": "verified",
+      "note": "Includes a US number per user. $20/$30 for higher tiers.",
+      "tiers": [
+        "lean"
+      ]
+    },
+    {
+      "slice": "telephony",
+      "irl": "FreeSWITCH + FusionPBX \u2014 self-hosted softswitch, per-group numbers",
+      "vendor": "Zoom",
+      "product": "Phone \u2014 US/Canada Metered",
+      "unit": "per_user_month",
+      "price": 10.5,
+      "verified_on": "2026-09-13",
+      "source": "voipcostsavings.com 2026 (June 2026 rates)",
+      "status": "verified",
+      "note": "Metered: ~$0.03/min outbound. The headline number is not the bill.",
+      "tiers": [
+        "lean"
+      ]
+    },
+    {
+      "slice": "telephony",
+      "irl": "FreeSWITCH + FusionPBX \u2014 self-hosted softswitch, per-group numbers",
+      "vendor": "Zoom",
+      "product": "Phone \u2014 US/Canada Unlimited",
+      "unit": "per_user_month",
+      "price": 15.5,
+      "verified_on": "2026-09-13",
+      "source": "voipcostsavings.com 2026",
+      "status": "verified",
+      "note": "The cheapest genuinely unlimited seat. Rides the Zoom Workplace bundle.",
+      "tiers": [
+        "standard"
+      ]
+    },
+    {
+      "slice": "telephony",
+      "irl": "FreeSWITCH + FusionPBX \u2014 self-hosted softswitch, per-group numbers",
+      "vendor": "RingCentral",
+      "product": "RingEX Core",
+      "unit": "per_user_month",
+      "price": 20.0,
+      "verified_on": "2026-09-13",
+      "source": "ringcentral.com/office/plansandpricing.html + voipcostsavings.com 2026",
+      "status": "verified",
+      "note": "Annual rate; month-to-month ~33% more. Dedicated number included per user.",
+      "tiers": [
+        "standard"
+      ]
+    },
+    {
+      "slice": "telephony",
+      "irl": "FreeSWITCH + FusionPBX \u2014 self-hosted softswitch, per-group numbers",
+      "vendor": "RingCentral",
+      "product": "RingEX Advanced",
+      "unit": "per_user_month",
+      "price": 25.0,
+      "verified_on": "2026-09-13",
+      "source": "ringcentral.com/office/plansandpricing.html",
+      "status": "verified",
+      "note": "Ultra is $35. Add-ons inflate it hard: AI Receptionist $39, SMS Booster $25, Call Queues $35.",
+      "tiers": [
+        "enterprise"
+      ]
+    },
+    {
+      "slice": "accounting",
+      "irl": "ERPNext \u2014 accounting, inventory, invoicing",
+      "vendor": "Intuit",
+      "product": "QuickBooks Online Simple Start",
+      "unit": "per_org_month",
+      "price": 38.0,
+      "verified_on": "2026-09-13",
+      "source": "dancingnumbers 2026 + costbench 2026-09",
+      "status": "verified",
+      "note": "1 user, no bills to pay. Not a real accounting setup for a co-op \u2014 listed for the range."
+    },
+    {
+      "slice": "accounting",
+      "irl": "ERPNext \u2014 accounting, inventory, invoicing",
+      "vendor": "Intuit",
+      "product": "QuickBooks Online Essentials",
+      "unit": "per_org_month",
+      "price": 85.0,
+      "verified_on": "2026-09-13",
+      "source": "dancingnumbers + certumsolutions 2026 (Aug 2026 increase)",
+      "status": "verified",
+      "note": "3 users, bills + recurring transactions. The credible entry for a small org.",
+      "mid_tier_pick": true
+    },
+    {
+      "slice": "accounting",
+      "irl": "ERPNext \u2014 accounting, inventory, invoicing",
+      "vendor": "Intuit",
+      "product": "QuickBooks Online Plus",
+      "unit": "per_org_month",
+      "price": 140.0,
+      "verified_on": "2026-09-13",
+      "source": "certumsolutions 2026 \u2014 Plus moved $99 to $140 in Aug 2026",
+      "status": "verified",
+      "note": "5 users + inventory and job costing. The tier a co-op actually outgrows into."
+    },
+    {
+      "slice": "accounting",
+      "irl": "ERPNext \u2014 accounting, inventory, invoicing",
+      "vendor": "Intuit",
+      "product": "QuickBooks Online Advanced",
+      "unit": "per_org_month",
+      "price": 340.0,
+      "verified_on": "2026-09-13",
+      "source": "dancingnumbers 2026 (costbench lists $275 as of Sep 2026 \u2014 treat $275-340 as the range)",
+      "status": "verified",
+      "note": "25 users. Payroll is separate: ~$60 base + ~$6.50/employee/mo."
+    },
+    {
+      "slice": "maps",
+      "irl": "Sovereign PMTiles basemap on MinIO \u2014 tiles you host",
+      "vendor": "Mapbox",
+      "product": "Web map loads (self-serve)",
+      "unit": "per_1k_loads",
+      "price": 5.0,
+      "verified_on": "2026-09-13",
+      "source": "woosmap 2026 Mapbox pricing breakdown",
+      "status": "verified",
+      "note": "50,000 web map loads free per month, then ~$5 per 1,000. Card required from day one. Mobile MAU billed separately.",
+      "free_monthly": 50000
+    },
+    {
+      "slice": "maps",
+      "irl": "Sovereign PMTiles basemap on MinIO \u2014 tiles you host",
+      "vendor": "Google",
+      "product": "Maps Platform \u2014 Dynamic Maps (Essentials SKU)",
+      "unit": "per_1k_loads",
+      "price": 7.0,
+      "verified_on": "2026-09-13",
+      "source": "lazige 2026 (Essentials SKUs: 10,000 free events/mo, then $2-7 per 1,000)",
+      "status": "verified",
+      "note": "10,000 free calls per SKU per month, then $7 per 1,000 for Dynamic Maps. The $200 credit is gone; per-SKU allowances replaced it.",
+      "free_monthly": 10000
+    },
+    {
+      "slice": "storage",
+      "irl": "MinIO on the node's own disk \u2014 one shared pool, no per-member quota",
+      "vendor": "Amazon",
+      "product": "S3 Standard \u2014 storage",
+      "unit": "per_gb_month",
+      "price": 0.023,
+      "verified_on": "2026-09-13",
+      "source": "tech-insider 2026 citing AWS published S3 pricing",
+      "status": "verified",
+      "note": "$23/TB/mo. The reference price everyone benchmarks against."
+    },
+    {
+      "slice": "storage",
+      "irl": "MinIO on the node's own disk \u2014 one shared pool, no per-member quota",
+      "vendor": "Backblaze",
+      "product": "B2 \u2014 storage",
+      "unit": "per_gb_month",
+      "price": 0.00695,
+      "verified_on": "2026-09-13",
+      "source": "tuskbackup 2026 cloud storage calculator",
+      "status": "verified",
+      "note": "$6.95/TB/mo, no minimum. Cheapest S3-compatible option. Wasabi sits in the same band (~$7/TB, 1 TB minimum) \u2014 verify before quoting it."
+    },
+    {
+      "slice": "storage",
+      "irl": "MinIO on the node's own disk \u2014 one shared pool, no per-member quota",
+      "vendor": "Cloudflare",
+      "product": "R2 \u2014 storage",
+      "unit": "per_gb_month",
+      "price": 0.015,
+      "verified_on": "2026-09-13",
+      "source": "developers.cloudflare.com/r2/pricing + leanopstech 2026",
+      "status": "verified",
+      "note": "$15/TB/mo with zero egress fees."
+    },
+    {
+      "slice": "storage_egress",
+      "irl": "MinIO on the node's own disk \u2014 one shared pool, no per-member quota",
+      "vendor": "Amazon",
+      "product": "S3 \u2014 internet egress",
+      "unit": "per_gb",
+      "price": 0.09,
+      "verified_on": "2026-09-13",
+      "source": "cloudzero + leanopstech 2026 (AWS published egress)",
+      "status": "verified",
+      "note": "$0.09/GB for the first 10 TB. 1 TB/mo of shared video = $90/mo in transfer alone \u2014 typically MORE than the storage line it is attached to."
+    },
+    {
+      "slice": "storage_egress",
+      "irl": "MinIO on the node's own disk \u2014 one shared pool, no per-member quota",
+      "vendor": "Cloudflare",
+      "product": "R2 \u2014 internet egress",
+      "unit": "per_gb",
+      "price": 0.0,
+      "verified_on": "2026-09-13",
+      "source": "developers.cloudflare.com/r2/pricing",
+      "status": "verified",
+      "zero_is_the_rate": true,
+      "note": "Zero egress, structurally \u2014 that is R2's whole proposition."
+    },
+    {
+      "slice": "storage_egress",
+      "irl": "MinIO on the node's own disk \u2014 one shared pool, no per-member quota",
+      "vendor": "Backblaze",
+      "product": "B2 \u2014 internet egress",
+      "unit": "per_gb",
+      "price": 0.0,
+      "verified_on": "2026-09-13",
+      "source": "tuskbackup 2026",
+      "status": "verified",
+      "free_multiple_of_stored": 3,
+      "note": "Free up to 3x stored per month (here: 3 x 11 GB = 34 GB free, so 200 GB/mo is NOT free). The overage rate is not verified here and is deliberately not quoted."
+    }
+  ],
+  "caveats": [
+    {
+      "title": "Several vendors discount for nonprofits and co-ops",
+      "detail": "Airtable's nonprofit rate is $12/collaborator/mo against a $20 Team list price \u2014 a 40% discount. Google and Microsoft both run nonprofit programs. These are list prices, so they are the CEILING of the commercial stack, not the floor. State that on screen: the honest claim is that this is what the software costs at list, and a determined co-op can shave it."
+    },
+    {
+      "title": "The tiers are not feature-equal",
+      "detail": "Asana Advanced carries AI and Gantt views; Slack Business+ is a mature product with a support contract. irl.coop's Plane or chat is not Asana Advanced or Slack Business+ feature-for-feature today. The model compares SLICES of capability, not parity. Say so \u2014 the argument is about the cost curve and ownership, not about out-featuring a decade of product work."
+    },
+    {
+      "title": "This is one node's cost, and a node is not a datacentre",
+      "detail": "The irl.coop side is a single host with a single failure domain. No SLA, no 24/7 on-call, no geographic redundancy. Those are real things the commercial stack buys. Price them in as honest trade-offs rather than leaving a skeptic to point them out."
+    },
+    {
+      "title": "Migration and learning are real costs, and they are not in either column",
+      "detail": "Moving a group off five subscriptions costs time \u2014 exporting, re-training, re-inviting people. Neither column includes it, so neither should be claimed to win on it."
+    },
+    {
+      "title": "Telephony: the software is free, the phone number is not",
+      "detail": "FreeSWITCH + FusionPBX removes the per-seat licence, not the carrier. A DID is rented in every world, and inbound/outbound minutes are metered in almost all of them. The saving is per-seat licensing and the fact that numbers attach to GROUPS rather than people. Say that, rather than 'phone is free now'."
+    },
+    {
+      "title": "Maps, under the free tiers, is not a cost argument at all",
+      "detail": "Mapbox gives 50,000 web map loads a month free; Google gives 10,000 per SKU. A small co-op's public map sits inside both allowances and pays $0 either way. The argument there is terms and sovereignty \u2014 the tiles cannot be re-priced, rate-limited, or switched off \u2014 not money. Claiming a saving would be the easiest thing in this whole model to disprove."
+    },
+    {
+      "title": "Taxes, regulatory fees and card fees sit on top of every per-seat number",
+      "detail": "Business VoIP runs ~15-25% above the headline in taxes and regulatory fees; Eventbrite adds card processing on top of its platform fee. None of it is in either column here, so a like-for-like comparison must add it to BOTH sides \u2014 the node's carrier minutes are taxed too."
+    },
+    {
+      "title": "Storage: at this volume the money is pennies, and the quota model is the argument",
+      "detail": "11 GB of live data costs $0.26/mo on S3, $0.17 on R2, $0.08 on B2, and about 2 cents on the node's own disk \u2014 where the disk is ALREADY paid for inside the infrastructure line. So do not sell this as a monthly saving. The real differences are: one shared pool instead of a per-member quota (40 members = 40 accounts to buy), egress you do not meter, and no capacity tier to move up."
+    },
+    {
+      "title": "Storage: the capacity ceiling is real, and it is in the provider's favour",
+      "detail": "Google Workspace Standard pools 2 TB PER USER; Drive and Dropbox sell 2 TB for ~$12/mo. The node has 87 GB free on a 468 GB disk that is already 81% full. Per gigabyte the node wins by 10x; per terabyte of headroom a consumer plan wins. Say both \u2014 the co-op's answer is that a co-op's own documents are not 2 TB, and if they become 2 TB that is a disk purchase, not a tier upgrade."
+    },
+    {
+      "title": "Egress is where the storage bill actually lives \u2014 and the node's limit is its uplink",
+      "detail": "S3 charges $0.09/GB out; R2 charges nothing; the node's disks charge nothing either because the bytes ride the co-op's own connection. But that connection is a domestic or office uplink: a group serving 1 TB/mo of video from a home line will feel it in bandwidth, not in a line item. Self-hosting moves the cost from the invoice to the pipe \u2014 it does not delete it."
+    },
+    {
+      "title": "Chain transaction costs are NOT in this model",
+      "detail": "Chain = Base mainnet (decided 2026-09-13), so on-chain writes cost real money: deposits, withdrawals, transfers, Tier-2 anchor writes, timelock upkeep, and monthly distribution runs. The node's $73/mo infrastructure line carries no chain cost at all. It is deliberately un-priced rather than guessed \u2014 gas has no list price, and a made-up per-transaction figure would discredit the rest of the model. It is also the ONE out-flow that grows as the commons economy works as designed (frequency x groups x members), so it needs a measured rate before it ships.",
+      "source": "docs/design/money-in-and-out.md \u00a72.12"
+    },
+    {
+      "title": "The platform never holds member funds \u2014 and that shapes the whole comparison",
+      "detail": "Money lives in group Safes; the fiat bridge is a vertical fund that is itself a group; the platform fee is $0.00 and that is CONFIGURED, not merely claimed (hievents.yaml APP_SAAS_STRIPE_APPLICATION_FEE_PERCENT = 0). BYO payment rails were considered and REJECTED on 2026-09-13 because a single account holder breaks governance-controlled finance. Consequence for this model: the group's own money handling is not a line the platform can price, because the platform is not in the path.",
+      "source": "docs/design/money-in-and-out.md \u00a74, \u00a75.2"
+    },
+    {
+      "title": "Peer.xyz merchant fees are NOT MODELLED",
+      "detail": "The fiat to USDC rail bills the merchant, not the payer (feePayer: MERCHANT, verified 2026-09-13), so every card payment is an out-flow the platform carries. The fee schedule has not been enumerated, so no number is asserted here. Like gas, this is the cost of the money path working rather than of the platform running."
+    },
+    {
+      "title": "The fiat rail's swap markup is a MEMBER cost, not a platform cost, and is not modelled",
+      "detail": "The provider caps its markup on the fiat->USDC swap at 20% (maxFeeConfig.valuePercentage, confirmed 2026-09-13). It is paid by the payer \u2014 the price of an untraced non-KYC settlement \u2014 so it does not appear in this model's platform lines, but it can be a fifth of a dues payment. No number is asserted: the real markup is per-quote and must be shown to the payer before they pay."
+    }
+  ],
+  "no_direct_comparable": [
+    {
+      "irl": "Local AI / RAG over the group's own docs",
+      "why": "Comparable products bill per seat plus per token, and the documents leave the building."
+    },
+    {
+      "irl": "Coop-api \u2014 the fleet session gateway + event bus",
+      "why": "This is the part that has no product equivalent at all: the glue that makes one identity and one event stream span every app. It exists nowhere to buy."
+    },
+    {
+      "irl": "Group Safe / treasury / governance",
+      "why": "Bank-like and board-like functions sold separately (or not at all) to small organizations."
+    },
+    {
+      "irl": "Per-group numbers instead of per-seat lines",
+      "why": "The carriers sell a line per person; the node rents numbers per GROUP and lets one extension ring several volunteers. No per-seat vendor has a product shaped like that, so it cannot be priced \u2014 it can only be described."
+    }
+  ],
+  "_tiers_help": "Per-user comparables carry `tiers` naming which column(s) they represent: lean = cheapest credible paid tier, standard = the tier with real admin/SSO controls, enterprise = top published or negotiated. Set explicitly, never inferred from list order. Per-org comparables carry no tiers \u2014 they feed the mid-tier column, which uses the cheapest credible entry per slice.",
+  "node_external": {
+    "illustrative": true,
+    "_warning": "Third-party costs the node pays and cannot make free. The honest asterisk on 'shared infrastructure is free': a PSTN number is rented from a carrier in every world, and open source does not change that.",
+    "items": [
+      {
+        "name": "PSTN DIDs (inbound numbers)",
+        "count": 3,
+        "per_unit_month": 1.5,
+        "note": "Wholesale SIP DID rates run roughly $0.50\u2013$2/mo per number. Deliberately per-NUMBER, not per-person: 3 numbers can front an entire group however many volunteers answer them \u2014 that shape difference is the actual argument."
+      },
+      {
+        "name": "Carrier trunk / outbound minutes",
+        "count": 1,
+        "per_unit_month": 0.0,
+        "note": "Left at $0 pending real usage. Outbound PSTN minutes are metered per minute in BOTH worlds; do not claim a saving here without a call-volume figure."
+      }
+    ]
+  },
+  "storage": {
+    "illustrative": true,
+    "_warning": "Storage inputs are MEASURED (du on the host, 2026-09-13), but the hardware cost per TB and the amortization window are assumptions. Every number derived from them is watermarked until a real figure is set.",
+    "measured_on": "2026-09-13",
+    "method": "du -s --block-size=1M on /opt/app/storage, read-only, from the service account",
+    "measured_total_gb": 34.3,
+    "live_data_gb": 11.25,
+    "build_scratch_gb": 23.07,
+    "breakdown": [
+      {
+        "path": "/opt/app/storage/data/minio",
+        "gb": 11.18,
+        "kind": "live",
+        "detail": "maps 10.13 (the basemap) + webstudio-assets 1.02 + docs, matrix-media, chat, plane, rag, profiles, postiz, stalwart, formbricks (all under 15 MB each)"
+      },
+      {
+        "path": "/opt/app/storage/geo-data/web",
+        "gb": 0.07,
+        "kind": "live",
+        "detail": "MapLibre embed + self-hosted Noto glyphs"
+      },
+      {
+        "path": "/opt/app/storage/data/cryptpad",
+        "gb": 0.01,
+        "kind": "live"
+      },
+      {
+        "path": "/opt/app/storage/geo-data/coverage.pmtiles",
+        "gb": 10.13,
+        "kind": "scratch",
+        "detail": "DUPLICATE \u2014 byte-identical to the MinIO maps bucket copy, stored twice"
+      },
+      {
+        "path": "/opt/app/storage/geo-data/sources",
+        "gb": 12.93,
+        "kind": "scratch",
+        "detail": "OSM source data for building the basemap \u2014 reproducible from the build, not needed at runtime"
+      },
+      {
+        "path": "/opt/app/storage/geo-data/tile_weights.tsv.gz",
+        "gb": 0.01,
+        "kind": "scratch"
+      }
+    ],
+    "unmeasured": [
+      "/opt/app/storage/data/postgres \u2014 mode 0700, uid 999; unreadable from the service account, so it is EXCLUDED and this footprint understates"
+    ],
+    "findings": [
+      "The basemap exists TWICE (~10 GB each): /opt/app/storage/geo-data/coverage.pmtiles and the MinIO maps bucket. One copy is redundant.",
+      "12.9 GB is OSM build input (sources/), reproducible from the build and not served at runtime.",
+      "So of 34.3 GB measured, only ~11.3 GB is live data and ~23 GB is build scratch plus a duplicate \u2014 roughly two thirds of the data footprint is reclaimable housekeeping, not working storage."
+    ],
+    "disk": {
+      "capacity_gb": 468,
+      "used_gb": 358,
+      "free_gb": 87,
+      "note": "The DATA is 34 GB; the DISK is 81% full because container images, source checkouts and build artifacts share the volume \u2014 roughly 325 GB beyond /opt/app/storage. Data footprint and platform footprint are different numbers, and only the first one is small."
+    },
+    "hardware_cost_per_tb": 80.0,
+    "amortization_months": 36,
+    "fixed_tiers": [
+      {
+        "vendor": "Google",
+        "tier": "One 100 GB",
+        "capacity_gb": 100,
+        "monthly": 1.99,
+        "source": "Google One US pricing via tech-insider 2026-07",
+        "note": "The smallest tier that covers the node's live data. Sold PER ACCOUNT \u2014 40 members means 40 subscriptions or a Workspace seat each."
+      },
+      {
+        "vendor": "Google",
+        "tier": "One 2 TB",
+        "capacity_gb": 2048,
+        "monthly": 9.99,
+        "source": "tech-insider 2026-07 + cleanor 2026 index",
+        "note": "$0.005/GB if you actually fill it. You will not fill it with 11 GB."
+      },
+      {
+        "vendor": "Dropbox",
+        "tier": "Plus 2 TB",
+        "capacity_gb": 2048,
+        "monthly": 11.99,
+        "source": "tech-insider 2026-07 + cleanor 2026 index",
+        "note": "Free tier is 2 GB \u2014 smaller than one Coop doc folder."
+      },
+      {
+        "vendor": "Amazon",
+        "tier": "Drive 2 TB",
+        "capacity_gb": 2048,
+        "monthly": 11.99,
+        "source": "cleanor 2026 cloud storage price index"
+      }
+    ]
+  },
+  "scale": {
+    "_about": "The at-scale model: what a volunteer movement of 10k-50k participants would pay the per-seat stack, versus what a node costs. The point is NOT that the node is cheaper per seat \u2014 it is that the per-seat product STOPS BEING FOR SALE at exactly the size a movement reaches, which is why small orgs rule the attempt out before pricing it. Two things follow: the ceiling table, and the cost curve.",
+    "_seat_logic": "Participation IS the bill: Slack prices Enterprise Grid per MONTHLY ACTIVE USER, and mail/identity price per provisioned account. So a movement's success is its invoice. Seats are split by who genuinely needs each slice \u2014 chat and identity for everyone, mail for staff and coordinators, functional tools for a sliver \u2014 so the number cannot be dismissed as 'you assumed 10,000 CRM seats'.",
+    "assumptions": {
+      "bandwidth_cost_per_tb": 5.0,
+      "_note": "Cost of moving a TB off the node. Illustrative: a domestic line hides this entirely (it is in the monthly bill already, unmetered), a colo or business circuit prices it. Set to 0 to model the domestic-line case.",
+      "node_host_monthly": 73.0,
+      "_node_host_note": "Same node cost as the base scenario \u2014 the per-host figure, multiplied by hosts."
+    },
+    "scenarios": [
+      {
+        "id": "movement-10k",
+        "label": "A volunteer movement \u2014 10,000 participants",
+        "participants": 10000,
+        "staff": 25,
+        "volunteers": 9975,
+        "seats": {
+          "identity": 10000,
+          "chat": 10000,
+          "docs_wiki": 1500,
+          "project_management": 150,
+          "mail_calendar_docs": 1500
+        },
+        "hosts": 3,
+        "egress_tb_monthly": 1.5,
+        "stewardship_hours": 40,
+        "notes": "Chat and identity for everyone (that is the movement), mail for staff plus coordinators, functional tools for a sliver. Even this narrow allocation is what breaks the per-seat model."
+      },
+      {
+        "id": "movement-50k",
+        "label": "A national movement \u2014 50,000 participants",
+        "participants": 50000,
+        "staff": 60,
+        "volunteers": 49940,
+        "seats": {
+          "identity": 50000,
+          "chat": 50000,
+          "docs_wiki": 6000,
+          "project_management": 400,
+          "mail_calendar_docs": 6000
+        },
+        "hosts": 8,
+        "egress_tb_monthly": 8.0,
+        "stewardship_hours": 120,
+        "notes": "Moderation at this size is a staffed function, not a hobby \u2014 the honest binding constraint is coordination labour, not compute."
+      }
+    ],
+    "ceilings": [
+      {
+        "vendor": "Microsoft",
+        "product": "365 Business Premium (and every Business-family SKU)",
+        "max_users": 300,
+        "price_under": 22.0,
+        "price_over": 39.0,
+        "over_product": "Microsoft 365 E3",
+        "verified_on": "2026-09-13",
+        "source": "urbanit 2026 + microsoft.com 2026 pricing update",
+        "note": "A HARD ceiling across all Business-family plans, not a guideline. At user 301 the product you were buying does not exist; you migrate to Enterprise. M365 E3 rose $36 to $39 on 2026-07-01.",
+        "move_note": "the upgrade the ceiling forces: +$17/user/mo"
+      },
+      {
+        "vendor": "Google",
+        "product": "Workspace Business Starter / Standard / Plus",
+        "max_users": 300,
+        "price_under": 14.0,
+        "price_over": null,
+        "over_product": "Workspace Enterprise (custom quote)",
+        "verified_on": "2026-09-13",
+        "source": "knowledge.workspace.google.com",
+        "note": "Purchasable for a maximum of 300 users; Enterprise has no published price."
+      },
+      {
+        "vendor": "Zoom",
+        "product": "Workplace Business",
+        "max_users": 250,
+        "price_under": 18.32,
+        "price_over": null,
+        "over_product": "Zoom Enterprise (sales-led)",
+        "verified_on": "2026-09-13",
+        "source": "itqlick 2026 Zoom pricing",
+        "note": "Pricing limited to 1-250 licences. Another ~300 wall, on the video tool."
+      },
+      {
+        "vendor": "Slack",
+        "product": "Self-serve plans (Pro / Business+)",
+        "max_users": 500,
+        "price_under": 15.0,
+        "price_over": 11.0,
+        "over_product": "Enterprise Grid (negotiated)",
+        "verified_on": "2026-09-13",
+        "source": "vendorbenchmark 2026 Enterprise Grid benchmarks",
+        "note": "Above ~500 active users Enterprise Grid is the route and it is negotiated, not published. Realised: $11.00-13.50/user/mo at 2,000+ active users, $12-15 at 500-2,000. The lowest verified rate is used here on purpose.",
+        "move_note": "per-seat falls, the bill doesn't: at 10,000 active users $11.00 \u00d7 10,000 = $110,000/mo"
+      },
+      {
+        "vendor": "Airtable",
+        "product": "Team / Business (self-serve)",
+        "max_users": null,
+        "price_under": 20.0,
+        "price_over": null,
+        "over_product": "Enterprise Scale (sales-led)",
+        "verified_on": "2026-09-13",
+        "source": "airtable.com/pricing",
+        "note": "Self-serve caps by plan features and record limits rather than a user count, then goes sales-led."
+      },
+      {
+        "vendor": "Okta",
+        "product": "Workforce Identity (self-serve suites)",
+        "max_users": null,
+        "price_under": 14.0,
+        "price_over": null,
+        "over_product": "Professional / Enterprise (custom quote)",
+        "verified_on": "2026-09-13",
+        "source": "okta.com/pricing",
+        "note": "$1,500/yr minimum, then Professional and Enterprise are quoted. Identity is the line nobody budgets for."
+      }
+    ],
+    "scale_rates": [
+      {
+        "slice": "mail_calendar_docs",
+        "vendor": "Microsoft",
+        "product": "Office 365 E1",
+        "rate": 10.0,
+        "no_user_cap": true,
+        "verified_on": "2026-09-13",
+        "source": "microsoft.com 2026 pricing/packaging update",
+        "note": "The cheapest verified enterprise SKU with NO user cap \u2014 $10.00/user/mo. The honest floor for mail at 10k+ users, and it is the floor precisely because Business Premium stopped at 300."
+      },
+      {
+        "slice": "mail_calendar_docs",
+        "vendor": "Microsoft",
+        "product": "Microsoft 365 E3",
+        "rate": 39.0,
+        "no_user_cap": true,
+        "verified_on": "2026-09-13",
+        "source": "urbanit 2026 (rise from $36 on 2026-07-01)",
+        "note": "What the upgrade from the 300-ceiling actually costs: +$17/user/mo over Business Premium."
+      },
+      {
+        "slice": "chat",
+        "vendor": "Slack",
+        "product": "Enterprise Grid (2,000+ active users)",
+        "rate": 11.0,
+        "no_user_cap": true,
+        "verified_on": "2026-09-13",
+        "source": "vendorbenchmark 2026 (range $11.00-13.50)",
+        "note": "Low end of the verified realised range \u2014 chosen because understating the commercial column is the honest direction."
+      },
+      {
+        "slice": "identity",
+        "vendor": "Okta",
+        "product": "Workforce Identity \u2014 Core Essentials (list)",
+        "rate": 14.0,
+        "no_user_cap": true,
+        "verified_on": "2026-09-13",
+        "source": "okta.com/pricing",
+        "note": "LIST price. At 10,000 accounts this is a negotiated enterprise agreement, so treat $14 as an upper bound \u2014 the commercial column may be lower, never higher."
+      },
+      {
+        "slice": "docs_wiki",
+        "vendor": "Notion",
+        "product": "Business (list, per member)",
+        "rate": 20.0,
+        "no_user_cap": true,
+        "verified_on": "2026-09-13",
+        "source": "notion.com/pricing via review roundup",
+        "note": "List price; Enterprise is custom at this volume."
+      }
+    ],
+    "nonprofit_programs": [
+      {
+        "vendor": "Google",
+        "offer": "Workspace for Nonprofits \u2014 free Nonprofit edition for eligible organizations; paid tiers from ~$3/user/mo",
+        "verified_on": "2026-09-13",
+        "source": "google.com/nonprofits/offerings/workspace + leadsmonky 2026",
+        "why_it_matters": "This is the STRONGEST counter-argument to the thesis and it must be stated before an audience raises it. It meaningfully lowers the commercial column for a registered 501(c)(3). Two limits keep it from dissolving the argument: eligibility is organisational (a loose movement may not qualify), and these programs cover STAFF ACCOUNTS \u2014 they do not cover 10,000 volunteer participants."
+      },
+      {
+        "vendor": "Airtable",
+        "offer": "Nonprofit rate $12/collaborator/mo vs $20 Team list",
+        "verified_on": "2026-09-13",
+        "source": "support.airtable.com",
+        "why_it_matters": "A 40% discount on one slice \u2014 real, and still per-collaborator."
+      },
+      {
+        "vendor": "Microsoft",
+        "offer": "Nonprofit grants and discounts on M365",
+        "verified_on": "2026-09-13",
+        "source": "microsoft.com nonprofit program (not priced here)",
+        "why_it_matters": "Broadly known to exist; deliberately NOT priced in this model because no verified rate was captured. Do not quote a number for it \u2014 cite the program and tell the org to check eligibility."
+      }
+    ],
+    "counterfactual": {
+      "title": "What a movement actually does instead",
+      "detail": "The realistic alternative is not 'pay $2.5M/yr' \u2014 it is Discord, WhatsApp, Facebook Groups, a Google Group and a spreadsheet. Those ARE free at scale, because somebody else's business model pays for them. That is the honest competitor, and it sharpens the argument rather than weakening it: the choice for a small org is between a funder-backed extractive platform and somebody else's free platform that it does not govern and cannot export from. A movement that wants neither currently has nothing \u2014 which is the gap."
+    }
+  },
+  "federation": {
+    "_about": "Org-run nodes that carry infrastructure for each other. This models the ECONOMICS and the incentive design only \u2014 the DNS/edge topology for surviving a takedown stays parked (AGENTS.md) and nothing here requires deciding it.",
+    "_synthesis": "This is not a new mechanism. event-bus-and-group-shapes.md \u00a77 and the commons economy digest already settled: cost is PUBLIC, payment is private-but-provable, and contribution shows as a COVERAGE PROOF with a subsidy gradient (free-rider \u2192 covers-self \u2192 subsidizer). Running a node is simply the IN-KIND form of the same proof: 'I covered \u2265X% of the platform cost by hosting it.' The cost model built here is what makes that proof possible \u2014 you cannot publish a cost you have not measured.",
+    "shared_assets_gb": 11.25,
+    "_asset_note": "The live data footprint from the storage measurement. 90% of it is the 10.13 GB basemap, which is identical for every group on every node \u2014 the single most replicable object in the system.",
+    "profiles": [
+      {
+        "id": "edge",
+        "tier": "B",
+        "label": "Edge node \u2014 the honest entry point",
+        "runs": "nginx (map embed + glyphs) + MinIO (shared-asset replica) + backup target",
+        "apps": 5,
+        "hardware_monthly": 6.0,
+        "storage_gb": 11.25,
+        "labour_hours": 1.0,
+        "contributes": "Serves the shared assets \u2014 basemap tiles, fonts, static JS \u2014 for every group in its region, and holds a full replica of the federation's shared data.",
+        "why_first": "It is the smallest thing that is genuinely useful, and it targets the biggest byte volume in the system. A Raspberry Pi on a connection the org already pays for, or a $6/mo VPS."
+      },
+      {
+        "id": "service",
+        "tier": "C",
+        "label": "Service node \u2014 one pillar for everyone",
+        "runs": "an edge node PLUS one shared pillar: mail relay, Matrix media repo, media transcode, RAG index worker, or a Temporal worker",
+        "apps": 12,
+        "hardware_monthly": 18.0,
+        "storage_gb": 51.25,
+        "labour_hours": 3.0,
+        "contributes": "Absorbs a whole workload for the federation: the node that moves bytes for everyone else's media, or the one that runs the jobs nobody wants on their laptop.",
+        "why_first": "The natural second step: same skills as the edge node, real offload."
+      },
+      {
+        "id": "steward",
+        "tier": "A",
+        "label": "Steward node \u2014 a full instance",
+        "runs": "the entire declared stack (the 37-app instance tree) for its own groups",
+        "apps": 37,
+        "hardware_monthly": 73.0,
+        "storage_gb": 36.25,
+        "labour_hours": 8.0,
+        "contributes": "Everything: its own groups' services, plus the shared assets and whatever pillars it volunteers to carry for the federation.",
+        "why_first": "This is what a member org graduates to \u2014 and what this host is today. It is the only tier that needs a person who can read a log."
+      }
+    ],
+    "replication": {
+      "_thesis": "On owned hardware, redundancy is nearly free. That is the whole argument, and it is arithmetic rather than aspiration: the same object costs $0.23/GB/mo on S3 and $0.00217/GB/mo on a disk the org already bought.",
+      "replica_count_independent": 3,
+      "_note": "Three independent nodes holding the shared assets. Below that, the loss of one node is a visible outage; at three, any single loss is invisible and a rolling upgrade is possible without downtime.",
+      "scenarios": [
+        {
+          "nodes": 1,
+          "coverage_gb": 11.25,
+          "resilience": "no redundancy \u2014 one loss is an outage",
+          "serving_multiplier": 1
+        },
+        {
+          "nodes": 3,
+          "coverage_gb": 33.75,
+          "resilience": "survives any single loss; rolling upgrades possible",
+          "serving_multiplier": 3
+        },
+        {
+          "nodes": 10,
+          "coverage_gb": 112.5,
+          "resilience": "survives multiple losses; each region served locally",
+          "serving_multiplier": 10
+        }
+      ]
+    },
+    "incentive": {
+      "for_the_org": [
+        "No per-seat cost for its own people \u2014 the reason it is reading this model at all.",
+        "Its data on hardware it controls, exportable, with no per-member storage ceiling.",
+        "A governance seat: node operators are the ones who can actually hold the platform accountable.",
+        "Reciprocal hosting \u2014 it stops depending on one host and one person.",
+        "An in-kind coverage proof it can show instead of money: cheaper than a subscription and visibly concrete."
+      ],
+      "for_the_federation": [
+        "Serving capacity multiplies: N nodes serve N times the bytes with no egress invoice.",
+        "N replicas of the shared assets instead of one \u2014 redundancy bought with idle disk.",
+        "Geographic locality: the basemap and media served from near the people using them.",
+        "Failure stops being existential: no single host, no single steward, no single bill."
+      ],
+      "the_proof_extension": "Contribution in kind is the same credential as contribution in money once the cost is published: \"hosted \u22651 node (\u2265X% of platform cost)\" sits on the same gradient as \"covered \u2265 100%\". No new mechanism, no token, no scoreboard \u2014 the settled coverage proof, extended from money to hosting."
+    },
+    "on_ramp": [
+      {
+        "phase": 1,
+        "what": "An edge node",
+        "work": "~1 hour, once",
+        "cost": "~$6/mo or a Pi on the existing connection",
+        "unlocks": "Its region's map tiles + a full replica of shared assets"
+      },
+      {
+        "phase": 2,
+        "what": "An edge node + shared backups",
+        "work": "~1 hour to set a remote target",
+        "cost": "$0 marginal (idle disk)",
+        "unlocks": "Another node's backups no longer live on the node they protect"
+      },
+      {
+        "phase": 3,
+        "what": "A service pillar",
+        "work": "an afternoon, then 3 hrs/mo",
+        "cost": "~$18/mo",
+        "unlocks": "A whole workload lifted off every other node"
+      },
+      {
+        "phase": 4,
+        "what": "A steward node (own instance)",
+        "work": "a weekend, then 8 hrs/mo",
+        "cost": "~$77/mo + labour",
+        "unlocks": "Sovereign services for its own groups, plus federation pillars it volunteers for"
+      }
+    ],
+    "failure_modes": [
+      {
+        "risk": "The steward burns out and the node dies with them",
+        "why_it_is_the_real_one": "This is the failure that ends most volunteer infrastructure, and no amount of architecture prevents it. It is visible in the settled design's own terms: a stale coverage proof IS the signal \u2014 the gradient watches for it, so the federation can see a node going quiet before it disappears.",
+        "mitigation": "Tier the on-ramp so no single person carries a whole stack; require a named second person per node; treat handover as a documented procedure, not a favour."
+      },
+      {
+        "risk": "Version drift across nodes",
+        "why_it_is_the_real_one": "N nodes at different generator versions is how federations rot: one node serves a schema the others don't expect.",
+        "mitigation": "The declarative tree is the defence \u2014 each org has its own instance dir, and `stack-report.py` already reconciles declared-vs-running. Drift is detectable per node; what is missing is anyone acting on the report."
+      },
+      {
+        "risk": "No SLA, no on-call",
+        "why_it_is_the_real_one": "Nobody is paged at 2am. For a co-op's mail and chat, that is a real service-level regression against a paid provider \u2014 and it must be said out loud in any recruitment video.",
+        "mitigation": "Say it. Price it as a trade-off, not hide it. Redundancy at the asset layer (maps, media, docs) is honest to promise; an uptime number is not."
+      },
+      {
+        "risk": "Heterogeneous networks (NAT, residential uplinks, dynamic IPs)",
+        "why_it_is_the_real_one": "An org's node sits behind a consumer router. Serving inbound traffic from one is a different problem from storing data on one.",
+        "mitigation": "An edge node that only holds a replica and serves behind a cache needs far less than one that terminates public traffic. THIS is where the parked DNS/edge question begins \u2014 name it and stop there."
+      },
+      {
+        "risk": "Free-riding",
+        "why_it_is_the_real_one": "If contribution is invisible, the honest org subsidises the strategic one.",
+        "mitigation": "The coverage-proof gradient already designed: positive credential, no shame flag, ranges rather than amounts."
+      },
+      {
+        "risk": "A node hosts other people's data \u2014 and the data is NOT all encrypted",
+        "why_it_is_the_real_one": "This was written as a governance worry. Reading the stack, it is a factual one: MinIO has server-side encryption switched OFF, Postgres rows are plaintext at rest (the design doc says so), and mail and collaborative documents are structurally server-readable. So 'encrypted at rest' would not fix it anyway \u2014 at-rest encryption protects a stolen disk, not the operator, who holds the key. See `federation.encryption_reality`.",
+        "mitigation": "Scope federation by pillar and say which is which: static assets and E2E content are federation-safe today; mail, docs and DB rows require a TRUSTED node. That is a fine answer for a federation of known orgs \u2014 it just has to be stated rather than assumed."
+      }
+    ],
+    "encryption_reality": {
+      "_why_this_is_here": "The federation's trust model was briefly justified with 'all the data is encrypted'. That is not true yet, and the distinction matters more than the fact: encryption AT REST with an operator-held key does NOT make hosting someone else's data acceptable \u2014 the operator has the key. Only end-to-end encryption, where the node never holds the key, delivers 'I don't mind a node hosting my data'.",
+      "tiers": [
+        {
+          "tier": 1,
+          "name": "At rest, operator holds the key",
+          "examples": "LUKS, MinIO SSE-KMS, Postgres PGE",
+          "protects_against": "a stolen disk, an improperly decommissioned drive",
+          "does_NOT_protect_against": "the node operator \u2014 they hold the key",
+          "solves_federation_custody": false
+        },
+        {
+          "tier": 2,
+          "name": "Application-level, platform holds the key",
+          "examples": "encrypted columns, encrypted blobs with a platform master key",
+          "protects_against": "a compromised backup target, a database dump in transit",
+          "does_NOT_protect_against": "whoever runs the app and can call its decrypt",
+          "solves_federation_custody": false
+        },
+        {
+          "tier": 3,
+          "name": "End-to-end, the user holds the key",
+          "examples": "Matrix E2EE room bodies, CryptPad, the group secret vault's k-of-n shares",
+          "protects_against": "the operator, the host, and a seized disk alike",
+          "does_NOT_protect_against": "the endpoint device",
+          "solves_federation_custody": true
+        }
+      ],
+      "current_state": [
+        {
+          "pillar": "Object store (MinIO): docs, mail blobs, media, avatars, webstudio assets",
+          "encrypted": false,
+          "evidence": "infra/instances/dev/apps/minio.yaml:21-23 \u2014 MINIO_KMS_SECRET_KEY_FILE is nulled out, so there is no server-side encryption; objects sit plaintext on disk",
+          "federation_safe": false,
+          "federation_fix": "Client-side AES-GCM before PUT; node holds ciphertext only. Cheapest and largest win \u2014 it covers files, media, attachments, avatars."
+        },
+        {
+          "pillar": "Postgres / Citus rows \u2014 seats, memberships, events, tickets, ledgers",
+          "encrypted": false,
+          "evidence": "docs/design/group-scoping.md:61-63 says it outright: \u201cRLS obscures the rows but the rows still exist in plaintext at rest, and a compromised store reads every group's seats\u201d",
+          "federation_safe": false,
+          "federation_fix": "Split: non-sensitive stays; sensitive -> commitments (group-scoping tier 2, already designed) + blind indexes where equality search must survive."
+        },
+        {
+          "pillar": "Chat \u2014 E2EE room message bodies",
+          "encrypted": true,
+          "evidence": "docs/design/matrix-chat-and-notifications.md:48-50 \u2014 metadata only by construction; ciphertext for the body",
+          "federation_safe": true,
+          "caveat": "message BODIES only. Room metadata, membership, and media in non-E2EE rooms are not covered.",
+          "federation_fix": "Force E2EE on group rooms; client-side encrypt attachments. Metadata is the residual, not the message body."
+        },
+        {
+          "pillar": "CryptPad documents",
+          "encrypted": true,
+          "evidence": "zero-knowledge by design (AGENTS.md, apps/cryptpad.yaml)",
+          "federation_safe": true,
+          "federation_fix": "None needed \u2014 this is the federation-safe document path. Use it in place of OnlyOffice for docs hosted by another org's node."
+        },
+        {
+          "pillar": "Group secret vault",
+          "encrypted": true,
+          "evidence": "docs/design/group-secret-vault.md \u2014 k-of-n shares, plaintext never stored",
+          "federation_safe": true,
+          "federation_fix": "None needed structurally \u2014 but the CODE does not match the design yet: apps/coop-api/src/vault.ts:42 encrypts with a platform-held pgp_sym key. Replace with the designed client-side SSS envelope."
+        },
+        {
+          "pillar": "Documents (OnlyOffice via the docs panel)",
+          "encrypted": false,
+          "evidence": "structural, not a config gap \u2014 collaborative editing requires the server to read the document to render and co-edit it",
+          "federation_safe": false,
+          "federation_fix": "No cryptographic fix keeps collaborative editing working. Either move these docs to the owning group's own node, or use CryptPad."
+        },
+        {
+          "pillar": "Mail (Stalwart)",
+          "encrypted": false,
+          "evidence": "structural \u2014 an SMTP/IMAP server must read the message to deliver, index and scan it. Only PGP/S-MIME makes it end-to-end, and that breaks most clients and all server-side search",
+          "federation_safe": false,
+          "federation_fix": "No honest full fix. Trusted node, or mail local to the owning group's node. PGP/S-MIME is a per-user opt-in that costs server-side search and most clients."
+        },
+        {
+          "pillar": "Maps / static shared assets",
+          "encrypted": "n/a \u2014 public by design (ODbL basemap)",
+          "evidence": "minio `maps` bucket is public-read by intent",
+          "federation_safe": true,
+          "federation_fix": "None \u2014 public by design, which is why federation phase 1 costs nothing."
+        },
+        {
+          "pillar": "Treasuries",
+          "encrypted": true,
+          "evidence": "ZK commitments + nullifiers on-chain (private-treasury-guards-ledgers.md)",
+          "federation_safe": true,
+          "federation_fix": "None \u2014 ZK commitments on-chain already."
+        }
+      ],
+      "design_consequence": "Federation can distribute STATIC assets and E2E content today: maps, static JS/glyphs, chat bodies, CryptPad, vault shares, treasury state. Distributing MAIL, DOCS or DATABASE ROWS to a node you do not trust needs either (a) end-to-end encryption for those layers \u2014 structurally hard for mail and for collaborative documents \u2014 or (b) the honest admission that a node carrying them is a TRUSTED node. Option (b) is fine and probably right for a co-op federation of known orgs; it just has to be a stated property, not an assumed one.",
+      "what_would_make_the_claim_true": [
+        "Enrol MinIO in SSE-KMS with a key each node holds separately \u2014 moves the object store from tier 1 to \u2018no\u2019 on custody, because the node still holds the key. Necessary for disk theft, insufficient for federation trust.",
+        "Encrypt Postgres at rest (tier 1, same limitation) or move group-scoped secrets to commitments (tier 3 \u2014 already designed for membership; not for event/ticket rows).",
+        "For mail: accept it as a trusted-node pillar, OR ship client-side PGP/S-MIME and give up server-side search. There is no third option that keeps a normal mail client working.",
+        "For documents: keep them on the owning group's own node, or accept a trusted node. Collaborative editing is not end-to-end-encryptable without going back to a CRDT-in-the-client design."
+      ],
+      "doc": "docs/design/federation-encryption-and-access.md",
+      "_doc_note": "The full fix design lives in that doc. This table is the inventory it operates on: what is encrypted today, and what each pillar's federation target is."
+    },
+    "adversary_doc": "docs/design/adversary-models-and-sector-fit.md",
+    "_adversary_note": "TWO CLASSES ARE UNIVERSAL, so the answer to them is universal \u2014 and that is the finding that matters: the state is a permanent constraint (it cannot be opted out of, it can compel third parties, it rewrites its own rules, it can act unseen) and internal tensions apply to every group of every size. Together they force one rule: THE PLATFORM CAN NEVER BE THE TRUST ANCHOR, because the state can compel it. That makes the whole encryption design the floor for every sector \u2014 including a food co-op whose data is public but whose platform must still not be a compellable concentration point. Sectors are then MODIFIERS on that core, not separate threat models, and the two classes vary along different axes: internal tensions scale with SIZE and structure; external adversaries scale with POLITICS and activity. Full analysis, including the eight invariant internal tensions (leaving member, over-permission, future self, operator, platform steward, the FOUNDER, the coerced member, the wronged member), the four modes the state can take (hostile / indifferent / gatekeeper / dependency), and the sector rows: adversary-models-and-sector-fit.md.",
+    "modes": [
+      {
+        "mode": "Open",
+        "fits": "tool libraries, childcare rotas, public events \u2014 the parts that are MEANT to be public",
+        "membership_visibility": "public roster \u2014 for the public parts only",
+        "content": "plaintext \u2014 a public good",
+        "keys": "none",
+        "blocked_by": "nothing"
+      },
+      {
+        "mode": "Guarded",
+        "fits": "mutual aid, advocacy, practical programs, food hubs and adoption co-ops",
+        "membership_visibility": "in-group only, non-enumerable to outsiders",
+        "content": "client-side encrypted",
+        "keys": "per-group DEK, k-of-n to members",
+        "blocked_by": "the vault fix (custodial \u2192 non-custodial)"
+      },
+      {
+        "mode": "Compartmented",
+        "fits": "unions in formation, community safety, peer support, identity-threatened coalitions (e.g. Somali / Latino / Black farmers organising together)",
+        "membership_visibility": "commitment-only \u2014 not even the platform can enumerate",
+        "content": "encrypted per sub-group, separate DEKs per compartment",
+        "keys": "epoch keys; rotation on membership change",
+        "blocked_by": "epoch keys + the commitment tier (group-scoping \u00a73 tier 2, designed and deferred) + per-pair visibility (a group is not one perimeter)"
+      },
+      {
+        "mode": "Deniable",
+        "fits": "rave, subculture, hostile jurisdictions, entheogenic",
+        "membership_visibility": "no central roster; membership proven on demand",
+        "content": "encrypted; no persistent plaintext on member devices",
+        "keys": "short-lived keys, frequent epoch rotation",
+        "blocked_by": "epoch keys + device policy + short-lived grants"
+      }
+    ],
+    "universal_core": {
+      "_claim": "Universal to every sector, therefore buildable now without choosing pilots. Sector choice only decides which MODE ships next.",
+      "state_modes": [
+        {
+          "mode": "Hostile / targeted",
+          "answer": "Minimisation \u2014 nothing to seize, nothing to name",
+          "primitive": "client-side encryption, non-enumeration, erasure sharding"
+        },
+        {
+          "mode": "Indifferent",
+          "answer": "Nothing. This is where encryption theatre lives.",
+          "primitive": "none \u2014 and saying so is the honest move"
+        },
+        {
+          "mode": "Gatekeeper",
+          "answer": "Selective disclosure \u2014 prove compliance without revealing the data",
+          "primitive": "selective-disclosure proofs (zk-badges, coverage proofs, commitments)"
+        },
+        {
+          "mode": "Dependency",
+          "answer": "Provable compliance, kept separate from member data",
+          "primitive": "proofs + separation of compliance records from member records"
+        },
+        {
+          "mode": "Instrument (steered)",
+          "answer": "Contest capability \u2014 prove your own account of events, fast, without disclosing everything. No amount of good intent substitutes for having the evidence already.",
+          "primitive": "tamper-evident custody logs + commitments (commit now, reveal later, selectively)"
+        }
+      ],
+      "internal_tensions": [
+        {
+          "tension": "The leaving member",
+          "why_universal": "every group has departures; E2EE cannot retroactively un-share",
+          "lever": "epoch keys"
+        },
+        {
+          "tension": "The over-permissioned member",
+          "why_universal": "access accumulates; roles drift",
+          "lever": "least privilege, per-object access, no bulk export by default"
+        },
+        {
+          "tension": "The group's future self",
+          "why_universal": "every group eventually has contested succession or a faction",
+          "lever": "constitutional vs ordinary governance; timelocks"
+        },
+        {
+          "tension": "The operator and the platform steward",
+          "why_universal": "whoever runs the box and ships the code",
+          "lever": "client-side keys; the platform never holds a DEK"
+        },
+        {
+          "tension": "The founder",
+          "why_universal": "holds every key, knows every password, won't leave or leaves badly",
+          "lever": "handover as a documented procedure; keys held by a threshold, never by a person"
+        },
+        {
+          "tension": "The coerced member",
+          "why_universal": "any member can be pressured; only the probability is sector-specific",
+          "lever": "deniability, compartmentalization, no single person holding everything"
+        },
+        {
+          "tension": "The nested boundary",
+          "why_universal": "any group with sub-groups has a parent/child visibility question",
+          "lever": "separate DEKs per compartment; no inherited visibility"
+        },
+        {
+          "tension": "The wronged member / interested party",
+          "why_universal": "someone with a stake in an outcome is also someone with access",
+          "lever": "recusal as a governance primitive; conflict-of-interest records in the governance axis"
+        }
+      ],
+      "_founder_note": "The founder is the same adversary as the node steward's burnout, one level down: a single person as the trust boundary. 'Require a named second person per node' is the group-level mitigation too \u2014 one feature, not two.",
+      "build_first": [
+        "The vault fix \u2014 custodial \u2192 non-custodial (a platform-held key defeats every mode)",
+        "Non-enumeration as a first-class property (group-scoping \u00a73 tier 2 \u2014 designed, deferred, now promoted)",
+        "Selective-disclosure proofs (the gatekeeper-state answer; one family unblocks unions, funders, alt-health, credit unions)",
+        "Contest readiness \u2014 commit now, reveal later, WITH ITS SUBSTRATE: the counter-signed CUSTODY CHAIN (docs/design/custody-chain-and-contest-kit.md). Every group can be falsely accused, so an evidence-ready, tamper-evident record of your own events is a universal capability \u2014 and a contest claim without the chain behind it is only a promise. Turns the 'cannot be exculpated' trade into a non-choice: provable without being readable.",
+        "Epoch keys (the leaving member is universal, not a corner case)"
+      ],
+      "then_per_sector": [
+        "Compartmented mode \u2014 unions in formation, community safety, peer support (highest value: its absence is a safety problem)",
+        "Deniable mode \u2014 rave, subculture, hostile jurisdictions, entheogenic",
+        "Open mode \u2014 deliberately ABSENT privacy machinery, so the platform stops reading as a surveillance product to groups that need none"
+      ]
+    },
+    "economic_adversaries": [
+      {
+        "id": "E15",
+        "name": "The corporate incumbent",
+        "capability": "outspends you by orders of magnitude; can buy your distributor, processor, landlord or certifier; can price below cost until you fold; can litigate to exhaust you",
+        "winning": "reads your footprint \u2014 supply chain, land pipeline, volumes, membership, capital plan \u2014 and interdicts the weakest link before you reach scale"
+      },
+      {
+        "id": "E16",
+        "name": "The chokepoint holder (distributor, co-packer, certifier, lender, landlord, insurer)",
+        "capability": "sits between you and the market; is not a member; is often acquirable or pressure-able",
+        "winning": "sees the whole network by virtue of its position"
+      },
+      {
+        "id": "E17",
+        "name": "The asset speculator",
+        "capability": "reads public land records, outbids, holds, waits",
+        "winning": "buys the land under the farms the co-op depends on and sets the rent"
+      },
+      {
+        "id": "E18",
+        "name": "The identity-based violent actor (three domains at once)",
+        "capability": "PHYSICAL harm to people, property, crops, water; INFORMATIONAL attacks \u2014 planted negative coverage, rumours, manufactured scandal; SUPPLY-CHAIN sabotage \u2014 contaminated inputs, spoiled storage, tampered equipment",
+        "winning": "the group is discredited, shut down or displaced. The incident IS the attack: a contamination event destroys a food business permanently even when the sabotage is later proven"
+      }
+    ],
+    "footprints": [
+      {
+        "footprint": "Published",
+        "reconstructible": "the deliberately sparse front: offerings, hours, contact",
+        "fits": "retail-facing co-ops, public events"
+      },
+      {
+        "footprint": "Sparse",
+        "reconstructible": "existence and rough purpose; nothing that maps the network",
+        "fits": "most operational groups, food hubs"
+      },
+      {
+        "footprint": "Unreadable",
+        "reconstructible": "not even a reliable count",
+        "fits": "identity-threatened coalitions, supply-chain organisers, hostile jurisdictions"
+      }
+    ],
+    "_footprint_note": "Mode and footprint are ORTHOGONAL, chosen independently. Mode governs how members and content are protected; footprint governs how legible the organisation is to an outsider. A food hub wants a PUBLISHED front and an UNREADABLE back. The footprint applies to the PROJECTION, never the store of record: a Published front is rendered from the encrypted back and stays sparse by construction. This is the correction to the first version of the analysis, which filed food co-ops under Open mode and conflated a public storefront with a public organisation. Rule of thumb: 'the data is public' is almost never true of an organisation \u2014 only of its projection.",
+    "_food_sector_correction": "Food co-ops are NOT Open mode. The incumbent is an economic adversary (E15) that can pick a smaller coalition apart link by link, and at scale a coalition DISRUPTS the status quo in a way that invites adversarial behaviour \u2014 even for food. Three sub-cases need different profiles: the adoption/disruption co-op (Sparse or Unreadable footprint), the identity-threatened coalition (e.g. Somali, Latino, Black farmers organising together \u2014 Unreadable, with non-enumeration as a SAFETY property and per-member exposure tiers because the group is not one perimeter), and the input-refusers (the certification conflict). Two principles fall out: (1) NO SINGLE COUNTERPARTY MAY RECONSTRUCT THE COALITION \u2014 anti-correlation across the certifier, lender and distributor, because each is acquirable; shard the VIEW, not just the storage; (2) the CERTIFIER IS A PRIVACY DECISION \u2014 a private accredited certifier holds traceability records privately, a state program is a public agency whose records may be obtainable by anyone who files.",
+    "certification_conflict": {
+      "_what": "Certified organic production is legally required to be traceable \u2014 the food-sector twin of the union's statutory record duty, and the second instance of the gatekeeper pattern. The map a coalition wants illegible is the map it is obliged to document.",
+      "citation": "7 CFR Part 205 (National Organic Program)",
+      "requirement": "'Fully disclose all activities and transactions of the certified operation, in sufficient detail as to be readily understood and audited'; records must span purchase/acquisition through production to sale or transport, and be traceable back to the last certified operation.",
+      "practically": "~5-year retention, annual inspection including a TRACEBACK exercise (finished product back to each ingredient) and a MASS-BALANCE exercise (quantities reconcile).",
+      "the_answer": "Selective disclosure: prove traceability TO THE CERTIFIER without the map being readable by anyone else who can obtain it.",
+      "actionable": "The choice of certifier is a privacy decision \u2014 private accredited certifier vs state program (public agency, records obtainable). Put it in the onboarding flow."
+    },
+    "convergent_adversaries": {
+      "_concept": "Adversaries converge without coordinating. E15 (the incumbent) and E18 (the violent actor) want the same outcome, and their methods compose into a chain neither has to plan.",
+      "chain": "subtle sabotage \u2192 food-safety incident \u2192 regulatory action \u2192 market vacancy the incumbent fills",
+      "consequences": [
+        "The incident IS the attack \u2014 the reputational damage persists even when the sabotage is proven, so detection is not the goal, contestability is.",
+        "The state can be recruited as an unwitting step (the Instrument mode) \u2014 a plausible complaint enlists an inspector at no cost to the adversary.",
+        "The weakest link is whoever has the least to lose \u2014 often a counterparty, not a member."
+      ]
+    },
+    "contest_readiness": {
+      "_why": "The analysis assumed the problem is BEING READ. This adds the opposite: BEING ACCUSED. Same primitive family, used in the other direction.",
+      "modes": [
+        {
+          "mode": "Selective disclosure (positive)",
+          "question": "how are we doing?",
+          "consumers": "certifiers, funders, regulators, members"
+        },
+        {
+          "mode": "Contest readiness (defensive)",
+          "question": "what actually happened, and who held custody?",
+          "consumers": "an inspector, a court, an insurer, the press"
+        }
+      ],
+      "unification": "Both are commitments + proofs + tamper-evident logs + selective reveal. Together they RESOLVE the 'cannot be exculpated' trade: the false choice was between unreadable and able-to-prove; the answer is COMMIT NOW, REVEAL LATER, SELECTIVELY \u2014 provable without being readable, with the group choosing when and to whom.",
+      "mechanisms": [
+        "Signed custody chain (who signed for what, when) \u2014 the hash-chained ledger tier applied to GOODS instead of credits",
+        "Counter-signed receipts between counterparties \u2014 a disputed delivery carries two signatures, neither alterable alone",
+        "Anchored records \u2014 periodic anchors to an external witness, so a later 'the log was edited' claim is checkable",
+        "An incident log shaped as evidence (timestamps, custody, signatures, no retroactive edits) \u2014 it will be read by an insurer, a regulator or a court"
+      ],
+      "note_on_certification": "This flips \u00a75.9: the traceability records a certified operation is OBLIGED to keep become its DEFENCE KIT \u2014 provided they are the co-op's own and tamper-evident, not only in the certifier's file.",
+      "cannot": "Stop a lie. The platform can own a channel, pre-position signed/dated statements of fact (so a smear meets verifiable priors instead of a vacuum), and produce evidence fast. Selling reputation defence as a technical guarantee would be the same dishonesty as selling disk encryption as protection from the operator."
+    },
+    "_footprint_attack_surface": "Illegibility is ATTACK-SURFACE REDUCTION, not only disclosure control: if an outsider cannot see who supplies what, they cannot choose the highest-leverage node to attack. A coalition with an unreadable supply chain is harder to interdict AND harder to discredit by proxy \u2014 a second, independent argument for the footprint axis.",
+    "custody_chain": {
+      "doc": "docs/design/custody-chain-and-contest-kit.md",
+      "_what": "Append-only, hash-chained, COUNTER-SIGNED log of custody events for physical goods \u2014 the Tier-2 ledger substrate (off-chain, hash-chained) applied to GOODS moving instead of people contributing. A Tier-2 SIBLING, not a fourth ledger.",
+      "why": "Contest readiness without a tamper-evident record is just a promise. The incident IS the attack, so the group must be able to answer 'what did you receive, from whom, when, and who had custody' precisely and verifiably \u2014 often before it gets a chance to explain, because the demand arrived via the state's INSTRUMENT mode after someone else's complaint.",
+      "the_trick": "The chain is PUBLICLY VERIFIABLE and PRIVATELY READABLE: record commitments and chain links are publishable/anchored; record content (parties, quantity, conditions) is encrypted to the parties; a disclosure reveals ONE record plus its inclusion proof against an anchored root \u2014 not the chain. So it proves facts about the past while keeping the network illegible, which EXTENDS the footprint axis rather than undermining it.",
+      "anchoring": "Periodic Merkle roots anchored outside the operator's control (the Base/Safe stack, optionally co-signed by member devices). An operator who stops anchoring is VISIBLE \u2014 a liveness limit you can see, which is the point.",
+      "evidence_needs_third_parties": "Self-signed records prove only that the group is consistent with itself. Third parties sign their OWN records into the chain \u2014 an inspector, a lab, a buyer \u2014 so a claim is backed by someone with no incentive to lie for the group. This is also what makes the certification burden pay off twice: the traceability records a certified operation must keep become its defence kit.",
+      "proves_vs_not": {
+        "proves": [
+          "a record existed at a time and has not been altered since (with an anchor)",
+          "both parties agreed to a transfer",
+          "the order of custody, and where a chain demonstrably broke",
+          "that a named third party attested a fact"
+        ],
+        "does_not_prove": [
+          "that the goods were what the record says \u2014 A SIGNED LIE IS STILL A LIE",
+          "that either party was honest or uncoerced at signing",
+          "that nothing happened off-chain",
+          "that the attestation was correct"
+        ],
+        "the_false_claim_to_avoid": "'we can prove our food is safe'. The true claim is narrower and better: 'we can prove our records are real, and show exactly where custody was held if something goes wrong.'"
+      },
+      "use_cases": [
+        "Inputs and produce \u2014 the sabotage case: prove custody held, seals intact, and the break point",
+        "Seed provenance \u2014 a SIGNED LINEAGE proves a seed line's origin without publishing the exchange network (the no-GMO / no-commercial-input coalition's exact need)",
+        "Cash and treasury in transit; tools and equipment loans; medicine and herbal preparations",
+        "Incident logs \u2014 evidence-shaped records of contamination, theft or damage for insurers and regulators",
+        "Federation-level: a node's own custody handovers (backups, erasure shares, key ceremonies) get the same treatment for free"
+      ],
+      "work_item": {
+        "position": "build #4 in the universal core, as the substrate for contest readiness",
+        "steps": [
+          "Record type + hash-chain substrate (reuse the Tier-2 mechanism \u2014 small, the shape exists)",
+          "Counter-signature flow, with append-a-correction rather than edit",
+          "Encrypted content + commitment structure (same per-group DEK and selective-reveal machinery)",
+          "Anchoring \u2014 periodic roots to Base, optional member co-signature",
+          "Third-party signing (inspector/lab/buyer) \u2014 a UX problem more than a crypto one"
+        ],
+        "default": "OFF by default, per group. A two-person tool library does not need a custody chain; a farming coalition with certified inputs and a sabotage risk does."
+      },
+      "open_decisions": [
+        "Who hosts the chain \u2014 the group's own node (operator can drop records; detectable via anchors, not preventable) or sharded/replicated across the federation (cheap at this data size, removes the single-custodian rewrite risk)?",
+        "Anchor cadence and who pays (batch to Base; group or federation subsidy)",
+        "Who may counter-sign, and what happens when a counterparty REFUSES \u2014 the design should allow a one-sided record marked UNCOUNTER-SIGNED rather than silently missing",
+        "The platform never holds the plaintext \u2014 same rule as the vault; the group operates the chain, the platform is an optional relay"
+      ]
+    },
+    "chilling_effect": {
+      "doc": "docs/design/chilling-effect-and-the-story.md",
+      "thesis": "The primary harm happens BEFORE any adversary acts. A group that anticipates them changes what it does, so the leak never has to occur for the damage to be done \u2014 THE EXPECTATION IS THE MECHANISM.",
+      "tells": [
+        "let's talk about that in person",
+        "don't put that in the chat",
+        "who else knows?",
+        "let's not put it in writing",
+        "a group chat named after something innocuous",
+        "screenshots quietly forbidden",
+        "no minutes, no member list, no written plan \u2014 on purpose",
+        "a second phone, a second number",
+        "recruiting by whisper: 'I know someone'",
+        "deliberately staying small",
+        "'we'll deal with that later'"
+      ],
+      "the_swap": "Being unrecorded feels like safety and functions as AMNESIA: no institutional memory, no proof a decision was made, no onboarding path, nothing to contest with, no case for a funder, no succession, no leverage. The fear buys safety and pays in capability \u2014 a trade almost never named out loud.",
+      "the_loop": [
+        "fear of the adversary",
+        "nothing written down",
+        "nothing provable",
+        "no funding, no growth, no leverage",
+        "fragility",
+        "more fear"
+      ],
+      "break_point": "BREAK IT AT 'nothing written down' \u2014 the cheapest link, and the only one the platform controls. Everything else in the design is downstream of that choice.",
+      "fear_table": [
+        [
+          "If I write it down, it can be seized or leaked",
+          "nothing written; strategy stays verbal",
+          "client-side encryption at rest; operator-blind storage",
+          "a DEVICE seized with the key still yields plaintext \u2014 device policy is the member's"
+        ],
+        [
+          "If we recruit openly, the list gets out",
+          "whisper recruiting; no public invitation",
+          "roster-less membership \u2014 provable, not enumerable",
+          "someone already in the room can still talk"
+        ],
+        [
+          "If our people are identifiable, they're targets",
+          "the most vulnerable never join; allies excluded",
+          "pseudonymous seats; commitment membership; per-pair visibility",
+          "physical security is not something the platform can provide"
+        ],
+        [
+          "If we're the visible face, we'll be attacked",
+          "no public voice, no spokesperson",
+          "a published front, unreadable back \u2014 sparse projection",
+          "a lie can still be told about you"
+        ],
+        [
+          "If we keep records, they'll be used against us",
+          "no minutes, no votes, no audit trail",
+          "tamper-evident records + contest readiness",
+          "A SIGNED LIE IS STILL A LIE"
+        ],
+        [
+          "If we take money, we'll owe someone",
+          "cash in a drawer; no treasury, no grants",
+          "private-but-provable treasury; coverage proofs",
+          "cash still exists, and so do the people who want control of it"
+        ],
+        [
+          "If we get big, we can't manage it",
+          "deliberately staying small",
+          "no per-seat cost curve; modes that scale",
+          "coordination labour is real \u2014 the platform doesn't do the moderating"
+        ],
+        [
+          "If we use one tool, we're dependent",
+          "five tools, five lists, no memory",
+          "exportable data; self-hostable; federated nodes",
+          "migration is work, and the first one is the hardest"
+        ],
+        [
+          "Nobody will understand our way of working",
+          "the rules live in people's heads",
+          "shapes: roles, config, governance encoded per group",
+          "it is still people \u2014 the software only holds the rules"
+        ]
+      ],
+      "comparison_rule": "SIGNAL IS EXCELLENT AND WE DO NOT BEAT IT AT MESSAGING. Any claim otherwise is false on its face. The argument is not 'our chat is more private' \u2014 it is 'those are messaging tools; you are trying to be an ORGANISATION.'",
+      "tools": [
+        [
+          "Signal",
+          "best-in-class E2EE messaging; open source; battle-tested; minimal metadata; free",
+          "roster-less membership; an archive that survives a lost phone (by design); a verifiable vote; any proof to an outsider; succession; reach without a phone number; integration",
+          "A Signal group is a CONVERSATION. The moment you need an organisation, you are using a filing cabinet made of chat"
+        ],
+        [
+          "WhatsApp",
+          "reach \u2014 in much of the world everyone already has it; E2EE content; broadcast",
+          "hidden membership; escape from Meta's address-book and metadata graph; immunity from ToS enforcement; structured export; any governance",
+          "The RELATIONSHIPS are the dataset, not the messages"
+        ],
+        [
+          "Discord",
+          "community features, voice, events, moderation tooling \u2014 good UX at scale",
+          "E2EE in practice; hiding anything from the platform or admins; survival of a ToS ban; guaranteed export",
+          "a well-run SURVEILLANCE-FRIENDLY community platform. Fine for a public community, poor for a threatened one"
+        ],
+        [
+          "SMS",
+          "universal; no app; works for members with no smartphone",
+          "any privacy at all \u2014 plaintext, carrier-retained, trivially obtained",
+          "use it for logistics, never for anything that matters"
+        ],
+        [
+          "Facebook Groups",
+          "reach and familiarity",
+          "everything above",
+          "the group is Meta's asset"
+        ]
+      ],
+      "the_five_gaps": [
+        "Membership without exposure \u2014 there is NO roster-less membership in any of them; being in the group means every other member and usually the platform sees you",
+        "Decisions that are records \u2014 no quorum, no recusal, no ratification, no verifiable tally, no provable minutes. SCREENSHOTS ARE NOT GOVERNANCE",
+        "Continuity across people \u2014 history lives on devices, administration lives with whoever created the group, and there is no succession",
+        "Facts you can prove to an outsider \u2014 dues, attendance, a vote, a delivery, a safety record: impossible from chat, for you AND against you",
+        "One identity across the work \u2014 five silos means five invitations, five member lists, five copies of the roster to leak"
+      ],
+      "interop_stance": [
+        "Do not demand migration: broadcast to WhatsApp and SMS, make the DECISIONS AND RECORDS happen on the platform. A co-op only reachable by people with a login is a co-op that excludes",
+        "A bridge is NOT a privacy upgrade: a Matrix bridge to WhatsApp terminates the encryption \u2014 the bridge sees plaintext \u2014 so it adds a new custodian rather than removing one. Say it plainly",
+        "When to keep using Signal: a small group of known people, a conversation, nothing needing governance or a record. Keep it \u2014 that is the pitch working, not failing"
+      ],
+      "guardrails": [
+        "Never 'more private than Signal' for messaging \u2014 false, and one informed audience member ends the pitch",
+        "Never 'your data is safe on any node' (the forbidden claim from federation-encryption-and-access.md)",
+        "Never imply protection at the physical layer (seized device, raid, abusive partner with the passcode)",
+        "Never imply a bridge makes WhatsApp private",
+        "Never claim encryption removes the need for trust \u2014 it relocates WHO must be trusted",
+        "Never claim the platform stops a lie \u2014 it makes your own account checkable",
+        "NEVER sell today's capability as tomorrow's: as of 2026-09-13 the shipped parts are one identity, groups/seats, events and ticketing, chat, files/docs, and a self-hosted node. The modes, the vault fix, selective-disclosure proofs and the custody chain are DESIGNED, NOT BUILT. The chilling-effect story is true today; the mitigations must be spoken as commitments with a stated timeline"
+      ],
+      "ships_with": "V11 \u00b7 The discussion that didn't happen (intro-video-series.md) \u2014 pair with V9: V9 removes the excuse of cost, V11 removes the excuse of fear",
+      "thesis_statement": "You don't have to be doing something morally wrong to be afraid. You just have to know you're up against systemic challenges, or a larger status quo poised against your direction \u2014 which is usually anti-cooperation and pro-monopolistic-capital. (Robbie, 2026-09-13)",
+      "thesis_why": "IT REQUIRES NO CONSPIRACY. Nothing in it claims anyone is out to get you \u2014 the threat is a GRADIENT, the default direction of the environment, and a gradient needs no villain to run one way. That is its rhetorical AND evidentiary strength: you never have to prove intent, so an audience that resists the word 'villain' has nothing to argue with. It also REMOVES THE SHAME: organizers read their own caution as being secretive, when the correct reading is declining to hand an advantage to someone who already has one.",
+      "thesis_lines": [
+        "You're not hiding something wrong. You're declining to hand over an advantage.",
+        "Privacy isn't a confession. It's a negotiating position.",
+        "The 'nothing to hide' answer is only available to people already swimming with the current."
+      ],
+      "thesis_measurable": "A claim about fear would normally be unfalsifiable \u2014 which is why the cost model, the 300-user wall and this analysis matter. They are not primarily about money or features: THEY ARE EVIDENCE THAT THE CURRENT RUNS ONE WAY. V9 is not a pricing video; it is a proof of the gradient.",
+      "current_defaults": [
+        [
+          "Scale is priced \u2014 cost tracks headcount",
+          "growth is punished by unit economics, precisely when the group is gaining leverage"
+        ],
+        [
+          "Self-serve ends at ~300 users",
+          "the moment you're big enough to matter you're in a procurement process you have no staff for"
+        ],
+        [
+          "Legibility is a requirement, not an option",
+          "every tool wants a roster, a real name, a phone number \u2014 the group's shape is the entry price"
+        ],
+        [
+          "Continuity is rented",
+          "records, history and admin rights live in someone else's account"
+        ],
+        [
+          "Exit is expensive",
+          "export is partial, migration is manual, and switching cost rises with use \u2014 hostage value grows"
+        ],
+        [
+          "The free tier is someone else's business model",
+          "free at scale because a third party's incentives pay for it"
+        ],
+        [
+          "Deplatforming is a business decision",
+          "an availability attack with no appeal, and no court to appeal it to"
+        ]
+      ],
+      "current_no_intent": "NO STEP IN THAT LIST REQUIRES ANYBODY TO WISH A CO-OP HARM. That is the whole point \u2014 and it is why the argument is unanswerable.",
+      "inversions": [
+        [
+          "Price scales with headcount \u2192 growth is punished",
+          "fixed infrastructure cost \u2192 participation is free at the margin"
+        ],
+        [
+          "Self-serve ends at 300 users \u2192 sales-led procurement",
+          "no user ceiling at all"
+        ],
+        [
+          "The vendor holds your data on the vendor's terms",
+          "client-side keys; operator-blind storage"
+        ],
+        [
+          "A single vendor is a single point to buy, ban or re-price",
+          "federated nodes; exportable; open source"
+        ],
+        [
+          "Membership is visible to the platform and to each other",
+          "roster-less membership is possible"
+        ],
+        [
+          "Records live in a vendor account and die with people",
+          "group-held encrypted archive with succession"
+        ],
+        [
+          "The platform decides who may act",
+          "the group's own governance decides"
+        ],
+        [
+          "Someone else's business model pays for free",
+          "the group's own contributions cover the cost, publicly"
+        ]
+      ],
+      "inversions_note": "If the environment is adversarially defaulted toward concentration, the platform's job is structural counter-weighting. EVERY DESIGN CHOICE HERE IS THE INVERSE OF A DEFAULT \u2014 which makes the cooperative identity the ENGINEERING SPEC, not a moral flourish.",
+      "telling_rules": [
+        "Never allege a villain \u2014 show the shape. More persuasive, and also TRUE: libel-proof and impossible to rebut with 'who, exactly?'",
+        "Name the asymmetry, not the actor. 'The menu ends at 300 users' is checkable; 'they don't want you to grow' is not.",
+        "Use the numbers as evidence of the GRADIENT, not just the bill \u2014 the cost model's job is to make an unfalsifiable fear falsifiable.",
+        "Present every mitigation as an INVERSION: here's the default, here's what we did instead.",
+        "Close on the identity claim: cooperation is a deliberate counter-current \u2014 not sentiment, it is the reason the architecture looks the way it does."
+      ],
+      "series_spine": {
+        "V9": "the menu ends at 300 users \u2014 growth is punished at the moment it would matter",
+        "V3/V8": "scale is priced; the free tier is someone else's business model",
+        "V11": "legibility is the entry price \u2014 so groups self-censor before anyone acts",
+        "V4": "continuity is rented, and a vendor can be bought or ban you",
+        "V2": "exit is expensive, so the switching cost grows with use"
+      }
+    }
+  }
+}

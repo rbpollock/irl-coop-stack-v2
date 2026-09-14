@@ -38,10 +38,10 @@ index 7ca5092..1af41b3 100644
  ## step 3: setup production runner
 diff --git a/apps/web/app/api/auth/gate-sso/route.ts b/apps/web/app/api/auth/gate-sso/route.ts
 new file mode 100644
-index 0000000..d693e86
+index 0000000..c4e5943
 --- /dev/null
 +++ b/apps/web/app/api/auth/gate-sso/route.ts
-@@ -0,0 +1,235 @@
+@@ -0,0 +1,261 @@
 +import { createHmac } from "node:crypto";
 +
 +import { createId } from "@paralleldrive/cuid2";
@@ -51,6 +51,7 @@ index 0000000..d693e86
 +import { Prisma } from "@formbricks/database/prisma";
 +import { SESSION_MAX_AGE, WEBAPP_URL } from "@/lib/constants";
 +import { env } from "@/lib/env";
++import { IRLCOOP_WORKSPACE_HEAD_SCRIPTS, IRLCOOP_WORKSPACE_STYLING } from "@/lib/irlcoop-skin";
 +import { getValidatedCallbackUrl } from "@/lib/utils/url";
 +
 +export const dynamic = "force-dynamic";
@@ -159,16 +160,41 @@ index 0000000..d693e86
 +
 +    const workspace = await prisma.workspace.upsert({
 +      where: { organizationId_name: { organizationId: org.id, name: g.name } },
++      // Existing workspaces keep their own styling unless it is still the app
++      // default (see the convergence check below).
 +      update: {},
 +      create: {
 +        name: g.name,
 +        organizationId: org.id,
 +        config: { channel: null, industry: null },
++        styling: IRLCOOP_WORKSPACE_STYLING as Prisma.InputJsonValue,
++        customHeadScripts: IRLCOOP_WORKSPACE_HEAD_SCRIPTS,
 +        contactAttributeKeys: { create: DEFAULT_CONTACT_ATTRIBUTE_KEYS },
 +        languages: { create: [{ code: DEFAULT_LOCALE, alias: null }] },
 +      },
-+      select: { id: true },
++      select: { id: true, styling: true, customHeadScripts: true },
 +    });
++
++    // A pre-existing workspace is "unskinned" when its styling is still the
++    // app's pristine default (only `allowStyleOverwrite`, no brandColor) — an
++    // admin's own styling is never overwritten. Head scripts null = unskinned.
++    const stylingKeys =
++      workspace.styling && typeof workspace.styling === "object" && !Array.isArray(workspace.styling)
++        ? Object.keys(workspace.styling)
++        : [];
++    const needsStyling =
++      !workspace.styling || stylingKeys.length === 0 || stylingKeys.every((k) => k === "allowStyleOverwrite");
++    const needsHeadScripts = !workspace.customHeadScripts;
++
++    if (needsStyling || needsHeadScripts) {
++      await prisma.workspace.update({
++        where: { id: workspace.id },
++        data: {
++          ...(needsStyling ? { styling: IRLCOOP_WORKSPACE_STYLING as Prisma.InputJsonValue } : {}),
++          ...(needsHeadScripts ? { customHeadScripts: IRLCOOP_WORKSPACE_HEAD_SCRIPTS } : {}),
++        },
++      });
++    }
 +    workspaceBySlug.set(g.slug, workspace.id);
 +
 +    await prisma.teamUser.upsert({
@@ -299,8 +325,79 @@ index 9167e39..cc91d9c 100644
      SESSION_MAX_AGE: process.env.SESSION_MAX_AGE,
      SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
    },
+diff --git a/apps/web/lib/irlcoop-skin.ts b/apps/web/lib/irlcoop-skin.ts
+new file mode 100644
+index 0000000..300b830
+--- /dev/null
++++ b/apps/web/lib/irlcoop-skin.ts
+@@ -0,0 +1,65 @@
++/**
++ * irl.coop default workspace skin.
++ *
++ * Applied when a coop group's workspace is created (and to any pre-existing
++ * workspace whose styling/head scripts are empty) in the gate-SSO provisioning
++ * path, so every group is born irl.coop-styled instead of needing a manual apply.
++ *
++ * Scope: our own file (added by irlcoop-fork.patch) — no upstream file is touched
++ * for the skin itself; the tokens are the same ones documented in
++ * docs/design/formbricks-customization-scope.md §5/§6c.
++ */
++
++/** Self-hosted serif (SIL OFL-1.1) in our own MinIO public-assets bucket. */
++const IRLCOOP_FONT_URL =
++  process.env.IRLCOOP_FONT_URL ??
++  "https://s3api.irl.coop/public-assets/fonts/cormorant-garamond-600-latin.woff2";
++
++export const IRLCOOP_WORKSPACE_STYLING = {
++  allowStyleOverwrite: true,
++  brandColor: { light: "#7C3AED" },
++  accentBgColor: { light: "#F5F3FF" },
++  accentBgColorSelected: { light: "#7C3AED" },
++  footerLinkColor: { light: "#7C3AED" },
++  buttonBgColor: { light: "#7C3AED" },
++  buttonTextColor: { light: "#FFFFFF" },
++  buttonBorderRadius: "12px",
++  buttonHeight: "44px",
++  buttonFontSize: "14px",
++  buttonFontWeight: "600",
++  inputBgColor: { light: "#FFFFFF" },
++  inputBorderColor: { light: "#E9D5FF" },
++  inputBorderRadius: "12px",
++  inputTextColor: { light: "#4C1D95" },
++  optionBgColor: { light: "#FFFFFF" },
++  optionLabelColor: { light: "#4C1D95" },
++  optionBorderColor: { light: "#E9D5FF" },
++  optionBorderRadius: "12px",
++  elementHeadlineColor: { light: "#4C1D95" },
++  elementDescriptionColor: { light: "#475569" },
++  cardBackgroundColor: { light: "#FFFFFF" },
++  cardBorderColor: { light: "#E9D5FF" },
++  highlightBorderColor: { light: "#7C3AED" },
++  progressTrackBgColor: { light: "#EDE9FE" },
++  progressIndicatorBgColor: { light: "#16A34A" },
++  roundness: 12,
++  isDarkModeEnabled: false,
++  background: { bg: "#FAF5FF", bgType: "color", brightness: 100 },
++};
++
++/**
++ * Workspace-level custom head scripts apply to every link survey in the
++ * workspace. `fontFamily` is not mapped by the survey renderer in 5.4.0, so the
++ * serif is delivered here (see the scope doc §6c).
++ */
++export const IRLCOOP_WORKSPACE_HEAD_SCRIPTS = `<style>
++@font-face {
++  font-family: "Cormorant Garamond";
++  src: url("${IRLCOOP_FONT_URL}") format("woff2");
++  font-weight: 600; font-style: normal; font-display: swap;
++}
++h1, h2, h3, h4, [class*="headline"], [class*="Headline"] {
++  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif !important;
++  letter-spacing: 0.01em;
++}
++</style>`;
 diff --git a/apps/web/proxy.ts b/apps/web/proxy.ts
-index 4887635..1c62690 100644
+index 4887635..2cf917a 100644
 --- a/apps/web/proxy.ts
 +++ b/apps/web/proxy.ts
 @@ -4,6 +4,7 @@ import { logger } from "@formbricks/logger";
@@ -311,7 +408,7 @@ index 4887635..1c62690 100644
  import { FORMBRICKS_WORKSPACE_ID_COOKIE } from "@/lib/localStorage";
  import { FORMBRICKS_CLIENT_IP_HEADER, resolveClientIp } from "@/lib/utils/client-ip";
  import { getValidatedCallbackUrl } from "@/lib/utils/url";
-@@ -12,7 +13,24 @@ import { getProxySession } from "@/modules/auth/lib/proxy-session";
+@@ -12,7 +13,35 @@ import { getProxySession } from "@/modules/auth/lib/proxy-session";
  const handleAuth = async (request: NextRequest): Promise<NextResponse | null> => {
    const session = await getProxySession(request);
  
@@ -323,17 +420,28 @@ index 4887635..1c62690 100644
 +  const needsAuth =
 +    isAuthProtectedRoute(request.nextUrl.pathname) || request.nextUrl.pathname === "/";
 +
-+  if (needsAuth && !session) {
-+    // irl.coop Gate-SSO: when the oauth2-proxy gate has authenticated the member
-+    // (x-forwarded-email present) AND we are on the admin domain (never the public
-+    // survey domain), auto-login from the forwarded identity instead of the native
-+    // login form. Opt-in via GATE_SSO_ENABLED=1.
-+    const gateEmail = request.headers.get("x-forwarded-email");
-+    if (env.GATE_SSO_ENABLED === "1" && gateEmail && !isRequestFromPublicDomain(request)) {
-+      const gateUrl = `${WEBAPP_URL}/api/auth/gate-sso?callbackUrl=${encodeURIComponent(WEBAPP_URL + request.nextUrl.pathname + request.nextUrl.search)}`;
-+      return NextResponse.redirect(gateUrl);
-+    }
++  // irl.coop Gate-SSO fires for ANY app page, not only the `needsAuth` routes above.
++  // Deep links (/workspaces/<id>/surveys/templates) are not in the upstream protected
++  // list, so without this a member following one got the native login form instead of
++  // auto-login. Deliberately excluded: /auth/* (the login page itself must render),
++  // /api/* (including the gate-sso endpoint — redirecting to it would loop), and the
++  // public survey domain (respondents stay anonymous there).
++  const pathname = request.nextUrl.pathname;
++  const isAppPage = !pathname.startsWith("/auth/") && !pathname.startsWith("/api/");
++  const gateEmail = request.headers.get("x-forwarded-email");
 +
++  if (
++    !session &&
++    isAppPage &&
++    env.GATE_SSO_ENABLED === "1" &&
++    gateEmail &&
++    !isRequestFromPublicDomain(request)
++  ) {
++    const gateUrl = `${WEBAPP_URL}/api/auth/gate-sso?callbackUrl=${encodeURIComponent(WEBAPP_URL + pathname + request.nextUrl.search)}`;
++    return NextResponse.redirect(gateUrl);
++  }
++
++  if (needsAuth && !session) {
      const loginUrl = `${WEBAPP_URL}/auth/login?callbackUrl=${encodeURIComponent(WEBAPP_URL + request.nextUrl.pathname + request.nextUrl.search)}`;
      return NextResponse.redirect(loginUrl);
    }

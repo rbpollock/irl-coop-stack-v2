@@ -4,6 +4,7 @@
 # processes routed by Traefik's file provider to 172.17.0.1:<port>:
 #   web     :3000  (Next.js)   apps/web/irl-dashboard
 #   coop-api:3001  (Fastify)   apps/coop-api
+#   rail    :3010  (Fastify)   apps/peer_xyz_payments
 #   hardhat :8545  (local chain) contracts
 #
 # Idempotent: an app is started only if it isn't already answering on its port.
@@ -54,6 +55,11 @@ start web 3000 / apps/web/irl-dashboard npx next dev
 
 # coop-api — ts-node-dev Fastify (dotenv: .env then infra/out/dev/secrets.env).
 start coop-api 3001 /api/auth/config apps/coop-api npm run dev
+
+# peer_xyz_payments — the payment rail service (internal only; no proxy route).
+# Separate process so a provider's SDK / a provider's takedown cannot reach the
+# member-facing API. Health path is its own /health.
+start peer_xyz_payments 3010 /health apps/peer_xyz_payments npm run dev
 
 # hardhat — local chain + Safe contract deploy on a fresh node.
 if start hardhat 8545 / contracts npx hardhat node; then

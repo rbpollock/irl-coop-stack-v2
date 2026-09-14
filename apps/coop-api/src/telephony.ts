@@ -2,7 +2,7 @@ import * as crypto from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { verifyBearer } from "./verify-jwt";
-import { withIdentity, provisionTelephonyResource } from "./db";
+import { withIdentity, provisionTelephonyResource, pool } from "./db";
 
 // Telephony surface — the dashboard "Calls" app is the consumer. This module
 // is the identity seam: the caller's coop JWT (sub) resolves to a SIP identity
@@ -159,6 +159,48 @@ export async function ensurePersonalTelephony(sub: string): Promise<string | nul
 }
 
 export default async function telephonyRoutes(fastify: FastifyInstance): Promise<void> {
+  // MGCP phone directory — served to FreeSWITCH's mod_xml_curl directory gateway
+  // so ShoreTel/MGCP phones resolve their extension from the coop DB (MAC →
+  // extension, from the resource's config.mgcp_mac) instead of hand-edited
+  // directory XML. Unauthenticated (FreeSWITCH calls it, not a user); the
+  // SECURITY DEFINER coop_mgcp_directory() reads across every member's RLS.
+  fastify.post("/api/v1/telephony/mgcp-directory", async (request, reply) => {
+    const { rows } = await pool.query<{ extension: string; mac: string }>(
+      "SELECT extension, mac FROM coop_mgcp_directory()",
+    );
+
+    const users = rows
+      .map(
+        (r) =>
+          `        <user id="${r.extension}">\n` +
+          `          <variables>\n` +
+          `            <variable name="mgcp_mac" value="${r.mac}"/>\n` +
+          `            <variable name="user_context" value="default"/>\n` +
+          `          </variables>\n` +
+          `        </user>`,
+      )
+      .join("\n");
+
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<document type="freeswitch/xml">\n` +
+      `  <section name="directory">\n` +
+      `    <domain name="${process.env.SIP_DOMAIN ?? "irl.coop"}">\n` +
+      `      <groups>\n` +
+      `        <group name="default">\n` +
+      `          <users>\n` +
+      `${users}\n` +
+      `          </users>\n` +
+      `        </group>\n` +
+      `      </groups>\n` +
+      `    </domain>\n` +
+      `  </section>\n` +
+      `</document>`;
+
+    reply.header("Content-Type", "application/xml");
+    return reply.send(xml);
+  });
+
   // The browserphone's config: SIP identity for the authenticated member's own
   // device. Same-origin dashboard calls this with the NextAuth access token;
   // the SIP secret is returned to the device only (never in a URL/log).

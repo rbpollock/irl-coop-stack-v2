@@ -15,7 +15,7 @@
 name: formbricks
 pillar: workflow
 type: image
-image: irlcoop/formbricks-gate-sso:5.4.0
+image: irlcoop/formbricks-gate-sso:5.4.0-irl.7
 env:
   WEBAPP_URL: https://forms.${DOMAIN}
   # anonymous survey-respondent domain (NOT gated — the embed script + /s/* +
@@ -72,7 +72,11 @@ depends_on:
   formbricks-cube:
     condition: service_healthy
 healthcheck:
-  test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+  # NB: hitting "/" is WRONG — formbricks 307s it to the ABSOLUTE external
+  # https://forms.irl.coop/auth/login, so an in-container fetch chases the
+  # public edge and never sees 2xx (container sat "unhealthy" for days while
+  # the app was fine). /auth/login answers 200 internally, no redirect.
+  test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/auth/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
   interval: 30s
   timeout: 10s
   retries: 5
@@ -91,6 +95,9 @@ nav:
 sidecars:
   formbricks-gate:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    restart: unless-stopped
+    # discovery-502 quirk: oauth2-proxy does OIDC discovery once, no retry (same
+    # as Synapse) — the restart policy self-heals a coop-api-restart window.
     command:
       - --provider=oidc
       # the fleet session gateway — the coop_session cookie makes authorize
@@ -103,6 +110,7 @@ sidecars:
       - --upstream=http://formbricks:3000
       - --http-address=0.0.0.0:4180
       - --cookie-secret=irlcoop-formbricks-gate-sec-1234
+      - --cookie-name=_irlformbricks
       - --cookie-secure=false
       - --skip-provider-button=true
       # inject the identity (X-Forwarded-Email/User/Groups) for the app's gate-SSO

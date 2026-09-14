@@ -2,6 +2,7 @@ import Link from "next/link"
 import {
   ArrowRight,
   CalendarDays,
+  Calculator,
   ClipboardList,
   Database,
   FileText,
@@ -207,6 +208,14 @@ const APPS = [
     across: "A federation event composes member groups.",
   },
   {
+    icon: Calculator,
+    name: "Accounting",
+    brand: "ERPNext",
+    line: "Your own books — income, expenses, invoices, taxes.",
+    group: "A company per member and per group; your numbers stay yours.",
+    across: "Subgroup companies roll up to the parent by reporting right.",
+  },
+  {
     icon: Palette,
     name: "Studio",
     brand: "Webstudio",
@@ -246,6 +255,7 @@ const APP_GRADIENTS: Record<string, string> = {
   Databases: "from-cyan-500 to-sky-600",
   Surveys: "from-orange-500 to-amber-600",
   Events: "from-lime-500 to-emerald-600",
+  Accounting: "from-yellow-500 to-amber-600",
   Studio: "from-purple-500 to-violet-600",
   "Social Media": "from-pink-500 to-fuchsia-600",
   "Live Video": "from-red-500 to-rose-600",
@@ -439,8 +449,12 @@ export default async function LandingPage({
             >
               Sign in
             </Link>
+            {/* The primary action is STARTING A GROUP, not joining the coop: the
+                FAQ already promises "just start... joining is optional", and
+                signup is not membership. The coop path stays a deliberate,
+                later step. */}
             <Link href={signIn} className={PILL.dark}>
-              Join the coop
+              Start a group
             </Link>
           </div>
         </div>
@@ -477,7 +491,7 @@ export default async function LandingPage({
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href={signIn} className={PILL.light}>
-              Join the coop <ArrowRight className="size-4" />
+              Start a group <ArrowRight className="size-4" />
             </Link>
             <a href="#recipes" className={PILL.ghost}>
               Browse the recipes
@@ -812,10 +826,12 @@ export default async function LandingPage({
             Cooperation, <em className="font-serif italic">on your terms.</em>
           </h2>
           <p className="max-w-md text-white/70">
-            One identity, your data, your servers. Join in under a minute.
+            One identity, your data, your servers. Name your group, pick a
+            blueprint, invite your people — start in under a minute. Joining the
+            coop is optional, and it is how you get a say in how this runs.
           </p>
           <Link href={signIn} className={PILL.light}>
-            Join the coop <ArrowRight className="size-4" />
+            Start a group <ArrowRight className="size-4" />
           </Link>
         </div>
       </section>

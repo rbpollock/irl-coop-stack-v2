@@ -148,6 +148,77 @@ reconciles by regenerating and re-applying the generated compose.
     (manifest.webmanifest, sw.js, favicon, robots) skip auth so the manifest
     doesn't CORS-fail pre-login; everything else stays gated (verified 302).
 
+- **Hi.Events** (https://events.irl.coop — app `:3007`, coop gate `:8099`):
+  - Image `irlcoop/hievents-gate-sso:1.11.1-beta.2` = upstream
+    `HiEventsDev/Hi.Events` `v1.11.1-beta` + one patch (durable home:
+    `infra/instances/dev/assets/hievents/`, rebuild:
+    `infra/build/images/hievents/build.sh <image tag>`).
+  - **Coop-SSO login screen + admin gate (2026-09-12)**: the edge splits this host
+    by PATH — `/manage/*` + `/oauth2/*` → `hievents-gate` (oauth2-proxy → the fleet
+    issuer, client `hievents-gate`), everything else (event pages, checkout, ticket
+    lookup, `/api/*`) → the app directly, so public ticketing never meets a login
+    wall. New generator capability behind it: an optional `proxy.path` emits
+    `Host(…) && PathPrefix(…)` + an explicit `priority`, so one host can split
+    across two upstreams declaratively.
+  - The auth screen leads with **"Log in with irl.coop"** (`/oauth2/sign_in` →
+    instant code when the dashboard `coop_session` exists) and keeps the native
+    password form as the fallback. The app's SSR exchanges the gate's
+    `x-forwarded-email` for a Hi.Events JWT via `/api/auth/gate-sso` — guarded by a
+    derived shared secret **and** a loopback-caller check, so a spoofed header can
+    never mint a session from the public internet.
+  - **Native signup CLOSED**: `APP_DISABLE_REGISTRATION=true`, `/auth/register`
+    302s to the login screen, no "Sign up" affordance. Members are provisioned on
+    first SSO (`CreateAccountHandler::$bypassRegistrationCheck` keeps fleet
+    provisioning open while signup is shut — closing signup can't lock a member
+    out of their own account).
+  - **Event bus (2026-09-12)**: every ticketing event auto-provisions its own
+    webhook to `POST https://api.irl.coop/api/v1/webhooks/hi-events`, target baked
+    into the URL (`?group=<slug>` for a group workspace, `?owner=<email>` for a
+    personal one) — created by the app (`Event::created` hook) and reconciled for
+    existing events at boot (`coop:event-bus:sync` in `startup.sh`). Subscribed:
+    order.created/marked_as_paid/refunded/cancelled, attendee.created/cancelled,
+    checkin.created, event.created. coop-api maps them to bus types
+    (order.created/paid/refunded/cancelled, attendee.registered/cancelled,
+    checkin.recorded, event.created), strips personal data (**counts + ids only**),
+    and ingests on the **group's** stream via the new `coop_ingest_group_event`
+    definer function (a group workspace's sales belong to the group, not to one
+    member) or the member's personal stream for a personal workspace; group
+    members get the live-lane notification (`irl:notify:{sub}`) and the dashboard
+    renders it with a deep link into `/manage/event/<id>`. Verified by
+    `scripts/verify-hievents-bus.py` (10/10) and
+    `scripts/verify-hievents-auto-webhook.py` (end-to-end: create an event through
+    the app API → webhook auto-created → fires → lands on the group's stream).
+  - **Group workspaces (2026-09-12)**: one Hi.Events **account** per coop group —
+    the app's native tenant boundary (events, organizers, users, settings all scope
+    by `account_id`), keyed rename-safely by a new `accounts.external_ref`
+    (`coop:<slug>` / `personal:user:<id>`). Provisioning converges on every sign-in
+    from the coop `groups` claim: seat role → tier (`owner` → ADMIN + account
+    owner, `member` → ADMIN, else `agent` → ORGANIZER), plus one LIVE organizer per
+    group so each group has a public event page. Switching = re-minting the session
+    for another `account_id`: `GET /api/auth/workspace/{account_id}` (avatar-menu
+    **Workspaces** list, from `GET /api/auth/workspaces`), and the dashboard's
+    per-group Events submenu deep-links `/manage/events?group=<slug>`.
+  - **Root-cause fix on the coop side**: coop-api's **id_token never carried the
+    `groups` claim** (only `roles`/`grants`), so no oauth2-proxy gate could ever
+    forward it — the app saw an empty claim. `groups` is now minted into the
+    id_token (both legs) and re-resolved in `/api/auth/userinfo`, so
+    `--cookie-refresh` picks up seat changes without a re-login. **This also
+    unblocks the Formbricks group→team mapping**, which had been silently working
+    from an empty claim.
+  - Verified 2026-09-12 (15/15 ad-hoc script): three-tier seat mapping, per-group
+    organizers LIVE, `/api/auth/workspaces` listing personal + groups, switch
+    re-mints + reports the group as current, a foreign workspace is refused,
+    `?group=` deep-link lands in that group. Live: robbie's coop group "happy days"
+    appeared as its own workspace + LIVE organizer while his personal workspace kept
+    the existing event.
+  - Verified 2026-09-12 by two ad-hoc scripts (9/9 + 9/9) **and a real-browser run**:
+    public paths ungated · mint 403s public/spoofed callers · `/manage/events` → 302
+    `client_id=hievents-gate` · gate identity → session → authenticated admin +
+    `/api/users/me` as the member · `POST /api/auth/register` 403 · provisioning-while-
+    closed (probe member created, used, removed). Browser leg: the coop door was
+    clicked in a pane with a live dashboard session → instant code → account
+    provisioned (`robbie@irl.coop`, 21:24) → authenticated admin, no password prompt.
+
 ## Data pillar — LIVE
 
 - Citus `172.17.0.1:5432` (0.0.0.0): roles/dbs `irlcoop`, `nocodb`, `stalwart`.
@@ -448,6 +519,17 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
 - Federation + takedown-resilient DNS/edge design session — PARKED (do nothing
   until Robbie raises it). Fragility points to weigh then: single Gandi account,
   single router WAN IP, one wildcard cert, surfy/this-host split.
+- Coop launch + infrastructure handoff — PARKED wish list (do nothing until
+  Robbie raises it): start the coop itself, hand it infrastructure control, and
+  map roadmap development to a Plane project owned by an irl.coop group.
+  `docs/design/coop-launch-and-roadmap-handoff.md`. The handoff depends on the
+  non-custodial vault fix, or it transfers the deed and keeps a copy of the keys.
+- Parked app integrations (intent recorded, not built) — **4 across 2 docs**:
+  **Mautic** (marketing automation) + **cal.diy** (scheduling — use the MIT fork,
+  NOT upstream Cal.com, which went closed-source; see
+  `mautic-calcom-mcp-inference.md`) and **Twenty** (CRM) + **Payload** (CMS) as
+  the member/relationship + content layers (`local-ai-chat.md`). Open question
+  before adding Twenty: **ERPNext already ships a CRM** and is already live.
 - Not in final form: Temporal, Formbricks, Webstudio, Postiz, CryptPad.
 - Group model (event bus + shapes + provisioning + proofs + commons economy) —
   design: `docs/design/event-bus-and-group-shapes.md`. Not started; builds on

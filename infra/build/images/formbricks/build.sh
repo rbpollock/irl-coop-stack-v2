@@ -18,9 +18,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-IMAGE="irlcoop/formbricks-gate-sso:5.4.0"
+IMAGE="irlcoop/formbricks-gate-sso:5.4.0-irl.7"
 PIN="286958e36464663489bfbc73d87abbd0f573825f"   # the 5.4.0 tag commit
 PATCH="$ROOT/infra/build/images/formbricks/irlcoop-fork.patch"
+CHROME="$ROOT/infra/build/images/formbricks/irlcoop-chrome.patch"
+TEMPLATES="$ROOT/infra/build/images/formbricks/irlcoop-templates.patch"
 SRC="$(mktemp -d)/formbricks-src"
 
 echo "== formbricks: cloning upstream @ $PIN ..."
@@ -30,6 +32,21 @@ git -C "$SRC" checkout "$PIN"
 
 echo "== formbricks: applying irl.coop gate-SSO patch ..."
 git -C "$SRC" apply "$PATCH"
+
+echo "== formbricks: applying irl.coop chrome/brand patch ..."
+# Chrome patch (irlcoop-chrome.patch): DEFAULT_BRAND_COLOR -> #7C3AED,
+# globals.css brand vars -> purple, teal logo gradients -> purple,
+# auth pages: warm background + irl.coop login copy,
+# survey "create your own" CTA + "Powered by Formbricks" links -> irl.coop.
+git -C "$SRC" apply "$CHROME"
+
+echo "== formbricks: applying irl.coop Cooperation Starter Pack (template pack) ..."
+# Templates patch (irlcoop-templates.patch): apps/web/app/lib/irlcoop-templates.ts
+# (the pack: TTemplate literals built with the survey-block-builder helpers) plus a
+# spread of `irlcoopTemplates(t)` at the head of the `templates()` gallery array.
+# Templates in Formbricks are code-defined (no DB table, no save-as-template), so
+# this is the only way to make the pack appear in every workspace's gallery.
+git -C "$SRC" apply "$TEMPLATES"
 
 echo "== formbricks: building $IMAGE ..."
 # The fork patch drops the Dockerfile's --mount=type=secret clauses (this host's

@@ -1,0 +1,331 @@
+{
+  "_about": "What every user-visible claim on the landing page actually is, plus the evidence. STATUS ANSWERS ONE QUESTION: what happens if a visitor goes and tries it right now? THE PLATFORM IS UNDER DEVELOPMENT. Claims describe intent and design and are ASPIRATIONAL BY DESIGN \u2014 this is a project site describing where the thing is going, not a sales pitch, and present-tense description of intent is the normal convention for software being built. Do NOT weaken an aspirational claim to satisfy this file; publish its stage instead. THE ONE EXCEPTION: a `live-state` claim asserts a fact about CURRENT conditions rather than about capability. Aspiration cannot cover it, because it is not aspirational \u2014 it is a status report, and it is the only kind of claim here that can be false while everyone is being honest.",
+  "audited_on": "2026-09-13",
+  "audited_surface": "apps/web/irl-dashboard/src/app/[lang]/(plain-layout)/page.tsx",
+  "counts": {
+    "live-state": 1,
+    "works": 22,
+    "in-progress": 6,
+    "designed": 7
+  },
+  "claims": [
+    {
+      "id": "footer-status",
+      "surface": "Landing footer",
+      "claim": "All systems operational",
+      "status": "live-state",
+      "evidence": "Literal JSX text with a green dot (page.tsx:857-860) \u2014 NOTHING READS HEALTH. UPDATED 2026-09-13 after the classifier fix (infra/scripts/stack-report.py): the old '21 of 82 down' figure this entry originally cited was itself a reporting bug \u2014 every non-running container counted as down, including completed one-shot jobs. The corrected truth is 61/61 CORE SERVICES HEALTHY, 0 down, 21 one-shot jobs (17 completed, 4 failed), 20 undeclared dev containers. `GET /api/v1/stack/status` now returns core_services / core_healthy / core_problems, so the claim is wireable to a real number.",
+      "fix": "Still the only non-aspirational claim on the page, and now trivially fixable. Wire the dot to `core_healthy`/`core_services` from `GET /api/v1/stack/status`, and reword it to something the API can actually support (e.g. '61/61 core services healthy'), with a truthful degraded state. Cite core services only \u2014 the job and dev-container counts are context, not health.",
+      "note": "DANGEROUS STATE: the hardcoded dot is ACCIDENTALLY TRUE today. That is the worst condition for a fixed claim \u2014 it will be trusted right up until the moment it is wrong, and nothing will have changed to warn anyone.",
+      "fixed_by": "infra/scripts/stack-report.py + apps/coop-api/src/status.ts (core-only summary, 2026-09-13)"
+    },
+    {
+      "id": "app-needs-offers",
+      "surface": "App card",
+      "claim": "Needs & Offers \u2014 post what you have or need, and find who fits together",
+      "status": "works",
+      "evidence": "CORRECTED 2026-09-13 (Robbie). `components/dashboards/needs-offers-mockup.tsx` is 780 lines of working UI: tabbed weave/board/trade-chain views, an interactive react-force-graph-2d weave graph, posting composer, zone filter, search, selection drawer and expediting detail. The name is legacy \u2014 the page comment says 'mockup only \u2014 no backend wiring yet'. It functions; it does not persist (no fetch, no API, no localStorage).",
+      "fix": "None to the claim \u2014 it works. Fix the FILE NAME (`needs-offers-mockup.tsx` \u2192 the tool it is), and add a persistence note where a visitor would post something real.",
+      "note": "Fully usable today as a client-side tool; NOTHING IS SAVED until it gets a backend."
+    },
+    {
+      "id": "decision-quorum",
+      "surface": "How it works / FAQ",
+      "claim": "Every decision on a quorum \u2014 no server or operator can act alone, the math forbids it",
+      "status": "in-progress",
+      "evidence": "Safe threshold is real (`api/safe/predict`, `api/safe/deploy`). Decisions BACKEND is real (`POST/GET /api/v1/groups/:id/decisions`, `:vid/vote`, tally in decisions.ts). The dashboard's own Governance card renders 'No open votes' marked `soon` \u2014 no vote UI.",
+      "fix": "State it as: decisions are recorded and the interface is landing. Or ship the UI (cheapest large win \u2014 backend is done).",
+      "note": "Decisions record today (backend: create/ vote/ tally); the voting UI is unbuilt."
+    },
+    {
+      "id": "groups-hold-groups",
+      "surface": "How it works",
+      "claim": "Groups hold groups \u2014 a coalition seats its member farms; nested, never fenced",
+      "status": "designed",
+      "evidence": "No `parent_id` / `parent_group` anywhere in `apps/coop-api/src`. Nesting is designed (`event-bus-and-group-shapes.md`).",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense.",
+      "note": "No parent/child relationship in coop-api yet."
+    },
+    {
+      "id": "treasury-splits",
+      "surface": "How it works / FAQ",
+      "claim": "A treasury per group \u2014 shared savings, quorum-gated pools, automatic splits; the platform pays it out on a schedule",
+      "status": "designed",
+      "evidence": "Treasury exists as a *provisioned resource* (`provisioning.ts:32`). No funds, no payout route, no split engine. Guards are designed (`private-treasury-guards-ledgers.md`).",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense.",
+      "note": "A group treasury resource exists; funds, splits and payouts are designed."
+    },
+    {
+      "id": "roles-spend",
+      "surface": "FAQ",
+      "claim": "Members hold roles \u2014 one plans, one spends, one's just along",
+      "status": "in-progress",
+      "evidence": "Members + roles exist (`POST/GET /api/v1/groups/:id/members`). 'One spends' depends on the treasury, which is designed.",
+      "fix": "Keep the roles claim; drop the spend example or move it to intent.",
+      "note": "Roles work. 'One spends' depends on the treasury, which does not hold funds yet."
+    },
+    {
+      "id": "privacy-group",
+      "surface": "FAQ",
+      "claim": "A group can be private, so only members see who is in it",
+      "status": "in-progress",
+      "evidence": "Scoping is designed (`group-scoping.md`); that same doc admits rows sit **plaintext at rest**. RLS hides rows from other tenants, not from the store.",
+      "fix": "Fine as a scoping claim. Do not let it read as an encryption claim.",
+      "note": "Scoping is real; note that it hides rows from other tenants, it is not encryption."
+    },
+    {
+      "id": "non-enumeration",
+      "surface": "FAQ",
+      "claim": "There's a setting for that \u2014 members can prove to each other that they belong, without any public roster an outsider could read",
+      "status": "designed",
+      "evidence": "Non-enumeration is `group-scoping.md` \u00a73 tier 2 \u2014 commitment-based membership, designed and deferred. No route.",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense."
+    },
+    {
+      "id": "credentials",
+      "surface": "FAQ",
+      "claim": "People can hold verifiable credentials and show them when needed \u2014 proof without oversharing",
+      "status": "designed",
+      "evidence": "zk-badges: designed. No route.",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense."
+    },
+    {
+      "id": "selective-disclosure",
+      "surface": "FAQ",
+      "claim": "A group can back a claim with a checkable proof, without handing over anything private",
+      "status": "designed",
+      "evidence": "Selective-disclosure proofs: designed. No route.",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense."
+    },
+    {
+      "id": "reputation",
+      "surface": "FAQ",
+      "claim": "Groups earn a reputation through what they actually do, recorded in a way that can be checked",
+      "status": "designed",
+      "evidence": "Regenerative / cooperativeness score: designed. No route.",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense."
+    },
+    {
+      "id": "participation-credits",
+      "surface": "FAQ",
+      "claim": "Hours and contributions are recorded, so everyone gets a turn stays fair when no money changes hands",
+      "status": "works",
+      "evidence": "Tier-2 participation ledger: BUILT AND DEPLOYED (2026-09-13). Tables tier2_entry / tier2_signature / anchors on the live Citus, RLS with zero delete policy, RFC-6962 Merkle anchoring, a live Temporal lane (contribution.logged -> outbox -> entry, 10/10 end-to-end incl. retry-does-not-double-log), a dues projection + panel, and contribution/countersign routes. Caveat: 0 rows in production and no member has logged through it \u2014 the substrate is complete, the use is not. Evidence before this entry was stale in the UNDERSTATING direction.",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense.",
+      "note": "built and verified; awaiting a group with real work. The gap is now usage, not code."
+    },
+    {
+      "id": "pricing-sliding",
+      "surface": "FAQ",
+      "claim": "Membership runs on a sliding scale \u2014 pay what you can",
+      "status": "designed",
+      "evidence": "No billing exists. The cost model's `revenue.member_monthly` is explicitly flagged `illustrative: true` \u2014 the coop's own price is a governance decision not yet made.",
+      "fix": "None to the claim \u2014 it is aspirational and that is intended. Publish it as a roadmap stage so the reader knows where it sits; do not rewrite it into the past tense.",
+      "note": "No price is set \u2014 a coop governance decision, not an engineering one."
+    },
+    {
+      "id": "one-identity",
+      "surface": "Hero / Principles",
+      "claim": "Sign in once. Every tool, every group \u2014 one account you own",
+      "status": "works",
+      "evidence": "Keycloak realm + coop session gateway; `/api/v1/me`, passkey link, `/api/auth/*`.",
+      "fix": "None."
+    },
+    {
+      "id": "self-hosted",
+      "surface": "FAQ / footer",
+      "claim": "There's no owner who can switch it off; your data stays yours",
+      "status": "works",
+      "evidence": "Self-hosted across the declarative tree; open source; `instance.yaml` is the source of truth.",
+      "fix": "None \u2014 this is the strongest true claim on the page."
+    },
+    {
+      "id": "no-resale",
+      "surface": "FAQ",
+      "claim": "Never resold, never used to sell you anything",
+      "status": "works",
+      "evidence": "No ad or resale surface exists in the stack.",
+      "fix": "None."
+    },
+    {
+      "id": "app-projects",
+      "surface": "App card",
+      "claim": "Projects \u2014 plan and run work (Plane)",
+      "status": "works",
+      "evidence": "Plane CE deployed; nav + iframe embed.",
+      "fix": "None."
+    },
+    {
+      "id": "app-groups",
+      "surface": "App card",
+      "claim": "Groups \u2014 the group itself: members, roles, decisions (Safe)",
+      "status": "works",
+      "evidence": "`POST/GET /api/v1/groups`, members, `PATCH :id`, Safe predict/deploy.",
+      "fix": "None."
+    },
+    {
+      "id": "app-chat",
+      "surface": "App card",
+      "claim": "Chat \u2014 rooms for every need, federated (Matrix/Element)",
+      "status": "works",
+      "evidence": "matrix + element/cinny live; `chat.ts`, `chat-sts.ts`, `/api/v1/chat/rooms`.",
+      "fix": "None."
+    },
+    {
+      "id": "app-maps",
+      "surface": "App card",
+      "claim": "Maps \u2014 your places, tracks and tours",
+      "status": "works",
+      "evidence": "`geo.ts`: tracks, markers, `/api/v1/discover/map`; PMTiles basemap.",
+      "fix": "None."
+    },
+    {
+      "id": "app-farm",
+      "surface": "App card",
+      "claim": "Farm \u2014 fields, crops, tasks and sales (LiteFarm)",
+      "status": "works",
+      "evidence": "LiteFarm deployed (`apps/farm` page).",
+      "fix": "None."
+    },
+    {
+      "id": "app-webmail",
+      "surface": "App card",
+      "claim": "Webmail \u2014 a real @irl.coop mailbox (Roundcube/Stalwart)",
+      "status": "works",
+      "evidence": "Stalwart + roundcube live; `mail.ts` webhook.",
+      "fix": "None."
+    },
+    {
+      "id": "app-calls",
+      "surface": "App card",
+      "claim": "Calls \u2014 voice and video on your own switch (FreeSWITCH)",
+      "status": "works",
+      "evidence": "FreeSWITCH + FusionPBX live; `telephony.ts` sip-config.",
+      "fix": "None."
+    },
+    {
+      "id": "app-files",
+      "surface": "App card",
+      "claim": "Files \u2014 on your servers (MinIO)",
+      "status": "works",
+      "evidence": "`files.ts`: folders, members, share tokens, download.",
+      "fix": "None."
+    },
+    {
+      "id": "app-docs",
+      "surface": "App card",
+      "claim": "Documents \u2014 co-edit in real time (OnlyOffice)",
+      "status": "works",
+      "evidence": "`docs.ts`: editor, content, save, new.",
+      "fix": "None."
+    },
+    {
+      "id": "app-databases",
+      "surface": "App card",
+      "claim": "Databases \u2014 a visual database (NocoDB)",
+      "status": "works",
+      "evidence": "Custom NocoDB image + gate.",
+      "fix": "None."
+    },
+    {
+      "id": "app-surveys",
+      "surface": "App card",
+      "claim": "Surveys \u2014 ask your members (Formbricks)",
+      "status": "works",
+      "evidence": "Formbricks + cube + public surveys domain.",
+      "fix": "None."
+    },
+    {
+      "id": "app-events",
+      "surface": "App card",
+      "claim": "Events and tickets (Hi.Events)",
+      "status": "works",
+      "evidence": "`events.ts`, `hi-events.ts` webhook; events.irl.coop live.",
+      "fix": "None."
+    },
+    {
+      "id": "app-accounting",
+      "surface": "App card",
+      "claim": "Accounting \u2014 your own books (ERPNext)",
+      "status": "works",
+      "evidence": "erpnext deployed at accounting.irl.coop (200 via the edge).",
+      "fix": "None."
+    },
+    {
+      "id": "app-studio",
+      "surface": "App card",
+      "claim": "Studio \u2014 build your group's home (Webstudio)",
+      "status": "works",
+      "evidence": "Webstudio builder + gate + publisher.",
+      "fix": "None."
+    },
+    {
+      "id": "app-social",
+      "surface": "App card",
+      "claim": "Social Media \u2014 schedule and publish (Postiz)",
+      "status": "works",
+      "evidence": "Postiz deployed; `social.ts` summary.",
+      "fix": "None."
+    },
+    {
+      "id": "app-livevideo",
+      "surface": "App card",
+      "claim": "Live Video \u2014 broadcast and watch (MediaMTX)",
+      "status": "works",
+      "evidence": "`livestream-state.ts`; mediamtx live.",
+      "fix": "Partial: group streams exist; 'any member can go live' is the designed part.",
+      "note": "Group streams exist; 'any member can go live' is the designed half."
+    },
+    {
+      "id": "scoping-nomerge",
+      "surface": "Apps section",
+      "claim": "Every app is scoped to your group first \u2014 nothing is merged or exposed unless you say so",
+      "status": "in-progress",
+      "evidence": "Scoping is designed (`group-scoping.md`); per-group buckets and RLS are partially wired.",
+      "fix": "Keep, but it reads as encryption. It is not.",
+      "note": "Per-group scoping is partly wired; not an encryption claim."
+    },
+    {
+      "id": "how-own-data",
+      "surface": "FAQ",
+      "claim": "Who owns my data? You do",
+      "status": "works",
+      "evidence": "Self-hosted; the operator is the coop; no third party in the path.",
+      "fix": "None."
+    },
+    {
+      "id": "take-it-with-you",
+      "surface": "FAQ",
+      "claim": "You can take it with you \u2014 open formats, files, records and money intact",
+      "status": "in-progress",
+      "evidence": "Files/download and open formats are real; 'records and money' partly designed (treasury).",
+      "fix": "Narrow to what is exportable today.",
+      "note": "Files and open formats export today; 'records and money' is partly designed."
+    },
+    {
+      "id": "pay-in-card",
+      "surface": "Roadmap (not yet claimed on a public surface)",
+      "claim": "Pay in with a card and it lands in your group's treasury as USDC on Base, without the platform ever holding it",
+      "status": "in-progress",
+      "evidence": "Sandbox VERIFIED and WIRED 2026-09-13, 19/19 end-to-end through TWO processes. The provider lives in its own app (apps/peer_xyz_payments, :3010, internal only) behind a vendor-neutral contract; coop-api holds the policy and the contract only \u2014 no SDK, no vendor term in its payment module, verified. payment_intent uses the COOP's status vocabulary with provider_payload as the sole vendor home, so a swap is a new app + a config line. The rail declares directToDestination (checked by the seam) and honestly reports canObserve:false (the SDK has no order lookup, so settlement cannot be polled). Attribution stays off-chain and is not group-readable; confirmation emits an event the Temporal lane turns into a receipt keyed peer:<provider_ref>. Settlement is now AUTOMATIC via webhook (14/14): the rail app receives the provider's event at pay.<domain>/webhooks/peer (the only routed path; the control plane 404s), authenticates it with a custom-header derived secret, translates it behind the seam so coop-api never sees a provider payload, dedupes retries on (rail,event_id), and handles CHARGEBACKS/REFUNDS as reversals \u2014 the intent goes to `reversed` and the ledger gets a `correction` entry referencing the original receipt, which is never deleted. NOT done: no route exercised with a real JWT; live refused in code; the destination is still the sandbox merchant wallet; the webhook is not yet REGISTERED with the provider (a dashboard action).",
+      "fix": "Live needs: the shared destination to become the batch router / pool contract (not a wallet), an IP allowlist on the merchant key (empty today), and either a provider webhook or an operator confirmation surface for settlement.",
+      "note": "sandbox-wired; the rails' visibility (Peer + the P2P counterparty) is the open design question."
+    }
+  ],
+  "vocabulary": {
+    "works": "You can use it today. `note` carries any caveat (e.g. it doesn't persist yet).",
+    "in-progress": "Partly usable, or actively being built right now.",
+    "designed": "Settled design, implementation not started. Aspirational \u2014 publish the stage, keep the claim.",
+    "live-state": "Asserts a current fact about running systems. Must be wired to a real source, or removed."
+  },
+  "revision": [
+    "2026-09-13a \u2014 initial audit: 35 claims classified against the code (shipped/partial/designed/mockup/false-hardcoded).",
+    "2026-09-13b \u2014 corrected needs-offers (functions, does not persist); reframed all claims as aspirational by design; only `live-state` can be false; vocabulary rebuilt around what a visitor experiences.",
+    "2026-09-13c \u2014 footer evidence corrected: the '21 of 82 down' figure was a REPORTING BUG (every non-running container counted as down, including completed one-shot jobs), not an outage. Real state is 61/61 core services healthy, 0 down. The footer is now wireable to core_healthy/core_services.",
+    "2026-09-13c \u2014 added peer-fiat-rail claim (in-progress): sandbox verified by calling the live API; recorded the destination invariant and the fee caveat.",
+    "2026-09-13d \u2014 corrected participation-credits designed -> works (the registry was UNDERSTATING what exists; same defect class as overstating).",
+    "2026-09-13e \u2014 peer-fiat-rail: wired under the two rules (shared destination, off-chain attribution), 15/15; recorded the omission experiment and the generator gap it exposed.",
+    "2026-09-13f \u2014 reversed the direct wiring: the provider moved to its own app behind a neutral contract (19/19 through both processes); recorded the native-dependency and camelCase/200 lessons.",
+    "2026-09-13g \u2014 settlement wired via webhook, including chargebacks/refunds as correction entries (14/14); recorded the definer-GRANT trap and the reversal semantics."
+  ]
+}

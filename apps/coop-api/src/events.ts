@@ -46,6 +46,36 @@ export async function ingestEvent(
   return id;
 }
 
+// Group-targeted ingest: the activity belongs to a GROUP (a group workspace's
+// ticket sales), not to a person, so it lands on the group's stream — RLS then
+// shows it to every member. The slug→group resolution happens inside the
+// SECURITY DEFINER function (groups is RLS-forced; a system source is not a
+// member). Returns the event id + the resolved group id.
+export async function ingestGroupEvent(
+  groupRef: string,
+  source: string,
+  sourceEventId: string | null,
+  type: string,
+  payload: Record<string, unknown>,
+  occurredAt: number,
+): Promise<{ id: string | null; group_id: string | null }> {
+  const r = await pool.query<{ id: string | null; group_id: string | null }>(
+    `SELECT id, group_id FROM coop_ingest_group_event($1, $2, $3, $4, $5::jsonb, $6::timestamptz)`,
+    [groupRef, source, sourceEventId, type, JSON.stringify(payload), new Date(occurredAt)],
+  );
+  return r.rows[0] ?? { id: null, group_id: null };
+}
+
+// Group members (system-level read, BYPASSRLS as coop_rls) — the live-lane
+// fan-out target list. Targeting resolves server-side, never from the client.
+export async function groupMemberSubs(groupId: string): Promise<string[]> {
+  const r = await pool.query<{ coop_group_member_subs: string }>(
+    `SELECT coop_group_member_subs($1)`,
+    [groupId],
+  );
+  return r.rows.map((row) => row.coop_group_member_subs);
+}
+
 export default async function eventRoutes(fastify: FastifyInstance): Promise<void> {
   // The caller's groups' events (RLS filters to what their sub may see).
   fastify.get("/api/v1/events", async (request, reply) => {

@@ -11,18 +11,35 @@ import { verifyBearer } from "./verify-jwt";
 // state = `docker ps -a`. Match on the compose project+service labels docker
 // stamps on every container. Everything running-but-not-declared is drift
 // (orphans); everything declared-but-not-running is a gap (missing).
+//
+// LIFECYCLE vs HEALTH (revised 2026-09-13, mirroring infra/scripts/
+// stack-report.py). The old model was binary — "not running = down" — which
+// put a completed migration, a failed one-shot, a real outage and a never-run
+// job in the same bucket, so the headline number was meaningless as a health
+// signal. Now:
+//   lifecycle = `job` when the resolved compose says `restart: "no"`
+//               (a one-shot, EXPECTED to exit), else `service`.
+//   role      = the app spec's `role` (`core` default); `support`/`dev` are
+//               excluded from the headline. Unknown is core, never ignored.
+//   health    = per service (healthy/degraded/running/completed/failed/
+//               down/not-started/not-run), not a container count.
+// Core services only are counted in `core_healthy` / `core_problems`; that is
+// the pair a public live-state claim may cite.
 
 const STACK_ROOT = process.env.STACK_ROOT ?? path.resolve(__dirname, "../../..");
 const COMPOSE_DIR = path.join(STACK_ROOT, "infra/out/dev/compose");
 const APPS_DIR = path.join(STACK_ROOT, "infra/instances/dev/apps");
 
-type ServiceDecl = { service: string; image?: string; healthcheck?: boolean };
+type ServiceDecl = { service: string; image?: string; healthcheck?: boolean; restart?: string | boolean };
 type DeclaredCompose = {
   id: string;
   kind: "tree" | "source";
   pillar: string;
   composePath: string;
   services: ServiceDecl[];
+  /** `type: source` composes are owned by exactly one app — their service
+   *  names (`web`, `api`, `worker`, `migrator`) carry no prefix to match. */
+  owner?: string;
 };
 
 type ContainerInfo = {
@@ -64,9 +81,79 @@ function composeServices(basePath: string): ServiceDecl[] {
       service: name,
       image: (o.image as string) ?? (b.image as string),
       healthcheck: Boolean(o.healthcheck ?? b.healthcheck),
+      restart: (o.restart as string | boolean) ?? (b.restart as string | boolean),
     });
   }
   return out.sort((a, b) => a.service.localeCompare(b.service));
+}
+
+const ONESHOT_RESTART = "no";   // the declarative marker: "do not expect me running"
+const DEFAULT_ROLE = "core";    // unknown is core — never silently ignore a service
+
+/** health values that mean "this one is fine" */
+const OK_STATES = new Set(["healthy", "running", "completed"]);
+
+type AppRole = { name: string; role: string; explicit: Set<string> };
+
+/** Roles from the declarative tree. `service_name` is the spec's exact compose
+ *  service when it differs from the app name (citus -> `postgres`); `sidecars`
+ *  cover the rest (minio -> `profiles-minio-init`, `chat-minio-init`). */
+function appRoles(): AppRole[] {
+  if (!fs.existsSync(APPS_DIR)) return [];
+  const out: AppRole[] = [];
+  for (const f of fs.readdirSync(APPS_DIR).sort()) {
+    const spec: any = loadYaml(path.join(APPS_DIR, f));
+    if (!spec || !spec.name) continue;
+    if (String(spec.enabled ?? "true").toLowerCase() === "false") continue;
+    const explicit = new Set<string>(Object.keys(spec.sidecars ?? {}));
+    if (spec.service_name) explicit.add(String(spec.service_name));
+    out.push({
+      name: String(spec.name),
+      role: String(spec.role ?? DEFAULT_ROLE).toLowerCase(),
+      explicit,
+    });
+  }
+  // longest name first, so `rag` does not swallow `rag-api`
+  return out.sort((a, b) => b.name.length - a.name.length);
+}
+
+/** Attribute a service to an app: explicit name first (exact), then `<app>-`
+ *  family by longest prefix. Unattributed stays core. */
+function roleFor(service: string, roles: AppRole[]): { role: string; app: string | null } {
+  for (const r of roles) if (r.explicit.has(service)) return { role: r.role, app: r.name };
+  for (const r of roles) if (service === r.name || service.startsWith(r.name + "-")) {
+    return { role: r.role, app: r.name };
+  }
+  return { role: DEFAULT_ROLE, app: null };
+}
+
+function lifecycleOf(restart: string | boolean | undefined): "job" | "service" {
+  // quoted "no" stays a string; an unquoted `restart: no` parses as boolean false
+  return restart === ONESHOT_RESTART || restart === false ? "job" : "service";
+}
+
+/** The per-service answer to "how healthy is this one?" */
+function classifyService(
+  c: { state: string; health: string | null; status: string } | undefined,
+  lifecycle: "job" | "service"
+): string {
+  if (!c) return lifecycle === "job" ? "not-run" : "not-started";
+  if (c.state === "running") {
+    if (c.health === "unhealthy") return "degraded";
+    if (c.health === "healthy") return "healthy";
+    return "running";
+  }
+  if (c.state === "exited") {
+    if (lifecycle === "job") {
+      const m = c.status.match(/Exited \((\d+)\)/);
+      return m && m[1] === "0" ? "completed" : "failed";
+    }
+    return "down";
+  }
+  if (["paused", "restarting", "created", "dead"].includes(c.state)) {
+    return c.state === "dead" ? "degraded" : c.state;
+  }
+  return c.state || "unknown";
 }
 
 /** Every compose file the tree declares: one per pillar + one per source app. */
@@ -98,6 +185,7 @@ function declaredComposes(): DeclaredCompose[] {
         pillar: (spec.pillar as string) ?? "source",
         composePath: base,
         services: composeServices(base),
+        owner: spec.name as string,
       });
     }
   }
@@ -172,6 +260,7 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
     }
 
     const decls = declaredComposes();
+    const roles = appRoles();
     const matchedNames = new Set<string>();
     const pillars: any[] = [];
 
@@ -180,8 +269,21 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
       const services = decl.services.map((svc) => {
         const c = containers.find((x) => x.project === project && x.service === svc.service);
         if (c) matchedNames.add(c.name);
+        const lifecycle = lifecycleOf(svc.restart);
+        const { role, app } = decl.owner
+          ? {
+              role: roles.find((r) => r.name === decl.owner)?.role ?? DEFAULT_ROLE,
+              app: decl.owner as string,
+            }
+          : roleFor(svc.service, roles);
+        const health = classifyService(c, lifecycle);
         return {
           service: svc.service,
+          app,
+          role,
+          lifecycle,
+          health,
+          healthy: OK_STATES.has(health),
           declared_healthcheck: svc.healthcheck,
           image: svc.image ?? null,
           container: c
@@ -196,18 +298,21 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
             : null,
         };
       });
-      const up = services.filter((s: any) => s.container?.state === "running").length;
       const missing = services
         .filter((s: any) => !s.container)
         .map((s: any) => s.service);
+      const problems = services.filter((s: any) => !s.healthy && s.role === "core");
       pillars.push({
         id: decl.id,
         pillar: decl.pillar,
         kind: decl.kind,
         compose: decl.composePath,
         declared: services.length,
-        up,
-        down: services.length - up,
+        services_count: services.filter((s: any) => s.lifecycle === "service").length,
+        jobs: services.filter((s: any) => s.lifecycle === "job").length,
+        up: services.filter((s: any) => s.container?.state === "running").length,
+        problems: problems.length,
+        problem_services: problems.map((s: any) => s.service),
         missing,
         services,
       });
@@ -225,6 +330,11 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    const allServices = pillars.flatMap((p) => p.services);
+    const coreServices = allServices.filter((s: any) => s.role === "core" && s.lifecycle === "service");
+    const jobs = allServices.filter((s: any) => s.lifecycle === "job");
+    const byState: Record<string, number> = {};
+    for (const s of allServices) byState[s.health] = (byState[s.health] ?? 0) + 1;
     const totalDeclared = pillars.reduce((n, p) => n + p.declared, 0);
     const totalUp = pillars.reduce((n, p) => n + p.up, 0);
     const healthy = containers.filter((c) => c.health === "healthy").length;
@@ -249,12 +359,27 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
       generated_at: new Date().toISOString(),
       stack_root: STACK_ROOT,
       summary: {
+        // --- headline: CORE SERVICES ONLY. The pair a public live-state
+        // claim may cite ("61/61 core services healthy").
+        core_services: coreServices.length,
+        core_healthy: coreServices.filter((s: any) => s.healthy).length,
+        core_problems: coreServices.filter((s: any) => !s.healthy).length,
+        // --- everything, still reported so nothing is hidden
         declared: totalDeclared,
         containers: containers.length,
         up: totalUp,
-        down: totalDeclared - totalUp,
+        services: allServices.filter((s: any) => s.lifecycle === "service").length,
+        jobs: jobs.length,
+        jobs_completed: jobs.filter((s: any) => s.health === "completed").length,
+        jobs_failed: jobs.filter((s: any) => s.health === "failed").length,
+        jobs_not_run: jobs.filter((s: any) => s.health === "not-run").length,
+        degraded: allServices.filter((s: any) => s.health === "degraded").length,
         healthy,
         orphans: orphans.length,
+        by_state: byState,
+        // --- kept for old consumers: "down" now means CORE SERVICES ACTUALLY DOWN
+        down: coreServices.filter((s: any) => !s.healthy).length,
+        not_attributed: allServices.filter((s: any) => !s.app).length,
       },
       browser_runners: {
         active: runners.filter((r) => r.state === "running").length,

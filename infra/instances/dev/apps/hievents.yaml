@@ -4,21 +4,57 @@
 # container). Uses the shared Citus Postgres (db `hievents`, role `hievents`,
 # provisioned by hievents-db-setup) and the shared Redis (queue/cache).
 #
-# Public event pages stay PUBLIC (attendees RSVP/ticket without an account);
-# admin is native email/password. APP_DISABLE_REGISTRATION gates signups —
-# flip to "true" once the first admin account is created. No oauth2-proxy gate
-# here because the public event/checkout pages must not 302 to a login.
+# Public event pages stay PUBLIC — the edge splits this host by PATH: /manage/*
+# and /oauth2/* go through the oauth2-proxy fleet gate (coop OIDC), everything
+# else — event pages, checkout, ticket lookup, /api/* — is served straight by the
+# app, so a ticket buyer never meets a login wall. The admin is coop-identity
+# gated + gate-SSO'd (the SSR exchanges x-forwarded-email for a Hi.Events session
+# via /api/auth/gate-sso — see assets/hievents/README.md), and the login screen
+# leads with "Log in with irl.coop" with the native form kept as the fallback.
+# Native signup is CLOSED (APP_DISABLE_REGISTRATION=true): there is no email/
+# password registration, the /auth/register route 302s to the login screen, and
+# members are provisioned from the fleet identity. The gate-SSO provisioning path
+# bypasses that flag (CreateAccountHandler's $bypassRegistrationCheck), so closing
+# signup can never lock a fleet member out of their own account. The password
+# LOGIN form stays as the fallback for accounts that already have one (invites,
+# the pre-SSO local admin).
 #
 # Mail: MAIL_MAILER=log for now (emails to the log, no SMTP) — wire Stalwart
 # submission (172.17.0.1:587) + a service account as the follow-on.
 name: hievents
 pillar: workflow
 type: image
-image: daveearley/hi.events-all-in-one:latest
+image: irlcoop/hievents-gate-sso:1.11.1-beta.4
 env:
   # keys — APP_KEY is base64 (vault), JWT_SECRET is derived hex
   APP_KEY: ${VAULT:hievents.app_key}
   JWT_SECRET: ${SECRET:hievents.jwt}
+  # ---- irl.coop fleet SSO (Gate SSO) --------------------------------------
+  # The gate on /manage + /oauth2 authenticates the member against coop-api and
+  # forwards x-forwarded-email; the frontend SSR exchanges that for a Hi.Events
+  # session. COOP_GATE_SSO_SECRET is the derived secret the SSR presents to the
+  # internal mint endpoint (which additionally requires a loopback caller), so a
+  # spoofed header can never mint a session from the public internet.
+  GATE_SSO_ENABLED: "true"
+  GATE_SSO_EMAIL_HEADER: x-forwarded-email
+  # the coop group seats (a JSON string of {slug,name,roles[]}) that decide which
+  # group workspaces this member gets — one Hi.Events account per group
+  GATE_SSO_GROUPS_HEADER: x-forwarded-groups
+  GATE_SSO_LANDING_PATH: /manage/events
+  COOP_GROUP_EMAIL_DOMAIN: ${DOMAIN}
+  COOP_GATE_SSO_SECRET: ${SECRET:hievents.gate-sso}
+  COOP_GATE_SSO_INTERNAL_API: http://127.0.0.1/api
+  # the login screen renders the "Log in with irl.coop" door (the SSR injects
+  # every runtime VITE_* var into window.hievents, which getConfig reads)
+  VITE_GATE_SSO_ENABLED: "true"
+  # ---- coop event bus ------------------------------------------------------
+  # Every ticketing event gets an auto-provisioned webhook to the coop bus (see
+  # assets/hievents/README.md): sales, attendees, check-ins land on the workspace's
+  # stream, so the group sees its own activity. URL + bearer secret + the event
+  # types the coop subscribes to; unset COOP_EVENT_BUS_URL disables it.
+  COOP_EVENT_BUS_URL: https://api.${DOMAIN}/api/v1/webhooks/hi-events
+  COOP_EVENT_BUS_SECRET: ${SECRET:hi-events.webhook}
+  COOP_EVENT_BUS_EVENTS: order.created,order.marked_as_paid,order.refunded,order.cancelled,attendee.created,attendee.cancelled,checkin.created,event.created
   # frontend build-time URLs
   VITE_FRONTEND_URL: https://events.${DOMAIN}
   VITE_API_URL_CLIENT: https://events.${DOMAIN}/api
@@ -29,7 +65,7 @@ env:
   APP_CDN_URL: https://events.${DOMAIN}/storage
   LOG_CHANNEL: stderr
   QUEUE_CONNECTION: redis
-  APP_DISABLE_REGISTRATION: "false"
+  APP_DISABLE_REGISTRATION: "true"
   APP_SAAS_MODE_ENABLED: "false"
   FILESYSTEM_PUBLIC_DISK: public
   FILESYSTEM_PRIVATE_DISK: local
@@ -78,14 +114,68 @@ healthcheck:
   retries: 5
   start_period: 60s
 proxy:
-  hostname: events.${DOMAIN}
-  port: 3007
-  description: Hi.Events (open-source events/ticketing)
+  # PATH-SPLIT on one host: the admin goes through the coop gate, the public
+  # ticketing surface does not. Priorities make the narrowed routers win over the
+  # bare-host fallback (traefik: higher priority wins).
+  - hostname: events.${DOMAIN}
+    port: 8099
+    path: /manage
+    priority: 30
+    description: Hi.Events admin (coop-identity gated)
+  - hostname: events.${DOMAIN}
+    port: 8099
+    path: /oauth2
+    priority: 30
+    description: Hi.Events coop gate (sign_in / start / callback)
+  - hostname: events.${DOMAIN}
+    port: 3007
+    priority: 10
+    description: Hi.Events (public events, checkout, tickets)
 nav:
   label: Events
   icon: CalendarDays
   section: Coop
 sidecars:
+  # The fleet gate (same pattern as nocodb-gate / webstudio-gate / formbricks-gate
+  # / fusionpbx-gate): coop OIDC against api.irl.coop — the coop_session cookie
+  # makes /manage instant, no Keycloak page. Only the admin paths reach it (the
+  # edge splits by path), so public event pages never see a login wall.
+  hievents-gate:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    restart: always
+    # oauth2-proxy does OIDC discovery ONCE at startup with no retry — if coop-api
+    # is mid-restart it 502s and dies; restart:always is the self-heal (same quirk
+    # as Synapse/every other gate).
+    command:
+      - --provider=oidc
+      - --oidc-issuer-url=https://api.${DOMAIN}
+      - --client-id=hievents-gate
+      - --client-secret=hievents-gate-secret
+      - --redirect-url=https://events.${DOMAIN}/oauth2/callback
+      - --email-domain=*
+      - --upstream=http://hievents:80
+      - --http-address=0.0.0.0:4180
+      # 32 bytes (oauth2-proxy AES requirement)
+      - --cookie-secret=irlcoop-events-gate-dev-sec-1234
+      - --cookie-name=_irlhievents
+      - --cookie-secure=false
+      # the member's dashboard session makes this a silent bounce
+      - --skip-provider-button=true
+      # forward the coop identity (X-Forwarded-Email) + the member's coop group
+      # seats (X-Forwarded-Groups — the `groups` claim is a JSON STRING, which
+      # oauth2-proxy forwards verbatim; an array claim would be Go-formatted into
+      # invalid JSON) so the app can scope a workspace per group
+      - --pass-user-headers=true
+      - --oidc-groups-claim=groups
+      # re-validate the session against userinfo every 5m: group/role drift
+      # (a member's seat changing in the coop) reaches the app without waiting for
+      # the next re-login — same setting the fusionpbx gate uses for grants
+      - --cookie-refresh=5m
+    ports:
+      # host-published for the traefik edge (172.17.0.1:8099 — 8091 is onlyoffice)
+      - "8099:4180"
+    depends_on:
+      - hievents
   hievents-db-setup:
     image: postgres:15-alpine
     restart: "no"

@@ -1,0 +1,292 @@
+diff --git a/apps/web/lib/brand-color.ts b/apps/web/lib/brand-color.ts
+index f2c4751..0c4247b 100644
+--- a/apps/web/lib/brand-color.ts
++++ b/apps/web/lib/brand-color.ts
+@@ -1 +1 @@
+-export const DEFAULT_BRAND_COLOR = "#1e40af";
++export const DEFAULT_BRAND_COLOR = "#7C3AED";
+diff --git a/apps/web/modules/auth/login/components/login-form.tsx b/apps/web/modules/auth/login/components/login-form.tsx
+index 1d6bb40..d1fb8b1 100644
+--- a/apps/web/modules/auth/login/components/login-form.tsx
++++ b/apps/web/modules/auth/login/components/login-form.tsx
+@@ -299,6 +299,20 @@ export const LoginForm = ({
+               source="signin"
+             />
+           )}
++          {/* irl.coop: our own fleet-SSO door. The EE SSOOptions above renders nothing
++              without an enterprise licence, and the gate-SSO middleware only fires when
++              the request already carries the gate's identity header — so this is the
++              one-click route in for anyone who lands on the native login form (e.g. a
++              pasted deep link, or the app reached without the gate). It hits the
++              oauth2-proxy gate, which authenticates against the coop gateway and hands
++              identity back to the app. */}
++          <div className="mt-4">
++            <a
++              href={`/oauth2/start?rd=${encodeURIComponent(resolvedCallbackUrl)}`}
++              className="relative flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
++              Sign in with irl.coop
++            </a>
++          </div>
+         </div>
+ 
+         {publicSignUpEnabled && !totpLogin && isMultiOrgEnabled && (
+diff --git a/apps/web/modules/auth/login/page.tsx b/apps/web/modules/auth/login/page.tsx
+index f1696ba..580e7ad 100644
+--- a/apps/web/modules/auth/login/page.tsx
++++ b/apps/web/modules/auth/login/page.tsx
+@@ -26,8 +26,8 @@ import {
+ import { LoginForm } from "./components/login-form";
+ 
+ export const metadata: Metadata = {
+-  title: "Login",
+-  description: "Open-source Experience Management. Free & open source.",
++  title: "Sign in to irl.coop",
++  description: "One account for every group you belong to.",
+ };
+ 
+ export const LoginPage = async ({
+@@ -53,7 +53,7 @@ export const LoginPage = async ({
+   const samlSsoEnabled = isSamlSsoEnabled && SAML_OAUTH_ENABLED;
+ 
+   return (
+-    <div className="flex min-h-screen w-full items-center justify-center bg-[#D9F6F4]">
++    <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF5FF]">
+       <FormWrapper>
+         <LoginForm
+           emailAuthEnabled={EMAIL_AUTH_ENABLED}
+diff --git a/apps/web/modules/auth/signup/page.tsx b/apps/web/modules/auth/signup/page.tsx
+index cf68c69..b9f743c 100644
+--- a/apps/web/modules/auth/signup/page.tsx
++++ b/apps/web/modules/auth/signup/page.tsx
+@@ -58,7 +58,7 @@ export const SignupPage = async ({
+   const emailFromSearchParams = searchParams["email"];
+ 
+   return (
+-    <div className="flex min-h-screen w-full items-center justify-center bg-[#D9F6F4]">
++    <div className="flex min-h-screen w-full items-center justify-center bg-[#FAF5FF]">
+       <FormWrapper>
+         <SignupForm
+           webAppUrl={WEBAPP_URL}
+diff --git a/apps/web/modules/survey/link/components/survey-completed-message.tsx b/apps/web/modules/survey/link/components/survey-completed-message.tsx
+index 115450e..c334336 100644
+--- a/apps/web/modules/survey/link/components/survey-completed-message.tsx
++++ b/apps/web/modules/survey/link/components/survey-completed-message.tsx
+@@ -30,7 +30,7 @@ export const SurveyCompletedMessage = async ({
+       </div>
+       {(!workspace || workspace.linkSurveyBranding) && (
+         <div>
+-          <Link href="https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=survey_completed">
++          <Link href="https://irl.coop/signup?intent=formbricks">
+             <Image src={footerLogo} alt="Brand logo" className="mx-auto w-40" />
+           </Link>
+         </div>
+diff --git a/apps/web/modules/ui/components/formbricks-logo/index.tsx b/apps/web/modules/ui/components/formbricks-logo/index.tsx
+index 7b2d66e..4a24d7b 100644
+--- a/apps/web/modules/ui/components/formbricks-logo/index.tsx
++++ b/apps/web/modules/ui/components/formbricks-logo/index.tsx
+@@ -79,10 +79,10 @@ export const FormbricksLogo = ({ className }: FormbricksLogoProps) => {
+           </g>
+         </g>
+         <g filter="url(#filter1_f_415_2)">
+-          <circle cx="21.4498" cy="179.212" r="53.13" fill="#00C4B8" />
++          <circle cx="21.4498" cy="179.212" r="53.13" fill="#7C3AED" />
+         </g>
+         <g filter="url(#filter2_f_415_2)">
+-          <circle cx="21.4498" cy="44.6163" r="53.13" fill="#00C4B8" />
++          <circle cx="21.4498" cy="44.6163" r="53.13" fill="#7C3AED" />
+         </g>
+       </g>
+       <defs>
+@@ -139,7 +139,7 @@ export const FormbricksLogo = ({ className }: FormbricksLogoProps) => {
+           x2="39.1553"
+           y2="174.873"
+           gradientUnits="userSpaceOnUse">
+-          <stop offset="1" stopColor="#00C4B8" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint1_linear_415_2"
+@@ -148,8 +148,8 @@ export const FormbricksLogo = ({ className }: FormbricksLogoProps) => {
+           x2="39.1602"
+           y2="110.554"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00DDD0" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#8B5CF6" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint2_linear_415_2"
+@@ -158,8 +158,8 @@ export const FormbricksLogo = ({ className }: FormbricksLogoProps) => {
+           x2="39.1602"
+           y2="45.0264"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00DDD0" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#8B5CF6" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint3_linear_415_2"
+@@ -168,8 +168,8 @@ export const FormbricksLogo = ({ className }: FormbricksLogoProps) => {
+           x2="39.1553"
+           y2="174.874"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00FFE1" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#A78BFA" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint4_linear_415_2"
+@@ -178,8 +178,8 @@ export const FormbricksLogo = ({ className }: FormbricksLogoProps) => {
+           x2="39.1602"
+           y2="110.555"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00FFE1" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#A78BFA" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint5_linear_415_2"
+@@ -188,8 +188,8 @@ export const FormbricksLogo = ({ className }: FormbricksLogoProps) => {
+           x2="39.1602"
+           y2="45.0264"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00FFE1" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#A78BFA" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+       </defs>
+     </svg>
+diff --git a/apps/web/modules/ui/components/logo/index.tsx b/apps/web/modules/ui/components/logo/index.tsx
+index 1993736..e4100e6 100644
+--- a/apps/web/modules/ui/components/logo/index.tsx
++++ b/apps/web/modules/ui/components/logo/index.tsx
+@@ -73,10 +73,10 @@ export const Logo = (props: any) => {
+           </g>
+         </g>
+         <g filter="url(#filter1_f_2810_6010)">
+-          <circle cx="13.0756" cy="107.906" r="23.7736" fill="#00C4B8" />
++          <circle cx="13.0756" cy="107.906" r="23.7736" fill="#7C3AED" />
+         </g>
+         <g filter="url(#filter2_f_2810_6010)">
+-          <circle cx="13.0756" cy="47.6793" r="23.7736" fill="#00C4B8" />
++          <circle cx="13.0756" cy="47.6793" r="23.7736" fill="#7C3AED" />
+         </g>
+       </g>
+       <line x1="123.75" y1="33" x2="123.75" y2="120" stroke="#CBD5E1" strokeWidth="1.5" />
+@@ -135,7 +135,7 @@ export const Logo = (props: any) => {
+           y2="105.964"
+           gradientUnits="userSpaceOnUse">
+           <stop stopColor="#00E6CA" />
+-          <stop offset="1" stopColor="#00C4B8" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint1_linear_2810_6010"
+@@ -145,7 +145,7 @@ export const Logo = (props: any) => {
+           y2="77.1838"
+           gradientUnits="userSpaceOnUse">
+           <stop stopColor="#00E6CA" />
+-          <stop offset="1" stopColor="#00C4B8" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint2_linear_2810_6010"
+@@ -155,7 +155,7 @@ export const Logo = (props: any) => {
+           y2="47.863"
+           gradientUnits="userSpaceOnUse">
+           <stop stopColor="#00E6CA" />
+-          <stop offset="1" stopColor="#00C4B8" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint3_linear_2810_6010"
+@@ -164,8 +164,8 @@ export const Logo = (props: any) => {
+           x2="20.9978"
+           y2="105.964"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00FFE1" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#A78BFA" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint4_linear_2810_6010"
+@@ -174,8 +174,8 @@ export const Logo = (props: any) => {
+           x2="21"
+           y2="77.1838"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00FFE1" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#A78BFA" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+         <linearGradient
+           id="paint5_linear_2810_6010"
+@@ -184,8 +184,8 @@ export const Logo = (props: any) => {
+           x2="21"
+           y2="47.863"
+           gradientUnits="userSpaceOnUse">
+-          <stop stopColor="#00FFE1" />
+-          <stop offset="1" stopColor="#01E0C6" />
++          <stop stopColor="#A78BFA" />
++          <stop offset="1" stopColor="#7C3AED" />
+         </linearGradient>
+       </defs>
+     </svg>
+diff --git a/apps/web/modules/ui/globals.css b/apps/web/modules/ui/globals.css
+index 8dd5255..cee3e00 100644
+--- a/apps/web/modules/ui/globals.css
++++ b/apps/web/modules/ui/globals.css
+@@ -12,12 +12,12 @@
+ 
+ @theme {
+   /* Brand */
+-  --color-brand: #00e6ca;
+-  --color-brand-light: #00e6ca;
+-  --color-brand-dark: #00c4b8;
++  --color-brand: #7C3AED;
++  --color-brand-light: #7C3AED;
++  --color-brand-dark: #5B21B6;
+ 
+   --color-focus: var(--formbricks-focus, #1982fc);
+-  --color-brandnew: var(--formbricks-brand, #038178);
++  --color-brandnew: var(--formbricks-brand, #7C3AED);
+ 
+   --color-primary: #0f172a;
+   --color-primary-foreground: #fefefe;
+@@ -237,7 +237,7 @@
+ @layer utilities {
+   :root {
+     /* Brand Colors */
+-    --formbricks-brand: #038178;
++    --formbricks-brand: #7C3AED;
+ 
+     /* Fill Colors */
+     --formbricks-fill-primary: #fefefe;
+@@ -261,7 +261,7 @@
+ 
+   .dark {
+     /* Brand Colors */
+-    --formbricks-brand: #038178;
++    --formbricks-brand: #7C3AED;
+ 
+     /* Fill Colors */
+     --formbricks-fill-primary: #0f172a;
+diff --git a/packages/surveys/src/components/general/formbricks-branding.tsx b/packages/surveys/src/components/general/formbricks-branding.tsx
+index e26209b..e39e91f 100644
+--- a/packages/surveys/src/components/general/formbricks-branding.tsx
++++ b/packages/surveys/src/components/general/formbricks-branding.tsx
+@@ -5,7 +5,7 @@ export function FormbricksBranding() {
+   return (
+     <span className="flex justify-center">
+       <a
+-        href="https://formbricks.com?utm_source=formbricks-app&utm_medium=survey&utm_campaign=powered_by_badge"
++        href="https://irl.coop"
+         target="_blank"
+         rel="noopener">
+         <p className="text-signature text-xs">

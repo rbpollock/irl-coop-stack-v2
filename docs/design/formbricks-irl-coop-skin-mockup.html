@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formbricks → irl.coop skin scope</title>
+<style>
+  /* Mockup page: standalone, so it sets its own palette (irl.coop design system). */
+  :root {
+    --purple: #7C3AED; --purple-deep: #4C1D95; --warm: #FAF5FF; --ink: #4C1D95;
+    --muted: #475569; --green: #16A34A; --line: #E9D5FF; --card: #fff;
+    --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--warm); color: var(--muted);
+         font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+  h1 { font-family: var(--serif); font-size: 30px; color: var(--ink); margin: 0 0 6px; font-weight: 600; }
+  .sub { color: var(--muted); margin: 0 0 20px; max-width: 70ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; }
+  .tag { font: 600 11px/1 var(--mono); padding: 5px 8px; border-radius: 999px; letter-spacing: .02em; }
+  .tA { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+  .tA2 { background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; }
+  .tB { background: #F5F3FF; color: #5B21B6; border: 1px solid var(--line); }
+  .tEE { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+  .grid { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .panel > h2 { font-family: var(--serif); font-size: 19px; color: var(--ink); margin: 0 0 2px; font-weight: 600; }
+  .panel > .note { font-size: 12px; color: var(--muted); margin: 0 0 14px; }
+  .frame { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--warm); }
+  /* --- survey surface --- */
+  .survey { padding: 22px 18px 14px; background: var(--warm); }
+  .progress { height: 6px; border-radius: 999px; background: #EDE9FE; overflow: hidden; margin-bottom: 18px; }
+  .progress > i { display: block; height: 100%; width: 38%; background: var(--green); }
+  .scard { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+           padding: 22px; box-shadow: 0 1px 2px rgba(76,29,149,.06); }
+  .scard h3 { font-family: var(--serif); color: var(--ink); font-size: 22px; margin: 0 0 6px; font-weight: 600; }
+  .scard p { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+  .opt { border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; margin-bottom: 9px;
+         background: #fff; display: flex; align-items: center; gap: 10px; }
+  .opt.sel { border-color: var(--purple); background: #F5F3FF; }
+  .opt i { width: 14px; height: 14px; border-radius: 999px; border: 2px solid var(--purple); display: inline-block; }
+  .opt.sel i { background: var(--purple); }
+  .btn { display: inline-block; background: var(--purple); color: #fff; border-radius: 12px;
+         padding: 11px 20px; font-weight: 600; font-size: 13px; border: 0; }
+  .sfoot { display: flex; justify-content: space-between; align-items: center; padding: 12px 4px 2px;
+           font-size: 11px; color: var(--muted); }
+  .sfoot a { color: var(--purple); text-decoration: none; font-weight: 600; }
+  /* --- admin chrome --- */
+  .admin { display: flex; min-height: 250px; background: var(--warm); }
+  .nav { width: 148px; border-right: 1px solid var(--line); padding: 12px 10px; background: #fff; }
+  .nav .brand { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; }
+  .nav .mark { width: 20px; height: 20px; border-radius: 6px; background: var(--purple); }
+  .nav .brand b { color: var(--ink); font-size: 12px; }
+  .nav a { display: block; color: var(--muted); text-decoration: none; font-size: 12px; padding: 6px 8px; border-radius: 8px; }
+  .nav a.on { background: #F5F3FF; color: var(--purple-deep); font-weight: 600; }
+  .nav .sect { font: 600 10px/1 var(--mono); color: #A78BFA; text-transform: uppercase; margin: 12px 8px 6px; }
+  .main { flex: 1; padding: 12px 14px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .ws { border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; font-size: 12px; background: #fff; color: var(--ink); font-weight: 600; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mcard { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .mcard b { display: block; color: var(--ink); font-size: 13px; }
+  .mcard span { font-size: 11px; color: var(--muted); }
+  /* --- login --- */
+  .login { padding: 26px 18px; text-align: center; background: var(--warm); }
+  .login .lc { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px 20px; }
+  .login h3 { font-family: var(--serif); font-size: 24px; color: var(--ink); margin: 0 0 4px; }
+  .login .hint { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+          border-radius: 12px; padding: 10px 14px; font-size: 13px; color: var(--ink); background: #fff; font-weight: 600; }
+  .anno { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  code { font-family: var(--mono); font-size: 11px; background: #F5F3FF; color: #5B21B6; padding: 1px 4px; border-radius: 4px; }
+  footer.page { margin-top: 24px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <h1>Formbricks → irl.coop — where the skin can go</h1>
+  <p class="sub">The same three surfaces a member actually touches, drawn in the irl.coop design
+  system (purple #7C3AED, ink #4C1D95, warm #FAF5FF, serif display). Each annotation names the
+  lever that produces it — that's the scope.</p>
+
+  <div class="legend">
+    <span class="tag tA">A · styling token (no code)</span>
+    <span class="tag tA2">A2 · customHeadScripts (no code)</span>
+    <span class="tag tB">B · AGPL patch (our fork)</span>
+    <span class="tag tEE">EE · not without a licence</span>
+  </div>
+
+  <div class="grid">
+    <!-- 1. public survey -->
+    <section class="panel">
+      <h2>1 · Public survey (respondent)</h2>
+      <p class="note">What a neighbor answering a coop survey sees — <b>almost entirely lever A</b>.</p>
+      <div class="frame">
+        <div class="survey">
+          <div class="progress"><i></i></div>
+          <div class="scard">
+            <h3>Which pickup days work for you?</h3>
+            <p>Cold Storage Co-op is setting the weekly route.</p>
+            <div class="opt sel"><i></i> Tuesday afternoon</div>
+            <div class="opt"><i></i> Thursday morning</div>
+            <div class="opt"><i></i> Either works</div>
+            <button class="btn">Next</button>
+          </div>
+          <div class="sfoot">
+            <span>Cold Storage Co-op · irl.coop</span>
+            <a href="#">Powered by Formbricks</a>
+          </div>
+        </div>
+      </div>
+      <div class="anno">
+        <span class="tag tA">brandColor</span>
+        <span class="tag tA">elementHeadlineColor + fontFamily</span>
+        <span class="tag tA">progressIndicatorBgColor</span>
+        <span class="tag tA">cardBackgroundColor · roundness · cardWidth</span>
+        <span class="tag tA">optionBgColor · accentBgColorSelected</span>
+        <span class="tag tA">buttonBgColor · buttonBorderRadius</span>
+        <span class="tag tA">footerLinkColor</span>
+        <span class="tag tB">footer link “Powered by Formbricks” → irl.coop (keep the words)</span>
+        <span class="tag tA2">customHeadScripts — webfont @font-face, flourishes</span>
+      </div>
+    </section>
+
+    <!-- 2. admin chrome -->
+    <section class="panel">
+      <h2>2 · Inside Formbricks (member admin)</h2>
+      <p class="note">Only members building surveys see this — <b>the one place lever B earns its keep</b>.</p>
+      <div class="frame">
+        <div class="admin">
+          <nav class="nav">
+            <div class="brand"><span class="mark"></span><b>irl.coop</b></div>
+            <a class="on">Surveys</a>
+            <a>Responses</a>
+            <a>Contacts</a>
+            <div class="sect">Groups</div>
+            <a>Cold Storage Co-op</a>
+            <a>My workspace</a>
+          </nav>
+          <div class="main">
+            <div class="top">
+              <b style="color:var(--ink);font-size:13px">Surveys</b>
+              <span class="ws">Cold Storage Co-op ▾</span>
+            </div>
+            <div class="cards">
+              <div class="mcard"><b>Pickup days</b><span>42 responses · live</span></div>
+              <div class="mcard"><b>Storage needs</b><span>draft</span></div>
+              <div class="mcard"><b>Harvest survey</b><span>closed</span></div>
+              <div class="mcard"><b>+ New survey</b><span>starts from a seed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="anno">
+        <span class="tag tB">sidebar nav — coop sections, workspace = group</span>
+        <span class="tag tB">app palette + type (globals.css / tailwind theme)</span>
+        <span class="tag tB">header/workspace switcher copy</span>
+        <span class="tag tB">brand assets (favicon, share cards)</span>
+        <span class="tag tB">“+ New survey” → blueprint picker (later)</span>
+      </div>
+    </section>
+
+    <!-- 3. login -->
+    <section class="panel">
+      <h2>3 · Login</h2>
+      <p class="note">Reached only when the gate has no session — <b>tiny patch, big signal</b>.</p>
+      <div class="frame">
+        <div class="login">
+          <div class="lc">
+            <div style="width:34px;height:34px;border-radius:10px;background:var(--purple);margin:0 auto 12px"></div>
+            <h3>Sign in to irl.coop</h3>
+            <p class="hint">One account for every group you belong to.</p>
+            <span class="pill">Continue with irl.coop</span>
+          </div>
+        </div>
+      </div>
+      <div class="anno">
+        <span class="tag tB">login page copy + palette (auth/login)</span>
+        <span class="tag tB">no Formbricks wordmark / marketing links</span>
+        <span class="tag tEE">hiding the “Powered by” signature itself — licence-gated; we repoint instead</span>
+      </div>
+    </section>
+  </div>
+
+  <footer class="page">
+    Scope detail, exact knob names and cost tiers: <code>docs/design/formbricks-customization-scope.md</code>.
+    This is a mockup of the levers, not a screenshot of the running app.
+  </footer>
+</body>
+</html>

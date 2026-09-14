@@ -187,6 +187,17 @@ def emit_proxy(instance, apps, out_dir, inst_dir):
             return f"HostRegexp(`^[^.]+[.]{escaped}$`)"
         return f"Host(`{host}`)"
 
+    def _rule(host, path):
+        # A `path:` on a proxy entry narrows its router to a path prefix, so one
+        # host can split across two upstreams (e.g. Hi.Events: /manage + /oauth2
+        # → the oauth2-proxy gate, everything else → the app itself, leaving the
+        # public event/checkout pages untouched by the gate). Give such routers an
+        # explicit priority so the narrowed one wins over the bare-host fallback.
+        rule = _host_rule(host)
+        if path:
+            rule = f"{rule} && PathPrefix(`{path}`)"
+        return rule
+
     routes = []
     middlewares = {}
     for app in apps:
@@ -197,24 +208,28 @@ def emit_proxy(instance, apps, out_dir, inst_dir):
             proxies = [proxies]
         for p in proxies:
             host = p["hostname"]
+            path = p.get("path")
             name = _route_name(app["name"], host)
+            if path:
+                # Two routers on one host need distinct router + service names.
+                name = f"{name}-{path.strip('/').replace('/', '-') or 'root'}"
             mw = None
             # optional per-route response header override (e.g. CSP frame-ancestors)
             headers = p.get("headers")
             if headers:
                 mw = f"{name}-headers"
                 middlewares[mw] = {"headers": {"customResponseHeaders": headers}}
-            routes.append((name, host, p["port"], p.get("priority"), mw))
+            routes.append((name, host, p["port"], p.get("priority"), mw, path))
     for app in apps:
         if app["name"] == "traefik":
             for r in app.get("routes", []):
                 host = r["hostname"]
                 routes.append(
-                    (_route_name("traefik", host), host, r["port"], r.get("priority"), None)
+                    (_route_name("traefik", host), host, r["port"], r.get("priority"), None, r.get("path"))
                 )
     http = {"routers": {}, "services": {}, "middlewares": middlewares}
-    for name, host, port, priority, mw in routes:
-        router = {"rule": _host_rule(host), "service": name, "tls": {}}
+    for name, host, port, priority, mw, path in routes:
+        router = {"rule": _rule(host, path), "service": name, "tls": {}}
         if priority is not None:
             router["priority"] = priority
         if mw:
@@ -297,11 +312,17 @@ def emit_ansible_edge(instance, inst_dir, out_dir):
         yaml.safe_dump(playbook, f, sort_keys=False)
 
 
-def emit_secrets_env(instance, inst_dir, master_hex, out_dir):
+def emit_secrets_env(instance, inst_dir, master_hex, out_dir, apps=None):
     """Emit out/<instance>/secrets.env — every ${SECRET:<name>} reference the
     specs use, resolved to derived values, as KEY=name lines. Host-side
     processes (coop-api dev) source this; gitignored with the rest of out/.
-    KEY naming: the SECRET name itself (dots stay), UPPER-SNAKE for env use."""
+    KEY naming: the SECRET name itself (dots stay), UPPER-SNAKE for env use.
+
+    Also emits the `env:` block of `type: source` (host) apps, already resolved.
+    A host app has no compose service, so without this its env has nowhere to go
+    and a ${VAULT:...} reference would silently vanish — a host process could not
+    receive a vault secret at all. `apps` is the resolved list (the caller has
+    already substituted ${SECRET:}/${VAULT:}/${DOMAIN})."""
     import re
     used = []
     for app_name in instance["apps"]:
@@ -313,6 +334,21 @@ def emit_secrets_env(instance, inst_dir, master_hex, out_dir):
     for name in sorted(set(used)):
         key = name.upper().replace(".", "_").replace("-", "_")
         lines.append(f"{key}={derived_secrets.derive(name, master_hex, instance['domain'])}")
+    if apps:
+        emitted = {ln.split("=", 1)[0] for ln in lines if "=" in ln}
+        extra = []
+        for app in apps:
+            if app.get("type") != "source":
+                continue
+            for key, val in (app.get("env") or {}).items():
+                if not isinstance(val, (str, int, float, bool)) or key in emitted:
+                    continue
+                extra.append(f"{key}={val}")
+                emitted.add(key)
+        if extra:
+            lines.append("")
+            lines.append("# host (type: source) app env, resolved from the spec at generate time")
+            lines.extend(extra)
     (out_dir / "secrets.env").write_text("\n".join(lines) + "\n")
 
 
@@ -442,7 +478,7 @@ def main():
     emit_views(apps, out)
     emit_proxy(instance, apps, out, inst_dir)
     emit_ansible_edge(instance, inst_dir, out)
-    emit_secrets_env(instance, inst_dir, master_hex, out)
+    emit_secrets_env(instance, inst_dir, master_hex, out, apps)
     emit_matrix_config(inst_dir, out)
     emit_navigation(apps, ROOT.parent)
 

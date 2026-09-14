@@ -1,0 +1,1625 @@
+diff --git a/backend/app/Console/Commands/CoopEventBusSyncCommand.php b/backend/app/Console/Commands/CoopEventBusSyncCommand.php
+new file mode 100644
+index 00000000..a98af834
+--- /dev/null
++++ b/backend/app/Console/Commands/CoopEventBusSyncCommand.php
+@@ -0,0 +1,44 @@
++<?php
++
++declare(strict_types=1);
++
++namespace HiEvents\Console\Commands;
++
++use HiEvents\Models\Event;
++use HiEvents\Services\Domain\Coop\CoopEventBusWebhookProvisioner;
++use Illuminate\Console\Command;
++
++/**
++ * Reconcile the coop event-bus webhooks (see CoopEventBusWebhookProvisioner):
++ * run at container start so every existing ticketing event has its webhook, and
++ * safe to run by hand at any time. A no-op when COOP_EVENT_BUS_URL is unset.
++ */
++class CoopEventBusSyncCommand extends Command
++{
++    protected $signature = 'coop:event-bus:sync';
++
++    protected $description = 'Ensure every ticketing event has its webhook into the coop event bus';
++
++    public function handle(CoopEventBusWebhookProvisioner $provisioner): int
++    {
++        if (!$provisioner->enabled()) {
++            $this->info('Coop event bus not configured (COOP_EVENT_BUS_URL unset) — nothing to do.');
++
++            return self::SUCCESS;
++        }
++
++        $provisioned = 0;
++
++        Event::query()->whereNull('deleted_at')->chunkById(200, function ($events) use ($provisioner, &$provisioned) {
++            foreach ($events as $event) {
++                if ($provisioner->ensureForEvent($event) !== null) {
++                    $provisioned++;
++                }
++            }
++        });
++
++        $this->info("Coop event-bus webhooks reconciled for {$provisioned} event(s).");
++
++        return self::SUCCESS;
++    }
++}
+diff --git a/backend/app/Http/Actions/Auth/GateSsoAction.php b/backend/app/Http/Actions/Auth/GateSsoAction.php
+new file mode 100644
+index 00000000..acf0b64c
+--- /dev/null
++++ b/backend/app/Http/Actions/Auth/GateSsoAction.php
+@@ -0,0 +1,379 @@
++<?php
++
++declare(strict_types=1);
++
++namespace HiEvents\Http\Actions\Auth;
++
++use HiEvents\DomainObjects\AccountUserDomainObject;
++use HiEvents\DomainObjects\Enums\Role;
++use HiEvents\DomainObjects\UserDomainObject;
++use HiEvents\Http\ResponseCodes;
++use HiEvents\Models\Account;
++use HiEvents\Models\User;
++use HiEvents\Repository\Interfaces\AccountUserRepositoryInterface;
++use HiEvents\Services\Application\Handlers\Account\CreateAccountHandler;
++use HiEvents\Services\Application\Handlers\Account\DTO\CreateAccountDTO;
++use HiEvents\Services\Application\Handlers\Account\Exceptions\AccountConfigurationDoesNotExist;
++use HiEvents\Services\Application\Handlers\Account\Exceptions\AccountRegistrationDisabledException;
++use HiEvents\Services\Domain\Coop\CoopWorkspaceProvisioner;
++use Illuminate\Config\Repository;
++use Illuminate\Http\JsonResponse;
++use Illuminate\Http\Request;
++use Illuminate\Support\Str;
++use PHPOpenSourceSaver\JWTAuth\JWTAuth;
++use Psr\Log\LoggerInterface;
++use Throwable;
++
++/**
++ * irl.coop Gate SSO — exchange the identity forwarded by the oauth2-proxy fleet
++ * gate (`x-forwarded-email` + the coop `groups` claim as `x-forwarded-groups`) for
++ * a Hi.Events session.
++ *
++ * The gate in front of https://events.<domain>/manage/* authenticates the member
++ * against coop-api (the fleet OIDC issuer; the coop_session cookie makes it
++ * instant) and forwards their canonical address plus their coop group seats. The
++ * frontend SSR (frontend/server.js) sees those headers on a gated document request
++ * and calls this endpoint server-to-server to mint the Hi.Events JWT, then sets it
++ * as the `token` cookie.
++ *
++ * GROUP WORKSPACES — one Hi.Events account per coop group the member is seated in
++ * (see CoopWorkspaceProvisioner), plus their own (their 1-of-1 group). Which one
++ * the session lands in is decided here:
++ *   - `?group=<slug>`   the workspace the caller asked for (dashboard deep-links)
++ *   - `?account_id=<id>` an account the member is actually seated in
++ *   - otherwise        their own workspace
++ * and switching later is `GET /api/auth/workspace/{account_id}`.
++ *
++ * TRUST BOUNDARY — this endpoint mints a session from headers, so it must never be
++ * usable from the public internet:
++ *   1. the caller must present the derived shared secret (COOP_GATE_SSO_SECRET,
++ *      only ever held by the SSR process) — hash_equals compared, and
++ *   2. the caller must be loopback (the SSR talks to nginx on 127.0.0.1; every
++ *      public request arrives via traefik/the gate with a non-loopback peer).
++ * Failing either check returns 403 and logs.
++ */
++class GateSsoAction extends BaseAuthAction
++{
++    public function __construct(
++        private readonly JWTAuth                        $jwtAuth,
++        private readonly AccountUserRepositoryInterface $accountUserRepository,
++        private readonly CreateAccountHandler           $createAccountHandler,
++        private readonly CoopWorkspaceProvisioner       $workspaceProvisioner,
++        private readonly Repository                     $config,
++        private readonly LoggerInterface                $logger,
++    ) {}
++
++    public function __invoke(Request $request): JsonResponse
++    {
++        if (!$this->gateSsoEnabled()) {
++            return $this->errorResponse(
++                message: __('Gate SSO is not enabled on this instance'),
++                statusCode: ResponseCodes::HTTP_FORBIDDEN,
++            );
++        }
++
++        if (!$this->isTrustedCaller($request)) {
++            $this->logger->warning('Rejected a gate SSO mint from an untrusted caller', [
++                'remote_addr' => $request->server('REMOTE_ADDR'),
++                'ip' => $request->getClientIp(),
++            ]);
++
++            return $this->errorResponse(
++                message: __('Untrusted caller'),
++                statusCode: ResponseCodes::HTTP_FORBIDDEN,
++            );
++        }
++
++        $email = strtolower(trim((string) $request->header($this->emailHeader(), '')));
++
++        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
++            return $this->errorResponse(
++                message: __('A valid member email was not forwarded by the gate'),
++                statusCode: ResponseCodes::HTTP_UNPROCESSABLE_ENTITY,
++            );
++        }
++
++        try {
++            $user = $this->ensureUser($email);
++            $personalAccountId = $this->ensurePersonalAccount($user);
++            $workspaces = $this->workspaceProvisioner->provision(
++                user: UserDomainObject::hydrateFromModel($user),
++                groups: $this->forwardedGroups($request),
++            );
++        } catch (AccountRegistrationDisabledException) {
++            return $this->errorResponse(
++                message: __('Account creation is disabled on this instance'),
++                statusCode: ResponseCodes::HTTP_FORBIDDEN,
++            );
++        } catch (AccountConfigurationDoesNotExist $e) {
++            $this->logger->error('Gate SSO could not provision an account: '.$e->getMessage());
++
++            return $this->errorResponse(
++                message: __('No default account configuration available'),
++                statusCode: ResponseCodes::HTTP_INTERNAL_SERVER_ERROR,
++            );
++        } catch (Throwable $e) {
++            $this->logger->error('Gate SSO provisioning failed', [
++                'email' => $email,
++                'error' => $e->getMessage(),
++            ]);
++
++            return $this->errorResponse(
++                message: __('Could not provision a session for the gate identity'),
++                statusCode: ResponseCodes::HTTP_INTERNAL_SERVER_ERROR,
++            );
++        }
++
++        $accountId = $this->selectAccount($request, (int) $user->id, $personalAccountId, $workspaces);
++        $role = $this->roleFor((int) $user->id, $accountId);
++
++        $token = $this->jwtAuth
++            ->claims([
++                'account_id' => $accountId,
++                'role' => $role->value,
++            ])
++            ->fromUser($user);
++
++        $this->accountUserRepository->updateWhere(
++            attributes: ['last_login_at' => now()],
++            where: [
++                'user_id' => $user->id,
++                'account_id' => $accountId,
++            ],
++        );
++
++        return $this->addTokenToResponse(
++            response: $this->jsonResponse([
++                'message' => __('Gate SSO session issued'),
++                'data' => [
++                    'token' => $token,
++                    'token_type' => 'bearer',
++                    'expires_in' => auth()->factory()->getTTL() * 60,
++                    'account_id' => $accountId,
++                    'role' => $role->value,
++                    'email' => $email,
++                    // slug => account id, so the caller can deep-link a group
++                    'workspaces' => $workspaces,
++                ],
++            ]),
++            token: $token,
++        );
++    }
++
++    /**
++     * The member's user row, signing them up on first sight through the same
++     * handler the native sign-up used (default account configuration, messaging
++     * tier, admin owner association). The fleet gate asserted the identity, so a
++     * closed native signup must not block provisioning.
++     */
++    private function ensureUser(string $email): User
++    {
++        $user = User::query()->where('email', $email)->first();
++
++        if ($user !== null) {
++            return $user;
++        }
++
++        $this->logger->info('Gate SSO provisioning a member', ['email' => $email]);
++
++        $account = $this->createAccountHandler->handle(
++            accountData: new CreateAccountDTO(
++                email: $email,
++                // Gate-authenticated members never see this password — the fleet
++                // identity is the credential. The native form stays usable for
++                // accounts that already have one (invites, local admins).
++                password: Str::password(32),
++                first_name: Str::before($email, '@'),
++                locale: 'en',
++            ),
++            bypassRegistrationCheck: true,
++        );
++
++        $user = User::query()->where('email', $email)->first();
++
++        if ($user === null) {
++            throw new \RuntimeException('Gate SSO could not resolve the provisioned member');
++        }
++
++        // Claim the freshly created account as their OWN workspace.
++        $this->markAsPersonal($account->getId(), (int) $user->id);
++
++        return $user;
++    }
++
++    /**
++     * The member's own workspace (their 1-of-1 group), keyed `personal:user:<id>`.
++     * A member who signed up before group workspaces existed has an owner account
++     * with no ref — that one is adopted rather than duplicated, so their existing
++     * events stay put.
++     */
++    private function ensurePersonalAccount(User $user): int
++    {
++        $account = Account::query()
++            ->where('external_ref', $this->personalRef((int) $user->id))
++            ->first();
++
++        if ($account !== null) {
++            return (int) $account->id;
++        }
++
++        $owned = $this->accountUserRepository->findFirstWhere([
++            'user_id' => $user->id,
++            'is_account_owner' => true,
++        ]);
++
++        if ($owned !== null) {
++            $legacy = Account::query()->find($owned->getAccountId());
++
++            if ($legacy !== null && trim((string) $legacy->external_ref) === '') {
++                $this->markAsPersonal((int) $legacy->id, (int) $user->id);
++
++                return (int) $legacy->id;
++            }
++        }
++
++        $created = $this->createAccountHandler->handle(
++            accountData: new CreateAccountDTO(
++                email: strtolower((string) $user->email),
++                password: Str::password(32),
++                first_name: Str::before((string) $user->email, '@'),
++                locale: 'en',
++            ),
++            bypassRegistrationCheck: true,
++        );
++
++        $this->markAsPersonal($created->getId(), (int) $user->id);
++
++        return $created->getId();
++    }
++
++    private function markAsPersonal(int $accountId, int $userId): void
++    {
++        $account = Account::query()->find($accountId);
++
++        if ($account === null || trim((string) $account->external_ref) !== '') {
++            return;
++        }
++
++        $account->external_ref = $this->personalRef($userId);
++        $account->save();
++    }
++
++    private function personalRef(int $userId): string
++    {
++        return 'personal:user:'.$userId;
++    }
++
++    /**
++     * The coop `groups` claim — a JSON STRING minted by coop-api and forwarded by
++     * the gate. Malformed input is logged and ignored: a claim problem must never
++     * cost a member their session.
++     *
++     * @return array<int, array{slug?: string, name?: string, roles?: array}>
++     */
++    private function forwardedGroups(Request $request): array
++    {
++        $raw = (string) $request->header(
++            (string) $this->config->get('app.coop_gate_sso_groups_header', 'x-forwarded-groups'),
++            '',
++        );
++
++        if (trim($raw) === '') {
++            return [];
++        }
++
++        $decoded = json_decode($raw, true);
++
++        if (!is_array($decoded)) {
++            $this->logger->warning('Gate SSO ignored a malformed coop groups claim', [
++                'length' => strlen($raw),
++            ]);
++
++            return [];
++        }
++
++        return $decoded;
++    }
++
++    /**
++     * Which workspace this session lands in. An unknown `group` slug falls back to
++     * the member's own workspace rather than failing the sign-in.
++     *
++     * @param array<string, int> $workspaces
++     */
++    private function selectAccount(Request $request, int $userId, int $personalAccountId, array $workspaces): int
++    {
++        $slug = trim((string) $request->query('group', ''));
++
++        if ($slug !== '' && isset($workspaces[$slug])) {
++            return (int) $workspaces[$slug];
++        }
++
++        $requested = (int) $request->query('account_id', 0);
++
++        if ($requested > 0
++            && $requested !== $personalAccountId
++            && $this->membership($userId, $requested) !== null
++        ) {
++            return $requested;
++        }
++
++        if ($requested > 0 && $requested === $personalAccountId) {
++            return $requested;
++        }
++
++        return $personalAccountId;
++    }
++
++    private function membership(int $userId, int $accountId): ?AccountUserDomainObject
++    {
++        /** @var AccountUserDomainObject|null $membership */
++        $membership = $this->accountUserRepository->findFirstWhere([
++            'user_id' => $userId,
++            'account_id' => $accountId,
++        ]);
++
++        return $membership;
++    }
++
++    private function roleFor(int $userId, int $accountId): Role
++    {
++        $membership = $this->membership($userId, $accountId);
++
++        if ($membership === null || $membership->getRole() === null) {
++            return Role::ADMIN;
++        }
++
++        try {
++            return Role::from($membership->getRole());
++        } catch (Throwable) {
++            return Role::ADMIN;
++        }
++    }
++
++    private function gateSsoEnabled(): bool
++    {
++        return in_array(
++            strtolower((string) $this->config->get('app.coop_gate_sso_enabled', 'false')),
++            ['true', '1'],
++            true,
++        );
++    }
++
++    private function emailHeader(): string
++    {
++        return (string) $this->config->get('app.coop_gate_sso_email_header', 'x-forwarded-email');
++    }
++
++    private function isTrustedCaller(Request $request): bool
++    {
++        $expected = (string) $this->config->get('app.coop_gate_sso_secret', '');
++        $presented = (string) $request->header('X-Coop-Gate-Secret', '');
++
++        if ($expected === '' || $presented === '' || !hash_equals($expected, $presented)) {
++            return false;
++        }
++
++        return in_array((string) $request->server('REMOTE_ADDR'), ['127.0.0.1', '::1'], true);
++    }
++}
+diff --git a/backend/app/Http/Actions/Auth/ListWorkspacesAction.php b/backend/app/Http/Actions/Auth/ListWorkspacesAction.php
+new file mode 100644
+index 00000000..49d1746e
+--- /dev/null
++++ b/backend/app/Http/Actions/Auth/ListWorkspacesAction.php
+@@ -0,0 +1,61 @@
++<?php
++
++declare(strict_types=1);
++
++namespace HiEvents\Http\Actions\Auth;
++
++use HiEvents\DomainObjects\Enums\Role;
++use HiEvents\Models\Account;
++use HiEvents\Models\User;
++use HiEvents\Repository\Interfaces\AccountUserRepositoryInterface;
++use Illuminate\Http\JsonResponse;
++
++/**
++ * The member's WORKSPACES — one Hi.Events account per coop group they are seated
++ * in, plus their own (their 1-of-1 group, `personal:user:<id>`).
++ *
++ * The in-app switcher renders this list; selecting one navigates to
++ * `GET /api/auth/workspace/{account_id}`, which re-mints the session for that
++ * account and lands on the admin. Reads go through the Eloquent model because
++ * `accounts.external_ref` is an irl.coop column (deliberately not in the generated
++ * DomainObjects).
++ */
++class ListWorkspacesAction extends BaseAuthAction
++{
++    public function __invoke(): JsonResponse
++    {
++        $user = $this->getAuthenticatedUser();
++        $currentAccountId = $this->getAuthenticatedAccountId();
++
++        $rows = Account::query()
++            ->join('account_users', 'account_users.account_id', '=', 'accounts.id')
++            ->where('account_users.user_id', $user->getId())
++            ->whereNull('account_users.deleted_at')
++            ->whereNull('accounts.deleted_at')
++            // the member's own workspace first, then the groups they're seated in
++            ->orderByRaw("CASE WHEN accounts.external_ref LIKE 'personal:%' THEN 0 ELSE 1 END")
++            ->orderBy('accounts.name')
++            ->get([
++                'accounts.id as id',
++                'accounts.name as name',
++                'accounts.external_ref as external_ref',
++                'account_users.role as role',
++            ]);
++
++        $workspaces = $rows->map(function ($row) use ($currentAccountId) {
++            $externalRef = (string) $row->external_ref;
++            $isGroup = str_starts_with($externalRef, 'coop:');
++
++            return [
++                'id' => (int) $row->id,
++                'name' => $row->name,
++                'kind' => $isGroup ? 'group' : 'personal',
++                'group_slug' => $isGroup ? substr($externalRef, strlen('coop:')) : null,
++                'role' => $row->role ?? Role::ORGANIZER->value,
++                'is_current' => (int) $row->id === $currentAccountId,
++            ];
++        });
++
++        return $this->jsonResponse(['data' => $workspaces]);
++    }
++}
+diff --git a/backend/app/Http/Actions/Auth/WorkspaceSwitchAction.php b/backend/app/Http/Actions/Auth/WorkspaceSwitchAction.php
+new file mode 100644
+index 00000000..5609312f
+--- /dev/null
++++ b/backend/app/Http/Actions/Auth/WorkspaceSwitchAction.php
+@@ -0,0 +1,83 @@
++<?php
++
++declare(strict_types=1);
++
++namespace HiEvents\Http\Actions\Auth;
++
++use HiEvents\DomainObjects\Enums\Role;
++use HiEvents\Models\User;
++use HiEvents\Repository\Interfaces\AccountUserRepositoryInterface;
++use Illuminate\Http\RedirectResponse;
++use Illuminate\Http\Request;
++use PHPOpenSourceSaver\JWTAuth\JWTAuth;
++
++/**
++ * SWITCH WORKSPACE — re-mint the member's session for another account (another
++ * coop group's workspace) and land them on the admin.
++ *
++ * A plain browser navigation (`GET /api/auth/workspace/{account_id}?rd=…`), so the
++ * switcher in the app is an ordinary link: the member must already hold a session
++ * (the `token` cookie — jwt-auth parses it), and the target account must be one
++ * they're actually seated in. The new token carries the `account_id` claim that
++ * `SetAccountContext` resolves, which is exactly what makes the whole admin
++ * (events, users, settings) switch tenants.
++ */
++class WorkspaceSwitchAction extends BaseAuthAction
++{
++    public function __construct(
++        private readonly AccountUserRepositoryInterface $accountUserRepository,
++        private readonly JWTAuth                        $jwtAuth,
++    ) {}
++
++    public function __invoke(Request $request, int $account_id): RedirectResponse
++    {
++        // An expired/absent session is not an error page for a navigation: send the
++        // member to the login screen (which carries the coop door).
++        if (!$this->isUserAuthenticated()) {
++            return redirect('/auth/login');
++        }
++
++        $user = $this->getAuthenticatedUser();
++
++        $membership = $this->accountUserRepository->findFirstWhere([
++            'user_id' => $user->getId(),
++            'account_id' => $account_id,
++        ]);
++
++        // Not their workspace? Behave as if the session were gone rather than
++        // confirming which account ids exist.
++        if ($membership === null) {
++            return redirect('/auth/login');
++        }
++
++        $model = User::query()->find($user->getId());
++
++        $token = $this->jwtAuth
++            ->claims([
++                'account_id' => $account_id,
++                'role' => $membership->getRole() ?? Role::ORGANIZER->value,
++            ])
++            ->fromUser($model);
++
++        $this->accountUserRepository->updateWhere(
++            attributes: ['last_login_at' => now()],
++            where: [
++                'user_id' => $user->getId(),
++                'account_id' => $account_id,
++            ],
++        );
++
++        return redirect($this->safeRedirectTarget((string) $request->query('rd', '')))
++            ->withCookie($this->getAuthCookie($token));
++    }
++
++    /** Only ever bounce back inside this app (no open redirect). */
++    private function safeRedirectTarget(string $rd): string
++    {
++        if ($rd !== '' && str_starts_with($rd, '/') && !str_starts_with($rd, '//')) {
++            return $rd;
++        }
++
++        return '/manage/events';
++    }
++}
+diff --git a/backend/app/Providers/AppServiceProvider.php b/backend/app/Providers/AppServiceProvider.php
+index 8f3b933a..31640f7f 100644
+--- a/backend/app/Providers/AppServiceProvider.php
++++ b/backend/app/Providers/AppServiceProvider.php
+@@ -21,6 +21,7 @@
+ use Stripe\StripeClient;
+ use HiEvents\Services\Infrastructure\Stripe\StripeConfigurationService;
+ use HiEvents\Services\Infrastructure\Stripe\StripeClientFactory;
++use HiEvents\Services\Domain\Coop\CoopEventBusWebhookProvisioner;
+ 
+ class AppServiceProvider extends ServiceProvider
+ {
+@@ -43,6 +44,15 @@ public function boot(): void
+         $this->disableLazyLoading();
+ 
+         $this->registerMorphMaps();
++
++        // irl.coop: every ticketing event carries a webhook into the coop event
++        // bus (sales, attendees, check-ins → the workspace's stream) so nobody has
++        // to click through the webhook UI. A no-op unless COOP_EVENT_BUS_URL is
++        // configured; existing events are reconciled from a console command at
++        // container start (coop:event-bus:sync).
++        Event::created(function (Event $event): void {
++            app(CoopEventBusWebhookProvisioner::class)->ensureForEvent($event);
++        });
+     }
+ 
+     private function bindDoctrineConnection(): void
+diff --git a/backend/app/Services/Application/Handlers/Account/CreateAccountHandler.php b/backend/app/Services/Application/Handlers/Account/CreateAccountHandler.php
+index bc5d89e3..4dbea67e 100644
+--- a/backend/app/Services/Application/Handlers/Account/CreateAccountHandler.php
++++ b/backend/app/Services/Application/Handlers/Account/CreateAccountHandler.php
+@@ -46,12 +46,16 @@ public function __construct(
+     }
+ 
+     /**
++     * @param bool $bypassRegistrationCheck gate SSO provisioning: the member's
++     *        identity is asserted by the fleet gate, not by an open signup form,
++     *        so a closed registration must not block a gate-authenticated member.
++     *
+      * @throws Throwable
+      */
+-    public function handle(CreateAccountDTO $accountData): AccountDomainObject
++    public function handle(CreateAccountDTO $accountData, bool $bypassRegistrationCheck = false): AccountDomainObject
+     {
+-        if ($this->config->get('app.disable_registration')) {
+-            throw new AccountRegistrationDisabledException();
++        if (!$bypassRegistrationCheck && $this->config->get('app.disable_registration')) {
++            throw new AccountRegistrationDisabledException;
+         }
+ 
+         $isSaasMode = $this->config->get('app.saas_mode_enabled');
+diff --git a/backend/app/Services/Domain/Coop/CoopEventBusWebhookProvisioner.php b/backend/app/Services/Domain/Coop/CoopEventBusWebhookProvisioner.php
+new file mode 100644
+index 00000000..6eb6b82e
+--- /dev/null
++++ b/backend/app/Services/Domain/Coop/CoopEventBusWebhookProvisioner.php
+@@ -0,0 +1,139 @@
++<?php
++
++declare(strict_types=1);
++
++namespace HiEvents\Services\Domain\Coop;
++
++use HiEvents\DomainObjects\Status\WebhookStatus;
++use HiEvents\Models\Account;
++use HiEvents\Models\Event;
++use HiEvents\Models\Webhook;
++use Illuminate\Config\Repository;
++use Psr\Log\LoggerInterface;
++
++/**
++ * Hi.Events → the coop EVENT BUS.
++ *
++ * Every ticketing event in a workspace gets a webhook pointed at the coop bus, so
++ * sales, attendees and check-ins land on the group's stream without anyone
++ * clicking through the webhook UI. The workspace decides the TARGET by baking it
++ * into the URL the (single, shared) bus endpoint is called with:
++ *
++ *   ?group=<slug>   a coop group workspace → the GROUP's stream, so every member
++ *                   sees the group's own activity
++ *   ?owner=<email>  a personal workspace  → that member's personal stream
++ *
++ * The target comes from `accounts.external_ref` (coop:<slug> / personal:user:<id>),
++ * the same key the group-workspace provisioning uses, so it survives renames of
++ * the Hi.Events account itself.
++ *
++ * Idempotent and self-healing: `ensureForEvent()` creates the row when missing,
++ * refreshes the subscribed types, and deletes rows pointing at a stale target
++ * (e.g. after a workspace changed group). Nothing happens at all unless
++ * COOP_EVENT_BUS_URL is configured, so a non-coop deployment of this fork is
++ * unaffected.
++ */
++class CoopEventBusWebhookProvisioner
++{
++    public function __construct(
++        private readonly Repository      $config,
++        private readonly LoggerInterface $logger,
++    ) {}
++
++    public function enabled(): bool
++    {
++        return trim((string) $this->config->get('app.coop_event_bus_url')) !== '';
++    }
++
++    /** The Hi.Events event types the coop subscribes to. */
++    public function eventTypes(): array
++    {
++        $configured = (string) $this->config->get('app.coop_event_bus_events', '');
++
++        return array_values(array_filter(array_map('trim', explode(',', $configured))));
++    }
++
++    public function ensureForEvent(Event $event): ?Webhook
++    {
++        if (!$this->enabled()) {
++            return null;
++        }
++
++        $url = $this->urlFor($event);
++
++        if ($url === null) {
++            return null;
++        }
++
++        // Drop rows for this event that point at another (stale) target.
++        Webhook::query()
++            ->where('event_id', $event->id)
++            ->where('url', '!=', $url)
++            ->where('url', 'like', rtrim((string) $this->config->get('app.coop_event_bus_url'), '/').'%')
++            ->whereNull('deleted_at')
++            ->delete();
++
++        $existing = Webhook::query()
++            ->where('event_id', $event->id)
++            ->where('url', $url)
++            ->whereNull('deleted_at')
++            ->first();
++
++        if ($existing !== null) {
++            // Keep the subscription + state fresh without touching anything else.
++            $existing->event_types = $this->eventTypes();
++            $existing->status = WebhookStatus::ENABLED->name;
++            $existing->save();
++
++            return $existing;
++        }
++
++        $this->logger->info('Provisioning a coop event-bus webhook', [
++            'event_id' => $event->id,
++            'account_id' => $event->account_id,
++        ]);
++
++        return Webhook::query()->create([
++            'url' => $url,
++            'event_types' => $this->eventTypes(),
++            'status' => WebhookStatus::ENABLED->name,
++            'secret' => (string) $this->config->get('app.coop_event_bus_secret'),
++            'user_id' => $event->user_id,
++            'event_id' => $event->id,
++            'account_id' => $event->account_id,
++        ]);
++    }
++
++    /** Forget the bus webhook for an event (used when a workspace loses its group). */
++    public function forgetForEvent(Event $event): void
++    {
++        Webhook::query()
++            ->where('event_id', $event->id)
++            ->where('url', 'like', rtrim((string) $this->config->get('app.coop_event_bus_url'), '/').'%')
++            ->whereNull('deleted_at')
++            ->delete();
++    }
++
++    private function urlFor(Event $event): ?string
++    {
++        $account = Account::query()->find($event->account_id);
++
++        if ($account === null) {
++            return null;
++        }
++
++        $ref = trim((string) $account->external_ref);
++
++        if (str_starts_with($ref, 'coop:')) {
++            $target = 'group='.rawurlencode(substr($ref, strlen('coop:')));
++        } elseif (trim((string) $account->email) !== '') {
++            $target = 'owner='.rawurlencode(strtolower((string) $account->email));
++        } else {
++            return null;
++        }
++
++        $base = trim((string) $this->config->get('app.coop_event_bus_url'));
++
++        return $base.(str_contains($base, '?') ? '&' : '?').$target;
++    }
++}
+diff --git a/backend/app/Services/Domain/Coop/CoopWorkspaceProvisioner.php b/backend/app/Services/Domain/Coop/CoopWorkspaceProvisioner.php
+new file mode 100644
+index 00000000..4c06c820
+--- /dev/null
++++ b/backend/app/Services/Domain/Coop/CoopWorkspaceProvisioner.php
+@@ -0,0 +1,248 @@
++<?php
++
++declare(strict_types=1);
++
++namespace HiEvents\Services\Domain\Coop;
++
++use HiEvents\DomainObjects\Enums\Role;
++use HiEvents\DomainObjects\Status\OrganizerStatus;
++use HiEvents\DomainObjects\Status\UserStatus;
++use HiEvents\DomainObjects\UserDomainObject;
++use HiEvents\Helper\IdHelper;
++use HiEvents\Models\Account;
++use HiEvents\Models\AccountConfiguration;
++use HiEvents\Models\Organizer;
++use HiEvents\Repository\Interfaces\AccountUserRepositoryInterface;
++use HiEvents\Repository\Interfaces\OrganizerRepositoryInterface;
++use HiEvents\Services\Domain\Account\AccountUserAssociationService;
++use HiEvents\Services\Domain\Organizer\CreateDefaultOrganizerSettingsService;
++use Illuminate\Config\Repository;
++use Psr\Log\LoggerInterface;
++use Throwable;
++
++/**
++ * irl.coop group workspaces — ONE Hi.Events ACCOUNT PER COOP GROUP.
++ *
++ * Hi.Events' tenant boundary is the account (events, organizers, users, tax and
++ * billing settings all hang off `account_id`), so a coop group maps onto an
++ * account and the member's group seats become memberships in it. The input is the
++ * coop `groups` claim — minted by coop-api as a JSON STRING and forwarded by the
++ * oauth2-proxy gate as `x-forwarded-groups`. The group is the source of truth, so
++ * every sign-in converges:
++ *
++ *   - account       keyed by `external_ref = coop:<slug>` (rename-safe)
++ *   - account name  synced to the group name
++ *   - membership    role mapped from the coop seat roles (see the tier map)
++ *   - organizer     one public-facing organizer per group, created LIVE
++ *
++ * Nothing here throws out to the caller: a provisioning failure is logged and the
++ * member still signs in (the rule the Formbricks gate-SSO port also follows).
++ *
++ * Accounts are read/written through the Eloquent model rather than the repository
++ * — `external_ref` is an irl.coop column and the generated DomainObjects are code
++ * generated upstream, so the coop layer stays out of them.
++ */
++class CoopWorkspaceProvisioner
++{
++    /**
++     * THE TIER MAP — which coop seat role buys which Hi.Events tier.
++     *
++     * Hi.Events has two useful account tiers: ADMIN (events, users, settings,
++     * billing) and ORGANIZER (runs events, no account admin). The group controls
++     * the tiering by assigning coop roles; this map is the one place to change it.
++     * FOLLOW-ON: per-group overrides carried in the claim (a group marks someone a
++     * workspace admin independently of their seat role), which needs a
++     * group-settings column on the coop side.
++     */
++    private const ROLE_TO_ACCOUNT_ROLE = [
++        'owner' => Role::ADMIN->value,
++        'member' => Role::ADMIN->value,
++    ];
++
++    private const DEFAULT_ACCOUNT_ROLE = Role::ORGANIZER->value;
++
++    public function __construct(
++        private readonly AccountUserRepositoryInterface        $accountUserRepository,
++        private readonly OrganizerRepositoryInterface          $organizerRepository,
++        private readonly AccountUserAssociationService         $accountUserAssociationService,
++        private readonly CreateDefaultOrganizerSettingsService $organizerSettingsService,
++        private readonly Repository                            $config,
++        private readonly LoggerInterface                       $logger,
++    ) {}
++
++    /**
++     * @param array<int, array{slug?: string, name?: string, roles?: array}> $groups
++     *
++     * @return array<string, int> slug => account id
++     */
++    public function provision(UserDomainObject $user, array $groups): array
++    {
++        $workspaces = [];
++
++        foreach ($groups as $group) {
++            $slug = trim((string) ($group['slug'] ?? ''));
++            $name = trim((string) ($group['name'] ?? ''));
++
++            if ($slug === '' || $name === '') {
++                continue;
++            }
++
++            try {
++                $workspaces[$slug] = $this->provisionGroup(
++                    user: $user,
++                    slug: $slug,
++                    name: $name,
++                    roles: array_map('strval', (array) ($group['roles'] ?? [])),
++                );
++            } catch (Throwable $e) {
++                $this->logger->error('Coop workspace provisioning failed', [
++                    'slug' => $slug,
++                    'error' => $e->getMessage(),
++                ]);
++            }
++        }
++
++        return $workspaces;
++    }
++
++    public function groupRef(string $slug): string
++    {
++        return 'coop:'.$slug;
++    }
++
++    private function provisionGroup(UserDomainObject $user, string $slug, string $name, array $roles): int
++    {
++        $account = Account::query()->where('external_ref', $this->groupRef($slug))->first();
++
++        if ($account === null) {
++            $account = $this->createGroupAccount($name, $slug);
++
++            $this->logger->info('Coop workspace created', [
++                'slug' => $slug,
++                'account_id' => $account->id,
++            ]);
++        } elseif ($account->name !== $name) {
++            // coop is the source of truth: a group rename converges on next sign-in
++            $account->name = $name;
++            $account->save();
++        }
++
++        $this->associate($user, $account, $slug, $roles);
++        $this->ensureOrganizer($account, $name, $slug);
++
++        return (int) $account->id;
++    }
++
++    private function createGroupAccount(string $name, string $slug): Account
++    {
++        $configurationId = AccountConfiguration::query()->where('is_system_default', true)->value('id');
++
++        if ($configurationId === null) {
++            $this->logger->error('No default account configuration found for a coop workspace');
++        }
++
++        return Account::query()->create([
++            'name' => $name,
++            'email' => $this->groupEmail($slug),
++            'short_id' => IdHelper::shortId(IdHelper::ACCOUNT_PREFIX),
++            'timezone' => $this->config->get('app.default_timezone'),
++            'currency_code' => $this->config->get('app.default_currency_code', 'USD'),
++            'account_configuration_id' => $configurationId,
++            'account_messaging_tier_id' => $this->config->get('app.is_hi_events') ? 1 : 3,
++            'account_verified_at' => now()->toDateTimeString(),
++            'external_ref' => $this->groupRef($slug),
++        ]);
++    }
++
++    /**
++     * The member's seat in the group's workspace. Existing rows converge (a
++     * demotion in the group must bite here); a new row is created otherwise.
++     */
++    private function associate(UserDomainObject $user, Account $account, string $slug, array $roles): void
++    {
++        $role = Role::from($this->mapRole($roles));
++        $isOwner = $this->hasRole($roles, 'owner');
++
++        $existing = $this->accountUserRepository->findFirstWhere([
++            'user_id' => $user->getId(),
++            'account_id' => (int) $account->id,
++        ]);
++
++        if ($existing === null) {
++            $this->accountUserAssociationService->associate(
++                user: $user,
++                account: $this->accountDomainObject($account),
++                role: $role,
++                status: UserStatus::ACTIVE,
++                isAccountOwner: $isOwner,
++            );
++
++            return;
++        }
++
++        $this->accountUserRepository->updateFromArray($existing->getId(), [
++            'role' => $role->name,
++            'is_account_owner' => $isOwner,
++            'status' => UserStatus::ACTIVE->name,
++        ]);
++    }
++
++    /**
++     * The association service wants the domain object; hydrate one from the model
++     * (the repository's own hydrator, so no generated code is touched).
++     */
++    private function accountDomainObject(Account $account): \HiEvents\DomainObjects\AccountDomainObject
++    {
++        return \HiEvents\DomainObjects\AccountDomainObject::hydrateFromModel($account);
++    }
++
++    /**
++     * Every group workspace gets a public-facing organizer (its event page), the
++     * same way Formbricks gave every group a workspace. Created only when the
++     * account has none, so a member's own organizers are never overwritten.
++     */
++    private function ensureOrganizer(Account $account, string $name, string $slug): void
++    {
++        if (Organizer::query()->where('account_id', $account->id)->exists()) {
++            return;
++        }
++
++        $organizer = $this->organizerRepository->create([
++            'name' => $name,
++            'email' => $this->groupEmail($slug),
++            'account_id' => (int) $account->id,
++            'timezone' => $account->timezone ?: $this->config->get('app.default_timezone'),
++            'currency' => $account->currency_code,
++            'status' => OrganizerStatus::LIVE->name,
++        ]);
++
++        $this->organizerSettingsService->createOrganizerSettings($organizer);
++    }
++
++    private function mapRole(array $roles): string
++    {
++        foreach ($roles as $role) {
++            $key = strtolower(trim((string) $role));
++
++            if (isset(self::ROLE_TO_ACCOUNT_ROLE[$key])) {
++                return self::ROLE_TO_ACCOUNT_ROLE[$key];
++            }
++        }
++
++        return self::DEFAULT_ACCOUNT_ROLE;
++    }
++
++    private function hasRole(array $roles, string $role): bool
++    {
++        return in_array(
++            $role,
++            array_map(static fn ($r) => strtolower(trim((string) $r)), $roles),
++            true,
++        );
++    }
++
++    private function groupEmail(string $slug): string
++    {
++        return sprintf('%s@%s', $slug, $this->config->get('app.coop_group_email_domain', 'irl.coop'));
++    }
++}
+diff --git a/backend/app/Services/Infrastructure/Webhook/WebhookDispatchService.php b/backend/app/Services/Infrastructure/Webhook/WebhookDispatchService.php
+index 25fe3369..63aecaf8 100644
+--- a/backend/app/Services/Infrastructure/Webhook/WebhookDispatchService.php
++++ b/backend/app/Services/Infrastructure/Webhook/WebhookDispatchService.php
+@@ -150,20 +150,46 @@ private function dispatchWebhook(DomainEventType $eventType, JsonResource $paylo
+         foreach ($webhooks as $webhook) {
+             $this->logger->info("Dispatching webhook for event ID: $eventId and webhook ID: {$webhook->getId()}");
+ 
+-            WebhookCall::create()
++            $call = WebhookCall::create()
+                 ->url($webhook->getUrl())
+                 ->payload([
+                     'event_type' => $eventType->value,
+                     'event_sent_at' => now()->toIso8601String(),
+-                    'payload' => $payload->resolve()
++                    'payload' => $payload->resolve(),
++                    // irl.coop: the workspace/event ids travel explicitly so a bus
++                    // consumer (Temporal) never has to dig them out of the resource
++                    // shape — see the coop event-bus receiver in coop-api.
++                    'coop' => [
++                        'event_id' => $eventId,
++                        'account_id' => $webhook->getAccountId(),
++                        'webhook_id' => $webhook->getId(),
++                    ],
+                 ])
+                 ->useSecret($webhook->getSecret())
+                 ->meta([
+                     'webhook_id' => $webhook->getId(),
+                     'event_id' => $eventId,
+                     'event_type' => $eventType->name,
+-                ])
+-                ->dispatchSync();
++                ]);
++
++            // The coop event bus authenticates its caller with a bearer derived
++            // secret (the Spatie signature stays on too, so any other consumer of
++            // the same webhook is unaffected).
++            if ($this->isCoopEventBus($webhook->getUrl())) {
++                $call = $call->withHeaders([
++                    'Authorization' => 'Bearer '.(string) config('app.coop_event_bus_secret'),
++                    'X-Coop-Event-Source' => 'hi-events',
++                ]);
++            }
++
++            $call->dispatchSync();
+         }
+     }
++
++    private function isCoopEventBus(string $url): bool
++    {
++        $bus = trim((string) config('app.coop_event_bus_url'));
++
++        return $bus !== '' && str_starts_with($url, $bus);
++    }
+ }
+diff --git a/backend/config/app.php b/backend/config/app.php
+index 50bcabc3..f215ef62 100644
+--- a/backend/config/app.php
++++ b/backend/config/app.php
+@@ -254,4 +254,47 @@
+ 
+ 
+     'is_hi_events' => env('APP_IS_HI_EVENTS', false),
++
++    /*
++    |--------------------------------------------------------------------------
++    | irl.coop Gate SSO
++    |--------------------------------------------------------------------------
++    |
++    | The oauth2-proxy fleet gate in front of /manage/* authenticates the member
++    | against coop-api (the fleet OIDC issuer) and forwards their canonical
++    | address as x-forwarded-email. The frontend SSR exchanges that header for a
++    | Hi.Events session via GET /api/auth/gate-sso — an endpoint that mints a
++    | session from a header, so it requires the derived shared secret and a
++    | loopback caller (see GateSsoAction).
++    |
++    */
++    'coop_gate_sso_enabled' => env('GATE_SSO_ENABLED', 'false'),
++    'coop_gate_sso_email_header' => env('GATE_SSO_EMAIL_HEADER', 'x-forwarded-email'),
++    'coop_gate_sso_groups_header' => env('GATE_SSO_GROUPS_HEADER', 'x-forwarded-groups'),
++    'coop_gate_sso_secret' => env('COOP_GATE_SSO_SECRET'),
++    // the address a coop group's workspace/organizer carries (per-group mail is a
++    // follow-on — this is only the account contact + organizer email)
++    'coop_group_email_domain' => env('COOP_GROUP_EMAIL_DOMAIN', 'irl.coop'),
++
++    /*
++    |--------------------------------------------------------------------------
++    | irl.coop event bus
++    |--------------------------------------------------------------------------
++    |
++    | Every ticketing event gets an auto-provisioned webhook to the coop bus
++    | (CoopEventBusWebhookProvisioner): sales, attendees and check-ins land on the
++    | workspace's stream — a group's stream for a group workspace, the member's own
++    | for a personal one. Two derived values are shared with the fleet:
++    | COOP_EVENT_BUS_SECRET is the bearer the app presents (coop-api carries the
++    | same value as HI_EVENTS_WEBHOOK) and COOP_EVENT_BUS_EVENTS is the Hi.Events
++    | event-type subscription. Unset the URL to turn the integration off.
++    |
++    */
++    'coop_event_bus_url' => env('COOP_EVENT_BUS_URL', ''),
++    'coop_event_bus_secret' => env('COOP_EVENT_BUS_SECRET', ''),
++    'coop_event_bus_events' => env(
++        'COOP_EVENT_BUS_EVENTS',
++        'order.created,order.marked_as_paid,order.refunded,order.cancelled,'
++        .'attendee.created,attendee.cancelled,checkin.created,event.created'
++    ),
+ ];
+diff --git a/backend/database/migrations/2026_09_12_120000_add_external_ref_to_accounts.php b/backend/database/migrations/2026_09_12_120000_add_external_ref_to_accounts.php
+new file mode 100644
+index 00000000..6590c899
+--- /dev/null
++++ b/backend/database/migrations/2026_09_12_120000_add_external_ref_to_accounts.php
+@@ -0,0 +1,37 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++/**
++ * irl.coop group workspaces — the rename-safe key that ties a Hi.Events account
++ * to what it represents:
++ *
++ *   coop:<group slug>     one account per coop group (the group's workspace)
++ *   personal:user:<id>    the member's own workspace (their 1-of-1 group)
++ *
++ * Without this, per-group provisioning could only key on the account NAME — and a
++ * group rename would orphan every event under the old workspace. `external_ref` is
++ * deliberately opaque: nothing in Hi.Events reads it except the coop provisioner.
++ */
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::table('accounts', function (Blueprint $table) {
++            $table->string('external_ref', 191)
++                ->nullable()
++                ->unique('accounts_external_ref_unique')
++                ->after('short_id');
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::table('accounts', function (Blueprint $table) {
++            $table->dropUnique('accounts_external_ref_unique');
++            $table->dropColumn('external_ref');
++        });
++    }
++};
+diff --git a/backend/routes/api.php b/backend/routes/api.php
+index e63c6548..e0cfa513 100644
+--- a/backend/routes/api.php
++++ b/backend/routes/api.php
+@@ -24,12 +24,15 @@
+ use HiEvents\Http\Actions\Attendees\ResendAttendeeTicketAction;
+ use HiEvents\Http\Actions\Auth\AcceptInvitationAction;
+ use HiEvents\Http\Actions\Auth\ForgotPasswordAction;
++use HiEvents\Http\Actions\Auth\GateSsoAction;
+ use HiEvents\Http\Actions\Auth\GetUserInvitationAction;
++use HiEvents\Http\Actions\Auth\ListWorkspacesAction;
+ use HiEvents\Http\Actions\Auth\LoginAction;
+ use HiEvents\Http\Actions\Auth\LogoutAction;
+ use HiEvents\Http\Actions\Auth\RefreshTokenAction;
+ use HiEvents\Http\Actions\Auth\ResetPasswordAction;
+ use HiEvents\Http\Actions\Auth\ValidateResetPasswordTokenAction;
++use HiEvents\Http\Actions\Auth\WorkspaceSwitchAction;
+ use HiEvents\Http\Actions\CapacityAssignments\CreateCapacityAssignmentAction;
+ use HiEvents\Http\Actions\CapacityAssignments\DeleteCapacityAssignmentAction;
+ use HiEvents\Http\Actions\CapacityAssignments\GetCapacityAssignmentAction;
+@@ -228,6 +231,11 @@ function (Router $router): void {
+         $router->post('/register', CreateAccountAction::class)->name('auth.register');
+         $router->post('/forgot-password', ForgotPasswordAction::class)->name('auth.forgot-password');
+ 
++        // irl.coop Gate SSO — the frontend SSR (frontend/server.js) exchanges the
++        // oauth2-proxy gate identity (x-forwarded-email) for a Hi.Events session.
++        // Internal-only: derived shared secret + loopback caller required.
++        $router->get('/gate-sso', GateSsoAction::class)->name('auth.gate-sso');
++
+         // Invitations
+         $router->get('/invitation/{invite_token}', GetUserInvitationAction::class)->name('auth.invitation');
+         $router->post('/invitation/{invite_token}', AcceptInvitationAction::class)->name('auth.accept-invitation');
+@@ -235,6 +243,12 @@ function (Router $router): void {
+         // Reset Passwords
+         $router->get('/reset-password/{reset_token}', ValidateResetPasswordTokenAction::class)->name('auth.validate-reset-password-token');
+         $router->post('/reset-password/{reset_token}', ResetPasswordAction::class)->name('auth.reset-password');
++
++        // irl.coop workspace switch — a plain browser navigation from the in-app
++        // switcher: re-mints the session for another coop group's workspace (the
++        // `account_id` claim) and redirects into the admin. Authenticated by the
++        // existing `token` cookie, not by the gate.
++        $router->get('/workspace/{account_id}', WorkspaceSwitchAction::class)->name('auth.workspace.switch');
+     }
+ );
+ 
+@@ -246,6 +260,9 @@ function (Router $router): void {
+         // Auth
+         $router->get('/auth/logout', LogoutAction::class);
+         $router->post('/auth/refresh', RefreshTokenAction::class);
++        // irl.coop: the member's workspaces (their own + one per coop group) — the
++        // switcher's data source; switching itself is auth.workspace.switch.
++        $router->get('/auth/workspaces', ListWorkspacesAction::class)->name('auth.workspaces');
+ 
+         // Users
+         $router->get('/users/me', GetMeAction::class);
+diff --git a/docker/all-in-one/scripts/startup.sh b/docker/all-in-one/scripts/startup.sh
+index 3ab2caad..82cd42ec 100644
+--- a/docker/all-in-one/scripts/startup.sh
++++ b/docker/all-in-one/scripts/startup.sh
+@@ -15,6 +15,10 @@ php artisan route:clear
+ php artisan view:clear
+ php artisan storage:link
+ 
++# irl.coop: reconcile the auto-provisioned coop event-bus webhooks (idempotent,
++# a no-op when COOP_EVENT_BUS_URL is unset) — never fatal to boot.
++php artisan coop:event-bus:sync || true
++
+ chown -R www-data:www-data /app/backend
+ chmod -R 775 /app/backend/storage /app/backend/bootstrap/cache
+ 
+diff --git a/frontend/server.js b/frontend/server.js
+index 5502ae25..5a4b4fd6 100644
+--- a/frontend/server.js
++++ b/frontend/server.js
+@@ -36,6 +36,145 @@ async function main() {
+     const app = express();
+     app.use(cookieParser());
+ 
++    // ---------------------------------------------------------------------------
++    // irl.coop Gate SSO
++    // ---------------------------------------------------------------------------
++    // The oauth2-proxy fleet gate in front of /manage/* authenticates the member
++    // against coop-api (the fleet OIDC issuer — instant when the coop_session
++    // cookie exists) and forwards their canonical identity as x-forwarded-email.
++    // That header is only trustworthy because the edge routes exactly /manage and
++    // /oauth2 through the gate; every other path (public event pages, checkout,
++    // /api/*) is served directly by this container and never carries it.
++    //
++    // Here — the SSR that renders the administrative document routes — we
++    // exchange the header for a Hi.Events session: mint the JWT server-to-server
++    // and hand the browser the same `token` cookie the native login sets. Members
++    // reach the admin without a password form; the native screen stays available
++    // as the fallback (see components/routes/auth/Login).
++    //
++    // The mint endpoint requires the derived shared secret AND a loopback caller,
++    // so this header can never turn into a session for the public internet.
++    const gateSsoEnabled = process.env.GATE_SSO_ENABLED === 'true';
++    const gateSsoEmailHeader = process.env.GATE_SSO_EMAIL_HEADER || 'x-forwarded-email';
++    const gateSsoGroupsHeader = process.env.GATE_SSO_GROUPS_HEADER || 'x-forwarded-groups';
++    const gateSsoSecret = process.env.COOP_GATE_SSO_SECRET || '';
++    const gateSsoApi = process.env.COOP_GATE_SSO_INTERNAL_API || 'http://127.0.0.1/api';
++    const gateSsoLanding = process.env.GATE_SSO_LANDING_PATH || '/manage/events';
++
++    const decodeJwtPayload = (token) => {
++        try {
++            const segment = String(token).split('.')[1];
++            return JSON.parse(Buffer.from(segment, 'base64url').toString('utf8'));
++        } catch {
++            return null;
++        }
++    };
++
++    const hasLiveSession = (token) => {
++        if (!token) {
++            return false;
++        }
++
++        const payload = decodeJwtPayload(token);
++
++        if (!payload || typeof payload.exp !== 'number') {
++            return false;
++        }
++
++        // A minute of slack, so a token expiring mid-request is re-minted.
++        return payload.exp * 1000 - 60_000 > Date.now();
++    };
++
++    const mintGateSession = async (email, {groups = '', params = {}} = {}) => {
++        const query = new URLSearchParams(params).toString();
++
++        const response = await fetch(`${gateSsoApi}/auth/gate-sso${query ? `?${query}` : ''}`, {
++            headers: {
++                accept: 'application/json',
++                [gateSsoEmailHeader]: email,
++                // the coop `groups` claim the gate forwarded (a JSON string) — the
++                // mint endpoint maps it onto one Hi.Events account per coop group
++                [gateSsoGroupsHeader]: groups,
++                'x-coop-gate-secret': gateSsoSecret,
++            },
++        });
++
++        if (!response.ok) {
++            console.error(`[gate-sso] session mint failed: ${response.status} ${await response.text()}`);
++            return null;
++        }
++
++        const body = await response.json();
++
++        return {
++            token: body?.data?.token,
++            cookies: response.headers.getSetCookie?.() ?? [],
++        };
++    };
++
++    if (gateSsoEnabled) {
++        app.use('*', async (req, res, next) => {
++            try {
++                const gateEmail = String(req.headers[gateSsoEmailHeader] || '').trim();
++
++                if (gateEmail === '') {
++                    return next();
++                }
++
++                const requestUrl = new URL(req.originalUrl, 'http://internal');
++                const groupSlug = String(requestUrl.searchParams.get('group') || '').trim();
++
++                // An ordinary page view only mints when there is no live session. A
++                // `?group=<slug>` deep-link (the dashboard's per-group links) always
++                // (re)targets that workspace — even over a session for another one.
++                if (groupSlug === '' && hasLiveSession(req.cookies?.token)) {
++                    return next();
++                }
++
++                const session = await mintGateSession(gateEmail, {
++                    groups: String(req.headers[gateSsoGroupsHeader] || ''),
++                    params: groupSlug === '' ? {} : {group: groupSlug},
++                });
++
++                if (!session?.token) {
++                    // Degrade to the native login screen instead of erroring out.
++                    return next();
++                }
++
++                if (session.cookies.length > 0) {
++                    // Relay the cookie exactly as the native login would set it.
++                    res.setHeader('set-cookie', session.cookies);
++                } else {
++                    res.cookie('token', session.token, {
++                        path: '/',
++                        httpOnly: true,
++                        secure: true,
++                        sameSite: 'none',
++                    });
++                }
++
++                // The gate lands the member on the login screen; send them to the
++                // admin instead (and re-enter here to render it authenticated). A
++                // group deep-link drops its own param once the switch has landed, so
++                // the redirect settles instead of looping.
++                let target = req.originalUrl;
++
++                if (groupSlug !== '') {
++                    requestUrl.searchParams.delete('group');
++                    const rest = requestUrl.searchParams.toString();
++                    target = requestUrl.pathname + (rest === '' ? '' : `?${rest}`);
++                } else if (target.startsWith('/auth/login')) {
++                    target = gateSsoLanding;
++                }
++
++                return res.redirect(302, target);
++            } catch (error) {
++                console.error('[gate-sso] failed', error);
++                return next();
++            }
++        });
++    }
++
+     app.use('/.well-known', express.static(path.join(__dirname, 'public/.well-known')));
+ 
+     let vite;
+diff --git a/frontend/src/components/common/GlobalMenu/index.tsx b/frontend/src/components/common/GlobalMenu/index.tsx
+index 119ad252..8890260d 100644
+--- a/frontend/src/components/common/GlobalMenu/index.tsx
++++ b/frontend/src/components/common/GlobalMenu/index.tsx
+@@ -1,6 +1,7 @@
+ import {Avatar, Menu, UnstyledButton} from "@mantine/core";
+ import {getInitials} from "../../../utilites/helpers.ts";
+ import {
++    IconCheck,
+     IconLifebuoy,
+     IconLogout,
+     IconPlus,
+@@ -17,6 +18,7 @@ import {useDisclosure} from "@mantine/hooks";
+ import {AboutModal} from "../../modals/AboutModal";
+ import {getConfig} from "../../../utilites/config.ts";
+ import {CreateOrganizerModal} from "../../modals/CreateOrganizerModal";
++import {switchWorkspace, useWorkspaces} from "../../../hooks/useWorkspaces.ts";
+ 
+ interface Link {
+     label: string;
+@@ -28,6 +30,7 @@ interface Link {
+ 
+ export const GlobalMenu = () => {
+     const {data: me} = useGetMe();
++    const {data: workspaces} = useWorkspaces();
+     const [aboutModalOpen, {open: openAboutModal, close: closeAboutModal}] = useDisclosure(false);
+     const [createOrganizerModalOpen, {
+         open: openCreateOrganizerModal,
+@@ -104,6 +107,27 @@ export const GlobalMenu = () => {
+                 </Menu.Target>
+ 
+                 <Menu.Dropdown>
++                    {/* irl.coop workspaces — the member's own + one per coop group.
++                        Selecting one re-mints the session for that account (a plain
++                        navigation, so the token never touches client JS). */}
++                    {workspaces && workspaces.length > 1 && (
++                        <>
++                            <Menu.Label>{t`Workspaces`}</Menu.Label>
++                            {workspaces.map((workspace) => (
++                                <Menu.Item
++                                    key={workspace.id}
++                                    leftSection={workspace.kind === 'group'
++                                        ? <IconUsers size={16}/>
++                                        : <IconUser size={16}/>}
++                                    rightSection={workspace.is_current ? <IconCheck size={14}/> : null}
++                                    onClick={() => switchWorkspace(workspace.id)}
++                                >
++                                    {workspace.name}
++                                </Menu.Item>
++                            ))}
++                            <Menu.Divider/>
++                        </>
++                    )}
+                     {links.map((link) => (
+                         <NavLink
+                             onClick={link.onClick}
+diff --git a/frontend/src/components/routes/auth/Login/index.tsx b/frontend/src/components/routes/auth/Login/index.tsx
+index 43a25f13..808804b2 100644
+--- a/frontend/src/components/routes/auth/Login/index.tsx
++++ b/frontend/src/components/routes/auth/Login/index.tsx
+@@ -1,4 +1,4 @@
+-import {Button, PasswordInput, TextInput, Collapse, UnstyledButton} from "@mantine/core";
++import {Button, Divider, PasswordInput, TextInput, Collapse, UnstyledButton} from "@mantine/core";
+ import {NavLink, useLocation} from "react-router";
+ import {useMutation} from "@tanstack/react-query";
+ import {notifications} from '@mantine/notifications';
+@@ -13,9 +13,16 @@ import {ChooseAccountModal} from "../../../modals/ChooseAccountModal";
+ import {useSendTicketLookupEmail} from "../../../../mutations/useSendTicketLookupEmail.ts";
+ import {showError} from "../../../../utilites/notifications.tsx";
+ import {IconTicket, IconChevronDown} from "@tabler/icons-react";
++import {getConfig} from "../../../../utilites/config.ts";
+ 
+ const Login = () => {
+     const location = useLocation();
++    // irl.coop fleet SSO: the oauth2-proxy gate in front of /manage/* admits the
++    // member against coop-api (instant when the dashboard session exists), so the
++    // primary door on this screen is the fleet identity — not a local password.
++    // The email/password form stays below as the fallback for existing accounts.
++    const isGateSsoEnabled = getConfig('VITE_GATE_SSO_ENABLED') === 'true';
++    const gateSsoHref = `/oauth2/sign_in?rd=${encodeURIComponent('/manage/events')}`;
+     const form = useForm({
+         initialValues: {
+             email: '',
+@@ -79,15 +86,38 @@ const Login = () => {
+             <header className={classes.header}>
+                 <h2>{t`Welcome back`}</h2>
+                 <p>
+-                    <Trans>
+-                        Don't have an account?{' '}
+-                        <NavLink to={`/auth/register${location.search}`}>
+-                            Sign up
+-                        </NavLink>
+-                    </Trans>
++                    {isGateSsoEnabled ? (
++                        <Trans>Access is through your irl.coop account.</Trans>
++                    ) : (
++                        <Trans>
++                            Don't have an account?{' '}
++                            <NavLink to={`/auth/register${location.search}`}>
++                                Sign up
++                            </NavLink>
++                        </Trans>
++                    )}
+                 </p>
+             </header>
+             <div className={classes.loginCard}>
++                {isGateSsoEnabled && (
++                    <>
++                        <Button
++                            component="a"
++                            href={gateSsoHref}
++                            color="green"
++                            size="md"
++                            fullWidth
++                            data-testid="gate-sso-login"
++                        >
++                            {t`Log in with irl.coop`}
++                        </Button>
++                        <Divider
++                            my="md"
++                            label={t`or sign in with your email`}
++                            labelPosition="center"
++                        />
++                    </>
++                )}
+                 <form onSubmit={form.onSubmit((values) => loginUser(values))}>
+                     <TextInput {...form.getInputProps('email')}
+                                label={t`Email`}
+diff --git a/frontend/src/hooks/useWorkspaces.ts b/frontend/src/hooks/useWorkspaces.ts
+new file mode 100644
+index 00000000..f9dd80fe
+--- /dev/null
++++ b/frontend/src/hooks/useWorkspaces.ts
+@@ -0,0 +1,38 @@
++import {useQuery} from "@tanstack/react-query";
++import {api} from "../api/client.ts";
++
++/**
++ * irl.coop workspaces — the member's session can be scoped to one Hi.Events
++ * account at a time. They always have their own (their 1-of-1 group) and one per
++ * coop group they're seated in; `GET /api/auth/workspaces` is served by the coop
++ * patch (one account per coop group, keyed `external_ref = coop:<slug>`).
++ *
++ * Switching is a plain navigation to `/api/auth/workspace/<id>` — the backend
++ * re-mints the session for that account and redirects into the admin, so there is
++ * no client-side token juggling here.
++ */
++export type Workspace = {
++    id: number;
++    name: string;
++    kind: 'group' | 'personal';
++    group_slug: string | null;
++    role: string | null;
++    is_current: boolean;
++};
++
++export const useWorkspaces = () => {
++    return useQuery<Workspace[]>({
++        queryKey: ['workspaces'],
++        queryFn: async () => {
++            const {data} = await api.get<{ data: Workspace[] }>('auth/workspaces');
++            return data.data;
++        },
++        retry: false,
++        staleTime: 60 * 1000,
++    });
++};
++
++export const switchWorkspace = (id: number, redirectTo?: string) => {
++    const suffix = redirectTo ? `?rd=${encodeURIComponent(redirectTo)}` : '';
++    window.location.href = `/api/auth/workspace/${id}${suffix}`;
++};
+diff --git a/frontend/src/router.tsx b/frontend/src/router.tsx
+index 5eaa8aa1..9de3c68f 100644
+--- a/frontend/src/router.tsx
++++ b/frontend/src/router.tsx
+@@ -1,4 +1,4 @@
+-import { Navigate, RouteObject } from "react-router";
++import { Navigate, redirect, RouteObject } from "react-router";
+ import ErrorPage from "./error-page.tsx";
+ import { useEffect, useState } from "react";
+ import { useGetMe } from "./queries/useGetMe.ts";
+@@ -45,11 +45,14 @@ export const router: RouteObject[] = [
+                 },
+             },
+             {
++                // Signups are closed on this deployment: members are provisioned
++                // from the fleet identity (the "Log in with irl.coop" door), so
++                // the native form is retired instead of left as a dead end. The
++                // loader redirect makes the SSR answer a real 302 (a bare
++                // <Navigate> would only redirect after hydration).
+                 path: "register",
+-                async lazy() {
+-                    const Register = await import("./components/routes/auth/Register");
+-                    return { Component: Register.default };
+-                }
++                loader: () => redirect("/auth/login"),
++                element: <Navigate to="/auth/login" replace={true} />
+             },
+             {
+                 path: "forgot-password",
+diff --git a/frontend/src/types.ts b/frontend/src/types.ts
+index 707ddcab..79882046 100644
+--- a/frontend/src/types.ts
++++ b/frontend/src/types.ts
+@@ -23,6 +23,7 @@ export type ConfigKeys =
+     | 'VITE_I_HAVE_PURCHASED_A_LICENCE'
+     | 'VITE_DEFAULT_IMAGE_URL'
+     | 'VITE_COOKIE_CONSENT_ENABLED'
++    | 'VITE_GATE_SSO_ENABLED'
+     | 'VITE_COOKIE_CONSENT_TEXT';
+ 
+ export enum StripePlatform {

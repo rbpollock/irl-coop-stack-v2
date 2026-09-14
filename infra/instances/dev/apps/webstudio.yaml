@@ -91,6 +91,7 @@ sidecars:
       - --upstream=http://webstudio:3000
       - --http-address=0.0.0.0:4180
       - --cookie-secret=irlcoop-studio-gate-dev-sec-1234
+      - --cookie-name=_irlstudio
       - --cookie-secure=false
       - --skip-provider-button=true
       # forward the coop identity (X-Forwarded-Email) to the builder for Gate SSO

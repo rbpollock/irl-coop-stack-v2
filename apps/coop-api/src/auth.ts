@@ -453,7 +453,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       const claims = await verifyIdToken(tokens.id_token);
       // Invite-on-first-signin: deploy the personal Safe + provision Matrix.
       // Best-effort, idempotent — never blocks the sign-in redirect.
-      await provisionOnSignIn(claims.sub, claims.email);
+      await provisionOnSignIn(claims.sub, claims.email, claims.name);
       const stored = await getProfile(claims.sub);
       const coopJwt = await mintCoopJwt(claims, stored);
 
@@ -553,6 +553,10 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     // config declares issuer "coop-api" + id_token_signed_response_alg HS256).
     const isNextAuth = clientId === "nextauth";
     const nonce = entry.nonce;
+    // NB: `groups` (the member's coop group seats, a JSON STRING) must ride the
+    // id_token as well as the access token — oauth2-proxy builds its session from
+    // the id_token claims and forwards them as x-forwarded-email/-groups, so a
+    // claim missing here never reaches a gated app.
     const idToken = isNextAuth
       ? jwt.sign(
           {
@@ -564,6 +568,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
             avatar: access.avatar,
             roles: access.roles ?? [],
             grants: access.grants ?? [],
+            groups: access.groups ?? "[]",
             nonce,
             iat: now,
             exp: now + 3600,
@@ -583,6 +588,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
             avatar: access.avatar,
             roles: access.roles ?? [],
             grants: access.grants ?? [],
+            groups: access.groups ?? "[]",
             policy: access.policy ?? null,
             nonce,
             iat: now,
@@ -613,8 +619,14 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       // failure so userinfo never 500s on a transient DB blip.
       let roles = decoded.roles ?? [];
       let grants = decoded.grants ?? [];
+      // `groups` is the coop group seats (a JSON STRING, forwarded verbatim by
+      // oauth2-proxy as x-forwarded-groups). Re-resolve it on every refresh too:
+      // joining or leaving a group then appears/disappears as a workspace without
+      // a full re-login.
+      let groups = decoded.groups ?? "[]";
       try {
         ({ roles, grants } = await getRolesAndGrants(decoded.sub));
+        groups = JSON.stringify(await getGroupSeats(decoded.sub));
       } catch {
         // keep the snapshot
       }
@@ -630,6 +642,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
         status: decoded.status ?? "ONLINE",
         roles,
         grants,
+        groups,
       });
     } catch {
       return reply.code(401).send({ error: "invalid_token" });
@@ -692,7 +705,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
       const tokens = await resp.json();
       const claims = await verifyIdToken(tokens.id_token);
       // Same invite-on-first-signin provisioning as the OAuth callback.
-      await provisionOnSignIn(claims.sub, claims.email);
+      await provisionOnSignIn(claims.sub, claims.email, claims.name);
       const stored = await getProfile(claims.sub);
       const coopJwt = await mintCoopJwt(claims, stored);
       setSessionCookie(reply, await mintCoopJwt(claims, stored, sessionTtl), request);

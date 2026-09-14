@@ -23,6 +23,9 @@ depends_on:
 sidecars:
   nocodb-gate:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    restart: unless-stopped
+    # discovery-502 quirk: oauth2-proxy does OIDC discovery once, no retry (same
+    # as Synapse) — the restart policy self-heals a coop-api-restart window.
     command:
       - --provider=oidc
       # the fleet session gateway — the coop_session cookie makes authorize
@@ -35,6 +38,7 @@ sidecars:
       - --upstream=http://nocodb:8080
       - --http-address=0.0.0.0:4180
       - --cookie-secret=irlcoop-nocodb-gate-dev-sec-1234
+      - --cookie-name=_irlnocodb
       - --cookie-secure=false
       - --skip-provider-button=true
       # PWA pre-login files: the browser's first-load manifest/sw fetches are

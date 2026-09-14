@@ -160,6 +160,7 @@ sidecars:
       - --upstream=http://s3-bridge:4181
       - --http-address=0.0.0.0:4180
       - --cookie-secret=irlcoop-s3-gate-cookie-secret-12
+      - --cookie-name=_irlminio
       - --cookie-secure=false
       # Show the branded sign-in page (rather than auto-bouncing to Keycloak)
       # so s3.irl.coop reads "Sign in to irl.coop".

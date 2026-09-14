@@ -116,6 +116,21 @@ by embedding LiteFarm's UI.
 | **NocoDB** | The "visual database" for non-technical members: farm inventory, sales ledger, member roles as NocoDB tables synced from LiteFarm (via the workspaces API / a sync job), so a food-coop's catalog is editable without touching LiteFarm. |
 | **Webstudio** | The group's public site: a "Farm" page showing produce, certifications, CSA signup (LiteFarm read surface via coop-api session auth) — an HtmlEmbed widget like the world-doc. |
 | **Maps (OpenMapServer)** | `farm.grid_points` {lat,lng} is a **marker** (`source='litefarm'`) on the sovereign map. Federation explore shows every group's farm; a farm's fields could become polygon tracks later. |
+| **Needs & Offers (weaving board)** | Farm work worth weaving → a **loop** on the needs/offers board (see below). |
+
+> **NOTE (idea — not specced/built): farm work as needs/offers.** A LiteFarm task — or a
+> *part* of a task (harvest rows, bed prep, a delivery run) — can be turned into a
+> **need** ("need hands Saturday") or, where the farm has surplus, an **offer**, on the
+> needs & offers board. Two scopes, chosen by the posting member at publish time:
+> **public** (federation-wide — anyone can weave a match) or **group-scoped** (the
+> farm's own group only, e.g. a members-only pick day). Sketch of the seam: the member
+> flags a task (or a subtask split) as shareable → LiteFarm emits `task.updated` /
+> `task.created` via the bus (`source='litefarm'`) with a `needs_help` payload →
+> coop-api's weaving consumer creates the loop post, idempotent on `source_event_id`
+> (same row never double-posts) → task completion closes the loop and marks it
+> matched/resolved. LiteFarm stays the source of truth for the *work*; the board is
+> only a reach surface. Blocked on the needs/offers board's group-scope + source-event
+> plumbing being live (see needs-offers-matching.md / weavers.md).
 
 ## 7. Surfaces (the pattern)
 

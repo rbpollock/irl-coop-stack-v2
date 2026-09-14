@@ -1,0 +1,168 @@
+# ERPNext (Frappe v16) — coop ERP/accounting, on the SHARED CITUS POSTGRES.
+#
+# DB: PostgreSQL was validated by spike (Sep 2026): frappe v16 + erpnext
+# v16.34.2 new-site + full migration + ORM reads run clean against the shared
+# Citus PG (172.17.0.1:5432). NO MariaDB. NO custom image — the stock
+# frappe/erpnext image does not create sites itself (upstream does
+# `bench new-site` as a one-shot); the PG delta is entirely in this spec's
+# one-shot configurator command.
+#
+# Topology (mirrors frappe_docker compose.yaml): one image, roles by command —
+#   erpnext            backend (gunicorn; image default CMD start.sh)
+#   erpnext-websocket  node apps/frappe/socketio.js
+#   erpnext-queue-short bench worker --queue short,default
+#   erpnext-queue-long  bench worker --queue long,default,short
+#   erpnext-scheduler   bench schedule
+#   erpnext-frontend    nginx-entrypoint.sh (published :8097 → edge)
+#   erpnext-configurator one-shot: bench set-config + idempotent site creation
+#
+# Redis: shared irl-redis at 172.17.0.1, dedicated db indices 4/5/6
+# (cache/queue/socketio). Frappe hardcodes key names (no prefix option) —
+# indices are the namespace (formbricks /1, rag /2-3 precedent).
+#
+# Secrets: the configurator carries the derived postgres SUPERUSER secret
+# (${SECRET:postgres.irlcoop}) ONLY to create role+db on first boot, then bench
+# mints a random least-priv site password into site_config.json (sites volume).
+# Runtime services never hold the superuser password.
+#
+# SSO (bring-up step): ERPNext Custom Social Login Key against the fleet
+# gateway — base_url https://api.irl.coop, authorize /api/auth/authorize,
+# token /api/auth/token, userinfo /api/auth/userinfo, redirect
+# https://accounting.irl.coop/api/method/frappe.integrations.oauth2_logins.custom/<key>.
+# Requires a confidential `erpnext` client in coop-api's OIDC_CLIENTS.
+# Access (Robbie, Sep 2026): any member signs in; tenant permissions gate what
+# they see; their own user/self-group is always accessible.
+
+name: erpnext
+pillar: workflow
+enabled: true
+type: image
+image: frappe/erpnext:v16.34.2
+restart: unless-stopped
+env:
+  # backend (gunicorn) role — image default CMD start.sh; no DB creds needed
+  # (site_config.json on the shared sites volume holds the least-priv role)
+  GUNICORN_THREADS: "4"
+  GUNICORN_WORKERS: "2"
+  GUNICORN_TIMEOUT: "120"
+volumes:
+  - erpnext_sites:/home/frappe/frappe-bench/sites
+depends_on:
+  erpnext-configurator:
+    condition: service_completed_successfully
+healthcheck:
+  test: ["CMD-SHELL", "curl -fsS -H 'X-Frappe-Site-Name: erp' http://127.0.0.1:8000/api/method/ping > /dev/null || exit 1"]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 180s
+sidecars:
+  erpnext-configurator:
+    image: frappe/erpnext:v16.34.2
+    restart: "no"
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -e
+        ls -1 apps > sites/apps.txt
+        bench set-config -g db_host 172.17.0.1
+        bench set-config -gp db_port 5432
+        bench set-config -g redis_cache "redis://172.17.0.1:6379/4"
+        bench set-config -g redis_queue "redis://172.17.0.1:6379/5"
+        bench set-config -g redis_socketio "redis://172.17.0.1:6379/6"
+        bench set-config -gp socketio_port 9000
+        bench set-config -g chromium_path /usr/bin/chromium-headless-shell
+        if [ ! -d "sites/erp" ]; then
+          echo "Creating PG site erp (db erpnext)..."
+          bench new-site erp --db-type postgres --db-host 172.17.0.1 \
+            --db-port 5432 --db-name erpnext \
+            --db-root-username postgres --db-root-password "$$DB_ROOT_PASSWORD" \
+            --admin-password "$$ADMIN_PASSWORD" --install-app erpnext
+          echo "Site creation done."
+        else
+          echo "Site erp already exists — skipping creation."
+        fi
+    environment:
+      DB_ROOT_PASSWORD: ${SECRET:postgres.irlcoop}
+      ADMIN_PASSWORD: ${SECRET:erpnext.admin}
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+  erpnext-queue-short:
+    image: frappe/erpnext:v16.34.2
+    restart: unless-stopped
+    command: ["bench", "worker", "--queue", "short,default"]
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
+  erpnext-queue-long:
+    image: frappe/erpnext:v16.34.2
+    restart: unless-stopped
+    command: ["bench", "worker", "--queue", "long,default,short"]
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
+  erpnext-scheduler:
+    image: frappe/erpnext:v16.34.2
+    restart: unless-stopped
+    command: ["bench", "schedule"]
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
+  erpnext-websocket:
+    image: frappe/erpnext:v16.34.2
+    restart: unless-stopped
+    command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
+  erpnext-frontend:
+    image: frappe/erpnext:v16.34.2
+    restart: unless-stopped
+    command: ["nginx-entrypoint.sh"]
+    environment:
+      BACKEND: erpnext:8000
+      SOCKETIO: erpnext-websocket:9000
+      # route every host to the single site `erp` (site folder name) — both the
+      # nginx server_name and the X-Frappe-Site-Name proxy header frappe reads
+      FRAPPE_SITE_NAME_HEADER: erp
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: "120"
+      CLIENT_MAX_BODY_SIZE: 50m
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    ports:
+      # host-published — the traefik edge reaches it via 172.17.0.1:8097.
+      # NB: the image's nginx listens on 8080 (NOT 80) — same quirk as
+      # element-call in this stack; map the publish to the real port.
+      - "8097:8080"
+    depends_on:
+      erpnext:
+        condition: service_healthy
+      erpnext-websocket:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+named_volumes:
+  erpnext_sites: {}
+proxy:
+  hostname: accounting.${DOMAIN}
+  port: 8097
+  description: ERPNext (Frappe v16 on Postgres) — coop accounting/ERP
+nav:
+  label: Accounting
+  icon: Calculator
+  section: Coop

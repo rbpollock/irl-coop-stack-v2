@@ -30,6 +30,15 @@ const TITLES: Record<string, string> = {
   "m.room.topic": "Room topic changed",
   "m.room.create": "Room created",
   "mail.received": "New email",
+  // Hi.Events → bus (see hi-events.ts); the group's own ticketing activity
+  "order.created": "New order",
+  "order.paid": "Order paid",
+  "order.refunded": "Order refunded",
+  "order.cancelled": "Order cancelled",
+  "attendee.registered": "New attendee",
+  "attendee.cancelled": "Attendee cancelled",
+  "checkin.recorded": "Check-in",
+  "event.created": "New event",
 };
 
 const URGENCY: Record<string, Notification["urgency"]> = {
@@ -41,7 +50,26 @@ const URGENCY: Record<string, Notification["urgency"]> = {
   "m.room.topic": "low",
   "m.room.create": "low",
   "mail.received": "normal",
+  "order.created": "normal",
+  "order.paid": "normal",
+  "order.refunded": "low",
+  "order.cancelled": "low",
+  "attendee.registered": "normal",
+  "attendee.cancelled": "low",
+  "checkin.recorded": "low",
+  "event.created": "normal",
 };
+
+const TICKET_TYPES = new Set([
+  "order.created",
+  "order.paid",
+  "order.refunded",
+  "order.cancelled",
+  "attendee.registered",
+  "attendee.cancelled",
+  "checkin.recorded",
+  "event.created",
+]);
 
 export function renderNotification(row: EventRow): Notification {
   const p = (row.payload ?? {}) as Record<string, unknown>;
@@ -59,16 +87,35 @@ export function renderNotification(row: EventRow): Notification {
     body = sender ? `${sender} posted${room ? ` in ${room}` : ""}` : "New activity";
   } else if (type === "m.room.member") {
     body = sender ? `${sender}${room ? ` · ${room}` : ""}` : "Membership changed";
+  } else if (TICKET_TYPES.has(type)) {
+    // Counts, not people (see hi-events.ts): the event title plus a count.
+    const fields = (p.fields ?? {}) as Record<string, unknown>;
+    const counts = (p.counts ?? {}) as Record<string, number>;
+    const eventTitle =
+      typeof fields.title === "string"
+        ? fields.title
+        : typeof fields.name === "string"
+          ? fields.name
+          : "";
+    const tickets = counts.order_items || counts.attendees || 0;
+    body =
+      [eventTitle, tickets ? `${tickets} ticket${tickets === 1 ? "" : "s"}` : ""]
+        .filter(Boolean)
+        .join(" · ") || type;
   } else {
     body = room || type;
   }
+
+  const explicitLink = typeof p.link === "string" ? p.link : "";
 
   return {
     id: row.id,
     type,
     title,
     body,
-    url: type.startsWith("mail.") ? "https://webmail.irl.coop" : "/apps/chat",
+    url:
+      explicitLink ||
+      (type.startsWith("mail.") ? "https://webmail.irl.coop" : "/apps/chat"),
     urgency: URGENCY[type] ?? "low",
     ts: new Date(row.occurred_at).getTime(),
     read: false,

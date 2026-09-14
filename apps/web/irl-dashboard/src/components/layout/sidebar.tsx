@@ -147,6 +147,19 @@ export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
           })),
         }
       }
+      // Same for "Events" — each group has its OWN Hi.Events workspace (account),
+      // so the link asks the app's SSR to switch the session to that group before
+      // rendering the admin (the ?group= param is consumed and dropped).
+      if (item.title === "Events" && groups.length > 0) {
+        return {
+          title: item.title,
+          iconName: item.iconName,
+          items: groups.map((g) => ({
+            title: g.name,
+            href: `https://events.irl.coop/manage/events?group=${g.slug}`,
+          })),
+        }
+      }
       return item
     }),
   }))
