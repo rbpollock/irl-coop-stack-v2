@@ -588,6 +588,15 @@ function resolveDesignDir(): string | null {
       "List rates for Telnyx / Twilio / VoIP.ms / Callcentric / prepaid SIM, sourced and dated — and the finding that decides the choice: a wholesale DID cannot verify an Instagram or YouTube account, because the platform runs a line-type lookup before it sends anything.",
     file: "did-provider-comparison.md",
   },
+  {
+    slug: "esim-and-remote-sim",
+    title: "eSIM and remote SIM: can numbers live on virtual devices?",
+    category: "Infrastructure",
+    status: "design",
+    description:
+      "The numbers can be virtual and the radio cannot. lpac manages eUICC profiles from Linux over a modem's AT interface; osmo-remsim separates a SIM from its modem — which is also the exact signature carriers detect, so the legitimate route is a REGISTERED gateway on an M2M plan.",
+    file: "esim-and-remote-sim.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
