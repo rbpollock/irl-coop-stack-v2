@@ -14,13 +14,13 @@ dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../../infra/out/dev/secrets.env") });
 
 import { PeerRail, type PaymentRail } from "./rail";
-import { translateWebhook } from "./webhook";
+import { translateWebhook, verifySignature } from "./webhook";
 
 const PORT = Number(process.env.PEER_XYZ_PAYMENTS_PORT ?? 3010);
 const TOKEN = process.env.RAIL_AUTH_TOKEN ?? "";
-// The provider posts webhooks to us. The types expose no signature scheme, so authenticity
-// comes from a CUSTOM HEADER carrying a derived secret — configured on the provider side as a
-// customHeaders entry. Without it the endpoint is unauthenticated, so it fails closed.
+// The provider posts webhooks to us and signs them: HMAC-SHA256(secret, `${timestamp}.${rawBody}`)
+// in X-Webhook-Signature, with X-Webhook-Timestamp and X-Webhook-Id alongside. The secret comes
+// from webhook creation and is shown only once, so it lives in the vault.
 const WEBHOOK_SECRET = process.env.PEER_PAY_WEBHOOK_SECRET ?? "";
 const COOP_API = process.env.COOP_API_URL ?? "http://127.0.0.1:3001";
 
@@ -39,14 +39,23 @@ function authed(header: string | undefined): boolean {
 
 fastify.get("/health", async () => ({ ok: true, rails: Object.keys(RAILS) }));
 
+// Fastify parses JSON for us, but the signature covers the RAW bytes: re-serialising the parsed
+// object can reorder keys or change spacing, and the signature would never match. So keep them.
+fastify.addContentTypeParser("application/json", { parseAs: "string" }, (req, body, done) => {
+  (req as unknown as { rawBody?: string }).rawBody = body as string;
+  try {
+    done(null, JSON.parse(body as string));
+  } catch (err) {
+    done(err as Error, undefined);
+  }
+});
+
 fastify.addHook("onRequest", async (request, reply) => {
   if (request.url === "/health") return;
   if (request.url.startsWith("/webhooks/")) {
-    // provider-facing: its own secret, its own header
-    const presented = String(request.headers["x-webhook-secret"] ?? "");
-    if (!WEBHOOK_SECRET || presented !== WEBHOOK_SECRET) {
-      return reply.code(401).send({ error: "invalid webhook secret" });
-    }
+    // Provider-facing, and authenticated by SIGNATURE — which cannot be checked here: this hook
+    // runs before the body is parsed, so the raw bytes the signature covers do not exist yet.
+    // The route verifies instead.
     return;
   }
   if (!authed(request.headers.authorization)) reply.code(401).send({ error: "invalid rail token" });
@@ -58,6 +67,16 @@ fastify.addHook("onRequest", async (request, reply) => {
 // Translate here, forward neutrally: coop-api never sees a provider payload, so the provider's
 // vocabulary and its event names stay behind the seam.
 fastify.post("/webhooks/peer", async (request, reply) => {
+  // Verify BEFORE interpreting anything. An unverified webhook is an anonymous instruction to
+  // move money in the coop's ledger.
+  const v = verifySignature(
+    (request as unknown as { rawBody?: string }).rawBody ?? "",
+    String(request.headers["x-webhook-timestamp"] ?? ""),
+    String(request.headers["x-webhook-signature"] ?? ""),
+    WEBHOOK_SECRET,
+  );
+  if (!v.ok) return reply.code(401).send({ error: `invalid webhook signature: ${v.reason}` });
+
   const t = translateWebhook(request.body);
   if (!t.eventId) return reply.code(400).send({ error: "not a webhook payload (no event id)" });
   if (!t.providerRef || t.status === null) {

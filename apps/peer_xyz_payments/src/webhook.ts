@@ -87,3 +87,46 @@ export function translateWebhook(payload: unknown): TranslatedWebhook {
         : `${type} -> ${finalStatus}`,
   };
 }
+
+
+/**
+ * Verify a Peer webhook signature — their documented scheme, not one we invented.
+ *
+ *   X-Webhook-Timestamp, X-Webhook-Signature  ->  HMAC-SHA256(secret, `${timestamp}.${rawBody}`)
+ *
+ * Both details are load-bearing:
+ *   - the RAW body must be used, byte for byte: re-serialising the JSON changes the bytes and
+ *     the signature will never match (a classic and silent failure);
+ *   - the timestamp window rejects a replayed delivery.
+ *
+ * Note their retry policy: a delivery is attempted up to 7 times and every attempt carries the
+ * SAME X-Webhook-Id with a FRESH timestamp and signature. So a valid signature says "Peer sent
+ * this", and the id is what makes a retry idempotent — two different checks, both required.
+ */
+export function verifySignature(
+  rawBody: string,
+  timestamp: string | undefined,
+  signature: string | undefined,
+  secret: string,
+  maxSkewSeconds = 300,
+): { ok: boolean; reason?: string } {
+  if (!secret) return { ok: false, reason: "no webhook secret configured" };
+  if (!timestamp || !signature) {
+    return { ok: false, reason: "missing X-Webhook-Timestamp or X-Webhook-Signature" };
+  }
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts)) return { ok: false, reason: "timestamp is not a number" };
+  const skew = Math.abs(Math.floor(Date.now() / 1000) - ts);
+  if (skew > maxSkewSeconds) {
+    return { ok: false, reason: `timestamp outside the ${maxSkewSeconds}s window (skew ${skew}s)` };
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const crypto = require("node:crypto");
+  const expected = crypto.createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
+  const a = Buffer.from(expected, "utf8");
+  const b = Buffer.from(String(signature).trim().toLowerCase(), "utf8");
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return { ok: false, reason: "signature mismatch" };
+  }
+  return { ok: true };
+}

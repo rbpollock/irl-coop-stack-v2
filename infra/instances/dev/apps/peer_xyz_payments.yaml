@@ -25,7 +25,8 @@ env:
   # The provider posts webhooks to us. Its types expose no signature scheme, so authenticity
   # comes from a CUSTOM HEADER carrying a derived secret, configured on the provider side as a
   # customHeaders entry. Fails closed if unset.
-  PEER_PAY_WEBHOOK_SECRET: ${SECRET:payments.webhook-secret}
+  # Shown ONCE by `peer-pay-cli webhooks create`; a self-derived value could never match it.
+  PEER_PAY_WEBHOOK_SECRET: ${VAULT:peerpay.webhook_secret}
   # Where to forward a translated settlement. The coop-api route is authenticated with the
   # same rail token the rail presents on outbound calls (one trust boundary, both directions).
   COOP_API_URL: http://127.0.0.1:3001

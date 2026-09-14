@@ -4,8 +4,9 @@
 stack and/or with **ERPNext**. Recorded, deliberately not built. This note exists so the intent
 is not lost and so the *first* build step is the cheap one rather than an accidental fork.
 
-**Decisions (Robbie, Sep 2026).** **Same Frappe site** as ERPNext, and the scope is
-**accounting AND the coop ledger** — both, not either.
+**Decisions (Robbie, Sep 2026).** **Same Frappe site** as ERPNext; the scope is **accounting
+AND the coop ledger** — both, not either; and **row-level ledger data is in scope**, so the
+per-member role mapping below is the accepted mechanism rather than an aggregates-only view.
 
 **Status: not built.** No Insights app, route, OIDC client, or data source exists today.
 

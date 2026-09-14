@@ -402,15 +402,18 @@ module contains no vendor term at all.
 **The rail declares its own limits, and the seam checks them.** `GET /rails` returns
 `directToDestination` — a rail that would hold funds itself is refused by the seam, so the
 invariant "the platform never intermediates" is enforced rather than documented — and
-`canObserve`, which for Peer is **false with the reason**: the SDK exposes exactly six
-functions and none looks up an order, so settlement **cannot be polled**. Reporting
-`pending` there would be a fabricated status, and a settled payment would sit looking unpaid
-forever.
+`canObserve`, which for Peer is **true**.
 
-**Swapping the provider, when it is taken down:** implement the interface in a new app (or
-add it to the rail service), deploy, point `RAIL_URL` at it. coop-api's routes, table
-and status vocabulary do not change. Two rails could even run at once, which is the resilience
-argument for naming the app after the provider.
+**Settlement is observable, and the order id is therefore a SECRET.** `GET
+/api/v1/orders/{orderId}` returns the order, the merchant and the customer's latest payment
+attempt, and it needs **no API key because the order id IS the credential** — so it must never
+appear in a published URL or a log. (The SDK exposes exactly six functions and none of them looks
+up an order, which is why an earlier version of this note said settlement could not be polled.
+The provider could; the SDK could not.)
+
+**Swapping the provider, when it is taken down.** Implement the interface in a new app, then
+point `RAIL_URL` at it. coop-api's routes, table and status vocabulary do not change. Two rails
+could even run at once, which is the resilience argument for naming the app after the provider.
 
 **Verified 19/19 through both processes** (`/tmp/hermes-verify-payments.js`): the rail's
 capabilities arrive over HTTP; the destination is the coop's policy, echoed by the rail and
@@ -490,28 +493,20 @@ The provider's own types carry nineteen event types, and the two that matter mos
 That is section 10's T+130 window arriving as data, and it fixes the meaning of a `receipt`
 entry: **"funds arrived", not "funds are final."**
 
-- **Authenticity.** The provider's types expose **no signature scheme** — `Webhook` carries only
-  `customHeaders`. So authenticity comes from a custom header carrying a **derived secret**,
-  configured on the merchant as a customHeaders entry, and the endpoint fails closed without it.
-  A webhook is untrusted input from outside; it is validated, not believed.
-- **Narrow exposure.** Only `Host(pay.<domain>) && PathPrefix(/webhooks)` is routed. Verified:
-  `pay.irl.coop/webhooks/peer` answers 401 while `/intents` and `/rails` 404 through the edge —
-  a payment provider cannot reach the rail's control plane.
-- **Translation stays behind the seam.** A small explicit event map, in the rail app: an
-  unrecognised event produces **no state change** rather than an assumed one (a 500 on an event
-  we merely do not act on would look like an outage to the provider). `partial` is *derived* —
-  `requested − remaining` — rather than taken on faith.
-- **Retries are harmless.** `rail_event` is unique on `(rail, event_id)`, so a repeated delivery
-  is a no-op; providers retry, and W4 asserts a retry changes nothing.
-- **A reversal is a CORRECTION, not a deletion.** The intent goes to `reversed` (a new status in
-  the coop's vocabulary) and the ledger gets a `correction` entry whose `refs` point at the
-  original receipt. **The receipt itself stays exactly as it was** — entries are never deleted,
-  and the money is accounted for rather than rewritten. The correction is keyed by the *event*
-  id, not the order, so two different chargebacks are two facts.
-- **The system write goes through a definer function.** An RLS-guarded UPDATE correctly refuses
-  a system write with no member identity, so settlement runs inside `coop_rails_settle` (owned
-  by `coop_rls`), and the contribution event is then emitted **as the payer**, so RLS admits the
-  entry on its own merits instead of by exemption.
+- **Authenticity.** `HMAC-SHA256(secret, `${X-Webhook-Timestamp}.${rawBody}`)`, hex, in
+  `X-Webhook-Signature`, with `X-Webhook-Id` naming the event and a 300s window rejecting a
+  replay. Two details are load-bearing: the **raw bytes** must be signed (re-serialising the
+  parsed JSON changes them and the signature can never match), and the same `X-Webhook-Id` is
+  reused across all 7 retry attempts with a *fresh* signature — so the signature says "the
+  provider sent this" while the id is what makes a retry idempotent. Those are two checks, and
+  both are required.
+
+  **Correction (recorded because the error is instructive).** This note previously claimed the
+  provider exposed *no signature scheme*, on the strength of its **TypeScript type declarations**
+  (`Webhook` carrying only `customHeaders`). That was wrong, and the mistake was treating an SDK's
+  type surface as the provider's contract. The signature headers are documented, not typed — and
+  the same misreading is what made `canObserve` false below. **The docs are the contract; the
+  types are one client's view of it.**
 
 **One property worth knowing:** the outbox dedupes on `(source, source_event_id)` **globally**,
 not per group — so if a provider ever *reuses* an event id, the second event is silently treated

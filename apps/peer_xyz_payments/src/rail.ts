@@ -110,13 +110,14 @@ export class PeerRail implements PaymentRail {
       directToDestination: true,
       chains: ["8453"], // Base
       currency: "USDC",
-      // The SDK exposes exactly six functions and NONE of them looks up an order:
-      // checkQuoteAvailability, createCheckout, createCheckoutAndRedirect, getCheckoutUrl,
-      // getMerchant, redirectToCheckout. So settlement cannot be polled, and the cooperative
-      // truth is "we cannot answer" rather than a status invented from hope.
-      canObserve: false,
+      // The SDK exposes exactly six functions and NONE of them looks up an order — but the
+      // HOSTED API does: `GET /api/v1/orders/{orderId}` returns the order, the merchant and the
+      // customer's latest payment attempt, and it needs NO API key because the order id IS the
+      // credential. So settlement is observable, and the earlier "cannot be observed" claim was
+      // about the SDK, not the provider.
+      canObserve: true,
       observeUnavailableReason:
-        "the provider's SDK exposes no order lookup; settlement must arrive by webhook or operator confirmation",
+        "read via the hosted order endpoint, which is a capability URL: the order id is the credential, so it must never be published",
     };
   }
 
@@ -201,11 +202,54 @@ export class PeerRail implements PaymentRail {
     return { providerRef, payUrl, destination: args.destination, expiresAt: null };
   }
 
-  async observeIntent(): Promise<ObservedIntent> {
-    // Honest: the provider cannot be asked. Returning "pending" here would be a fabricated
-    // status — a settled payment would sit looking unpaid forever, and worse, the reverse
-    // would credit money that never arrived.
-    return { status: "unknown", note: this.capabilities().observeUnavailableReason };
+  /**
+   * Ask the provider what happened to an intent.
+   *
+   * Uses the hosted read (`GET /api/v1/orders/{id}`) rather than the SDK, which has no lookup.
+   * No API key is sent: the order id is the credential — which is exactly why it must be treated
+   * as a secret on our side and never put in a URL we publish or a log we keep.
+   */
+  async observeIntent(providerRef: string): Promise<ObservedIntent> {
+    const cfg = peerConfig();
+    const base = String(cfg.apiBaseUrl ?? "").replace(/\/+$/, "");
+    const res = await fetch(`${base}/api/v1/orders/${encodeURIComponent(providerRef)}`, {
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) {
+      return { status: "unknown", note: `provider read returned HTTP ${res.status}` };
+    }
+    const body = (await res.json().catch(() => null)) as any;
+    // The REST reads are ENVELOPED — {success, message, responseObject} — unlike the SDK, which
+    // returns the payload unwrapped. Reading body.order found nothing and reported "unknown",
+    // which is exactly the kind of silent nothing that looks like a status.
+    const payload = body?.responseObject ?? body;
+    const order = payload?.order ?? null;
+    if (!order) return { status: "unknown", note: "provider read returned no order" };
+
+    const requested = Number(order.requestedUsdcAmount ?? NaN);
+    const remaining = Number(order.remainingUsdcAmount ?? NaN);
+    const received =
+      Number.isFinite(requested) && Number.isFinite(remaining) ? requested - remaining : null;
+
+    // A remainder means partial whatever the status says: the money decides, not the label.
+    let status: RailStatus;
+    switch (String(order.status ?? "")) {
+      case "CREATED":
+        status = "pending";
+        break;
+      case "PARTIALLY_FULFILLED":
+        status = "partial";
+        break;
+      case "FULFILLED":
+        status = received !== null && Number.isFinite(requested) && received < requested ? "partial" : "settled";
+        break;
+      case "CANCELLED":
+        status = "cancelled";
+        break;
+      default:
+        status = "unknown";
+    }
+    return { status, received, note: `order ${String(order.status ?? "?")} read from the provider` };
   }
 
   async cancelIntent(): Promise<ObservedIntent> {
