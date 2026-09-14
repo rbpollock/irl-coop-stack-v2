@@ -597,6 +597,15 @@ function resolveDesignDir(): string | null {
       "The numbers can be virtual and the radio cannot. lpac manages eUICC profiles from Linux over a modem's AT interface; osmo-remsim separates a SIM from its modem — which is also the exact signature carriers detect, so the legitimate route is a REGISTERED gateway on an M2M plan.",
     file: "esim-and-remote-sim.md",
   },
+  {
+    slug: "telnyx-sim-to-pbx",
+    title: "Telnyx Wireless SIM → the coop's PBX",
+    category: "Infrastructure",
+    status: "design",
+    description:
+      "The SIM and the SIP trunk are the same vendor, so the SIM's number can terminate in FreeSWITCH like any DID — but the SMS half and the line type of the SIM's number are the open questions, and Telnyx's own Number Lookup calls its numbers VoIP.",
+    file: "telnyx-sim-to-pbx.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
