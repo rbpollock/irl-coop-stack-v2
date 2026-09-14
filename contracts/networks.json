@@ -1,0 +1,28 @@
+{
+  "_about": "Per-chain facts for the coop's contracts. Every usdc address here was VERIFIED ON-CHAIN (eth_chainId + symbol() + decimals()), never typed from a document or from memory — a token address taken on trust sends funds nowhere. Re-verify with `npm run verify:token:<net>` before trusting an edit.",
+  "local": {
+    "chainId": 31337,
+    "rpcUrl": "http://127.0.0.1:8545",
+    "usdc": null,
+    "explorer": null,
+    "note": "No USDC here: the local chain uses a deployed MockUsdc stand-in. A real payment can never happen on this chain."
+  },
+  "base-sepolia": {
+    "chainId": 84532,
+    "rpcUrl": "https://sepolia.base.org",
+    "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "explorer": "https://sepolia.basescan.org",
+    "usdc_verified_on": "2026-09-13",
+    "usdc_verified_how": "chainId 0x14a34; symbol() -> 0x55534443 ('USDC'); decimals() -> 6; bytecode contains 5c60da1b (implementation()) i.e. Circle's proxy",
+    "note": "Testnet. Proves the CHAIN side (deploy, gas, Safe, router, verification). It CANNOT prove the payment rail: the provider delivers USDC on Base mainnet only."
+  },
+  "base": {
+    "chainId": 8453,
+    "rpcUrl": "https://mainnet.base.org",
+    "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "explorer": "https://basescan.org",
+    "usdc_verified_on": "2026-09-13",
+    "usdc_verified_how": "chainId 0x2105; symbol() -> 'USDC'; decimals() -> 6",
+    "note": "The coop's chain (DECIDED). The rail also delivers only here, so a real payment test is a mainnet test."
+  }
+}

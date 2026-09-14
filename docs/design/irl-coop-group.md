@@ -23,6 +23,12 @@ The co-op is a **group Safe** — `irl.coop` — deployed like any other account
 - Same `SafeProxyFactory` + `Safe` singleton as user accounts (safe.ts has the creation code + CREATE2 math).
 - Salt: a fixed, documented salt (`irlcoop-group-v1`) → **address is deterministic** and can be pre-printed in the UI/docs before deployment.
 - Initial owners: Robbie (the deployer), threshold 1-of-1 in dev → promoted to 2-of-3 (Robbie + 2 founding members) when the co-op formalizes.
+- **This Safe is also the DEPLOYER of the group's contracts** (settled Sep 2026): a Safe
+  transaction delegatecalling Safe's `CreateCall` executes `CREATE` in the Safe's own context, so
+  the new contract's `msg.sender` is the group's Safe and its address derives from it. With the
+  threshold promoted to 2-of-3, no single owner can deploy. See `account-and-key-model.md`
+  §"Deployment authority". Deploying the co-op's own Safe is still gated on the Base switch —
+  a dev-chain Safe would be a throwaway, exactly as a dev-chain group would.
 - The Safe is `safe.irl.coop`'s canonical address in coop-api config (SAFE_SINGLETON_ADDRESS exists in .env already; the GROUP singleton address is a new env).
 
 ### 2.2 What the group Safe owns

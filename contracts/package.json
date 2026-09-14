@@ -4,7 +4,12 @@
   "private": true,
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "deploy:router:local": "hardhat run scripts/deploy_usdc_router.ts --network local",
+    "deploy:router:base-sepolia": "hardhat run scripts/deploy_usdc_router.ts --network base-sepolia",
+    "verify:deployment:local": "hardhat run scripts/verify_deployment.ts --network local",
+    "verify:deployment:base-sepolia": "hardhat run scripts/verify_deployment.ts --network base-sepolia",
+    "deploy:safe:base-sepolia": "hardhat run scripts/deploy_local.ts --network base-sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.2",

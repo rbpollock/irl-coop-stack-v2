@@ -208,11 +208,78 @@ Constraints (settled): badges prove contribution, never worth — no class syste
 - Onboarding + account linking (coop-api authority), OAuth bridge (irl-dashboard ↔
   coop-api ↔ Keycloak ↔ Google) — all E2E-verified
 
+## Deployment authority — the group's Safe IS the deployer (settled Sep 2026)
+
+**Decision (Robbie): for all group contracts, the Safe is the deployer.** Not a key the group
+owns, and not an operator key: the group's own account performs the deployment.
+
+### Mechanism (proven, not proposed)
+
+A Safe cannot execute `CREATE` itself — `execTransaction` performs a CALL. But Safe ships an
+audited library, `CreateCall` (`performCreate` / `performCreate2`), and a **DELEGATECALL runs it
+in the Safe's OWN context**, so the `CREATE` opcode executes *as the Safe*. The consequences are
+the whole point:
+
+| Property | Consequence |
+|---|---|
+| the new contract's `msg.sender` is the Safe | the deployment *is* the group's act |
+| **the DELEGATECALL does this — not the opcode** | `performCreate` and `performCreate2` are the same library and behave identically here; both are asserted in the tests, so this is measured, not assumed |
+| `execTransaction` needs the threshold | **one owner alone cannot deploy**; no single key exists that can |
+| the relay is permissionless | whoever broadcasts pays gas — **gas is not authority, signatures are** |
+| ownerless contracts stay ownerless | deploying the router confers no power on anyone, including the Safe |
+
+### CREATE or CREATE2 — a choice, with a cost on both sides
+
+The deployer is the Safe either way, so the opcode buys exactly one thing: **address
+predictability**. Default to plain `CREATE`; reach for `CREATE2` only when an address must be
+known *before* it exists (config, UI, a reference another contract already holds — the same
+reason the co-op's own Safe uses a documented salt).
+
+| | address | cost |
+|---|---|---|
+| plain `CREATE` (no salt) | the Safe's nonce; read back from the `ContractCreation` event | nothing; always a fresh address |
+| `CREATE2` (salt) | a pure function of (Safe, salt, initCode) — checkable before spending gas | **the address moves if any constructor argument changes**, and repeating a salt reverts, so a deliberate redeploy needs a fresh salt |
+
+The `ContractCreation` event is emitted **by the Safe** in both paths, because the call is a
+delegatecall — which is how the plain-`CREATE` address is discovered at all.
+
+This is the pattern Safe's own `SafeProxyFactory` used, and the library is still shipped in
+`@safe-global/safe-contracts` (1.4's factory now inlines `create2` itself, so the file is
+imported deliberately in `contracts/contracts/SafeImports.sol` to keep its artifact compiled).
+
+### Consequence for the group vault — this REMOVES its hardest requirement
+
+With the Safe as deployer there is **no group signer key to generate, split, store, or
+reassemble**. `group-secret-vault.md` therefore never needs to hold a deployment key; its scope
+narrows to what it was designed for — **member owner keys, per-service env secrets, and salt /
+recovery material**. This is why "would the group generate a signer key and store it in its own
+vault" is answered by *not needing one*: the group's authority is its threshold, held as member
+keys, and exercised by signing a transaction rather than by possessing a secret.
+
+### Verified
+
+`contracts/test/SafeAsDeployer.ts`, **9/9**, including the ones that matter:
+- **the control** — a plain EOA deployment records that EOA, so `deployer()` is measuring the
+  real thing and the Safe assertions cannot pass by accident;
+- **the governance property** — with threshold 2, one owner alone cannot deploy, and a
+  non-owner's signature changes nothing;
+- the Safe deploying its **own router** with the router's invariants intact (still ownerless);
+- **plain `CREATE` also makes the Safe the deployer** (test 7), which is the empirical reason the
+  opcode is not what carries this design;
+- **the CREATE2 trade-off is real** (test 8): a repeated salt cannot redeploy, plain `CREATE` can.
+
+### Open knob
+
+**A Safe guard for delegatecall.** `execTransaction(operation = DelegateCall)` runs arbitrary
+code in the Safe's context, which is exactly why `CreateCall` works — and exactly what a guard
+should constrain once a group's Safe holds real value (whitelist the delegatecall target).
+Default: no guard in dev; decide before the group Safe holds funds.
+
 ## Gaps to build (when knobs are decided)
 
 1. Passkey registration in coop-api (SimpleWebAuthn; PasskeyValidator module;
    P-256 via Base precompile 0x00…0100 per EIP-7212)
-2. Infra DAO Safe deployment + backend Safe as deployer/co-owner
+2. Infra DAO Safe deployment — **now settled and built for group contracts**: see "Deployment authority" above; what remains is deploying the co-op's own Safe on Base
 3. Group accounts (N-of-M creation; join = addOwnerWithThreshold)
 4. Threshold-encrypted group secret vault (salt backups, env secrets)
 5. Frontend onboarding Safe step (salt generation/backup UX, keep it invisible)
