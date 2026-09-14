@@ -564,6 +564,15 @@ const DOCS: DesignDoc[] = [
       "Intent (not built): run Frappe Insights on the existing ERPNext bench, report over the coop ledger, and the RLS hazard that decides how it may connect.",
     file: "frappe-insights-integration.md",
   },
+  {
+    slug: "coop-accounts-and-phone-verification",
+    title: "The coop's own accounts, verified from the coop's own number",
+    category: "Identity & accounts",
+    status: "design",
+    description:
+      "Goal (not built): the coop owns a DID and receives its verification texts; the signup itself stays a human step, and why automating it would burn the number.",
+    file: "coop-accounts-and-phone-verification.md",
+  },
 ]
 
 function resolveDesignDir(): string | null {
