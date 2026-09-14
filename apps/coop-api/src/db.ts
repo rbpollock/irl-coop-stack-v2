@@ -489,12 +489,21 @@ CREATE TABLE IF NOT EXISTS rail_event (
   created_at   timestamptz NOT NULL DEFAULT now(),
   UNIQUE (rail, event_id)
 );
+-- An informational event (order created, a bridge moving) carries no status: it is evidence
+-- that a VERIFIED delivery arrived, not a claim about where the money is.
+ALTER TABLE rail_event ALTER COLUMN status DROP NOT NULL; -- rail_event_status_nullable
+-- A CHECK of the form status IN (...) does NOT reject NULL (NULL IN (...) is NULL, not
+-- FALSE), so the CHECK as written allowed a null status on an intent. Say it explicitly.
+-- written allowed a null status on an intent. Say it explicitly.
+ALTER TABLE payment_intent DROP CONSTRAINT IF EXISTS payment_intent_status_check;
+ALTER TABLE payment_intent ADD CONSTRAINT payment_intent_status_check
+  CHECK (status IS NOT NULL AND status IN ('pending','partial','settled','cancelled','failed','reversed'));
 CREATE INDEX IF NOT EXISTS rail_event_ref_idx ON rail_event (rail, provider_ref);
 -- A settled payment can be taken back. The CHECK is widened idempotently, like the
 -- signature class before it: CREATE TABLE IF NOT EXISTS can never add a constraint.
 ALTER TABLE payment_intent DROP CONSTRAINT IF EXISTS payment_intent_status_check;
 ALTER TABLE payment_intent ADD CONSTRAINT payment_intent_status_check
-  CHECK (status IN ('pending','partial','settled','cancelled','failed','reversed'));
+  CHECK (status IS NOT NULL AND status IN ('pending','partial','settled','cancelled','failed','reversed'));
 CREATE TABLE IF NOT EXISTS dues_policy (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id    uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,

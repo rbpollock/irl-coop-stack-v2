@@ -10,30 +10,52 @@ import type { IntentStatus } from "./rail";
 // REFUNDS and CHARGEBACKS. The money doc's section 10 has a T+130 settlement window for
 // exactly this reason, and a `receipt` entry means "funds arrived", not "funds are final".
 
-/** What the provider's event types translate to. Anything absent is deliberately inert. */
+/**
+ * What the provider's event types translate to. Anything absent is deliberately inert.
+ *
+ * Four of the five rules below come from an explicit warning in the provider's own docs, and
+ * they are the difference between an attempt-level event and a fact about the ORDER:
+ *
+ *   "For merchant order state transitions, treat PAYMENT_SETTLED, PAYMENT_FAILED,
+ *    PAYMENT_EXPIRED and ORDER_FULFILLED as the primary event set. ... These events do NOT
+ *    auto-cancel the order, and eligible late settlements can still produce PAYMENT_SETTLED
+ *    and ORDER_FULFILLED."
+ *
+ * So an expired or failed *payment attempt* is not a failed order: mapping either to
+ * `cancelled`/`failed` would tell the coop that money is not coming when it still might.
+ */
 const EVENT_STATUS: Record<string, IntentStatus | null> = {
+  // Where the money is.
   PAYMENT_SETTLED: "settled",
   ORDER_FULFILLED: "settled",
+
+  // ONLY the order-level event cancels. A cancelled/expired/failed ATTEMPT does not.
   ORDER_CANCELLED: "cancelled",
-  PAYMENT_CANCELLED: "cancelled",
-  PAYMENT_EXPIRED: "cancelled",
-  PAYMENT_FAILED: "failed",
-  PAYMENT_BRIDGE_FAILED: "failed",
-  // Reversal family. A settled payment can be taken back, and the coop must be able to say so.
+
+  // Attempt-level, and deliberately inert — a late settlement can still arrive (see above).
+  PAYMENT_EXPIRED: null,
+  PAYMENT_FAILED: null,
+  PAYMENT_CANCELLED: null,
+
+  // Reversal family: a settled payment can be taken back, and the coop must be able to say so.
+  // A refund only reverses when it has COMPLETED — PENDING means it has not left yet.
   PAYMENT_CHARGEBACKED: "reversed",
   ORDER_CHARGEBACKED: "reversed",
   ORDER_PARTIALLY_CHARGEBACKED: "reversed",
   REFUND_COMPLETED: "reversed",
-  REFUND_PENDING: "reversed",
-  // Informational: the order exists / a bridge is moving / a refund is in flight. No status
-  // change, because inventing one would be a lie about where the money is.
+  REFUND_PENDING: null,
+
+  // Informational: the order exists, a bridge is moving, or a crypto payout to the destination
+  // failed (which is a DELIVERY problem, not "the payment failed" — the fiat was collected).
+  // No status change: inventing one would be a lie about where the money is.
   ORDER_CREATED: null,
   PAYMENT_CREATED: null,
   PAYMENT_BRIDGE_PENDING: null,
   PAYMENT_BRIDGE_SUBMITTED: null,
   PAYMENT_BRIDGE_COMPLETED: null,
-  // ORDER_RESIZED changes the amount mid-flight. Deliberately NOT handled yet: it needs a
-  // decision about whether the coop accepts a changed amount, and pretending it is fulfilment
+  PAYMENT_BRIDGE_FAILED: null,
+  // ORDER_RESIZED changes the amount mid-flight (`data.resize`). Still NOT handled: it needs a
+  // decision about whether the coop accepts a changed amount, and treating it as fulfilment
   // would be worse than ignoring it. Recorded as an open item.
 };
 

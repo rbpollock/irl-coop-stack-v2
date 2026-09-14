@@ -229,12 +229,23 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     // 4 — the chain must be the coop's chain
     gates.push({ id: "chain-is-base", ok: chain === "8453", kind: "checked", detail: `PAYMENTS_CHAIN_ID=${chain || "(unset)"}` });
 
-    // 5 — settlement must be observable: at least one webhook received, ever
-    const seen = await pool.query("SELECT count(*)::int AS n FROM rail_event").catch(() => ({ rows: [{ n: 0 }] }));
-    const n = (seen.rows[0] as { n: number }).n;
+    // 5 — settlement must be observable: at least one VERIFIED delivery, ever.
+    //     Read through a SECURITY DEFINER count, because rail_event is FORCE RLS with no
+    //     policies — a direct count returned 0 while the row existed, i.e. the gate could not
+    //     see its own evidence. And a failed read must NOT be reported as "none arrived":
+    //     asserting a negative from a failure is the same defect one level up.
+    const seen = await pool.query("SELECT coop_rail_event_count()::int AS n").catch(() => null);
+    const n = seen ? (seen.rows[0] as { n: number }).n : null;
     gates.push({
-      id: "webhook-evidenced", ok: n > 0, kind: "checked",
-      detail: n > 0 ? `${n} provider event(s) recorded` : "no provider event has ever arrived — register the webhook or settlement is unobserved and the coop cannot reconcile",
+      id: "webhook-evidenced",
+      ok: n !== null && n > 0,
+      kind: "checked",
+      detail:
+        n === null
+          ? "cannot read the event count — the gate cannot answer, which is NOT the same as 'nothing arrived'"
+          : n > 0
+            ? `${n} verified provider event(s) recorded — a signed delivery has been accepted`
+            : "none yet — the webhook is registered but no delivery has arrived",
     });
 
     // 6 — the legal entity. NOT checkable: no code can know whether a coop legally exists, and
@@ -334,10 +345,13 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       return reply.code(401).send({ error: "invalid rail token" });
     }
     const b = (request.body ?? {}) as Record<string, unknown>;
-    const needed = ["rail", "provider_ref", "status", "event_id", "event_type"];
+    // `provider_ref` and `status` are OPTIONAL: a verified event that carries no state change is
+    // still worth recording, because "we accepted a signed delivery" is the evidence that the
+    // webhook is wired at all. Absent a status, nothing about an intent is touched.
+    const needed = ["rail", "event_id", "event_type"];
     if (needed.some((k) => !b[k])) return reply.code(400).send({ error: `required: ${needed.join(", ")}` });
-    const status = String(b.status);
-    if (!["pending", "partial", "settled", "cancelled", "failed", "reversed"].includes(status)) {
+    const status = b.status == null || b.status === "" ? null : String(b.status);
+    if (status && !["pending", "partial", "settled", "cancelled", "failed", "reversed"].includes(status)) {
       return reply.code(400).send({ error: `unknown status: ${status}` });
     }
 
@@ -346,7 +360,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     // exemption. It also dedupes on (rail, event_id), so a provider retry is a no-op.
     const res = await pool.query(
       "SELECT * FROM coop_rails_settle($1, $2, $3, $4, $5, $6)",
-      [String(b.rail), String(b.provider_ref), status, b.received ?? null, String(b.event_id), String(b.event_type)]
+      [String(b.rail), b.provider_ref == null ? null : String(b.provider_ref), status, b.received ?? null, String(b.event_id), String(b.event_type)]
     );
     const row = res.rows[0] as { dup: boolean; intent_id: string | null; group_id: string | null; payer_sub: string | null; cur_status: string | null; received: string | null } | undefined;
     if (!row) return reply.code(500).send({ error: "settlement function returned nothing" });
@@ -373,6 +387,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       refs = [String((orig.rows[0] as { entry_id: string }).entry_id)];
     }
 
+    // A record-only event changes nothing and must emit NOTHING. Emitting a receipt for an
+    // informational event is how a "money arrived" entry gets created out of thin air — and it
+    // is exactly what happened when informational events began being forwarded: the lane
+    // dead-lettered a receipt whose quantity was null.
+    if (status === null) {
+      return reply.send({ ok: true, status: row.cur_status, received: row.received, record_only: true });
+    }
+
     await withIdentity(String(row.payer_sub), async (client) => {
       entryId = await emitContributionEvent(client, {
         groupId: String(row.group_id),
@@ -384,13 +406,13 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
                 // A correction, not a deletion: entries are never deleted, and the original
                 // receipt stays exactly as it was.
                 sub: String(row.payer_sub), kind: "correction", subject: String(row.payer_sub),
-                quantity: row.received ? -Math.abs(Number(row.received)) : null, unit: "USDC",
+                quantity: row.received ? -Math.abs(Number(row.received)) : undefined, unit: "USDC",
                 happened_at: new Date().toISOString(), refs,
                 note: `reversed by ${String(b.event_type)}`,
               }
             : {
                 sub: String(row.payer_sub), kind: "receipt", subject: String(row.payer_sub),
-                quantity: row.received ? Number(row.received) : null, unit: "USDC",
+                quantity: row.received ? Number(row.received) : undefined, unit: "USDC",
                 happened_at: new Date().toISOString(),
               },
         // No signature: this is the LANE's path, which materialises it as machine-only.

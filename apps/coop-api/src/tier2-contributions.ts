@@ -101,10 +101,17 @@ export function contributionPayloadToEntry(
 /** Validate a producer's payload. A malformed event is the PRODUCER's bug, so it must be
  *  dead-lettered rather than retried forever — see materializeContribution. */
 export function assertContributionPayload(p: unknown): asserts p is ContributionPayload {
-  const c = p as ContributionPayload;
+  const c = p as ContributionPayload & Record<string, unknown>;
   if (!c || typeof c !== "object") throw new Error("contribution payload must be an object");
   if (typeof c.sub !== "string" || !c.sub) throw new Error("contribution payload needs `sub`");
   if (typeof c.kind !== "string" || !c.kind) throw new Error("contribution payload needs `kind`");
+
+  // JSON has no `undefined`, so a producer that omits an OPTIONAL field typically sends `null`.
+  // Treating that as "not a number" dead-lettered the lane over a field that was optional to
+  // begin with. Absent is absent, however it is spelled.
+  for (const k of ["subject", "quantity", "unit", "happened_at", "note"]) {
+    if (c[k] === null) delete c[k];
+  }
   if (c.quantity !== undefined && (typeof c.quantity !== "number" || !Number.isFinite(c.quantity))) {
     throw new Error("contribution payload `quantity` must be a number");
   }

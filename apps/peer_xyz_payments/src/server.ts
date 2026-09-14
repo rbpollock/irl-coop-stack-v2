@@ -79,11 +79,8 @@ fastify.post("/webhooks/peer", async (request, reply) => {
 
   const t = translateWebhook(request.body);
   if (!t.eventId) return reply.code(400).send({ error: "not a webhook payload (no event id)" });
-  if (!t.providerRef || t.status === null) {
-    // Acknowledge and do nothing. Peer retries on failure, and a 500 on an event we simply do
-    // not act on would look like an outage to them.
-    return reply.send({ ok: true, ignored: true, event: t.eventType, note: t.note });
-  }
+  // Even an event that changes no state is FORWARDED, so the coop keeps an audit of what the
+  // provider told it and can prove the webhook is wired. `status: null` means "record only".
   try {
     const res = await fetch(`${COOP_API}/api/v1/internal/rails/settlement`, {
       method: "POST",

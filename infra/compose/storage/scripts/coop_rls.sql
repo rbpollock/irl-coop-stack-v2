@@ -794,6 +794,20 @@ CREATE POLICY dues_policy_select ON dues_policy FOR SELECT USING (coop_can_view_
 -- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
+-- coop_rail_event_count — "has a verified delivery EVER arrived?" as a fact.
+-- rail_event is FORCE RLS with NO policies on purpose (nobody should read the provider's own
+-- words about payments), so the app role sees zero rows and a plain count is blind to its own
+-- evidence. A definer function returning a bare count leaks nothing — no row, no attribution.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION coop_rail_event_count() RETURNS bigint
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $railcount$
+  SELECT count(*) FROM rail_event
+$railcount$;
+ALTER FUNCTION coop_rail_event_count() OWNER TO coop_rls;
+REVOKE EXECUTE ON FUNCTION coop_rail_event_count() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION coop_rail_event_count() TO coop;
+
+-- ---------------------------------------------------------------------------
 -- coop_rails_settle — the ONLY writer for a rail webhook. A webhook is untrusted input from
 -- outside, and the intent row is RLS-protected, so a system write with no member identity must
 -- go through a definer function rather than being handed an RLS exemption. It dedupes on
@@ -821,6 +835,15 @@ BEGIN
     RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::text, NULL::text, NULL::numeric;
     RETURN;
   END IF;
+  -- RECORD-ONLY. An informational event (order created, a bridge moving) carries a provider_ref
+  -- and so DOES match here, but has no status: without this guard it would fall through to the
+  -- ELSE below and null out a perfectly good intent status.
+  IF p_status IS NULL THEN
+    UPDATE rail_event SET intent_id = v_intent.id WHERE rail = p_rail AND event_id = p_event_id;
+    RETURN QUERY SELECT false, v_intent.id, v_intent.group_id, v_intent.payer_sub, v_intent.status, v_intent.received_amount;
+    RETURN;
+  END IF;
+
   IF v_intent.status = 'reversed' THEN
     -- already taken back; a later settle notice must not resurrect it
     RETURN QUERY SELECT false, v_intent.id, v_intent.group_id, v_intent.payer_sub, v_intent.status, v_intent.received_amount;
