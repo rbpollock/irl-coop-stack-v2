@@ -104,6 +104,74 @@ So the missing concept is a **group-owned account as a first-class resource**: w
 which handle, which number verifies it, where its credential lives, who holds which role on it,
 and its lifecycle (created → active → rotated → retired). Nothing models that today.
 
+### Credential custody — the departure problem, and why "bootstrap, not anchor" must be structural
+
+**The credential is the group's, always, from the moment of creation** — the account, the passkey, the
+access. Never in question, never re-adjudicated. **The phone number is the member's, always** — the SIM,
+the line, the number the platform texts, sits under a *person's* control whatever the title says. And
+because *control* (not title) is what bites, the group's ownership of the credential is **unimplementable**
+while its recovery path routes through a number a member controls: the group cannot answer its own
+recovery SMS.
+
+So the gap is never "who owns the account" (the group) — it is **"the one act that re-pins the
+credential off the member's number, and it is an act only the member can perform."** That single fact
+dictates everything below.
+
+**"Bootstrap, not anchor" is unenforceable as advice, and structural as a transaction boundary.** Told
+to a group as policy, it lapses: the credential is created in a high-friction moment, anchored to
+whoever was present, hardened "later," and "later" never comes — the member drifts away and the group
+discovers, after the departure, that its account is tethered to a ghost's phone. The reason it lapses
+is economic: **the person who can fix it now feels no pain, and the people who will feel the pain
+can't fix it then.** So it must not be a follow-up; it must be the *definition of done*:
+
+1. **Anchor-by-default.** The account does not graduate from `provisioning` to `active` until the group
+   holds a passkey (quorum-custodied in the vault) + a group recovery email + recovery codes, in the
+   *same* guided flow as creation. There is no "created but not yet hardened" state to lapse, because
+   the anchor is the completion condition.
+2. **The unanchored state is surfaced and gated, not silent.** An account still riding a personal
+   number shows a standing "at risk — anchored to X's number" flag, the same reflex the claims registry
+   and the payments preflight already use: unhealthy is a *visible failure*, not a footnote.
+3. **Departure is a hook, and capital is the settlement condition.** A member leaving with unwithdrawn
+   capital in the group has economic skin in finishing the re-home they are leaving unfinished.
+   Revocation does not complete while an account is still anchored to them — but **always with an
+   exit**: "re-home the credential, relinquish the number/materials, *or* accept the orphan and log
+   the risk," never an open-ended block. (A hard gate could be *weaponized* in either direction — a
+   hostile member refusing to re-home would hold the group hostage, or the group could trap a member —
+   so every leg of this has a severance path.)
+
+The rage-quit case is the sharp test, and it splits by intent: an **unconsidered** act needs a
+checkpoint + the member's economic stake to intercept it; a **hostile** act needs clean severance. None
+of this removes the member's *underlying* power (they can delete a number they legally hold, on the
+platform, with no coop involved) — it only converts the accidental orphan into a deliberate,
+accounted decision.
+
+**This generalizes to every group-held credential**, because they all share the curve. The phone case
+is merely the sharpest instance. The identical trap sits in: the group's shared email / recovery
+address; DNS/domain registrant contact; cloud and service logins; API keys; merchant and payment
+accounts; every platform brand-account. For each, the rule is the same: **anchor before active,
+surface when weak, settle at departure — and the credential belongs to the group no matter who
+created it.**
+
+### The account resource + a group-side interface
+
+The artifact this points at is the **group-account resource** (the "missing concept" above) with its
+lifecycle rule made load-bearing — and it is the *generic* spine, of which phone-verified social
+accounts are one supplier. It wants no new surface: the group detail page
+(`apps/web/irl-dashboard/.../apps/groups/[id]/page.tsx`) already has a **"Group apps"** card and a
+`scopeResource` pattern (`app='postiz'`, `resource_key=…`) for attaching a service to a group. An
+**"Accounts"** panel in that same card would hold, per account:
+
+- platform + handle + verification number (reads as a `telephony_resources 'did'`),
+- **anchor status** (group-passkey / group-email / member-number — with the member's alias shown),
+- the role mapping ("who holds which platform role, granted by whom"),
+- a one-tap **"Finish hardening"** flow that runs the passkey + group-email + recovery-codes steps and
+  only then flips the account to `active`,
+- and a **departure interaction** that, when a member is being removed, surfaces "this account is
+  still anchored to them — re-home or acknowledge" before the revocation completes.
+
+The UI rule matches the mechanics: **an account is *healthy* only when it is group-anchored; an
+unanchored account is the most prominent state, not a buried detail.**
+
 ## Consequence: per-group numbers become load-bearing
 
 A number cannot be reused across groups for verification — platforms block a number that has
@@ -270,6 +338,13 @@ wiring SMS to the bus.
    hotline.
 8. **The SIM's named signer** — whether a verification SIM needs its own KYC'd signer distinct from the
    carrier/DID account, or rides the same one (see "SIM inventory reality").
+9. **The SIM carrier discriminator is call-forwarding tolerance, not price.** Red Pocket (#1:
+   documented per-network, ~$10/mo, no term), Tello (cheapest; its own help says forwarding needs a
+   data-inclusive plan), US Mobile (documented, ~$17.50/mo). **Ultra Mobile rejected** (multi-month
+   lock-in + international-calling value the coop doesn't need). **Lyca Mobile rejected** (its own
+   acceptable-use policy names call-forwarding / onward-calling as an abuse vector). Screen every
+   candidate on *"does this plan support unconditional forwarding, and is using it permitted?"*
+   before any other attribute.
 
 ## Non-goals
 
