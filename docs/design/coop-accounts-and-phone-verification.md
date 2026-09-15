@@ -139,15 +139,37 @@ can be rotated or replaced without the number moving. The control surface (Telny
 forward authority) lives with the group/coop, so a hostile or absent keeper cannot hold the group's
 identity hostage.
 
-**Two numbers, two roles.** The SIM and the Telnyx DID are different surfaces and should not blur:
+**Two numbers, two roles — and the premise is human call traffic, not verification.**
 
-- **SIM number = identity / bootstrap.** What Instagram texts. One-time verification codes, 2FA. This
-  is why it must be mobile-class and why it sits in a phone.
-- **Telnyx DID = operations.** Member calls in/out, IVR, the number the group *shows*. VoIP-class is
-  fine here because nothing checks its line type.
+The common case is *not* "the occasional code" — it is **groups fielding real human calls**, on farms,
+in community spaces, in mutual-aid circles, and *frequently* — because groups aggregate and can forward
+a call to a sub-group or a related group's extension. That inverts which layer is load-bearing:
 
-Both still land in the one spine (`sms/inbound` → `phone_message`), so the two roles differ only in
-what they are *for*, not in how their traffic reaches the platform.
+- **SIM number = identity token, nothing public.** What Instagram texts: one-time verification codes,
+  2FA. One call at a time, near-zero traffic, sits in a phone, mobile-class. The SIM leaves the room
+  the moment real volume enters it.
+- **Telnyx DID = the phone system.** *All* human call traffic lands here — a public number sized with
+  **channels** and pointed at FreeSWITCH, where ring groups, queues and dialplan do the work. VoIP-class
+  is fine because nothing checks its line type.
+
+Two consequences, each load-bearing:
+
+1. **Every group's public DID needs a channel count sized to its traffic**, not the default. A quiet
+   mutual-aid group is 2–4 channels; a hotline is 10+. Channels — not SIMs, not phones — are how
+   "many simultaneous calls" is served. The SIM is a single-call identity token and must never be the
+   public number for a group that takes realtime inbound calls.
+2. **Forwarding is first-class, not an edge case.** A call forwarded into FreeSWITCH can be routed to
+   another extension, a ring group, a queue, *another group's extension*, or an outside number,
+   recursively. That is the platform's point — a "group-aware telephony core" — and it is a dialplan
+   capability, gated by a **cross-group forwarding permission** (a governance question: may any group
+   forward into any other, or must that be a grant?).
+
+The only concurrency hazard that actually bites is an **unterminated forwarded call**: one stuck call
+holds the SIM busy and silently blocks every later caller. The fix is voicemail/timeout on the DID and
+PBX — guaranteed-to-terminate dialplan — never more SIMs.
+
+Both surfaces still land in the one spine (`sms/inbound` → `phone_message`); the roles differ in what
+they are *for*, not in how their traffic reaches the platform.
 
 **The honest seams, left open on purpose:**
 
@@ -160,6 +182,33 @@ what they are *for*, not in how their traffic reaches the platform.
    not after.
 3. **The app is deliberately out of scope here** (huge; its own project). The shape above needs only
    the *interface* of that app (SIM SMS listener → `sms/inbound`, alive-check), not the app itself.
+
+## The SIM inventory reality — no free standing numbers
+
+The telephony *DIDs* are forecast-bought stock (`did-inventory-forecasting.md`). The *verification
+SIMs* are not the same kind of asset, and the difference matters:
+
+| what you hold | cost | clock |
+|---|---|---|
+| **unactivated SIM card** (no number) | $2–10 one-time each | **expires** in months–a year (printed on the kit); after that it is dead plastic |
+| **activated SIM, no plan / suspended** | sometimes $0 | number expires if the line sits too long without a plan top-up |
+| **activated SIM, on a plan** | ~$10/mo each | keeps working while paid |
+
+So "keep a few SIMs on hand" is honest only as **stocking cheap physical *cards* (a consumable with an
+expiry sticker), not pre-provisioned numbers.** The *number* is the scarce, identity-bound, ~$10/mo
+thing created **on demand** — there is no drawer of ready-to-go phone numbers that survives idle for
+free. The card is a $5 consumable you replace like a battery; the number is minted when a group is
+ready and paid for from then on.
+
+**The number is KYC-bound by regulation, and that is not optional.** FCC prepaid rules require a named
+responsible party on the account. "No KYC" is not achievable for a *real, mobile-class, reaches-
+verification* number. The resolution is not to dodge KYC but to **concentrate it once**: the coop (as
+its legal entity) KYC's a single time and holds SIMs for groups, exactly as `did-inventory-forecasting.md`
+already settles for the carrier-relationship ("KYC concentrates once … one accountable signer"). This
+is the same custody move as the vault and Safe-as-deployer — the number is group/coop-held, never a
+per-group member's personal identity. *(Open: whether a SIM held for account-verification needs its own
+named signer distinct from the DID account, or rides the same one — a procurement question, not yet
+answered.)*
 
 ## Built (Sep 2026) — the spine, and only the spine
 
@@ -198,20 +247,13 @@ wiring SMS to the bus.
    actually missing.
 2. **Code extraction + surface**: pull a 4–8 digit code out of the body, store it with a TTL,
    and show it where the person doing the signup can read it (dashboard tile / API).
-3. **The DID**, when a carrier is chosen, provisioned as a `did` resource and pointed at the
-   voice stack.
-
-## Non-goals
-
-- No automated signup against Instagram, Google, or anything else.
-- No browser automation or fingerprint work to get past their detection.
-- Not a reason to put the coop's accounts under a member's personal identity without deciding
-  that on purpose: **who owns these accounts is a decision**, and it is the same entity
-  question as payments.
+3. **The DID** — Telnyx, one per group, provisioned as a `did` resource and pointed at the
+   voice stack (carrier now settled; see "the settled shape").
 
 ## Open decisions
 
-1. **The DID's carrier** — the aggregator model is settled; which carrier is not.
+1. **The DID's carrier — settled: Telnyx**, one number per group, forwarded from the group's SIM. The
+   *aggregator* model was always settled; the specific carrier is now named (see "the settled shape").
 2. **Who owns the eventual accounts** — the coop cannot hold them as itself until it legally
    exists, so this is either "a named member, deliberately" or "wait for the entity".
 3. **Ingress shape** — TextBee on a device (cheap, no carrier API) vs a carrier SMS API
@@ -219,3 +261,24 @@ wiring SMS to the bus.
 4. **Scoping** — a `phone_message` row is among the most sensitive things the coop could store
    (codes and personal messages). Who may read it: the member whose seat it concerns, a
    bookkeeper-style grant, or an operator for shared numbers.
+5. **Cross-group forwarding permission** — may any group forward a call into any other group's
+   extension, or is that a *grant* (a governance question the telephony layer surfaces; unresolved).
+6. **Peak concurrent callers per group** — the number that sizes each public DID's channels and
+   decides queue-vs-ring-group; needs a seed value per group-shape before provisioning.
+7. **Whether `mod_callcenter` / queue dialplan is present** — "many simultaneous calls" is served by
+   FreeSWITCH queues, not by the SIM; confirm the queue/overflow path is wired before a group goes
+   hotline.
+8. **The SIM's named signer** — whether a verification SIM needs its own KYC'd signer distinct from the
+   carrier/DID account, or rides the same one (see "SIM inventory reality").
+
+## Non-goals
+
+- No automated signup against Instagram, Google, or anything else.
+- No browser automation or fingerprint work to get past their detection.
+- No dodge of the KYC requirement — the number is KYC-bound by regulation; the move is to concentrate
+  it once on the coop, not to evade it with burner SIMs (which would be disposable-class and fail
+  verification anyway).
+- Not a reason to put the coop's accounts under a member's personal identity without deciding
+  that on purpose: **who owns these accounts is a decision**, and it is the same entity
+  question as payments.
+
