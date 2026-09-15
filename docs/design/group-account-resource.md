@@ -1,29 +1,32 @@
-# The account resource — group-held credentials, and the will that outlives the individual
+# The account resource — and the group operations that move custody
 
-**Status: design (scoped, not built).** The durable identity that holds accounts is *not* "a group"
-in the membership sense — it is "a thing that outlives any single person." A coop is one such thing;
-**an individual planning a will is another.** This doc scopes one primitive that serves both.
+**Status: design (scoped, v1-in-scope, not built).** The durable identity that holds accounts is
+*not* "a group" in the membership sense — it is **"a thing that outlives any single person."** A coop
+is one such thing; **an individual planning a will is another.** The account resource is *one surface*
+that group *operations* act on — it is not the whole story, and it is not a "key solution." It sits
+inside a wider suite of **group operations** (dissolve, absorb, devolve, delegate, succeed, merge, and
+ones still being discovered) that move custody of *everything* a group holds — accounts, funds, DIDs,
+seats, spaces, publishing — not just credentials.
 
 ## The one insight that collapses the scope
 
 The "group" in "group-account resource" was never really *group* — it was **"a durable identity whose
-credentials survive the departure of whoever set them up."** The stack already models this: `groups`
-has a `kind` (`coop` | `personal`), and a **personal group is a user's own identity**
+holdings survive the departure or dissolution of whoever set them up."** The stack already models this:
+`groups` has a `kind` (`coop` | `personal`), and a **personal group is a user's own identity**
 (`created_by` → one per `sub`, enforced at the DB level, `docs/design/telephony.md`). So an individual
-is *already* a group of kind `personal`.
+is *already* a group of kind `personal`, and a will is therefore the *same* class of thing as a group
+dissolving — a custody transition, not a second kind of thing.
 
-That means the account resource does **not** need a new holder concept. It hangs off `groups.id`, and
-"a person's descendants inherit their accounts" is just **succession on a `personal` group** — a
-governance transition (who may act as this identity) rather than a second kind of thing.
-
-The only genuinely new idea the will case introduces is **succession**: a rule that says "these people
-gain authority over this identity's credentials at a time triggered by incapacity or death." Everything
-else (authority, custody, resignation, revocation) is the same for a coop and a person.
+**The primitive is not the account; it is the group operation.** An operation (`dissolve`, `absorb`,
+`devolve`, `delegate`, `succeed`, `merge`…) moves custody of a *surface*. The account resource records
+what an operation did to *accounts*; the same operation, run against the treasury or the DID inventory,
+moves *those* instead. So the account resource is a ledger of one operation class's effects — never the
+owner of the logic.
 
 ## What the resource IS (schema shape)
 
-One table, owned by `groups`. Nothing here is new column types — it reuses the `grants`/`roles` model
-and the vault, and introduces one new concept (`anchor` + `succession`).
+One table, owned by `groups`. Reuses the `grants`/`roles` model and the vault; introduces `anchor`
+(custody state) and a reference to the operation that last changed it.
 
 ```
 accounts
@@ -41,109 +44,128 @@ accounts
   created_at / updated_at timestamptz
 ```
 
-The **anchor** is the load-bearing field — it is *the* thing that says whether a departing member can
-strand this credential — and it reuses the custody rules already written in
+The **anchor** is the load-bearing field — *the* thing that says whether a departure or dissolution can
+strand this credential — and it carries the custody rules from
 `coop-accounts-and-phone-verification.md` §"credential custody":
 
 - `provisioning` is the only status allowed while `anchor = 'member-number'` (or no passkey exists).
 - `active` requires `anchor IN ('group-passkey','group-email')`.
 - `orphaned` is the explicit, logged state after a re-home fails or is waived (never a silent fall).
 
-The group-passkey itself lives in the **vault** (member-split, quorum-held) — the account resource
-records *which anchor is active*, not the secret.
+The group-passkey lives in the **vault** (member-split, quorum-held); the resource records *which
+anchor is active*, not the secret. The reason a group can move an account to another identity at all is
+that the account is anchored to a **transferable key, not a person** — but this is an enabling property,
+not the point. The point is the operations below.
 
 ### Role mapping (who may act, platform-side)
 
-Not the coop's invention — it mirrors the platform's own multi-user model (Meta business roles,
-YouTube brand-account managers, Google's account managers). One row per grant:
+Not the coop's invention — mirrors the platform's own multi-user model (Meta business roles, YouTube
+brand-account managers, Google account managers):
 
 ```
 account_roles
   account_id  uuid REFERENCES accounts(id) ON DELETE CASCADE
   sub         text (nullable)   -- nullable = a machine credential (API key), not a person
-  platform_role text            -- 'owner','admin','contributor', ... platform-specific
+  platform_role text            -- 'owner','admin','contributor', ...
   granted_by  text
   granted_at / revoked_at timestamptz
 ```
 
-`sub` nullable is the *machine* lane: the API-token / server-side credential that does publishing, which
-is exactly what the vault's per-group Postiz/API keys already presuppose. A person-role and a
-machine-role are different rows with different revocation semantics.
+`sub` nullable is the *machine* lane (API tokens / publishing creds, the vault's per-group keys). A
+person-role and a machine-role are different rows with different revocation semantics.
 
-## Succession — the will case, and the only new mechanism
+## The group operations (the real primitive — v1, not deferred)
 
-A `personal` group is, by construction, a single living person's identity. The will case is the demand
-that its accounts **transition** rather than die with them. Two sub-problems, kept separate because
-their triggers and trust are different:
+Custody of a group-held surface can move three ways — **up/sideways**, **down**, or **across a
+person's own life** — and every hop is one of these operations, authorized at the *departing holder's
+own threshold while still healthy*, never by the recipient declaring itself. Six named here; the suite
+is open and still being discovered.
 
-1. **Incapacity** — the person is alive but cannot act. Needs a *delegate* who can be added *now*,
-   trusted on a schedule, and removed if recovery happens. (This is the platform's native "account
-   manager / legacy contact" feature, e.g. Google's Inactive Account Manager — **use the platform's,
-   do not reimplement it**, but the coop records *that it was configured* as part of `anchor` health.)
-2. **Death** — the person is gone. Needs a **successor rule**: named beneficiaries + the conditions
-   under which they gain authority. Two honest halves, only one of which is a chain problem:
+### Dissolve
+The holding identity ends. Its custody moves to a **receiving identity**. Two directions, two
+authorization shapes:
 
-   - **The cooperative half (build it):** the coop records *who* is entitled to inherit *which*
-     accounts, and enforces the *transition* under the group's own governance (a defined, witnessed,
-     irreversible event). This is `account_succession`:
-     ```
-     account_succession
-       account_id  uuid REFERENCES accounts(id)
-       beneficiary uuid     -- a personal group id (the heir's own identity), or a coop group
-       role        text     -- what they inherit ('owner' default)
-       condition   text     -- 'on-death' | 'on-incapacity' | 'manual'
-       created_at / executed_at timestamptz
-     ```
-   - **The platform half (can NOT be built):** the platform still decides whether a dead person's
-     account transfers, and it wants a death certificate / probate / its own legacy process. The coop
-     cannot *make* Instagram honor a succession rule — it can only **record the entitlement and hand
-     the heir a complete, notarized-ready dossier**: the handle, the anchor state, the recovery paths,
-     the role mapping, and the documented intent. The account resource is the *engineering fact* that
-     turns "probate nightmare" into "the heir has everything in one place when the platform asks."
+- **Up / sideways** — a group dissolves into its vertical, its federation, or a peer group. The
+  departing party still *outlives* the decision, so its own threshold authorizes the handoff.
+- **Down** — a container dissolves and devolves to its constituents. Here the departing party *is* the
+  set of recipients, so the **membership ratifies at its threshold** what each will now hold. A faction
+  cannot devolve to itself by declaring the container dissolved.
 
-That split is the honest line: **the coop enforces the *intent*; the platform enforces the
-*transfer*.** The resource makes the first airtight and the second merely a matter of presenting the
-right documents — which is the best anyone can do without the platform cooperating.
+### Absorb
+The complement of dissolve: a receiving identity takes on the custody of a dissolving one. **Push, not
+pull** — the dissolving party authorizes its own absorption; the recipient never claims it unilaterally.
+(A stronger/adjacent group cannot "absorb" a peer by declaring that peer dissolved.)
 
-## Custody invariant (unchanged, restated for the individual)
+### Devolve
+Downward handoff along the containment chain — vertical → group → member-persona — *without* the
+holding identity ending. The container releases a slice of custody to a constituent while continuing to
+exist. Authorized by whoever held it at the healthy moment.
 
-An individual planning a will is the *same* trap as a group that never hardens — the person set up the
-account with their own number, meant to "re-home it later," and later is now a will that nobody can
-answer because the number died with them. So:
+### Delegate
+The reversible middle of the ladder: a holder (person or group) grants *partial, revocable* authority to
+an agent for a bounded scope or time — because they are **incapacitated, incarcerated, missing, or
+off-grid**, not dead. This is the platform's native "account manager / legacy contact / inactive-account
+manager" mechanism; **lean on the platform's where it exists, and record in the coop that it was
+configured** (part of `anchor` health), rather than reimplementing it.
 
-- **The anchor must move off the person *before* the point of no return.** For a will, "group-passkey
-  + recovery email that the *successor* can reach" is not optional hardening — it is the *only* thing
-  that makes the succession enforceable at all. An account still anchored to the deceased's personal
-  number is de facto lost, whatever any succession table says.
-- **The succession rule itself must have an anchor.** Who may *execute* the succession (declare the
-  death, trigger the transition) is itself a credential to be group-held — otherwise "the person who
-  declares me dead gains everything" is a new single point. The rule is a group decision with a
-  threshold, not a named individual's unilateral power.
+### Succeed
+The terminal, irreversible transfer — death (a person) or full dissolution (a group). Full custody moves
+to the named successor identity/identities, at the highest authority level. This is the *easy* end of the
+ladder, precisely because it is the only state that is both verifiable **and** irreversible.
 
-## Ownership vs. control, restated for individuals
+### Merge
+Two identities become one *without* either dissolving-in-abandonment — a combination, not an absorption.
+Custody is pooled, roles are mapped, and the merged identity's account surface is the union. The
+departure-then-absorb shape (dissolve into) is a special case; merge reserves the case where both sides
+*want* the combination and each ratifies it.
 
-The same "credential is the group's / number is the member's" split applies verbatim to a person: the
-*account* is the estate's (part of the durable identity), the *number* is the person's (dies with them,
-or is ported by whoever holds the KYC). The will is the moment that split becomes fatal if it was never
-resolved — which is precisely why the anchor must be group-held *during life*.
+### The ladder underneath all of them
+
+Every departure-state a holder can enter — **missing, incapacitated, incarcerated, absent, dead** — maps
+onto one of the above, with three properties each:
+
+- **grant** — how much authority moves (read-only → agent → full), *not* a boolean;
+- **evidence** — what proves the state, and it must **not be self-declared** (a booking/court record, a
+  clinician's letter/guardianship order, a death record, or — for *missing* — the absence of a signal
+  plus a delay, which is the one state with no positive document and the most abuse-prone);
+- **reversibility** — the person might return (incarceration, incapacity, missing all do; only death
+  does not), so the grant must be revocable wherever return is possible.
+
+## Custody invariant
+
+- **The anchor must move off the person *before* the point of no return.** A will — or a dissolved
+  group — whose accounts still ride a dead/absent person's number is de facto lost, whatever any
+  operation table says. "Group-passkey + recovery email the successor *can reach*" is not hardening;
+  it is the only thing that makes any of the above enforceable at all.
+- **The operation itself needs an anchor.** Who may *execute* a dissolve/succeed/delegate (declare the
+  death, trigger the devolution) is itself a group-held authority with a threshold — never a named
+  individual's unilateral power, never the recipient declaring the state of another. Otherwise "the
+  person who declares me dead gains everything" is a new single point, at every scale.
+
+## Ownership vs. control
+
+The "credential is the group's / number is the member's" split applies at every scale. The *account* is
+the durable identity's holding (movable by the operations above); the *number* is the person's (dies
+with them, or is ported by whoever holds its KYC). Departure and dissolution are the moments that split
+becomes fatal if it was never resolved — which is precisely why the anchor must be group-held *while the
+holder is still healthy*.
 
 ## Open questions
 
-1. **What triggers `succession` execution** — a witnessed death event, a social-recovery threshold, a
-   dead-man's-switch, a coop-governed vote? The mechanism (not just "on-death") is undecided.
-2. **Is `personal`-group succession in v1, or is the will case a later slice?** The coop/group case has
-   a live consumer (group accounts, now); the individual will-case has *moral* weight but no immediate
-   user. Scope v1 to `accounts` + `account_roles` + the anchor lifecycle, and treat `account_succession`
-   as a designed-but-later table.
-3. **Platform legacies first.** Before building any succession hook, enumerate which platforms offer
-   their *own* legacy/inactive-account-manager feature — the coop should record and lean on those
-   (they're legally recognized), not reimplement them.
-4. **The anchor-of-the-anchor** — the group-passkey that anchors an account is itself held by quorum;
-   for a *personal* group of one, what is the corresponding quorum? (This is where the will-case
-   genuinely differs from a coop — drafting a single-person authority model that still survives death.)
+1. **The trigger mechanism** — how a dissolve/succeed/delegate is *executed*: witnessed event,
+   social-recovery threshold, dead-man's-switch, coop-governed vote? The mechanism (not just the
+   operation type) is undecided.
+2. **The full operation suite** — dissolve/absorb/devolve/delegate/succeed/merge are named, but the
+   list is **explicitly open**; Robbie is still discovering more. Do not freeze the taxonomy.
+3. **Platform legacies first** — enumerate which platforms offer their *own* legacy / inactive-account /
+   delegation feature, and lean on those (legally recognized) before reimplementing.
+4. **The anchor-of-the-anchor for a one-person group** — a `personal` group of one has no quorum; what
+   is the corresponding threshold for a *single* person's authority model that still survives death?
+   (The sharpest open difference between the personal and coop cases.)
 
 ## Interface note (deferred)
 
 The group page redesign is **paused** until this resource exists, per Robbie: think it through before
-mocking up. When it lands, the "Accounts" panel reads directly from `accounts` + `account_roles`, and
-the health strip is "anchor status per account" — but no mockup until the data model is agreed.
+mocking up. When it lands, the "Accounts" panel reads from `accounts` + `account_roles`, and the health
+strip is "anchor status per account." No mockup until the data model — now including the operation
+model above — is agreed.
