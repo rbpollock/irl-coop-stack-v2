@@ -150,13 +150,54 @@ with them, or is ported by whoever holds its KYC). Departure and dissolution are
 becomes fatal if it was never resolved — which is precisely why the anchor must be group-held *while the
 holder is still healthy*.
 
+## Candidate operations (not canon — the suite's open complement)
+
+These are *candidates* the six named operations imply but don't yet cover. They are thinking, not a
+frozen schema; which are real falls out of actually resisting the frictions they name, not from this
+list. **Freeze and contest are flagged as arguably load-bearing, not optional.**
+
+- **Restore / revoke-delegation** — the mirror of `delegate`, and the act its "reversible" property
+  *requires*. A returned (or recovered) holder takes their authority back, at threshold. Not a new
+  operation so much as the un-tripped half of delegate — but it needs a name because "the grant is
+  revocable" needs a committed act to actually revoke it.
+- **Freeze / suspend** — *load-bearing*. Neither transfer nor end: custody pauses for a bounded window
+  on a trigger (missing, hostile-but-unsettled, disputed). The honest "hold still" state between "they
+  are gone" and "we have decided where it goes." The brake that lets every other operation be *rushed
+  toward* safely, because it can be stopped.
+- **Split / partition** — the inverse of `merge`. One identity divides into two or more, and its
+  surfaces are partitioned among them (an org that outgrows itself; a federation that splits along
+  genuine lines). `devolve` hands to *existing* constituents; `split` *creates* them and divides the
+  estate across them.
+- **Escrow / hold-in-trust** — custody moves to a neutral party (a steward, the coop itself) pending
+  resolution, rather than to any interested identity. Distinct from `absorb` (no one *gains* it) and
+  from `freeze` (a named holder *holds* it, protected from the parties in conflict).
+- **Attest / witness** — the act that *feeds* every other operation's `evidence` field. Who declares
+  "missing / dead / incapacitated / absent," with what proof, witnessed by whom, at what threshold.
+  Right now "evidence must not be self-declared" is an invariant with no operation behind it; `attest`
+  is that operation — the death-record / booking-record / clinician-letter as a first-class group act.
+- **Ratify / confirm** — where the *receiving* side's consent becomes explicit rather than implicit.
+  Two-actor operations are asymmetric (push-not-pull); `ratify` is the post-hoc or pre-authorization
+  seal that makes the receiving side a party rather than a paper recipient.
+- **Contest / challenge** — *load-bearing*. Any operation can be contested within a window (a dissolve
+  that was a power grab, a merge that was coerced), and the contest **freezes** execution until
+  adjudicated. The tripwire that makes the whole suite honest: without a path to undo a wrongly-taken
+  operation, every "threshold prevents abuse" claim is unfalsifiable. The group form of an appeal.
+
+**Why freeze and contest are the two that matter most:** together they make the other operations safe
+to *run*. Freeze is the answer to "the trigger may be premature" (missing, disputed, hostile) — you
+must be able to stop custody from moving while you decide whether it should. Contest is the answer to
+"thresholds can be wrong or coerced" — you must be able to *un-execute* a mistaken operation. The rest
+round the model out; these two are what keep it from being a set of irreversible moves with no brakes
+and no undo — the exact fragility this whole design has been resisting.
+
 ## Open questions
 
 1. **The trigger mechanism** — how a dissolve/succeed/delegate is *executed*: witnessed event,
    social-recovery threshold, dead-man's-switch, coop-governed vote? The mechanism (not just the
    operation type) is undecided.
-2. **The full operation suite** — dissolve/absorb/devolve/delegate/succeed/merge are named, but the
-   list is **explicitly open**; Robbie is still discovering more. Do not freeze the taxonomy.
+2. **The full operation suite** — six are named and seven are candidates (restore, freeze, split,
+   escrow, attest, ratify, contest); the list is **explicitly open**, Robbie is still discovering more,
+   and which candidates are *real* (vs. thinking) is unresolved. Do not freeze the taxonomy.
 3. **Platform legacies first** — enumerate which platforms offer their *own* legacy / inactive-account /
    delegation feature, and lean on those (legally recognized) before reimplementing.
 4. **The anchor-of-the-anchor for a one-person group** — a `personal` group of one has no quorum; what
