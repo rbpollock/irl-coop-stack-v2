@@ -606,6 +606,15 @@ function resolveDesignDir(): string | null {
       "The SIM and the SIP trunk are the same vendor, so the SIM's number can terminate in FreeSWITCH like any DID — but the SMS half and the line type of the SIM's number are the open questions, and Telnyx's own Number Lookup calls its numbers VoIP.",
     file: "telnyx-sim-to-pbx.md",
   },
+  {
+    slug: "group-account-resource",
+    title: "The account resource — group-held credentials, and the will that outlives a person",
+    category: "Identity & accounts",
+    status: "design",
+    description:
+      "One primitive for group-held accounts and personal succession: the durable identity is not 'a group' but 'a thing that outlives any single person', and a personal group is already modeled. Anchor status, platform role-mapping, and the honest split between what the coop enforces (intent) and what the platform enforces (transfer).",
+    file: "group-account-resource.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
