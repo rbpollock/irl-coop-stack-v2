@@ -624,6 +624,15 @@ function resolveDesignDir(): string | null {
       "One shared picker, embedded at every 'who' affordance (doc collaborators, project members, @-mentions, share dialogs): group-native selection, person-materialized enforcement, authority in coop-api. The fix for person-scoped apps that can't show cooperative structure. Expected to be tweaked on first real use.",
     file: "group-who-picker.md",
   },
+  {
+    slug: "nocodb-integration",
+    title: "NocoDB integration — goals, and per-user identity at the connection layer",
+    category: "Apps & files",
+    status: "design",
+    description:
+      "NocoDB is blank because the projection chain was never verified end-to-end — not because of one failure. Records the spike (a plain view defeats RLS; a narrowed view is safe), the settled principle (OAuth at the edge, ident/cert at the DB, role-as-identity, no passwords), and the license line (stub probes, port against the public contract, never clone the EE code).",
+    file: "nocodb-integration.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
