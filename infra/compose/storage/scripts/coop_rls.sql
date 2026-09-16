@@ -49,8 +49,32 @@ ALTER FUNCTION coop_slug_taken(text) OWNER TO coop_rls;
 
 
 -- identity
+-- The caller's sub resolves TWO ways: (1) an explicit per-role mapping (a Postgres ROLE that
+-- IS a member, authenticated via ident/peer/cert), which WINS; (2) the app `app.sub` GUC the
+-- coop-api / NocoDB injection sets. Role wins so a mapped role cannot be spoofed by anyone
+-- flipping app.sub. A row in coop_member_role = a role name -> a member sub (revocable).
+CREATE TABLE IF NOT EXISTS coop_member_role (
+  role_name   name PRIMARY KEY,
+  sub         text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  revoked_at  timestamptz
+);
+
+-- NOT SECURITY DEFINER: current_user must read the SESSION's SET ROLE target, not the
+-- function owner (a SECURITY DEFINER owned by coop_rls would alias current_user to coop_rls
+-- and never match the caller). The mapping table is read-only role->sub metadata (no secrets),
+-- so it GRANTs SELECT to PUBLIC and the function runs with caller privileges.
+CREATE OR REPLACE FUNCTION coop_role_sub() RETURNS text AS $$
+  SELECT sub FROM coop_member_role
+   WHERE role_name = current_user AND revoked_at IS NULL
+$$ LANGUAGE sql STABLE;
+GRANT SELECT ON coop_member_role TO PUBLIC;
+
 CREATE OR REPLACE FUNCTION coop_current_sub() RETURNS text AS $$
-  SELECT NULLIF(current_setting('app.sub', true), '')::text
+  SELECT COALESCE(
+    coop_role_sub(),
+    NULLIF(current_setting('app.sub', true), '')::text
+  )
 $$ LANGUAGE sql STABLE;
 
 -- membership (any seat)
