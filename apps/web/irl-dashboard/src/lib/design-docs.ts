@@ -651,6 +651,15 @@ function resolveDesignDir(): string | null {
       "The three discussed changes (user-based connection, joined user-specific base, UI-building + invitations) form a strict dependency chain; this is the tracked plan with a test gate per step and a rollback posture.",
     file: "nocodb-rebuild-plan.md",
   },
+  {
+    slug: "nocodb-one-base-per-group",
+    title: "NocoDB — one base per group; a person IS a group",
+    category: "Apps & files",
+    status: "design",
+    description:
+      "The settled north star: a base is a group's data surface, and every group (personal + collective) has exactly one base. A person's lens is their personal group's base, federating across member-group bases; scope, sharing, and shape-migration all fall out of that. No 'coop' category is ever asked.",
+    file: "nocodb-one-base-per-group.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
