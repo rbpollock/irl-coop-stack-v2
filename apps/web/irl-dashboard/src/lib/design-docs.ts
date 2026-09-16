@@ -615,6 +615,15 @@ function resolveDesignDir(): string | null {
       "One primitive for group-held accounts and personal succession: the durable identity is not 'a group' but 'a thing that outlives any single person', and a personal group is already modeled. Anchor status, platform role-mapping, and the honest split between what the coop enforces (intent) and what the platform enforces (transfer).",
     file: "group-account-resource.md",
   },
+  {
+    slug: "group-who-picker",
+    title: "The group-aware 'who' picker — one shared primitive across every app",
+    category: "Groups & governance",
+    status: "design",
+    description:
+      "One shared picker, embedded at every 'who' affordance (doc collaborators, project members, @-mentions, share dialogs): group-native selection, person-materialized enforcement, authority in coop-api. The fix for person-scoped apps that can't show cooperative structure. Expected to be tweaked on first real use.",
+    file: "group-who-picker.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
