@@ -660,6 +660,15 @@ function resolveDesignDir(): string | null {
       "The settled north star: a base is a group's data surface, and every group (personal + collective) has exactly one base. A person's lens is their personal group's base, federating across member-group bases; scope, sharing, and shape-migration all fall out of that. No 'coop' category is ever asked.",
     file: "nocodb-one-base-per-group.md",
   },
+  {
+    slug: "nocodb-rebuild-handoff",
+    title: "NocoDB rebuild — handoff state",
+    category: "Apps & files",
+    status: "note",
+    description:
+      "Pick-the-thread state: A1 (role-as-identity) is done and proven; A2+A3 collapse into cert + per-user connection (cert is just another user credential, vault/realtime); the incorrectly-scoped ident/peer correction; the 3 error classes; and the reset e2e-test password flag.",
+    file: "nocodb-rebuild-handoff.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
