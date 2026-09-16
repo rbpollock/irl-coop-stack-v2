@@ -642,6 +642,15 @@ function resolveDesignDir(): string | null {
       "Disambiguates the three meanings of 'share' (data / co-view / remix) and pins the safety rule: ship the shape, re-bind the data — an interface never carries one group's rows to another. Composes the who-picker (share affordance) + blueprint library (where shapes live) + role-as-identity RLS (how the copy re-binds).",
     file: "sharing-nocodb-interfaces.md",
   },
+  {
+    slug: "nocodb-rebuild-plan",
+    title: "NocoDB rebuild — execution plan (A → B → C, each gated by a test)",
+    category: "Apps & files",
+    status: "design",
+    description:
+      "The three discussed changes (user-based connection, joined user-specific base, UI-building + invitations) form a strict dependency chain; this is the tracked plan with a test gate per step and a rollback posture.",
+    file: "nocodb-rebuild-plan.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
