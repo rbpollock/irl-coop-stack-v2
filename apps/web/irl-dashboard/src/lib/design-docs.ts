@@ -633,6 +633,15 @@ function resolveDesignDir(): string | null {
       "NocoDB is blank because the projection chain was never verified end-to-end — not because of one failure. Records the spike (a plain view defeats RLS; a narrowed view is safe), the settled principle (OAuth at the edge, ident/cert at the DB, role-as-identity, no passwords), and the license line (stub probes, port against the public contract, never clone the EE code).",
     file: "nocodb-integration.md",
   },
+  {
+    slug: "sharing-nocodb-interfaces",
+    title: "Sharing NocoDB interfaces — ship the shape, re-bind the data",
+    category: "Apps & files",
+    status: "design",
+    description:
+      "Disambiguates the three meanings of 'share' (data / co-view / remix) and pins the safety rule: ship the shape, re-bind the data — an interface never carries one group's rows to another. Composes the who-picker (share affordance) + blueprint library (where shapes live) + role-as-identity RLS (how the copy re-binds).",
+    file: "sharing-nocodb-interfaces.md",
+  },
   ]
   return candidates.find((c) => fs.existsSync(c)) ?? null
 }
