@@ -1,140 +1,95 @@
-# Jev decision-head for group-authored Temporal workflows
+# Decision Engine on Temporal — scope (tightened)
 
-Status: design (spec) · Sep 2026 · Owner: Robbie
-Drives from: `docs/decisions/workflow-economics/` (D-series) and the Open-Jev
-repo (`/tmp/Open-Jev`, e.g. `examples/workflows/*`, `docs/workflows.md`,
-`docs/community-workflow-v3.md`).
+Status: design / spec (phase-1 slice) · Sep 2026 · Owner: Robbie
+Prev doc (superseded, too broad): `jev-temporal-group-workflows.md`
+Grounds: Open-Jev `{state, questions}` workflow cases + `policy_fixture_*`.
 
-## The problem this solves
+## Goal (one sentence)
+Give irl.coop groups a low-code way to author small Temporal workflows whose
+"what do I do next" is a **scoped decision**, scored by Jev (or a deterministic
+oracle in phase 1) at each decision point.
 
-Groups on irl.coop want to build small, autonomous systems that run *for* them
-(provisioning, digests, approvals, escalations, onboarding) with a visual
-builder UI — without writing Temporal code and without babysittes each step.
-The hard part of such workflows is rarely "run a step"; it is **decide at each
-step** from local context + local policy, with no single operator watching and
-no model free to just do anything.
+## Scope — ONE vertical slice first (no breadth)
+Do **one** workflow end-to-end before generalizing:
 
-A Temporal workflow is a natural fit (already live in the stack — the coop-api
-worker). What it needs is a small, deterministic **decision head** at each
-branch/approval/action point.
+> **Member onboarding.** A new member is added to group G. A workflow grants
+> that member the group's knowledge areas + a matrix room, and decides whether
+> it can auto-route or must be queued for an admin's approval.
 
-## Why a decision head, and why Jev-shaped
+Everything else (digests, dues approval, escalations, invoice-style policy,
+cross-group synthesis, RAG-fed state) is **explicitly out of this slice** — listed
+in Out-of-scope below so it does not leak in.
 
-The Open-Jev project is exactly this shape, and it's verified in its own corpus:
+## In scope
+- A builder UI emits a JSON workflow spec (one workflow on the slice).
+- A Temporal workflow iterating that spec, calling a decision point for the
+  grant step.
+- The **decision head**: phase-1 = deterministic `policy_fixture_*` oracle (no
+  model), phase-2 = local Open-Jev 2B/9B behind the same interface.
+- The **human gate** (review/deny) for intangible/irreversible.
+- Audit to the group ledger (content-free).
 
-- A workflow decision is encoded as a request `{state, questions}` where each
-  **candidate action is a typed question** (`noul` yes/no, `choice`, `score`).
-  Its workflow cases (customer service, invoice processing, security incidents,
-  agent-trace observability) model each action as an *independent* Noul with a
-  calibrated probability; a deterministic `selectActions` picks actions above a
-  threshold, and **probability 0.5 abstains**. Probabilities need not sum to 1 —
-  a workflow can select zero, one, or several actions.
-- Type signal: it is **non-generative** — it returns probabilities, never
-  natural-language text, so no prompt-text generation noise.
-- An **offline deterministic oracle** (`policy_fixture_*`) exists for a pure
-  synthetic policy — you can test wiring/rules without calling any model.
-- The dataset adds policy-heavy blocks: `community-workflow-v3` is exactly
-  an **approval** system: `Choice(permit | deny | review)` plus a `Noul`
-  (`is this permitted now?`) over a policy + operations log — i.e. a workflow
-  whose "yes, and only a human goes beyond review".
+## Out of scope (this slice)
+- Generic multi-case runner, digests, approvals (CMS), security-incident
+  playbooks, invoice D&C.
+- Heavy JSON with RAG/full-context; a Jev server fleet; any auto-apply of
+  money/publish/creds/delete.
+- Cross-group data to the head; storing prompt/content.
 
-That is *the* interface a Temporal worker wants at a decision node.
-
-## Role in the stack
-
+## The decision request (this slice, at the grant step)
+```json
+{ "state": { "group_id": "g", "member": "u", "roles": ["member"],
+             "areas": [{"id":"a1","visibility":"group"}],
+             "room": "room:g_main" },
+  "questions": {
+    "grant_area_a1": { "type": "noul", "instructions": "Does membership authorize? grants (RLS scope), default deny." },
+    "open_room_plus": { "type": "noul", "instructions": "Also invite to the room?" },
+    "queue_admin":     { "type": "noul", "instructions": "Require an admin to review before applying?" }
+  }
+}
 ```
-[Group UI: low-code spec] --JSON-->> [Temporal workflow code]
-                                        at each decision point ↓
-                                  [decision head: Jev or the policy-oracle]
-                                        returns {action, probability}
-                                            ↓  deterministic rule gate
-                      approve?  ----------->  (G0) human approval for any
-                      no        (irreversible)  irreversible side-effect
-                      |                      (money, publish, provision,
-                      yes / high conf                    credentials, delete)
-                      |                              |
-                   route / apply                       queue to approval
+- Oracle (phase 1) → deterministic probs (e.g. `grant 0.0` if no group grant, etc.).
+- Jev (phase 2) → calibrated probs, `selectActions` above `τ=0.6`; `0.5` abstains;
+  an empty selection = HOLD/review.
+- The head **never** executes; the workflow maps chosen actions through the
+  **gate**: reversible → auto-apply + audit; irreversible → queue for admin.
+
+## Minimal machine
 ```
+Builder (UI) → spec JSON → Temporal workflow
+        at the grant step  ─ decision head (oracle→Jev)
+                               │ probs (typed)
+                       ├ thresholds → auto-apply (reversible) + audit
+                       └ else      → queue for admin (human gate), audit
+```
+Reuses: Temporal worker (already live), Citus/RLS for the scoped facts,
+Keycloak for identity. No new model infra for phase 1.
 
-Wrapping the stack:
-- The **builder UI** lets a group draw a workflow (steps + decision points) and
-  generates the Temporal workflow (JSON spec) — a "system that runs for them."
-- Each **decision point** is a `{state, questions}` request, the state being the
-  group-scoped (RLS) facts the workflow already holds (no full content, no
-  leaked cross-group data).
-- The **decision head** is either (a) the deterministic `policy_fixture_*`
-  oracle (pure rule, no model — use to test), or (b) Open-Jev (2B/9B) when a
-  case needs learned judgment.
+## Phase plan
+1. **Oracle-first.** Wish: the builder can emit the onboarding spec and the
+   oracle makes the grant/queue decisions deterministically. Acceptance: the
+   gate + audit + handler wired; no model in the critical path.
+2. **Swap the head.** Give the same request to a single Jev-2B local infer
+   (oracle reserved as `.→0.5` fallback). Acceptance: exact same interface,
+   the log shows both, and the finite D-series measures per-action acceptance
+   before any auto-route class goes live without a human.
+3. **Generalize** to other workflows only after (2) holds on the first class.
 
-## Workflow decision mechanics
+## Acceptance for the slice
+- Oracle path: (a) the UI→spec compiles, (b) a grant and a "queue for admin"
+  case both route correctly, (c) ledger rows record state-hash + probs + chosen
+  action + gate outcome, content-free.
+- Model path: the same runs on Jev; per-action acceptance measured stated in a
+  review (no unsupported claim), false-negative recall reported (not just
+  accuracy).
 
-- For a action set `{A1..An}`: `questions = { "A1": noul..., ...}` → each Ai has
-  a probability `p(Ai)`.
-- Choose: the orchestration deterministic layer selects `Ai` where
-  `p(Ai) > τ` (e.g. τ=0.6); `0.5` abstains → treat as "needs human / more info";
-  empty selection → HOLD/REVIEW (mirrors invoice "cannot release any payment").
-- **Hard rule overlay (from D7/G0):** if the chosen action is irreversible or
-  touches money/publish/creds/delete, it never executes on probability alone —
-  it goes to an approval gate (permit/deny/review) with a human binding.
+## Evidence / source shapes
+- `Open-Hex examples/workflows/invoice_processing.json` + `docs/workflows.md`
+  (per-action Noul scores; threshold; `0.5` abstains; `policy_fixture_oracle`).
+- `docs/community-workflow-v3.md` (approval: permit/deny/review as the gate
+  contract).
+- The irl stack already runs Temporal (worker: outbox + digests + proven lane).
 
-## Concrete uses a group can build first
-
-1. **Member onboarding.** New member in group G → decision: which knowledge
-   areas + rooms to grant (from membership facts). Jev scores a small set;
-   grants are reversible so auto-route; record to ledger.
-2. **Moderated digest.** Decide, per member, which queued items to send
-   (audience fit). Reversible/observable; auto-send, with a "flag for review"
-   option when near-0.5.
-3. **Approvals/dues.** Policy-driven permit/deny/review for group actions —
-   mirror the Open-Jev `approval/CMS` case: money or irreversible = human gate.
-4. **Escalation laptops.** When consent/fraud/docs missing → HOLD/FRAUD-REVIEW
-   instead of partial action (mirrors invoice "short pay … denied").
-
-## Data & privacy
-- `state` fed to the head is **group-scoped metadata** from the RL-stepped store
-  (Citus) — no cross-group content; local CPU; nothing leaves the host.
-- The head never authorizes irreversible side-effecting work; the deterministic
-  approval layer (human) sits above it. (D7/G0 boundary.)
-
-## Security/operational mechanics
-- The decision head runs local: deterministic oracle for wiring; Open-HJev 2B/9B
-  on CPU (probe: loads, typo at 1024, ~12s/decision — keep warm, not per-call).
-- `select_actions` is deterministic (threshold); the only coin-flip point is the
-  head.
-- Audit: every decision (state-hash, questions, probs, chosen action, and the
-  approval outcome) is appended content-free to the group's evidence ledger.
-
-## What is explicitly not in scope
-- Full autonomy over money/creds/publish (human gate always).
-- Storing content/prompts; feeding raw cross-group data to the model.
-- Swapping Jev for a generic "AI agent" that can generate actions de novo — the
-  candidate actions are authored by the workflow, the head scores only within
-  that action set.
-
-## Phasing (small, tested)
-1. Ship the **oracle path**: a workflow builder emits a Temporal spec where
-  decision points call `policy_fixture_*` (no model). Proves wiring + approval
-  gate + audit end-to-end.
-2. Switch decision-inference to **local Open-Jev** for the highest-confidence
-  classes (onboarding/digest), keeping the oracle as fallback when `p≈0.5`.
-3. Every test records pro/antecedent, per-action acceptance and reabd a.
-4. Separate (here) review pipeline: for anything irreversible, the human-gate
-  only, + Jev merely recommends.
-
-## Risks
-- Learned accuracy on a class must be measured per action (mirror D9/M3) before
-  an auto-route class goes live without a human. `review`/abstent 0.5 is the
-  escape.
-- Latency/memory of local 2B vs the RAG host CPU — keep warm, batch.
-- The policy authored must match real authority (RLS). Wrong policy → confined.
-
-## Evidence (where these shapes come from)
-- `Open-Jev/examples/workflows/invoice_processing.json` (action set per item,
-   hold/short-route; the `PAY` Noul shows "missing approval is not
-   approval").
-- `Open-Jev/docs/workflows.md` (independent actions, threshold, 0.5 abstains,
-   `policy_fixture_oracle`).
-- `Open-Jev/docs/community-workflow-v3.md` (approval permit/deny/review + CMS
-   editorial choices).
-- irl.coop stack already runs Temporal (worker: outbox + digests + a proven
-   lane) — the executor host exists; this adds the decision head to that fabric.
+## Deferred (write later, when slice 1 is green)
+- Digest delivery (which items to whom), invoice/dues approvals, security
+  playbook dispositions, and multi-workflow builder library.
