@@ -1,0 +1,486 @@
+{
+  "days": 45,
+  "beats": [
+    {
+      "title": "untitled",
+      "date": "2026-08-11",
+      "magnitude": 105765,
+      "messages": 106,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Internet Connection Confirmed",
+      "date": "2026-08-12",
+      "magnitude": 44590,
+      "messages": 28,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Cleaning Source and Debugging Remaining Issues",
+      "date": "2026-08-12",
+      "magnitude": 20471373,
+      "messages": 381,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.36,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-08-13",
+      "magnitude": 47887,
+      "messages": 11,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-08-14",
+      "magnitude": 40016,
+      "messages": 26,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Solar System Trivia Question",
+      "date": "2026-08-14",
+      "magnitude": 17125,
+      "messages": 4,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-08-14",
+      "magnitude": 809758,
+      "messages": 452,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Reviewing irl-coop-stack-v2 setup",
+      "date": "2026-08-14",
+      "magnitude": 5549800,
+      "messages": 295,
+      "repo": "irl-coop-stack-v2",
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-08-15",
+      "magnitude": 172953,
+      "messages": 85,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Tmux Injection Works Test",
+      "date": "2026-08-16",
+      "magnitude": 67299,
+      "messages": 9,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-08-17",
+      "magnitude": 131376,
+      "messages": 60,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Metric Versus Felt Experience",
+      "date": "2026-08-17",
+      "magnitude": 18830,
+      "messages": 2,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Prompt Injection Test Refusal",
+      "date": "2026-08-17",
+      "magnitude": 34017,
+      "messages": 12,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-08-17",
+      "magnitude": 885,
+      "messages": 2,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Organize and commit working tree",
+      "date": "2026-08-17",
+      "magnitude": 8938559,
+      "messages": 167,
+      "repo": "irl-coop-stack-v2",
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "hi",
+      "date": "2026-08-17",
+      "magnitude": 26953,
+      "messages": 2,
+      "repo": null,
+      "act": "I",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "hi #2",
+      "date": "2026-08-17",
+      "magnitude": 339,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "my app sucks so much ass",
+      "date": "2026-08-18",
+      "magnitude": 57826,
+      "messages": 40,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "hey Hermes how you doing today",
+      "date": "2026-08-18",
+      "magnitude": 477,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "the wall we got two more lines we got to run…",
+      "date": "2026-08-18",
+      "magnitude": 651,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "what's the status of IRL server 1",
+      "date": "2026-08-18",
+      "magnitude": 38471,
+      "messages": 10,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "I want to make sure that the python server is…",
+      "date": "2026-08-18",
+      "magnitude": 47434,
+      "messages": 21,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "hu",
+      "date": "2026-08-18",
+      "magnitude": 408,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "hey",
+      "date": "2026-08-18",
+      "magnitude": 3206987,
+      "messages": 45,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "I'm calling this see",
+      "date": "2026-08-19",
+      "magnitude": 19395,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "once it's terminated it should be Terminator…",
+      "date": "2026-08-19",
+      "magnitude": 69866,
+      "messages": 50,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "like when I got home",
+      "date": "2026-08-19",
+      "magnitude": 623,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Reply with single word OK",
+      "date": "2026-08-22",
+      "magnitude": 51061,
+      "messages": 2,
+      "repo": "hermes-agent",
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Friendly greeting",
+      "date": "2026-08-22",
+      "magnitude": 28216,
+      "messages": 10,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Friendly greeting #2",
+      "date": "2026-08-22",
+      "magnitude": 25363,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Plan FusionPBX browserphone dashboard integration",
+      "date": "2026-08-23",
+      "magnitude": 37259753,
+      "messages": 933,
+      "repo": "irl-coop-stack-v2",
+      "act": "II",
+      "confidence": 0.37,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Reply with single word OK #2",
+      "date": "2026-08-24",
+      "magnitude": 29105,
+      "messages": 2,
+      "repo": null,
+      "act": "II",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Document weavers collaboration feature",
+      "date": "2026-08-30",
+      "magnitude": 163846,
+      "messages": 37,
+      "repo": "irl-coop-stack-v2",
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Bot Chat",
+      "date": "2026-08-30",
+      "magnitude": 0,
+      "messages": 0,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "i like the changes to the dashboard screen. i…",
+      "date": "2026-08-31",
+      "magnitude": 210646,
+      "messages": 45,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-09-04",
+      "magnitude": 192515,
+      "messages": 48,
+      "repo": "irl-coop-stack-v2",
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "untitled",
+      "date": "2026-09-05",
+      "magnitude": 0,
+      "messages": 0,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Stream browser screen to YouTube or Twitch",
+      "date": "2026-09-05",
+      "magnitude": 1753852,
+      "messages": 339,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "i'm trying to find an episode of the show \"to…",
+      "date": "2026-09-07",
+      "magnitude": 238483,
+      "messages": 200,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "i'm trying to find an episode of the show \"to… #2",
+      "date": "2026-09-07",
+      "magnitude": 98721,
+      "messages": 37,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Resume FreeSWITCH Shoretel IP 230 custom mod",
+      "date": "2026-09-07",
+      "magnitude": 12950336,
+      "messages": 370,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.36,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Determine irl-coop funding and membership",
+      "date": "2026-09-08",
+      "magnitude": 3534560,
+      "messages": 609,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Update hi.events auth screen to SSO pattern",
+      "date": "2026-09-12",
+      "magnitude": 1775458,
+      "messages": 375,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Plan intro video strategy for irl.coop",
+      "date": "2026-09-13",
+      "magnitude": 8955969,
+      "messages": 1094,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Continue NocoDB rebuild A2+A3 client cert",
+      "date": "2026-09-16",
+      "magnitude": 5946425,
+      "messages": 719,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Design group dashboard interface",
+      "date": "2026-09-18",
+      "magnitude": 4936762,
+      "messages": 1274,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "I'm trying to connect my fusionpbx to telnyx…",
+      "date": "2026-09-19",
+      "magnitude": 539282,
+      "messages": 171,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    },
+    {
+      "title": "Design Hermes plugin decision workflow",
+      "date": "2026-09-22",
+      "magnitude": 2831718,
+      "messages": 329,
+      "repo": null,
+      "act": "III",
+      "confidence": 0.35,
+      "_source": "deterministic-placeholder"
+    }
+  ],
+  "story": "A working story from your session history — pending Jev scene scoring."
+}
