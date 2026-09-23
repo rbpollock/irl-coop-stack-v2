@@ -15,11 +15,20 @@ import sys
 from collections import OrderedDict
 from pathlib import Path
 
-# Price cards: USD per 1M tokens. SAMPLE — replace with the real BAAI/local card.
+# Price cards: USD per 1M tokens. Local GGUF models run on THIS box -> $0.
+# Hosted values are ESTIMATES (sample real-world family rates); verify against
+# your provider contract before trusting them. Provide a --rates JSON to override.
 PRICE = [
-    {"match": "deepseek-v4-flash", "kind": "local_draft", "in": 0.30, "out": 1.10, "cache_read": 0.002},
-    {"match": "deepseek-v4-pro", "kind": "strong",        "in": 1.20, "out": 4.00, "cache_read": 0.002},
-    {"match": "",                 "kind": "unknown",      "in": 0.50, "out": 1.50, "cache_read": 0.001},
+    # hosted (estimated)
+    {"match": "deepseek-v4-flash", "kind": "es.deepseek-flash", "in": 0.27, "out": 1.10, "cache_read": 0.07},
+    {"match": "deepseek-v4-pro",   "kind": "es.deepseek-pro",   "in": 1.10, "out": 4.00, "cache_read": 0.07},
+    {"match": "gemini-3.1-pro",    "kind": "es.gemini-pro",     "in": 0.50, "out": 4.00, "cache_read": 0.1},
+    {"match": "gemini",            "kind": "es.gemini-flash",   "in": 0.10, "out": 0.60, "cache_read": 0.03},
+    # local / gguf on this host: no provider billing
+    {"match": ".gguf",             "kind": "local (host)",      "in": 0.0,  "out": 0.0,  "cache_read": 0.0},
+    {"match": "models-",           "kind": "local (host)",      "in": 0.0,  "out": 0.0,  "cache_read": 0.0},
+    # fallback
+    {"match": "",                  "kind": "unknown-est",       "in": 0.50, "out": 1.50, "cache_read": 0.01},
 ]
 
 
