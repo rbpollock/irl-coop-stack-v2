@@ -2,13 +2,13 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { ChevronRight } from "lucide-react"
 
+import type { ProfileGroup } from "../../_lib/profile"
+
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import { getInitials } from "@/lib/utils"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-
-import type { ProfileGroup } from "../../_lib/profile"
 
 const PRIVACY_LABEL: Record<string, string> = {
   open: "Open",

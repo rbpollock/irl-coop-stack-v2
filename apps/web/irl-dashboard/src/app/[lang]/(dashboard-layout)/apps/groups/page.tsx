@@ -6,9 +6,12 @@ import { useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { ChevronRight, Plus, RefreshCw, Users } from "lucide-react"
 
+import type { Group, GroupPrivacy } from "./_lib/groups"
+
 import { ensureLocalizedPathname } from "@/lib/i18n"
-import { Button } from "@/components/ui/button"
+
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
@@ -27,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -35,26 +39,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Skeleton } from "@/components/ui/skeleton"
+import { createGroup, listGroups } from "./_lib/groups"
 
-import {
-  createGroup,
-  listGroups,
-  type Group,
-  type GroupPrivacy,
-} from "./_lib/groups"
-
-const PRIVACY_META: Record<GroupPrivacy, { label: string; className: string }> = {
-  open: {
-    label: "Open",
-    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  },
-  members: {
-    label: "Members",
-    className: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  },
-  hidden: { label: "Hidden", className: "bg-muted text-muted-foreground" },
-}
+const PRIVACY_META: Record<GroupPrivacy, { label: string; className: string }> =
+  {
+    open: {
+      label: "Open",
+      className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    },
+    members: {
+      label: "Members",
+      className: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
+    },
+    hidden: { label: "Hidden", className: "bg-muted text-muted-foreground" },
+  }
 
 function shortAddress(a: string | null | undefined) {
   if (!a) return "—"
@@ -170,7 +168,9 @@ export default function GroupsPage() {
                     <TableHead className="hidden md:table-cell">
                       Safe account
                     </TableHead>
-                    <TableHead className="hidden md:table-cell">Created</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Created
+                    </TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -254,7 +254,9 @@ export default function GroupsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="open">Open — anyone can find it</SelectItem>
+                  <SelectItem value="open">
+                    Open — anyone can find it
+                  </SelectItem>
                   <SelectItem value="members">
                     Members — members see everything
                   </SelectItem>

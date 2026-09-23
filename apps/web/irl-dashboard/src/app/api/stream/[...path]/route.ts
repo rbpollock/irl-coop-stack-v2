@@ -7,7 +7,8 @@ import { getSession } from "@/lib/auth"
 //      the HLS Authorization header would trigger a preflight.
 //   2. Auth — MediaMTX's JWT auth expects the viewer's coop JWT as a Bearer
 //      header; adding it server-side keeps the token out of the browser.
-const MEDIAMTX_UPSTREAM = process.env.MEDIAMTX_UPSTREAM ?? "http://localhost:8888"
+const MEDIAMTX_UPSTREAM =
+  process.env.MEDIAMTX_UPSTREAM ?? "http://localhost:8888"
 
 // MediaMTX's HLS session handshake: the first request 302s with a `cookieCheck`
 // cookie (Secure in browsers, but Node's fetch does not enforce that), and the
@@ -32,7 +33,7 @@ async function fetchHls(url: string, token: string): Promise<Response> {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> },
+  { params }: { params: Promise<{ path: string[] }> }
 ): Promise<Response> {
   const session = await getSession()
   const token = session?.accessToken

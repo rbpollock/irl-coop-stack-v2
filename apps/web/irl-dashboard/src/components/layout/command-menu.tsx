@@ -12,6 +12,8 @@ import type {
 } from "@/types"
 import type { DialogProps } from "@radix-ui/react-dialog"
 
+import { navigationsData } from "@/data/navigations"
+
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import {
   cn,
@@ -20,7 +22,6 @@ import {
   titleCaseToCamelCase,
 } from "@/lib/utils"
 
-import { navigationsData } from "@/data/navigations"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

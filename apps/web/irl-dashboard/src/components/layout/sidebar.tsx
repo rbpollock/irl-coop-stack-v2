@@ -11,6 +11,8 @@ import type {
   NavigationRootItem,
 } from "@/types"
 
+import { navigationsData } from "@/data/navigations"
+
 import { i18n } from "@/configs/i18n"
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import {
@@ -19,9 +21,7 @@ import {
   titleCaseToCamelCase,
 } from "@/lib/utils"
 
-import { navigationsData } from "@/data/navigations"
 import { useGroups } from "@/hooks/use-groups"
-import { Logo } from "./logo"
 import { useSettings } from "@/hooks/use-settings"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/sidebar"
 import { DynamicIcon } from "@/components/dynamic-icon"
 import { CommandMenu } from "./command-menu"
+import { Logo } from "./logo"
 
 export function Sidebar({ dictionary }: { dictionary: DictionaryType }) {
   const pathname = usePathname()

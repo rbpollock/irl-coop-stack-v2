@@ -18,16 +18,20 @@ async function hmac(key: Uint8Array, data: string): Promise<Uint8Array> {
     key as unknown as BufferSource,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign"]
   )
-  const sig = await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(data))
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    k,
+    new TextEncoder().encode(data)
+  )
   return new Uint8Array(sig)
 }
 
 async function sha256Hex(data: string): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(data),
+    new TextEncoder().encode(data)
   )
   return [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -40,7 +44,7 @@ async function sigv4Request(
   method: string,
   objectKey: string, // e.g. "chat/{sub}/abc.json" (bucket included)
   query = "",
-  body?: string,
+  body?: string
 ): Promise<Response> {
   const path = `/${objectKey}`
   const now = new Date()
@@ -67,7 +71,10 @@ async function sigv4Request(
   const scope = `${date}/${creds.region}/s3/aws4_request`
   const stringToSign = `AWS4-HMAC-SHA256\n${amz}\n${scope}\n${await sha256Hex(canonical)}`
 
-  const kDate = await hmac(new TextEncoder().encode(`AWS4${creds.secretKey}`), date)
+  const kDate = await hmac(
+    new TextEncoder().encode(`AWS4${creds.secretKey}`),
+    date
+  )
   const kRegion = await hmac(kDate, creds.region)
   const kService = await hmac(kRegion, "s3")
   const kSigning = await hmac(kService, "aws4_request")
@@ -86,14 +93,17 @@ async function sigv4Request(
   })
 }
 
-export function getObject(creds: StsCreds, objectKey: string): Promise<Response> {
+export function getObject(
+  creds: StsCreds,
+  objectKey: string
+): Promise<Response> {
   return sigv4Request(creds, "GET", objectKey)
 }
 
 export function putObject(
   creds: StsCreds,
   objectKey: string,
-  body: string,
+  body: string
 ): Promise<Response> {
   return sigv4Request(creds, "PUT", objectKey, "", body)
 }
@@ -101,7 +111,7 @@ export function putObject(
 // LIST objects under a prefix, returning {key, lastModified} in order.
 export async function listObjects(
   creds: StsCreds,
-  prefix: string,
+  prefix: string
 ): Promise<{ key: string; lastModified: string }[]> {
   const q = `?list-type=2&prefix=${encodeURIComponent(prefix)}`
   const res = await sigv4Request(creds, "GET", creds.bucket, q)
@@ -110,7 +120,8 @@ export async function listObjects(
   const out: { key: string; lastModified: string }[] = []
   for (const c of xml.match(/<Contents>[\s\S]*?<\/Contents>/g) ?? []) {
     const key = (c.match(/<Key>([^<]+)<\/Key>/) || [])[1]
-    const lastModified = (c.match(/<LastModified>([^<]+)<\/LastModified>/) || [])[1] ?? ""
+    const lastModified =
+      (c.match(/<LastModified>([^<]+)<\/LastModified>/) || [])[1] ?? ""
     if (key) out.push({ key, lastModified })
   }
   return out

@@ -1,11 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
 import { FileManager } from "@cubone/react-file-manager"
+import { useSession } from "next-auth/react"
+
 import "@cubone/react-file-manager/dist/style.css"
 import "./file-manager.css"
+
 import type { FileManagerFile } from "@cubone/react-file-manager"
 
 import { ensureLocalizedPathname } from "@/lib/i18n"
@@ -18,14 +20,30 @@ import { ensureLocalizedPathname } from "@/lib/i18n"
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 
-type Folder = { id: string; name: string; parent: string | null; createdAt: string }
+type Folder = {
+  id: string
+  name: string
+  parent: string | null
+  createdAt: string
+}
 type FolderMember = { folderId: string; source: string; key: string }
 type DocMeta = { name: string; size: number; modified: string }
 
 // Extensions the OnlyOffice editor can open (docs.ts documentType mapping).
 const DOC_EXTS = new Set([
-  "docx", "odt", "txt", "rtf", "html", "mht", "epub", "pdf",
-  "xlsx", "ods", "csv", "pptx", "odp",
+  "docx",
+  "odt",
+  "txt",
+  "rtf",
+  "html",
+  "mht",
+  "epub",
+  "pdf",
+  "xlsx",
+  "ods",
+  "csv",
+  "pptx",
+  "odp",
 ])
 
 export default function FilesPage() {
@@ -107,7 +125,8 @@ export default function FilesPage() {
 
   const folderIdByPath = useMemo(() => {
     const m = new Map<string, string>()
-    for (const f of folders) m.set(folderPathById.get(f.id) ?? `/${f.name}`, f.id)
+    for (const f of folders)
+      m.set(folderPathById.get(f.id) ?? `/${f.name}`, f.id)
     return m
   }, [folders, folderPathById])
 
@@ -122,8 +141,15 @@ export default function FilesPage() {
       updatedAt: f.createdAt,
     }))
     for (const d of docs) {
-      const ptrs = members.filter((m) => m.source === "docs" && m.key === d.name)
-      const base = { name: d.name, isDirectory: false, size: d.size, updatedAt: d.modified }
+      const ptrs = members.filter(
+        (m) => m.source === "docs" && m.key === d.name
+      )
+      const base = {
+        name: d.name,
+        isDirectory: false,
+        size: d.size,
+        updatedAt: d.modified,
+      }
       if (ptrs.length === 0) {
         out.push({ ...base, path: `/${d.name}` })
       } else {
@@ -148,7 +174,7 @@ export default function FilesPage() {
       if (f.isDirectory) continue
       const res = await fetch(
         `${COOP_API_URL}/api/v1/files/docs/${encodeURIComponent(f.name)}/download`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       if (!res.ok) continue
       const blob = await res.blob()
@@ -183,7 +209,10 @@ export default function FilesPage() {
       : null
     await fetch(`${COOP_API_URL}/api/v1/files/folders`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ name: name.trim(), parent: parentId }),
     })
     await refresh()
@@ -203,7 +232,7 @@ export default function FilesPage() {
       } else {
         await fetch(
           `${COOP_API_URL}/api/v1/files/docs/${encodeURIComponent(f.name)}`,
-          { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+          { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
         )
       }
     }
@@ -216,9 +245,12 @@ export default function FilesPage() {
       `${COOP_API_URL}/api/v1/files/docs/${encodeURIComponent(file.name)}/rename`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ to: newName.trim() }),
-      },
+      }
     )
     await refresh()
   }
@@ -228,7 +260,7 @@ export default function FilesPage() {
   async function onPaste(
     files: FileManagerFile[],
     destFolder: FileManagerFile,
-    opType: "copy" | "move",
+    opType: "copy" | "move"
   ) {
     if (!token || opType !== "move") return
     const destId = destFolder?.isDirectory
@@ -240,23 +272,34 @@ export default function FilesPage() {
         if (!folderId) continue
         await fetch(`${COOP_API_URL}/api/v1/files/folders/${folderId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ parent: destId }),
         })
       } else {
         // single-location: drop existing pointers, then point at the dest
-        for (const m of members.filter((m) => m.source === "docs" && m.key === f.name)) {
+        for (const m of members.filter(
+          (m) => m.source === "docs" && m.key === f.name
+        )) {
           await fetch(
             `${COOP_API_URL}/api/v1/files/folders/${m.folderId}/members?key=${encodeURIComponent(f.name)}&source=docs`,
-            { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+            { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
           )
         }
         if (destId) {
-          await fetch(`${COOP_API_URL}/api/v1/files/folders/${destId}/members`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ source: "docs", key: f.name }),
-          })
+          await fetch(
+            `${COOP_API_URL}/api/v1/files/folders/${destId}/members`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ source: "docs", key: f.name }),
+            }
+          )
         }
       }
     }

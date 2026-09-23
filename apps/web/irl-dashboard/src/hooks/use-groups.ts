@@ -35,7 +35,10 @@ export function useGroups(): CoopGroup[] {
     const parsed = JSON.parse(claims.groups)
     if (!Array.isArray(parsed)) return []
     return parsed
-      .filter((g: any) => g && typeof g.name === "string" && typeof g.slug === "string")
+      .filter(
+        (g: any) =>
+          g && typeof g.name === "string" && typeof g.slug === "string"
+      )
       .map((g: any) => ({
         slug: g.slug,
         name: g.name,

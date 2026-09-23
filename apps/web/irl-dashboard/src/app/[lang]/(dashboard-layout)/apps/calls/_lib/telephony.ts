@@ -15,7 +15,11 @@ export type SipConfig = {
   wss: { port: string; path: string }
 }
 
-async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+async function api<T>(
+  path: string,
+  token: string,
+  init?: RequestInit
+): Promise<T> {
   const res = await fetch(`${COOP_API_URL}${path}`, {
     ...init,
     headers: {

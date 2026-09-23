@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
 import type { Profile } from "../../_lib/profile"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProfileContentIntroItem } from "./profile-content-info-intro-item"
 
 function shortAddress(a: string | null | undefined) {
@@ -39,7 +39,11 @@ export function ProfileContentMembership({ profile }: { profile: Profile }) {
             />
             <ProfileContentIntroItem
               title="Onboarded"
-              value={profile.onboarded ? formatDate(profile.onboardedAt) : "Not completed"}
+              value={
+                profile.onboarded
+                  ? formatDate(profile.onboardedAt)
+                  : "Not completed"
+              }
               iconName="CircleCheck"
             />
             <ProfileContentIntroItem

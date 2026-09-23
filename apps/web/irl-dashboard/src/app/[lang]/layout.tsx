@@ -1,4 +1,4 @@
-import { Cairo, Lato, Instrument_Serif } from "next/font/google"
+import { Cairo, Instrument_Serif, Lato } from "next/font/google"
 import { getServerSession } from "next-auth"
 
 import { i18n } from "@/configs/i18n"

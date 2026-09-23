@@ -17,9 +17,18 @@ import {
   UserPlus,
 } from "lucide-react"
 
+import type {
+  Group,
+  GroupPrivacy,
+  Member,
+  MemberVisibility,
+  Resource,
+} from "../_lib/groups"
+
 import { ensureLocalizedPathname } from "@/lib/i18n"
-import { Button } from "@/components/ui/button"
+
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -37,7 +46,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -45,6 +53,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -53,8 +62,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Skeleton } from "@/components/ui/skeleton"
-
+import { Textarea } from "@/components/ui/textarea"
 import {
   inviteMember,
   listGroups,
@@ -62,28 +70,32 @@ import {
   listResources,
   scopeResource,
   updateGroup,
-  type Group,
-  type GroupPrivacy,
-  type Member,
-  type MemberVisibility,
-  type Resource,
 } from "../_lib/groups"
 
-const PRIVACY_META: Record<GroupPrivacy, { label: string; className: string }> = {
-  open: {
-    label: "Open",
-    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  },
-  members: {
-    label: "Members",
-    className: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  },
-  hidden: { label: "Hidden", className: "bg-muted text-muted-foreground" },
-}
+const PRIVACY_META: Record<GroupPrivacy, { label: string; className: string }> =
+  {
+    open: {
+      label: "Open",
+      className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    },
+    members: {
+      label: "Members",
+      className: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
+    },
+    hidden: { label: "Hidden", className: "bg-muted text-muted-foreground" },
+  }
 
-const APP_CHOICES = ["plane", "nocodb", "docs", "files", "matrix", "chat", "projects"]
+const APP_CHOICES = [
+  "plane",
+  "nocodb",
+  "docs",
+  "files",
+  "matrix",
+  "chat",
+  "projects",
+]
 
-function shortAddress(a: string) {
+function _shortAddress(a: string) {
   return a.length > 18 ? `${a.slice(0, 10)}…${a.slice(-6)}` : a
 }
 
@@ -422,7 +434,9 @@ export default function GroupDetailPage() {
                   <TableHead>Alias</TableHead>
                   <TableHead>Roles</TableHead>
                   <TableHead>Visibility</TableHead>
-                  <TableHead className="hidden md:table-cell">Subject</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Subject
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -593,7 +607,10 @@ export default function GroupDetailPage() {
             <Button variant="outline" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEdit} disabled={savingEdit || !editName.trim()}>
+            <Button
+              onClick={handleEdit}
+              disabled={savingEdit || !editName.trim()}
+            >
               {savingEdit ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
@@ -640,7 +657,9 @@ export default function GroupDetailPage() {
               <Label>Visibility</Label>
               <Select
                 value={inviteVisibility}
-                onValueChange={(v) => setInviteVisibility(v as MemberVisibility)}
+                onValueChange={(v) =>
+                  setInviteVisibility(v as MemberVisibility)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -658,7 +677,10 @@ export default function GroupDetailPage() {
             <Button variant="outline" onClick={() => setInviteOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleInvite} disabled={inviting || !inviteSub.trim()}>
+            <Button
+              onClick={handleInvite}
+              disabled={inviting || !inviteSub.trim()}
+            >
               {inviting ? "Inviting…" : "Invite"}
             </Button>
           </DialogFooter>

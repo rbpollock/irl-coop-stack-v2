@@ -7,16 +7,12 @@ import {
   Search,
   Sprout,
   Waypoints,
-  type LucideIcon,
 } from "lucide-react"
 
+import type { LucideIcon } from "lucide-react"
+
 import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 // The action-oriented coop dashboard, three tiers:
 //   1. Needs my attention — the inbox (notifications, governance, weaves, edits)
@@ -27,7 +23,10 @@ import {
 
 function Soon() {
   return (
-    <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
+    <Badge
+      variant="outline"
+      className="text-[10px] font-normal text-muted-foreground"
+    >
       soon
     </Badge>
   )
@@ -89,7 +88,11 @@ function AttentionCard({
 }
 
 function TierHeading({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{children}</h2>
+  return (
+    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h2>
+  )
 }
 
 export function CoopDashboard() {
@@ -135,7 +138,9 @@ export function CoopDashboard() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Regenerative score</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Regenerative score
+              </CardTitle>
               <Sprout className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="flex items-center gap-6">
@@ -151,12 +156,15 @@ export function CoopDashboard() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-semibold text-muted-foreground">—</span>
+                  <span className="text-2xl font-semibold text-muted-foreground">
+                    —
+                  </span>
                 </div>
               </div>
               <div className="space-y-1">
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  A private ZK-metric of the care you give and receive — not a leaderboard.
+                  A private ZK-metric of the care you give and receive — not a
+                  leaderboard.
                 </p>
                 <Soon />
               </div>
@@ -165,7 +173,9 @@ export function CoopDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Group health</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Group health
+              </CardTitle>
               <Activity className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>

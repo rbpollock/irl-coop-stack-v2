@@ -1,11 +1,11 @@
 "use client"
 
 import { useRef, useState } from "react"
-import Hls from "hls.js"
 import { MonitorPlay, Play } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import Hls from "hls.js"
 
 // The HLS stream is proxied same-origin through /api/stream, which adds the
 // viewer's coop JWT server-side for MediaMTX's JWT auth — the browser never
@@ -20,7 +20,6 @@ export default function StreamPage() {
   const [error, setError] = useState<string | null>(null)
   const [broadcasting, setBroadcasting] = useState(false)
   const [streamerMode, setStreamerMode] = useState(false)
-  const [shareModalOpen, setShareModalOpen] = useState(false)
   const [matrixLiveCallActive, setMatrixLiveCallActive] = useState(false)
 
   const stop = () => {
@@ -61,7 +60,9 @@ export default function StreamPage() {
       return
     }
 
-    video.play().catch(() => setError("Autoplay was blocked — press play on the player."))
+    video
+      .play()
+      .catch(() => setError("Autoplay was blocked — press play on the player."))
     setPlaying(true)
   }
 
@@ -95,12 +96,18 @@ export default function StreamPage() {
   }
 
   return (
-    <div className={`flex h-[calc(100svh-9.85rem)] flex-col ${streamerMode ? "ring-4 ring-rose-500/30" : ""}`}>
+    <div
+      className={`flex h-[calc(100svh-9.85rem)] flex-col ${streamerMode ? "ring-4 ring-rose-500/30" : ""}`}
+    >
       <div className="flex items-center justify-between border-b bg-background px-4 py-2.5">
         <div>
           <h1 className="text-sm font-semibold flex items-center gap-2">
             Live Video & Sovereign Stream
-            {streamerMode && <span className="rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-medium text-rose-500">Streamer Mode Active</span>}
+            {streamerMode && (
+              <span className="rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-medium text-rose-500">
+                Streamer Mode Active
+              </span>
+            )}
           </h1>
           <p className="text-xs text-muted-foreground">
             Sovereign streaming via MediaMTX & Matrix LiveKit calls.
@@ -119,7 +126,9 @@ export default function StreamPage() {
             size="sm"
             variant="outline"
             onClick={() => {
-              const url = window.location.href.split("?")[0] + `?path=${encodeURIComponent(path)}`
+              const url =
+                window.location.href.split("?")[0] +
+                `?path=${encodeURIComponent(path)}`
               navigator.clipboard.writeText(url)
               alert("Shareable link copied to clipboard!")
             }}
@@ -177,17 +186,30 @@ export default function StreamPage() {
 
         <div className="grid flex-1 grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
           <div className="md:col-span-2 flex flex-col overflow-hidden rounded-lg border bg-black relative">
-            <video ref={videoRef} controls className="h-full w-full object-contain" playsInline />
+            <video
+              ref={videoRef}
+              controls
+              className="h-full w-full object-contain"
+              playsInline
+            />
             {matrixLiveCallActive && (
               <div className="absolute inset-0 bg-background/95 backdrop-blur flex flex-col items-center justify-center p-6 text-center">
-                <h3 className="text-base font-semibold mb-2">Matrix LiveKit Video Call Stage</h3>
+                <h3 className="text-base font-semibold mb-2">
+                  Matrix LiveKit Video Call Stage
+                </h3>
                 <p className="text-xs text-muted-foreground mb-4 max-w-md">
-                  Connected to Matrix SFU stage. All participants in this group room can broadcast or view the sovereign feed.
+                  Connected to Matrix SFU stage. All participants in this group
+                  room can broadcast or view the sovereign feed.
                 </p>
                 <div className="w-full h-64 rounded border bg-card flex items-center justify-center text-xs text-muted-foreground">
                   [LiveKit Stage Grid — Active Speaker & Stream Overlay]
                 </div>
-                <Button size="sm" variant="outline" className="mt-4" onClick={toggleMatrixLiveCall}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-4"
+                  onClick={toggleMatrixLiveCall}
+                >
                   Return to Stream Viewer
                 </Button>
               </div>

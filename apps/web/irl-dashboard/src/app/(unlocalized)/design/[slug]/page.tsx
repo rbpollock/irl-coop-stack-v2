@@ -1,17 +1,17 @@
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
 import { notFound } from "next/navigation"
 import Markdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import rehypeSlug from "rehype-slug"
+import remarkGfm from "remark-gfm"
+import { ArrowLeft } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import {
   getCategories,
   getDesignDoc,
   getDesignDocs,
   readDesignDoc,
 } from "@/lib/design-docs"
+import { cn } from "@/lib/utils"
 
 export function generateStaticParams() {
   return getDesignDocs().map((doc) => ({ slug: doc.slug }))
@@ -25,7 +25,9 @@ export async function generateMetadata({
   const { slug } = await params
   const doc = getDesignDoc(slug)
   return {
-    title: { absolute: doc ? `${doc.title} — irl.coop` : "Design Docs — irl.coop" },
+    title: {
+      absolute: doc ? `${doc.title} — irl.coop` : "Design Docs — irl.coop",
+    },
   }
 }
 
@@ -81,7 +83,9 @@ export default async function DesignDocPage({
           All design docs
         </Link>
         <article className="prose max-w-3xl prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-a:text-primary prose-pre:bg-muted text-foreground">
-          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>{content}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>
+            {content}
+          </Markdown>
         </article>
       </div>
     </div>

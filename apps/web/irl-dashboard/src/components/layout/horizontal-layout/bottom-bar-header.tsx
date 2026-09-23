@@ -13,8 +13,8 @@ import { FullscreenToggle } from "@/components/layout/full-screen-toggle"
 import { NotificationDropdown } from "@/components/layout/notification-dropdown"
 import { UserDropdown } from "@/components/layout/user-dropdown"
 import { ModeDropdown } from "@/components/mode-dropdown"
-import { ToggleMobileSidebar } from "../toggle-mobile-sidebar"
 import { Logo } from "../logo"
+import { ToggleMobileSidebar } from "../toggle-mobile-sidebar"
 
 export function BottomBarHeader({
   dictionary,

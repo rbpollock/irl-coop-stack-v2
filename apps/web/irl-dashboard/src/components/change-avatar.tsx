@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Camera, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { Camera, Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+
 import { Button } from "@/components/ui/button"
 
 const COOP_API_URL =

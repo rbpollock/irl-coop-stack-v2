@@ -1,26 +1,24 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { Bell, X } from "lucide-react";
+import Link from "next/link"
+import { Bell, X } from "lucide-react"
 
-import type { DictionaryType } from "@/lib/get-dictionary";
+import type { LiveNotification } from "@/hooks/use-notifications"
+import type { DictionaryType } from "@/lib/get-dictionary"
+import type { DynamicIconNameType } from "@/types"
 
-import { cn, formatDistance, formatUnreadCount } from "@/lib/utils";
+import { cn, formatDistance, formatUnreadCount } from "@/lib/utils"
 
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardFooter } from "@/components/ui/card";
+import { useNotifications } from "@/hooks/use-notifications"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Card, CardFooter } from "@/components/ui/card"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { DynamicIcon } from "@/components/dynamic-icon";
-import {
-  useNotifications,
-  type LiveNotification,
-} from "@/hooks/use-notifications";
-import type { DynamicIconNameType } from "@/types";
+} from "@/components/ui/popover"
+import { DynamicIcon } from "@/components/dynamic-icon"
 
 const ICON_BY_TYPE: Record<string, DynamicIconNameType> = {
   "m.room.message": "MessageSquare",
@@ -31,7 +29,7 @@ const ICON_BY_TYPE: Record<string, DynamicIconNameType> = {
   "m.room.topic": "Pencil",
   "m.room.create": "Plus",
   "mail.received": "Mail",
-};
+}
 
 function toRow(n: LiveNotification) {
   return {
@@ -41,16 +39,16 @@ function toRow(n: LiveNotification) {
     url: n.url || "",
     date: new Date(n.ts),
     isRead: n.read,
-  };
+  }
 }
 
 export function NotificationDropdown({
   dictionary,
 }: {
-  dictionary: DictionaryType;
+  dictionary: DictionaryType
 }) {
-  const { notifications, unread, markAllRead, markRead } = useNotifications();
-  const unreadCount = formatUnreadCount(unread);
+  const { notifications, unread, markAllRead, markRead } = useNotifications()
+  const unreadCount = formatUnreadCount(unread)
 
   return (
     <Popover modal>
@@ -92,7 +90,7 @@ export function NotificationDropdown({
               </li>
             ) : (
               notifications.map((n) => {
-                const row = toRow(n);
+                const row = toRow(n)
                 return (
                   <li key={row.id}>
                     <div className="group relative flex items-center gap-2 py-4 px-6 hover:bg-accent hover:text-accent-foreground">
@@ -102,7 +100,10 @@ export function NotificationDropdown({
                         className="flex items-center gap-2 flex-1 w-0 min-w-0 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                       >
                         <Badge className="h-10 w-10 shrink-0">
-                          <DynamicIcon name={row.iconName} className="h-5 w-5" />
+                          <DynamicIcon
+                            name={row.iconName}
+                            className="h-5 w-5"
+                          />
                         </Badge>
                         <div className="flex-1 w-0">
                           <p className="text-sm break-all truncate">
@@ -127,7 +128,7 @@ export function NotificationDropdown({
                       </Button>
                     </div>
                   </li>
-                );
+                )
               })
             )}
           </ul>
@@ -145,5 +146,5 @@ export function NotificationDropdown({
         </Card>
       </PopoverContent>
     </Popover>
-  );
+  )
 }

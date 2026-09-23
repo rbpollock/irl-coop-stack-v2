@@ -1,19 +1,24 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Brain, Loader2, Plus, Send, Trash2, X } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { Brain, Loader2, Plus, Send, Trash2, X } from "lucide-react"
+
+import type { StsCreds } from "@/lib/s3-browser"
+
+import { getObject, listObjects, putObject } from "@/lib/s3-browser"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getObject, listObjects, putObject, type StsCreds } from "@/lib/s3-browser"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 const DOCS_AREA_ID =
-  process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ?? "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
+  process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ??
+  "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
 const GROUPS_AREA_ID =
-  process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ?? "ff498932-aae5-449a-a4db-13432cdf7e2b"
+  process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ??
+  "ff498932-aae5-449a-a4db-13432cdf7e2b"
 
 type MemoryFact = {
   id: string
@@ -35,7 +40,7 @@ type Message = { role: "user" | "assistant"; text: string; sources?: Context[] }
 async function callTool(
   token: string | undefined,
   name: string,
-  args: Record<string, unknown> = {},
+  args: Record<string, unknown> = {}
 ) {
   const res = await fetch(`${COOP_API_URL}/mcp`, {
     method: "POST",
@@ -67,7 +72,7 @@ async function callTool(
 async function retrieve(
   token: string | undefined,
   areaId: string,
-  question: string,
+  question: string
 ): Promise<Context[]> {
   const doFetch = async (withToken: boolean): Promise<Context[]> => {
     const res = await fetch(`${COOP_API_URL}/mcp`, {
@@ -131,7 +136,7 @@ async function generate(prompt: string): Promise<string> {
 function buildPrompt(
   memory: MemoryFact[],
   contexts: Context[],
-  question: string,
+  question: string
 ): string {
   const facts =
     memory.map((m) => `- ${m.fact}`).join("\n") || "(nothing remembered yet)"
@@ -139,7 +144,7 @@ function buildPrompt(
     ? contexts
         .map(
           (c, i) =>
-            `[${i + 1}] ${c.document_name ?? "doc"}${c.heading ? ` — ${c.heading}` : ""}: ${(c.text ?? "").slice(0, 600)}`,
+            `[${i + 1}] ${c.document_name ?? "doc"}${c.heading ? ` — ${c.heading}` : ""}: ${(c.text ?? "").slice(0, 600)}`
         )
         .join("\n\n")
     : "(no relevant coop knowledge retrieved)"
@@ -224,7 +229,10 @@ export function AssistantPanel() {
         }
         const last = sessions[0]
         const id =
-          last.key.split("/").pop()?.replace(/\.json$/, "") ?? crypto.randomUUID()
+          last.key
+            .split("/")
+            .pop()
+            ?.replace(/\.json$/, "") ?? crypto.randomUUID()
         setSessionId(id)
         const gres = await getObject(c, last.key)
         if (gres.ok) {
@@ -334,12 +342,12 @@ export function AssistantPanel() {
           const fact = await generate(
             [
               "From this exchange, extract ONE durable fact to remember about the member",
-              '(a group they belong to, a need, a preference, or a decision).',
+              "(a group they belong to, a need, a preference, or a decision).",
               'Reply with just the fact, or the single word "nothing".',
               "",
               `Member: ${q}`,
               answer ? `Assistant: ${answer.slice(0, 500)}` : "",
-            ].join("\n"),
+            ].join("\n")
           )
           const clean = fact.trim().replace(/^["']|["']$/g, "")
           if (
@@ -414,8 +422,8 @@ export function AssistantPanel() {
               >
                 {messages.length === 0 && !thinking && (
                   <p className="py-6 text-center text-sm text-muted-foreground">
-                    Ask the coop a question — I answer from what I remember about
-                    you and the coop&apos;s knowledge.
+                    Ask the coop a question — I answer from what I remember
+                    about you and the coop&apos;s knowledge.
                   </p>
                 )}
                 {messages.map((m, i) => (
@@ -461,9 +469,7 @@ export function AssistantPanel() {
 
               {proposal && (
                 <div className="border-t px-3 py-2 text-xs">
-                  <p className="mb-1.5 text-muted-foreground">
-                    Remember this?
-                  </p>
+                  <p className="mb-1.5 text-muted-foreground">Remember this?</p>
                   <p className="mb-2 rounded-md border p-2">{proposal}</p>
                   <div className="flex gap-2">
                     <Button
@@ -556,7 +562,9 @@ export function AssistantPanel() {
                 <Input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && remember(draft, "member")}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && remember(draft, "member")
+                  }
                   placeholder="Add a fact to remember…"
                   className="h-9 text-sm"
                 />

@@ -4,7 +4,7 @@ import { getDesignDoc, readDesignDoc } from "@/lib/design-docs"
 // (also reachable as /design/<slug>.md via the middleware rewrite).
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params
   const doc = getDesignDoc(slug)

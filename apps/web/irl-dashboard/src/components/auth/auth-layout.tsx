@@ -10,8 +10,8 @@ import type { ComponentProps } from "react"
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
-import { LanguageDropdown } from "../language-dropdown"
 import { Logo } from "@/components/layout/logo"
+import { LanguageDropdown } from "../language-dropdown"
 
 interface AuthProps extends ComponentProps<"div"> {
   imgSrc?: string

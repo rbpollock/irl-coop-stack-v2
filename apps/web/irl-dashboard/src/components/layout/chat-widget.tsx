@@ -1,15 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { MessagesSquare, X } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { MessagesSquare, X } from "lucide-react"
 
 import type { DictionaryType } from "@/lib/get-dictionary"
 
 import { Button } from "@/components/ui/button"
 
-const CINNY_URL =
-  process.env.NEXT_PUBLIC_CINNY_URL ?? "https://cinny.irl.coop"
+const CINNY_URL = process.env.NEXT_PUBLIC_CINNY_URL ?? "https://cinny.irl.coop"
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 const AUTHED_KEY = "irlcoop-chat-authed"
@@ -42,7 +41,9 @@ export function ChatWidget({ dictionary }: { dictionary: DictionaryType }) {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("login failed"))))
+      .then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error("login failed"))
+      )
       .then((data: { loginToken?: string }) => {
         if (data.loginToken) {
           setLoginToken(data.loginToken)

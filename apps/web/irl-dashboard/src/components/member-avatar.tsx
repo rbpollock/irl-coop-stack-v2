@@ -23,7 +23,9 @@ export function MemberAvatar({
   const src = avatar || (sub ? dicebearAvatar(sub) : undefined)
   return (
     <Avatar className={className}>
-      {src && <AvatarImage src={src} alt={name ?? ""} className={imageClassName} />}
+      {src && (
+        <AvatarImage src={src} alt={name ?? ""} className={imageClassName} />
+      )}
       <AvatarFallback className="bg-transparent">
         {name ? getInitials(name) : null}
       </AvatarFallback>

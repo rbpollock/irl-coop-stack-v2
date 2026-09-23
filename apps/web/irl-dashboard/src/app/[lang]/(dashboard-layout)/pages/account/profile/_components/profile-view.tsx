@@ -5,10 +5,11 @@ import { useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { AlertCircle, RefreshCw } from "lucide-react"
 
+import type { Profile } from "../_lib/profile"
+
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-
-import { getProfile, type Profile } from "../_lib/profile"
+import { getProfile } from "../_lib/profile"
 import { ProfileContent } from "./profile-content"
 import { ProfileHeader } from "./profile-header"
 

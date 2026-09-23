@@ -12,7 +12,12 @@ export type SocialSummary = {
   posts_by_day: { day: string; n: number }[]
   integrations: number
   members: number
-  recent_posts: { id: string; content: string; state: string; created_at: string }[]
+  recent_posts: {
+    id: string
+    content: string
+    state: string
+    created_at: string
+  }[]
 }
 
 export const COOP_API_URL =

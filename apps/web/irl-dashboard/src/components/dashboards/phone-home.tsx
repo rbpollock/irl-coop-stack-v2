@@ -1,12 +1,12 @@
 "use client"
 
-import Link from "next/link"
 import { useState } from "react"
+import Link from "next/link"
 import {
   Activity,
   Bell,
-  CalendarDays,
   Calculator,
+  CalendarDays,
   ClipboardList,
   Database,
   FileText,
@@ -27,8 +27,9 @@ import {
   Video,
   Waypoints,
   X,
-  type LucideIcon,
 } from "lucide-react"
+
+import type { LucideIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { DocsSearch } from "@/components/docs-search"
@@ -47,23 +48,115 @@ type App = {
 }
 
 const APPS: App[] = [
-  { title: "Projects", href: "/apps/projects", icon: FolderKanban, gradient: "from-indigo-500 to-blue-600", hasNotification: true },
-  { title: "Farm", href: "/apps/farm", icon: Sprout, gradient: "from-emerald-500 to-green-600" },
-  { title: "Video & Chat", href: "/apps/chat", icon: Video, gradient: "from-violet-500 to-purple-600", hasNotification: true },
-  { title: "Maps", href: "/apps/map", icon: Map, gradient: "from-teal-500 to-cyan-600" },
-  { title: "Webmail", href: "/apps/webmail", icon: Mail, gradient: "from-sky-500 to-blue-600", hasNotification: true },
-  { title: "Calls", href: "/apps/calls", icon: Phone, gradient: "from-rose-500 to-red-600" },
-  { title: "Files", href: "/apps/files", icon: FolderOpen, gradient: "from-amber-500 to-orange-600" },
-  { title: "Docs", href: "/design", icon: FileText, gradient: "from-zinc-500 to-slate-600" },
-  { title: "Groups", href: "/apps/groups", icon: Network, gradient: "from-fuchsia-500 to-pink-600" },
-  { title: "Needs & Offers", href: "/dashboards/needs-offers", icon: Handshake, gradient: "from-teal-500 to-emerald-600" },
-  { title: "Dues", href: "/dashboards/dues", icon: Scale, gradient: "from-amber-500 to-orange-600" },
-  { title: "Databases", href: "https://nocodb.irl.coop", icon: Database, gradient: "from-cyan-500 to-sky-600", external: true },
-  { title: "Surveys", href: "https://forms.irl.coop", icon: ClipboardList, gradient: "from-orange-500 to-amber-600", external: true },
-  { title: "Events", href: "https://events.irl.coop", icon: CalendarDays, gradient: "from-lime-500 to-emerald-600", external: true },
-  { title: "Accounting", href: "https://accounting.irl.coop", icon: Calculator, gradient: "from-yellow-500 to-amber-600", external: true },
-  { title: "Stream", href: "/apps/stream", icon: Radio, gradient: "from-red-500 to-rose-600" },
-  { title: "Social", href: "/apps/social-media", icon: Megaphone, gradient: "from-pink-500 to-fuchsia-600" },
+  {
+    title: "Projects",
+    href: "/apps/projects",
+    icon: FolderKanban,
+    gradient: "from-indigo-500 to-blue-600",
+    hasNotification: true,
+  },
+  {
+    title: "Farm",
+    href: "/apps/farm",
+    icon: Sprout,
+    gradient: "from-emerald-500 to-green-600",
+  },
+  {
+    title: "Video & Chat",
+    href: "/apps/chat",
+    icon: Video,
+    gradient: "from-violet-500 to-purple-600",
+    hasNotification: true,
+  },
+  {
+    title: "Maps",
+    href: "/apps/map",
+    icon: Map,
+    gradient: "from-teal-500 to-cyan-600",
+  },
+  {
+    title: "Webmail",
+    href: "/apps/webmail",
+    icon: Mail,
+    gradient: "from-sky-500 to-blue-600",
+    hasNotification: true,
+  },
+  {
+    title: "Calls",
+    href: "/apps/calls",
+    icon: Phone,
+    gradient: "from-rose-500 to-red-600",
+  },
+  {
+    title: "Files",
+    href: "/apps/files",
+    icon: FolderOpen,
+    gradient: "from-amber-500 to-orange-600",
+  },
+  {
+    title: "Docs",
+    href: "/design",
+    icon: FileText,
+    gradient: "from-zinc-500 to-slate-600",
+  },
+  {
+    title: "Groups",
+    href: "/apps/groups",
+    icon: Network,
+    gradient: "from-fuchsia-500 to-pink-600",
+  },
+  {
+    title: "Needs & Offers",
+    href: "/dashboards/needs-offers",
+    icon: Handshake,
+    gradient: "from-teal-500 to-emerald-600",
+  },
+  {
+    title: "Dues",
+    href: "/dashboards/dues",
+    icon: Scale,
+    gradient: "from-amber-500 to-orange-600",
+  },
+  {
+    title: "Databases",
+    href: "https://nocodb.irl.coop",
+    icon: Database,
+    gradient: "from-cyan-500 to-sky-600",
+    external: true,
+  },
+  {
+    title: "Surveys",
+    href: "https://forms.irl.coop",
+    icon: ClipboardList,
+    gradient: "from-orange-500 to-amber-600",
+    external: true,
+  },
+  {
+    title: "Events",
+    href: "https://events.irl.coop",
+    icon: CalendarDays,
+    gradient: "from-lime-500 to-emerald-600",
+    external: true,
+  },
+  {
+    title: "Accounting",
+    href: "https://accounting.irl.coop",
+    icon: Calculator,
+    gradient: "from-yellow-500 to-amber-600",
+    external: true,
+  },
+  {
+    title: "Stream",
+    href: "/apps/stream",
+    icon: Radio,
+    gradient: "from-red-500 to-rose-600",
+  },
+  {
+    title: "Social",
+    href: "/apps/social-media",
+    icon: Megaphone,
+    gradient: "from-pink-500 to-fuchsia-600",
+  },
 ]
 
 type WidgetConfig = {
@@ -95,7 +188,12 @@ function AppTile({ app }: { app: App }) {
 
   if (app.external) {
     return (
-      <a href={app.href} target="_blank" rel="noreferrer" className="flex flex-col items-center">
+      <a
+        href={app.href}
+        target="_blank"
+        rel="noreferrer"
+        className="flex flex-col items-center"
+      >
         {inner}
       </a>
     )
@@ -109,7 +207,10 @@ function AppTile({ app }: { app: App }) {
 
 function Soon() {
   return (
-    <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
+    <Badge
+      variant="outline"
+      className="text-[10px] font-normal text-muted-foreground"
+    >
       soon
     </Badge>
   )
@@ -136,8 +237,12 @@ export function PhoneHome() {
       className: "col-span-2",
       content: (
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <p className="text-sm font-medium text-foreground/85">3 new updates</p>
-          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">Mentions, decisions and group activity land here.</p>
+          <p className="text-sm font-medium text-foreground/85">
+            3 new updates
+          </p>
+          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">
+            Mentions, decisions and group activity land here.
+          </p>
         </div>
       ),
     },
@@ -150,10 +255,19 @@ export function PhoneHome() {
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
             <svg className="size-16 -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15" fill="none" stroke="var(--muted)" strokeWidth="3.5" />
+              <circle
+                cx="18"
+                cy="18"
+                r="15"
+                fill="none"
+                stroke="var(--muted)"
+                strokeWidth="3.5"
+              />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-lg font-semibold text-muted-foreground">—</span>
+              <span className="text-lg font-semibold text-muted-foreground">
+                —
+              </span>
             </div>
           </div>
           <div className="space-y-1.5">
@@ -172,9 +286,15 @@ export function PhoneHome() {
       gradient: "from-teal-500 to-cyan-600",
       content: (
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <p className="text-sm font-medium text-foreground/85">No groups yet</p>
-          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">Status per group: decisions, weaves, unread.</p>
-          <div className="mt-2"><Soon /></div>
+          <p className="text-sm font-medium text-foreground/85">
+            No groups yet
+          </p>
+          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">
+            Status per group: decisions, weaves, unread.
+          </p>
+          <div className="mt-2">
+            <Soon />
+          </div>
         </div>
       ),
     },
@@ -187,7 +307,9 @@ export function PhoneHome() {
       content: (
         <div className="flex flex-col items-center justify-center py-4 text-center">
           <p className="text-sm font-medium text-foreground/85">1 open vote</p>
-          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">Choices your groups are asking you to weigh in on.</p>
+          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">
+            Choices your groups are asking you to weigh in on.
+          </p>
         </div>
       ),
     },
@@ -198,9 +320,15 @@ export function PhoneHome() {
       gradient: "from-violet-500 to-purple-600",
       content: (
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <p className="text-sm font-medium text-foreground/85">No pending weaves</p>
-          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">Needs and offers you're helping connect.</p>
-          <div className="mt-2"><Soon /></div>
+          <p className="text-sm font-medium text-foreground/85">
+            No pending weaves
+          </p>
+          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">
+            Needs and offers you&apos;re helping connect.
+          </p>
+          <div className="mt-2">
+            <Soon />
+          </div>
         </div>
       ),
     },
@@ -211,9 +339,15 @@ export function PhoneHome() {
       gradient: "from-rose-500 to-red-600",
       content: (
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <p className="text-sm font-medium text-foreground/85">No open needs</p>
-          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">What your community is asking for.</p>
-          <div className="mt-2"><Soon /></div>
+          <p className="text-sm font-medium text-foreground/85">
+            No open needs
+          </p>
+          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">
+            What your community is asking for.
+          </p>
+          <div className="mt-2">
+            <Soon />
+          </div>
         </div>
       ),
     },
@@ -224,9 +358,15 @@ export function PhoneHome() {
       gradient: "from-amber-500 to-orange-600",
       content: (
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <p className="text-sm font-medium text-foreground/85">No offers yet</p>
-          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">What you and your groups can give.</p>
-          <div className="mt-2"><Soon /></div>
+          <p className="text-sm font-medium text-foreground/85">
+            No offers yet
+          </p>
+          <p className="mt-1 max-w-[24ch] text-xs leading-relaxed text-muted-foreground">
+            What you and your groups can give.
+          </p>
+          <div className="mt-2">
+            <Soon />
+          </div>
         </div>
       ),
     },
@@ -242,8 +382,12 @@ export function PhoneHome() {
     setMinimizedWidgets(minimizedWidgets.filter((w) => w !== id))
   }
 
-  const activeWidgets = initialWidgets.filter((w) => !minimizedWidgets.includes(w.id))
-  const hiddenWidgets = initialWidgets.filter((w) => minimizedWidgets.includes(w.id))
+  const activeWidgets = initialWidgets.filter(
+    (w) => !minimizedWidgets.includes(w.id)
+  )
+  const hiddenWidgets = initialWidgets.filter((w) =>
+    minimizedWidgets.includes(w.id)
+  )
 
   return (
     <div className="flex gap-6 items-start relative">
@@ -251,11 +395,17 @@ export function PhoneHome() {
       <div className="flex-1 space-y-8 min-w-0">
         {/* Under-development notice */}
         <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-900 dark:text-amber-200">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+          <TriangleAlert
+            className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+            strokeWidth={2}
+          />
           <p className="text-xs leading-relaxed">
-            <span className="font-semibold">irl.coop is under active development.</span>{" "}
-            Features are subject to change, the platform is still experimental, and data loss is
-            likely. Please don&apos;t rely on it for anything you can&apos;t afford to lose.
+            <span className="font-semibold">
+              irl.coop is under active development.
+            </span>{" "}
+            Features are subject to change, the platform is still experimental,
+            and data loss is likely. Please don&apos;t rely on it for anything
+            you can&apos;t afford to lose.
           </p>
         </div>
 
@@ -286,11 +436,19 @@ export function PhoneHome() {
               {activeWidgets.map((widget) => {
                 const Icon = widget.icon
                 return (
-                  <div key={widget.id} className={`rounded-3xl border bg-card p-4 shadow-sm relative group ${widget.className ?? ""}`}>
+                  <div
+                    key={widget.id}
+                    className={`rounded-3xl border bg-card p-4 shadow-sm relative group ${widget.className ?? ""}`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className={`flex size-6 items-center justify-center rounded-lg bg-gradient-to-br ${widget.gradient}`}>
-                          <Icon className="size-3.5 text-white" strokeWidth={2} />
+                        <div
+                          className={`flex size-6 items-center justify-center rounded-lg bg-gradient-to-br ${widget.gradient}`}
+                        >
+                          <Icon
+                            className="size-3.5 text-white"
+                            strokeWidth={2}
+                          />
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {widget.title}
@@ -328,7 +486,9 @@ export function PhoneHome() {
                 className="relative group p-2 rounded-2xl hover:bg-muted transition-colors"
                 title={`Restore ${widget.title}`}
               >
-                <div className={`flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${widget.gradient} shadow-sm`}>
+                <div
+                  className={`flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${widget.gradient} shadow-sm`}
+                >
                   <Icon className="size-5 text-white" strokeWidth={1.75} />
                 </div>
                 {widget.count !== undefined && widget.count > 0 && (

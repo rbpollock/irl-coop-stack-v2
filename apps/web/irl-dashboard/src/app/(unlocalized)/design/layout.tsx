@@ -1,4 +1,5 @@
 import Link from "next/link"
+
 import type { ReactNode } from "react"
 
 export default function DesignLayout({ children }: { children: ReactNode }) {
@@ -16,18 +17,18 @@ export default function DesignLayout({ children }: { children: ReactNode }) {
             irl.coop
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="/#apps" className="hover:text-foreground">
+            <Link href="/#apps" className="hover:text-foreground">
               Apps
-            </a>
-            <a href="/#identity" className="hover:text-foreground">
+            </Link>
+            <Link href="/#identity" className="hover:text-foreground">
               One identity
-            </a>
-            <a href="/#network" className="hover:text-foreground">
+            </Link>
+            <Link href="/#network" className="hover:text-foreground">
               Groups
-            </a>
-            <a href="/#architecture" className="hover:text-foreground">
+            </Link>
+            <Link href="/#architecture" className="hover:text-foreground">
               Architecture
-            </a>
+            </Link>
             <Link href="/design" className="font-semibold text-foreground">
               Design docs
             </Link>

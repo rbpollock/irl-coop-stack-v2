@@ -13,8 +13,8 @@ import {
   SunMoon,
 } from "lucide-react"
 
-import type { CSSProperties } from "react"
 import type { LocaleType, ModeType, ThemeType } from "@/types"
+import type { CSSProperties } from "react"
 
 import { i18n } from "@/configs/i18n"
 import { radii, themes } from "@/configs/themes"
@@ -65,7 +65,9 @@ export function AppearanceSettings() {
     <Card>
       <CardHeader>
         <CardTitle>Appearance</CardTitle>
-        <CardDescription>Pick a style and color for the dashboard.</CardDescription>
+        <CardDescription>
+          Pick a style and color for the dashboard.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-1.5">
@@ -80,7 +82,9 @@ export function AppearanceSettings() {
                   style={
                     {
                       "--primary":
-                        value.activeColor[settings.mode === "dark" ? "dark" : "light"],
+                        value.activeColor[
+                          settings.mode === "dark" ? "dark" : "light"
+                        ],
                       "--primary-foreground": value.activeColor["foreground"],
                     } as CSSProperties
                   }
@@ -141,15 +145,21 @@ export function AppearanceSettings() {
           <p className="text-sm">Layout</p>
           <div className="grid grid-cols-2 gap-2">
             <Button
-              variant={settings.layout === "horizontal" ? "secondary" : "outline"}
-              onClick={() => updateSettings({ ...settings, layout: "horizontal" })}
+              variant={
+                settings.layout === "horizontal" ? "secondary" : "outline"
+              }
+              onClick={() =>
+                updateSettings({ ...settings, layout: "horizontal" })
+              }
             >
               <AlignStartHorizontal className="shrink-0 h-4 w-4 me-2" />
               Horizontal
             </Button>
             <Button
               variant={settings.layout === "vertical" ? "secondary" : "outline"}
-              onClick={() => updateSettings({ ...settings, layout: "vertical" })}
+              onClick={() =>
+                updateSettings({ ...settings, layout: "vertical" })
+              }
             >
               <AlignStartVertical className="shrink-0 h-4 w-4 me-2" />
               Vertical

@@ -1,16 +1,21 @@
 "use client"
 
-import Link from "next/link"
-import { useSession } from "next-auth/react"
 import { useState } from "react"
-import { ArrowUpRight, Loader2, Search } from "lucide-react"
+import Link from "next/link"
 import GitHubSlugger from "github-slugger"
+import { useSession } from "next-auth/react"
+import { ArrowUpRight, Loader2, Search } from "lucide-react"
 
 const slugger = new GitHubSlugger()
 
-const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
-const DOCS_AREA_ID = process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ?? "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
-const GROUPS_AREA_ID = process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ?? "ff498932-aae5-449a-a4db-13432cdf7e2b"
+const COOP_API_URL =
+  process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+const DOCS_AREA_ID =
+  process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ??
+  "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
+const GROUPS_AREA_ID =
+  process.env.NEXT_PUBLIC_RAG_GROUPS_AREA_ID ??
+  "ff498932-aae5-449a-a4db-13432cdf7e2b"
 
 type Context = {
   document_id: string
@@ -20,7 +25,10 @@ type Context = {
   source: string
 }
 
-function resolveLink(documentName: string | null, heading: string | null): { href: string; label: string } | null {
+function resolveLink(
+  documentName: string | null,
+  heading: string | null
+): { href: string; label: string } | null {
   if (!documentName) return null
   if (documentName.startsWith("group-")) {
     const slug = documentName.slice("group-".length).replace(/\.md$/, "")
@@ -28,7 +36,9 @@ function resolveLink(documentName: string | null, heading: string | null): { hre
   }
   const slug = documentName.replace(/\.md$/, "")
   // Anchor to the exact section shown when the card carries a heading.
-  const href = heading ? `/design/${slug}#${slugger.slug(heading)}` : `/design/${slug}`
+  const href = heading
+    ? `/design/${slug}#${slugger.slug(heading)}`
+    : `/design/${slug}`
   return { href, label: heading ? "Jump to section" : "Read more" }
 }
 
@@ -36,8 +46,12 @@ function ResultCard({ context: c }: { context: Context }) {
   const link = resolveLink(c.document_name, c.heading)
   const inner = (
     <>
-      {c.heading && <p className="mb-1 text-xs font-semibold text-primary">{c.heading}</p>}
-      <p className="text-sm leading-relaxed text-foreground/85">{c.text.slice(0, 300)}</p>
+      {c.heading && (
+        <p className="mb-1 text-xs font-semibold text-primary">{c.heading}</p>
+      )}
+      <p className="text-sm leading-relaxed text-foreground/85">
+        {c.text.slice(0, 300)}
+      </p>
       <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
         {link ? (
           <>
@@ -62,9 +76,15 @@ function ResultCard({ context: c }: { context: Context }) {
   )
 }
 
-async function queryArea(token: string | undefined, areaId: string, question: string): Promise<Context[]> {
+async function queryArea(
+  token: string | undefined,
+  areaId: string,
+  question: string
+): Promise<Context[]> {
   const doFetch = async (withToken: boolean): Promise<Context[]> => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    }
     if (withToken && token) headers.Authorization = `Bearer ${token}`
     const res = await fetch(`${COOP_API_URL}/mcp`, {
       method: "POST",
@@ -73,7 +93,10 @@ async function queryArea(token: string | undefined, areaId: string, question: st
         jsonrpc: "2.0",
         id: 1,
         method: "tools/call",
-        params: { name: "rag.retrieve_area_contexts", arguments: { area_id: areaId, question, rerank: true } },
+        params: {
+          name: "rag.retrieve_area_contexts",
+          arguments: { area_id: areaId, question, rerank: true },
+        },
       }),
     })
     // A stale/expired session token is rejected (401) — fall back to the
@@ -91,7 +114,13 @@ async function queryArea(token: string | undefined, areaId: string, question: st
   return doFetch(Boolean(token))
 }
 
-export function DocsSearch({ className = "", prioritizeGroups = false }: { className?: string; prioritizeGroups?: boolean }) {
+export function DocsSearch({
+  className = "",
+  prioritizeGroups = false,
+}: {
+  className?: string
+  prioritizeGroups?: boolean
+}) {
   const { data: session } = useSession()
   const token = session?.accessToken as string | undefined
   const [query, setQuery] = useState("")
@@ -144,10 +173,16 @@ export function DocsSearch({ className = "", prioritizeGroups = false }: { class
         </div>
       )}
 
-      {error && <p className="mt-4 text-center text-sm text-muted-foreground">{error}</p>}
+      {error && (
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          {error}
+        </p>
+      )}
 
       {searched && !loading && contexts.length === 0 && !error && (
-        <p className="mt-4 text-center text-sm text-muted-foreground">No matching passages.</p>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          No matching passages.
+        </p>
       )}
 
       {!loading && contexts.length > 0 && (
@@ -155,20 +190,28 @@ export function DocsSearch({ className = "", prioritizeGroups = false }: { class
           {prioritizeGroups ? (
             <>
               {contexts.some((c) => c.document_name?.startsWith("group-")) && (
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Groups</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Groups
+                </h3>
               )}
               <div className="space-y-3">
-                {contexts.filter((c) => c.document_name?.startsWith("group-")).map((c, i) => (
-                  <ResultCard key={`g-${i}`} context={c} />
-                ))}
+                {contexts
+                  .filter((c) => c.document_name?.startsWith("group-"))
+                  .map((c, i) => (
+                    <ResultCard key={`g-${i}`} context={c} />
+                  ))}
               </div>
               {contexts.some((c) => !c.document_name?.startsWith("group-")) && (
-                <h3 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Docs</h3>
+                <h3 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  Docs
+                </h3>
               )}
               <div className="space-y-3">
-                {contexts.filter((c) => !c.document_name?.startsWith("group-")).map((c, i) => (
-                  <ResultCard key={`d-${i}`} context={c} />
-                ))}
+                {contexts
+                  .filter((c) => !c.document_name?.startsWith("group-"))
+                  .map((c, i) => (
+                    <ResultCard key={`d-${i}`} context={c} />
+                  ))}
               </div>
             </>
           ) : (
@@ -184,7 +227,10 @@ export function DocsSearch({ className = "", prioritizeGroups = false }: { class
       {!token && (
         <p className="mt-4 text-center text-xs text-muted-foreground">
           Just browsing —{" "}
-          <Link href="/sign-in" className="font-semibold text-primary hover:underline">
+          <Link
+            href="/sign-in"
+            className="font-semibold text-primary hover:underline"
+          >
             sign in
           </Link>{" "}
           to ask follow-ups and see your group&apos;s knowledge.

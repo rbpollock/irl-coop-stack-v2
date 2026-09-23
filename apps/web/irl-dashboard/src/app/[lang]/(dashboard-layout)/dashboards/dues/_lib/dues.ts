@@ -52,7 +52,12 @@ export type DuesPolicyView = {
     created_at: string
   } | null
   drafts: Array<{ version: number; created_at: string }>
-  history: Array<{ version: number; status: string; decided_by: string | null; created_at: string }>
+  history: Array<{
+    version: number
+    status: string
+    decided_by: string | null
+    created_at: string
+  }>
 }
 
 export type DuesSummary = {
@@ -63,7 +68,11 @@ export type DuesSummary = {
   note: string
 }
 
-async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+async function api<T>(
+  path: string,
+  token: string,
+  init?: RequestInit
+): Promise<T> {
   const res = await fetch(`${COOP_API_URL}${path}`, {
     ...init,
     headers: {
@@ -109,7 +118,11 @@ export function getDuesSummary(token: string, groupId: string) {
 }
 
 /** Draft a policy. Validated server-side; the response names the violation if refused. */
-export function draftDuesPolicy(token: string, groupId: string, policy: unknown) {
+export function draftDuesPolicy(
+  token: string,
+  groupId: string,
+  policy: unknown
+) {
   return api<{ version: number; status: string; next: string }>(
     `/api/v1/groups/${groupId}/dues/policy`,
     token,

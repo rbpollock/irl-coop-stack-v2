@@ -1,7 +1,6 @@
 "use client"
 
-const CINNY_URL =
-  process.env.NEXT_PUBLIC_CINNY_URL ?? "https://cinny.irl.coop"
+const CINNY_URL = process.env.NEXT_PUBLIC_CINNY_URL ?? "https://cinny.irl.coop"
 
 // The coop's video/chat: the Cinny Matrix client (lighter + mobile-responsive,
 // with video calling) iframed from the sidenav. Auth rides the homeserver's

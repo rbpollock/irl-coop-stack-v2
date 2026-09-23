@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState } from "react"
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +12,8 @@ import {
   Sprout,
   Users,
 } from "lucide-react"
+
+import type { ReactNode } from "react"
 
 // Mocked onboarding flow — the 8-step prototype (docs/design/onboarding-prototype.html)
 // as a real dashboard route. All state is in-memory; nothing calls coop-api or deploys
@@ -30,7 +32,9 @@ const ICONS = {
 
 type IconKey = keyof typeof ICONS
 
-const serif = { fontFamily: '"Cormorant Garamond", "Crimson Pro", Georgia, serif' }
+const serif = {
+  fontFamily: '"Cormorant Garamond", "Crimson Pro", Georgia, serif',
+}
 
 const VERTICALS: {
   icon: IconKey
@@ -68,7 +72,11 @@ const SHAPES: { icon: IconKey; name: string; desc: string }[] = [
   { icon: "seed", name: "Circle", desc: "A gathering with rhythm and roles." },
   { icon: "people", name: "Co-op", desc: "Shared ownership, shared work." },
   { icon: "design", name: "Working group", desc: "A team on a mission." },
-  { icon: "repair", name: "Mutual-aid fund", desc: "Pool money for hard times." },
+  {
+    icon: "repair",
+    name: "Mutual-aid fund",
+    desc: "Pool money for hard times.",
+  },
 ]
 
 const STEPS: {
@@ -87,10 +95,10 @@ const STEPS: {
     ),
     lead: (
       <>
-        irl.coop is for people who want to build something together — a circle, a
-        co-op, a fund, a team — and keep it theirs. Your rules, your money, your
-        people, nobody in the middle. And a library of blueprints, so you don&apos;t
-        have to start from scratch.
+        irl.coop is for people who want to build something together — a circle,
+        a co-op, a fund, a team — and keep it theirs. Your rules, your money,
+        your people, nobody in the middle. And a library of blueprints, so you
+        don&apos;t have to start from scratch.
       </>
     ),
     tagline: "One account. Then a world.",
@@ -104,9 +112,9 @@ const STEPS: {
     ),
     lead: (
       <>
-        Before you join anyone else, you&apos;re already a group of your own — one
-        seat, one voice, fully yours. Every group you join or start after this is
-        just another connection to it.
+        Before you join anyone else, you&apos;re already a group of your own —
+        one seat, one voice, fully yours. Every group you join or start after
+        this is just another connection to it.
       </>
     ),
     tagline: "",
@@ -121,11 +129,11 @@ const STEPS: {
     ),
     lead: (
       <>
-        You&apos;re a point. Every group is a line between points. And a group can
-        live inside another group — a working group inside a co-op, a co-op inside
-        a bigger network. That&apos;s what{" "}
-        <strong className="font-semibold text-[#4C1D95]">composable</strong> means:
-        what you build can join what others build, and it stays yours.
+        You&apos;re a point. Every group is a line between points. And a group
+        can live inside another group — a working group inside a co-op, a co-op
+        inside a bigger network. That&apos;s what{" "}
+        <strong className="font-semibold text-[#4C1D95]">composable</strong>{" "}
+        means: what you build can join what others build, and it stays yours.
       </>
     ),
     tagline: "",
@@ -134,7 +142,8 @@ const STEPS: {
     eyebrow: "What you'll build",
     title: (
       <>
-        The hard things, made <em className="italic text-[#7C3AED]">startable.</em>
+        The hard things, made{" "}
+        <em className="italic text-[#7C3AED]">startable.</em>
       </>
     ),
     lead: (
@@ -142,8 +151,8 @@ const STEPS: {
         Some of the most important work — running a room where everyone&apos;s
         heard, mending a rift, shaping a group that doesn&apos;t fall apart,
         noticing what&apos;s going on under the surface — is exactly the work
-        that&apos;s hardest to coordinate and hardest to fund. Here, it&apos;s where
-        we start.
+        that&apos;s hardest to coordinate and hardest to fund. Here, it&apos;s
+        where we start.
       </>
     ),
     tagline: "",
@@ -152,7 +161,8 @@ const STEPS: {
     eyebrow: "Your first shape",
     title: (
       <>
-        Start from a <em className="italic text-[#7C3AED]">seed,</em> not a cage.
+        Start from a <em className="italic text-[#7C3AED]">seed,</em> not a
+        cage.
       </>
     ),
     lead: (
@@ -167,8 +177,8 @@ const STEPS: {
     eyebrow: "Three warm questions",
     title: (
       <>
-        Asked early, because it&apos;s <em className="italic text-[#7C3AED]">kinder</em>{" "}
-        early.
+        Asked early, because it&apos;s{" "}
+        <em className="italic text-[#7C3AED]">kinder</em> early.
       </>
     ),
     lead: (
@@ -189,9 +199,10 @@ const STEPS: {
     ),
     lead: (
       <>
-        What&apos;s yours stays yours — your group, your money, your people. If an
-        app or a person helps out, they&apos;re borrowing a narrow permission,
-        never owning anything, and you can take it back whenever you like.
+        What&apos;s yours stays yours — your group, your money, your people. If
+        an app or a person helps out, they&apos;re borrowing a narrow
+        permission, never owning anything, and you can take it back whenever you
+        like.
       </>
     ),
     tagline: "",
@@ -240,22 +251,50 @@ function Diagram() {
         <line x1="300" y1="130" x2="420" y2="200" />
       </g>
       <g fontFamily="Inter,sans-serif" fontSize="13" fill="#4C1D95">
-        <circle cx="150" cy="60" r="26" fill="#EDE9FE" stroke="#7C3AED" strokeWidth="2" />
+        <circle
+          cx="150"
+          cy="60"
+          r="26"
+          fill="#EDE9FE"
+          stroke="#7C3AED"
+          strokeWidth="2"
+        />
         <text x="150" y="65" textAnchor="middle" fontSize="11">
           co-op
         </text>
-        <circle cx="450" cy="60" r="26" fill="#DCFCE7" stroke="#16A34A" strokeWidth="2" />
+        <circle
+          cx="450"
+          cy="60"
+          r="26"
+          fill="#DCFCE7"
+          stroke="#16A34A"
+          strokeWidth="2"
+        />
         <text x="450" y="65" textAnchor="middle" fontSize="11">
           circle
         </text>
-        <circle cx="420" cy="200" r="34" fill="#fff" stroke="#A78BFA" strokeWidth="2" />
+        <circle
+          cx="420"
+          cy="200"
+          r="34"
+          fill="#fff"
+          stroke="#A78BFA"
+          strokeWidth="2"
+        />
         <text x="420" y="196" textAnchor="middle" fontSize="11">
           working
         </text>
         <text x="420" y="210" textAnchor="middle" fontSize="11">
           group
         </text>
-        <circle cx="420" cy="200" r="16" fill="#EDE9FE" stroke="#7C3AED" strokeWidth="1.5" />
+        <circle
+          cx="420"
+          cy="200"
+          r="16"
+          fill="#EDE9FE"
+          stroke="#7C3AED"
+          strokeWidth="1.5"
+        />
       </g>
       <g>
         <circle cx="300" cy="130" r="30" fill="#7C3AED" />
@@ -336,8 +375,10 @@ export default function OnboardingPage() {
             <div className="mt-4 flex items-start gap-2 text-[13px] text-[#64748B]">
               <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-[#A78BFA]" />
               <span>
-                <em>This quietly sets up your own account underneath. You&apos;ll never
-                have to think about keys or wallets.</em>
+                <em>
+                  This quietly sets up your own account underneath. You&apos;ll
+                  never have to think about keys or wallets.
+                </em>
               </span>
             </div>
           </div>
@@ -365,10 +406,15 @@ export default function OnboardingPage() {
                     <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#EDE9FE] text-[#7C3AED]">
                       <Icon className="h-5 w-5" />
                     </span>
-                    <h3 className="mb-1.5 text-[20px] font-semibold text-[#2E1065]" style={serif}>
+                    <h3
+                      className="mb-1.5 text-[20px] font-semibold text-[#2E1065]"
+                      style={serif}
+                    >
                       {v.name}
                     </h3>
-                    <p className="text-[13.5px] leading-snug text-[#475569]">{v.desc}</p>
+                    <p className="text-[13.5px] leading-snug text-[#475569]">
+                      {v.desc}
+                    </p>
                     <span className="mt-2.5 block text-[12.5px] font-semibold text-[#16A34A]">
                       {v.fund}
                     </span>
@@ -379,8 +425,10 @@ export default function OnboardingPage() {
             <div className="mt-4 flex items-start gap-2 text-[13px] text-[#64748B]">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#A78BFA]" />
               <span>
-                <em>Healing and cooperation are different muscles — both built by practice,
-                not reading.</em>
+                <em>
+                  Healing and cooperation are different muscles — both built by
+                  practice, not reading.
+                </em>
               </span>
             </div>
           </div>
@@ -406,8 +454,12 @@ export default function OnboardingPage() {
                     <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#EDE9FE] text-[#7C3AED]">
                       <Icon className="h-5 w-5" />
                     </span>
-                    <h3 className="mb-1.5 text-base font-semibold text-[#2E1065]">{sh.name}</h3>
-                    <p className="text-[13.5px] leading-snug text-[#475569]">{sh.desc}</p>
+                    <h3 className="mb-1.5 text-base font-semibold text-[#2E1065]">
+                      {sh.name}
+                    </h3>
+                    <p className="text-[13.5px] leading-snug text-[#475569]">
+                      {sh.desc}
+                    </p>
                   </button>
                 )
               })}
@@ -424,7 +476,8 @@ export default function OnboardingPage() {
               onChange={(e) => setSlug(e.target.value)}
             />
             <p className="mt-1.5 text-[12.5px] text-[#64748B]">
-              One name drives your group&apos;s home, its inbox, and its shared spaces.
+              One name drives your group&apos;s home, its inbox, and its shared
+              spaces.
             </p>
           </div>
         )
@@ -452,9 +505,9 @@ export default function OnboardingPage() {
               onChange={(e) => setRecovery(e.target.value)}
             />
             <p className="mt-1.5 max-w-[460px] text-[12.5px] text-[#64748B]">
-              You can skip this — we&apos;ll ask again later, gently. We only ask
-              because every group should have a will, and it&apos;s kinder to name
-              someone before you need to.
+              You can skip this — we&apos;ll ask again later, gently. We only
+              ask because every group should have a will, and it&apos;s kinder
+              to name someone before you need to.
             </p>
             <label htmlFor="ob-fund" className={labelCls}>
               What do you want to fund first?{" "}
@@ -478,15 +531,17 @@ export default function OnboardingPage() {
               </h3>
               <p className="text-[13.5px] leading-snug text-[#475569]">
                 Letting an app post a message or make a scheduled payment means
-                lending it one narrow permission — scoped, revocable, and yours to
-                take back anytime.
+                lending it one narrow permission — scoped, revocable, and yours
+                to take back anytime.
               </p>
             </div>
             <div className="mt-4 flex items-start gap-2 text-[13px] text-[#64748B]">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#A78BFA]" />
               <span>
-                <em>Agreeing records a cryptographic receipt of your consent — on the
-                record, never a secret.</em>
+                <em>
+                  Agreeing records a cryptographic receipt of your consent — on
+                  the record, never a secret.
+                </em>
               </span>
             </div>
           </div>
@@ -513,8 +568,12 @@ export default function OnboardingPage() {
                 key={c.h}
                 className="rounded-2xl border border-[#DDD6FE] bg-white p-5"
               >
-                <h3 className="mb-1.5 text-base font-semibold text-[#2E1065]">{c.h}</h3>
-                <p className="text-[13.5px] leading-snug text-[#475569]">{c.p}</p>
+                <h3 className="mb-1.5 text-base font-semibold text-[#2E1065]">
+                  {c.h}
+                </h3>
+                <p className="text-[13.5px] leading-snug text-[#475569]">
+                  {c.p}
+                </p>
               </div>
             ))}
           </div>
@@ -596,7 +655,9 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={() =>
-                isLast ? alert("Demo — in the real flow this sends invitations.") : go(step + 1)
+                isLast
+                  ? alert("Demo — in the real flow this sends invitations.")
+                  : go(step + 1)
               }
               className={
                 isLast

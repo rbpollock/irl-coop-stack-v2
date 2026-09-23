@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Phone, RefreshCw, Radio, Settings2 } from "lucide-react"
+import { Phone, Radio, RefreshCw, Settings2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { MemberAvatar } from "@/components/member-avatar"
-import { Skeleton } from "@/components/ui/skeleton"
+import type { SipConfig } from "./_lib/telephony"
+
 import { useHasGrant } from "@/hooks/use-has-grant"
-
-import { getSipConfig, type SipConfig } from "./_lib/telephony"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { MemberAvatar } from "@/components/member-avatar"
+import { getSipConfig } from "./_lib/telephony"
 
 // Platform admins (telephony.platform.admin) get a jump to the FusionPBX
 // admin console. The grant is the same claim the pbx oauth2-proxy gate checks,

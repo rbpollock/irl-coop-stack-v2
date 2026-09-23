@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { UserPen } from "lucide-react"
 
+import type { Profile } from "../_lib/profile"
+
 import { ensureLocalizedPathname } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -8,8 +10,6 @@ import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { buttonVariants } from "@/components/ui/button"
 import { ChangeAvatar } from "@/components/change-avatar"
 import { MemberAvatar } from "@/components/member-avatar"
-
-import type { Profile } from "../_lib/profile"
 
 function shortAddress(a: string | null | undefined) {
   if (!a) return null

@@ -5,16 +5,26 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import {
-  Megaphone,
-  Plus,
-  RefreshCw,
-  Send,
-  Vote,
-} from "lucide-react"
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
+import { Megaphone, Plus, RefreshCw, Send, Vote } from "lucide-react"
+
+import type { Group } from "../groups/_lib/groups"
+import type { SocialSummary } from "./_lib/social"
 
 import { ensureLocalizedPathname } from "@/lib/i18n"
-import { Button } from "@/components/ui/button"
+
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -31,25 +41,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
-
-import { listGroups, scopeResource, type Group } from "../groups/_lib/groups"
-import {
-  getSocialSummary,
-  proposeConnectPostiz,
-  type SocialSummary,
-} from "./_lib/social"
+import { listGroups, scopeResource } from "../groups/_lib/groups"
+import { getSocialSummary, proposeConnectPostiz } from "./_lib/social"
 
 const STATE_COLORS: Record<string, string> = {
   POSTED: "var(--accent)",
@@ -198,7 +191,9 @@ export default function SocialMediaPage() {
               <CardContent className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded border p-3">
-                    <div className="text-2xl font-semibold">{s.total_posts}</div>
+                    <div className="text-2xl font-semibold">
+                      {s.total_posts}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       Posts (30d)
                     </div>
@@ -207,7 +202,9 @@ export default function SocialMediaPage() {
                     <div className="text-2xl font-semibold">
                       {s.integrations}
                     </div>
-                    <div className="text-xs text-muted-foreground">Channels</div>
+                    <div className="text-xs text-muted-foreground">
+                      Channels
+                    </div>
                   </div>
                   <div className="rounded border p-3">
                     <div className="text-2xl font-semibold">{s.members}</div>
@@ -315,8 +312,9 @@ export default function SocialMediaPage() {
           <DialogHeader>
             <DialogTitle>Connect Postiz to a group</DialogTitle>
             <DialogDescription>
-              Provision a Postiz workspace (org + synced membership) for a group.
-              Owners connect directly; others propose it for a group vote.
+              Provision a Postiz workspace (org + synced membership) for a
+              group. Owners connect directly; others propose it for a group
+              vote.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-80 space-y-2 overflow-auto">
@@ -337,7 +335,9 @@ export default function SocialMediaPage() {
                         {g.name}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {isOwner ? "You are an owner" : "Member — propose a vote"}
+                        {isOwner
+                          ? "You are an owner"
+                          : "Member — propose a vote"}
                       </div>
                     </div>
                     {isOwner ? (

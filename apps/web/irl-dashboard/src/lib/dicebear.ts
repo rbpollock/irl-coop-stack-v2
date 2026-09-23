@@ -1,4 +1,5 @@
 import { Avatar, Style } from "@dicebear/core"
+
 import glyphs from "@dicebear/styles/glyphs.json"
 
 // Self-hosted DiceBear "glyphs" style (no api.dicebear.com call — the seed

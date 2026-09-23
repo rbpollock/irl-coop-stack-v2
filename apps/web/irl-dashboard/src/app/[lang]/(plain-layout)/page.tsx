@@ -1,8 +1,8 @@
 import Link from "next/link"
 import {
   ArrowRight,
-  CalendarDays,
   Calculator,
+  CalendarDays,
   ClipboardList,
   Database,
   FileText,
@@ -23,11 +23,13 @@ import {
   Wallet,
 } from "lucide-react"
 
-import { Logo } from "@/components/layout/logo"
 import { getCategories } from "@/lib/design-docs"
 
+import { Logo } from "@/components/layout/logo"
+
 const PILL = {
-  light: "inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-neutral-950 transition hover:bg-white/90",
+  light:
+    "inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-neutral-950 transition hover:bg-white/90",
   dark: "inline-flex items-center justify-center gap-2 rounded-full bg-neutral-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800",
   ghost:
     "inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10",
@@ -485,9 +487,9 @@ export default async function LandingPage({
             <em className="font-serif italic">cooperation.</em>
           </h1>
           <p className="max-w-xl text-base text-white/70 md:text-lg">
-            Share tools, time, skills and space. The apps your community
-            already needs — project management, visual databases, websites,
-            chat — under one identity you own. No platform in the middle.
+            Share tools, time, skills and space. The apps your community already
+            needs — project management, visual databases, websites, chat — under
+            one identity you own. No platform in the middle.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href={signIn} className={PILL.light}>
@@ -514,8 +516,8 @@ export default async function LandingPage({
               <p className="mt-2 text-sm text-muted-foreground">
                 The group is the primitive: a Safe smart contract members hold
                 together — seats, roles, a private treasury, and nine shared
-                pathways that compose into every shape, from a tool library to
-                a worker union. With diagrams, schemas, and a glossary.
+                pathways that compose into every shape, from a tool library to a
+                worker union. With diagrams, schemas, and a glossary.
               </p>
             </div>
             <Link
@@ -592,7 +594,8 @@ export default async function LandingPage({
               The toolbox, in full
             </p>
             <h2 className="text-4xl font-normal leading-tight tracking-tight md:text-5xl">
-              Every app, <em className="font-serif italic">inside and across.</em>
+              Every app,{" "}
+              <em className="font-serif italic">inside and across.</em>
             </h2>
             <p className="mt-4 text-muted-foreground">
               Every app is scoped to your group first — then composes across
@@ -604,15 +607,56 @@ export default async function LandingPage({
           {/* composition diagram */}
           <div className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-8">
             <div className="flex flex-col items-center gap-1.5">
-              <svg viewBox="0 0 96 96" className="h-20 w-20" aria-hidden="true" fill="none">
-                <circle cx="48" cy="48" r="38" className="stroke-neutral-400" strokeWidth="2" />
-                <rect x="36" y="36" width="8" height="8" rx="2" className="fill-neutral-500" />
-                <rect x="52" y="36" width="8" height="8" rx="2" className="fill-neutral-500" />
-                <rect x="36" y="52" width="8" height="8" rx="2" className="fill-neutral-500" />
-                <rect x="52" y="52" width="8" height="8" rx="2" className="fill-neutral-500" />
+              <svg
+                viewBox="0 0 96 96"
+                className="h-20 w-20"
+                aria-hidden="true"
+                fill="none"
+              >
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="38"
+                  className="stroke-neutral-400"
+                  strokeWidth="2"
+                />
+                <rect
+                  x="36"
+                  y="36"
+                  width="8"
+                  height="8"
+                  rx="2"
+                  className="fill-neutral-500"
+                />
+                <rect
+                  x="52"
+                  y="36"
+                  width="8"
+                  height="8"
+                  rx="2"
+                  className="fill-neutral-500"
+                />
+                <rect
+                  x="36"
+                  y="52"
+                  width="8"
+                  height="8"
+                  rx="2"
+                  className="fill-neutral-500"
+                />
+                <rect
+                  x="52"
+                  y="52"
+                  width="8"
+                  height="8"
+                  rx="2"
+                  className="fill-neutral-500"
+                />
               </svg>
               <span className="text-sm font-medium">One group</span>
-              <span className="text-xs text-muted-foreground">and its apps</span>
+              <span className="text-xs text-muted-foreground">
+                and its apps
+              </span>
             </div>
             <svg
               viewBox="0 0 40 24"
@@ -620,18 +664,61 @@ export default async function LandingPage({
               aria-hidden="true"
               fill="none"
             >
-              <path d="M4 12 H32" className="stroke-neutral-400" strokeWidth="2" strokeDasharray="3 3" />
-              <path d="M28 6 L36 12 L28 18" className="stroke-neutral-400" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M4 12 H32"
+                className="stroke-neutral-400"
+                strokeWidth="2"
+                strokeDasharray="3 3"
+              />
+              <path
+                d="M28 6 L36 12 L28 18"
+                className="stroke-neutral-400"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             <div className="flex flex-col items-center gap-1.5">
-              <svg viewBox="0 0 96 96" className="h-20 w-20" aria-hidden="true" fill="none">
-                <circle cx="48" cy="48" r="38" className="stroke-neutral-400" strokeWidth="2" strokeDasharray="4 3" />
-                <circle cx="30" cy="40" r="12" className="stroke-neutral-400" strokeWidth="1.75" />
-                <circle cx="66" cy="40" r="12" className="stroke-neutral-400" strokeWidth="1.75" />
-                <circle cx="48" cy="62" r="12" className="stroke-neutral-400" strokeWidth="1.75" />
+              <svg
+                viewBox="0 0 96 96"
+                className="h-20 w-20"
+                aria-hidden="true"
+                fill="none"
+              >
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="38"
+                  className="stroke-neutral-400"
+                  strokeWidth="2"
+                  strokeDasharray="4 3"
+                />
+                <circle
+                  cx="30"
+                  cy="40"
+                  r="12"
+                  className="stroke-neutral-400"
+                  strokeWidth="1.75"
+                />
+                <circle
+                  cx="66"
+                  cy="40"
+                  r="12"
+                  className="stroke-neutral-400"
+                  strokeWidth="1.75"
+                />
+                <circle
+                  cx="48"
+                  cy="62"
+                  r="12"
+                  className="stroke-neutral-400"
+                  strokeWidth="1.75"
+                />
               </svg>
               <span className="text-sm font-medium">Groups of groups</span>
-              <span className="text-xs text-muted-foreground">a composition</span>
+              <span className="text-xs text-muted-foreground">
+                a composition
+              </span>
             </div>
           </div>
 
@@ -645,10 +732,15 @@ export default async function LandingPage({
                   <div
                     className={`flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ${APP_GRADIENTS[app.name] ?? "from-zinc-500 to-slate-600"}`}
                   >
-                    <app.icon className="size-5 text-white" strokeWidth={1.75} />
+                    <app.icon
+                      className="size-5 text-white"
+                      strokeWidth={1.75}
+                    />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-base font-medium leading-tight">{app.name}</h3>
+                    <h3 className="text-base font-medium leading-tight">
+                      {app.name}
+                    </h3>
                     <span className="text-[11px] tracking-wide text-muted-foreground">
                       {app.brand}
                     </span>
@@ -666,7 +758,9 @@ export default async function LandingPage({
                     <span className="mt-px shrink-0 rounded-full border border-neutral-300 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Groups of groups
                     </span>
-                    <p className="text-xs text-muted-foreground">{app.across}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {app.across}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -730,12 +824,13 @@ export default async function LandingPage({
                 Design docs
               </p>
               <h2 className="text-4xl font-normal leading-tight tracking-tight md:text-5xl">
-                How it&apos;s all <em className="font-serif italic">designed.</em>
+                How it&apos;s all{" "}
+                <em className="font-serif italic">designed.</em>
               </h2>
               <p className="mt-4 max-w-xl text-muted-foreground">
-                The settled design decisions — the group primitive, the treasury,
-                the shapes, and the open questions — written for anyone to read
-                and challenge.
+                The settled design decisions — the group primitive, the
+                treasury, the shapes, and the open questions — written for
+                anyone to read and challenge.
               </p>
             </div>
             <Link
@@ -761,7 +856,9 @@ export default async function LandingPage({
                     >
                       <div>
                         <div className="flex items-center justify-between gap-2">
-                          <h4 className="font-medium leading-snug">{doc.title}</h4>
+                          <h4 className="font-medium leading-snug">
+                            {doc.title}
+                          </h4>
                           <span className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                             {doc.status}
                           </span>
@@ -809,7 +906,9 @@ export default async function LandingPage({
                           +
                         </span>
                       </summary>
-                      <p className="pb-5 text-sm text-muted-foreground">{f.a}</p>
+                      <p className="pb-5 text-sm text-muted-foreground">
+                        {f.a}
+                      </p>
                     </details>
                   ))}
                 </div>

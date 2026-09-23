@@ -1,11 +1,22 @@
 "use client"
 
-import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { BadgeCheck, CheckCircle2, ChevronDown, ChevronRight, Clock, Handshake, Plus, Repeat, X } from "lucide-react"
+import dynamic from "next/dynamic"
 import { forceLink } from "d3-force-3d"
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Handshake,
+  Plus,
+  Repeat,
+  X,
+} from "lucide-react"
 
-import { buildLinks, buildPostings, REGIONS, type Posting, type Shape } from "@/lib/needs-offers.data"
+import type { Posting, Shape } from "@/lib/needs-offers.data"
+
+import { REGIONS, buildLinks, buildPostings } from "@/lib/needs-offers.data"
 
 // Needs/offers — a force-directed "solution space". Color = shape; line length =
 // fit (shorter = stronger); dashed links are loose connections. Selecting nodes
@@ -137,8 +148,14 @@ export function NeedsOffersMockup() {
   const applyForces = useCallback((fg: any) => {
     const fitDistance = (l: any) => 24 + (1 - (l.weight ?? 0.5)) * 320
     fg.d3Force("link", forceLink().distance(fitDistance))
-    fg.d3Force("group-gravity", makeGroupGravity(() => myWeaveRef.current))
-    fg.d3Force("focus", makeCenteringForce(() => myWeaveRef.current))
+    fg.d3Force(
+      "group-gravity",
+      makeGroupGravity(() => myWeaveRef.current)
+    )
+    fg.d3Force(
+      "focus",
+      makeCenteringForce(() => myWeaveRef.current)
+    )
     fg.d3ReheatSimulation()
   }, [])
 
@@ -149,7 +166,8 @@ export function NeedsOffersMockup() {
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const measure = () => setGraphSize({ width: el.clientWidth, height: el.clientHeight })
+    const measure = () =>
+      setGraphSize({ width: el.clientWidth, height: el.clientHeight })
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
@@ -167,11 +185,16 @@ export function NeedsOffersMockup() {
     return allPostings.filter((p) => p.location === region)
   }, [zone, allPostings])
 
-  const visibleIds = useMemo(() => new Set(visiblePostings.map((p) => p.id)), [visiblePostings])
+  const visibleIds = useMemo(
+    () => new Set(visiblePostings.map((p) => p.id)),
+    [visiblePostings]
+  )
 
   // Keep the selection in sync with the visible zone — drop nodes that no longer exist.
   useEffect(() => {
-    setMyWeave((prev) => (prev.length ? prev.filter((id) => visibleIds.has(id)) : prev))
+    setMyWeave((prev) =>
+      prev.length ? prev.filter((id) => visibleIds.has(id)) : prev
+    )
   }, [visibleIds])
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -182,17 +205,23 @@ export function NeedsOffersMockup() {
           p.what.toLowerCase().includes(q) ||
           p.group.toLowerCase().includes(q) ||
           p.type.toLowerCase().includes(q) ||
-          p.location.toLowerCase().includes(q),
+          p.location.toLowerCase().includes(q)
       )
       .slice(0, 6)
   }, [search, visiblePostings])
   const highPriorityNeeds = useMemo(
-    () => visiblePostings.filter((p) => !p.have && p.urgency === "high").slice(0, 8),
-    [visiblePostings],
+    () =>
+      visiblePostings
+        .filter((p) => !p.have && p.urgency === "high")
+        .slice(0, 8),
+    [visiblePostings]
   )
   const visibleLinks = useMemo(
-    () => allLinks.filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target)),
-    [allLinks, visibleIds],
+    () =>
+      allLinks.filter(
+        (l) => visibleIds.has(l.source) && visibleIds.has(l.target)
+      ),
+    [allLinks, visibleIds]
   )
 
   // Seed positions grouped by shape so the layout starts spatially organized.
@@ -200,22 +229,55 @@ export function NeedsOffersMockup() {
     () =>
       visiblePostings.map((p, i) => ({
         ...p,
-        x: p.shape === "physical" ? -450 + (i % 5) * 90 : p.shape === "remote" ? 150 + (i % 3) * 90 : -90 + (i % 3) * 90,
-        y: p.shape === "physical" ? -280 + Math.floor((i % 15) / 5) * 95 : p.shape === "remote" ? -260 + (i % 4) * 95 : 240,
+        x:
+          p.shape === "physical"
+            ? -450 + (i % 5) * 90
+            : p.shape === "remote"
+              ? 150 + (i % 3) * 90
+              : -90 + (i % 3) * 90,
+        y:
+          p.shape === "physical"
+            ? -280 + Math.floor((i % 15) / 5) * 95
+            : p.shape === "remote"
+              ? -260 + (i % 4) * 95
+              : 240,
       })),
-    [visiblePostings],
+    [visiblePostings]
   )
 
   // Solid links between the selected nodes (in selection order) — the weave.
   const weaveLinks = useMemo(() => {
-    const links: { source: string; target: string; weight: number; connected: boolean; closing?: boolean }[] = []
+    const links: {
+      source: string
+      target: string
+      weight: number
+      connected: boolean
+      closing?: boolean
+    }[] = []
     for (let i = 0; i < myWeave.length - 1; i++) {
-      if (!visibleIds.has(myWeave[i]) || !visibleIds.has(myWeave[i + 1])) continue
-      links.push({ source: myWeave[i], target: myWeave[i + 1], weight: 1, connected: true })
+      if (!visibleIds.has(myWeave[i]) || !visibleIds.has(myWeave[i + 1]))
+        continue
+      links.push({
+        source: myWeave[i],
+        target: myWeave[i + 1],
+        weight: 1,
+        connected: true,
+      })
     }
     // Commencing closes the loop — the last piece links back to the first.
-    if (commenced && myWeave.length >= 3 && visibleIds.has(myWeave[myWeave.length - 1]) && visibleIds.has(myWeave[0])) {
-      links.push({ source: myWeave[myWeave.length - 1], target: myWeave[0], weight: 1, connected: true, closing: true })
+    if (
+      commenced &&
+      myWeave.length >= 3 &&
+      visibleIds.has(myWeave[myWeave.length - 1]) &&
+      visibleIds.has(myWeave[0])
+    ) {
+      links.push({
+        source: myWeave[myWeave.length - 1],
+        target: myWeave[0],
+        weight: 1,
+        connected: true,
+        closing: true,
+      })
     }
     return links
   }, [myWeave, commenced, visibleIds])
@@ -223,7 +285,12 @@ export function NeedsOffersMockup() {
   // Group reveal: a NEED highlights its group's OFFERS (yellow); an OFFER
   // highlights its group's NEEDS (red). Every selected node keeps its own reveal.
   const groupLinks = useMemo(() => {
-    const links: { source: string; target: string; weight: number; kind: "offer" | "need" }[] = []
+    const links: {
+      source: string
+      target: string
+      weight: number
+      kind: "offer" | "need"
+    }[] = []
     for (const selId of myWeave) {
       const sel = visiblePostings.find((p) => p.id === selId)
       if (!sel) continue
@@ -231,19 +298,32 @@ export function NeedsOffersMockup() {
       for (const p of visiblePostings) {
         if (p.id === selId || p.group !== sel.group) continue
         if (p.have !== targetHave) continue
-        links.push({ source: selId, target: p.id, weight: 0.5, kind: p.have ? "offer" : "need" })
+        links.push({
+          source: selId,
+          target: p.id,
+          weight: 0.5,
+          kind: p.have ? "offer" : "need",
+        })
       }
     }
     return links
   }, [myWeave, visiblePostings])
 
-  const graphLinks = useMemo(() => [...visibleLinks, ...weaveLinks, ...groupLinks], [visibleLinks, weaveLinks, groupLinks])
+  const graphLinks = useMemo(
+    () => [...visibleLinks, ...weaveLinks, ...groupLinks],
+    [visibleLinks, weaveLinks, groupLinks]
+  )
 
   const isMatched =
-    myWeave.length >= 2 && visibleLinks.some((l) => myWeave.includes(l.source) && myWeave.includes(l.target))
+    myWeave.length >= 2 &&
+    visibleLinks.some(
+      (l) => myWeave.includes(l.source) && myWeave.includes(l.target)
+    )
 
   const toggle = (id: string) =>
-    setMyWeave((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+    setMyWeave((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
 
   const nodeLabel = (n: Posting) => {
     const verb = n.have ? "We have" : "We need"
@@ -266,7 +346,9 @@ export function NeedsOffersMockup() {
               key={id}
               onClick={() => setTab(id)}
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                tab === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                tab === id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="size-4" />
@@ -301,18 +383,25 @@ export function NeedsOffersMockup() {
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Post a need or offer</p>
-            <button onClick={() => setPostOpen(false)} className="text-muted-foreground transition hover:text-foreground">
+            <button
+              onClick={() => setPostOpen(false)}
+              className="text-muted-foreground transition hover:text-foreground"
+            >
               ✕
             </button>
           </div>
-          <label className="mt-3 block text-xs font-medium text-muted-foreground">What do you have or need?</label>
+          <label className="mt-3 block text-xs font-medium text-muted-foreground">
+            What do you have or need?
+          </label>
           <input
             value={postText}
             onChange={(e) => setPostText(e.target.value)}
             placeholder="e.g. 20 kg seed for spring, or five volunteers for the harvest"
             className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm"
           />
-          <label className="mt-3 block text-xs font-medium text-muted-foreground">What kind?</label>
+          <label className="mt-3 block text-xs font-medium text-muted-foreground">
+            What kind?
+          </label>
           <div className="mt-1 flex gap-2">
             {(
               [
@@ -325,7 +414,9 @@ export function NeedsOffersMockup() {
                 key={s}
                 onClick={() => setPostShape(s)}
                 className={`flex-1 rounded-md border p-2 text-xs font-medium transition ${
-                  postShape === s ? "border-primary bg-primary/5" : "hover:border-primary/40"
+                  postShape === s
+                    ? "border-primary bg-primary/5"
+                    : "hover:border-primary/40"
                 }`}
               >
                 <span className="block text-base">{emoji}</span>
@@ -336,11 +427,13 @@ export function NeedsOffersMockup() {
           <div className="mt-3 rounded-md border border-dashed bg-muted/40 p-2.5 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">The AI fills the rest</p>
             <p className="mt-0.5">
-              type · temporality · urgency · location — read from your words, your group, and your device.
+              type · temporality · urgency · location — read from your words,
+              your group, and your device.
             </p>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Or start from a Plane issue or Matrix message — the posting is pre-seeded from work you&apos;re already doing.
+            Or start from a Plane issue or Matrix message — the posting is
+            pre-seeded from work you&apos;re already doing.
           </p>
           <button className="mt-3 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
             Post it
@@ -351,150 +444,167 @@ export function NeedsOffersMockup() {
       {/* the weave view — the graph fills the page, controls float on top */}
 
       {tab === "weave" && (
-        <div ref={containerRef} className="relative h-[calc(100vh-8rem)] overflow-hidden [&_canvas]:touch-none">
+        <div
+          ref={containerRef}
+          className="relative h-[calc(100vh-8rem)] overflow-hidden [&_canvas]:touch-none"
+        >
           <ForceGraph2D
             width={graphSize.width}
             height={graphSize.height}
-            ref={((fg: any) => {
-              fgRef.current = fg
-              if (fg && !appliedRef.current) {
-                appliedRef.current = true
-                applyForces(fg)
-              }
-            }) as any}
+            ref={
+              ((fg: any) => {
+                fgRef.current = fg
+                if (fg && !appliedRef.current) {
+                  appliedRef.current = true
+                  applyForces(fg)
+                }
+              }) as any
+            }
             graphData={{ nodes: graphNodes, links: graphLinks }}
-              nodeId="id"
-              linkSource="source"
-              linkTarget="target"
-              nodeCanvasObject={(node: any, ctx: any, globalScale: number) => {
-                const inWeave = myWeave.includes(node.id)
-                const r = (node.have ? 7 : 6) / globalScale
-                const color = SHAPE_COLOR[node.shape as Shape]
-                if (inWeave) {
-                  ctx.beginPath()
-                  ctx.arc(node.x, node.y, r + 6 / globalScale, 0, 2 * Math.PI)
-                  ctx.strokeStyle = "rgba(79,70,229,1)"
-                  ctx.lineWidth = 3.5 / globalScale
-                  ctx.stroke()
-                }
+            nodeId="id"
+            linkSource="source"
+            linkTarget="target"
+            nodeCanvasObject={(node: any, ctx: any, globalScale: number) => {
+              const inWeave = myWeave.includes(node.id)
+              const r = (node.have ? 7 : 6) / globalScale
+              const color = SHAPE_COLOR[node.shape as Shape]
+              if (inWeave) {
                 ctx.beginPath()
-                ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
-                if (node.have) {
-                  ctx.fillStyle = color
-                  ctx.fill()
-                } else {
-                  ctx.strokeStyle = color
-                  ctx.lineWidth = 1.8 / globalScale
-                  ctx.stroke()
-                }
-                const label = node.what.length > 14 ? `${node.what.slice(0, 13)}…` : node.what
-                ctx.font = `${11 / globalScale}px system-ui, sans-serif`
-                ctx.textAlign = "center"
-                ctx.textBaseline = "top"
-                ctx.fillStyle = "rgba(255,255,255,0.95)"
-                ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
-
-                // persistent tooltip while this node is selected
-                if (node.id === selected?.id) {
-                  const title = `${node.have ? "We have" : "We need"} ${node.what}`
-                  const sub = `${node.group}${node.km != null ? ` · ${node.km} km` : ""}`
-                  ctx.font = `600 ${12 / globalScale}px system-ui, sans-serif`
-                  const w = Math.max(ctx.measureText(title).width, ctx.measureText(sub).width) + 16 / globalScale
-                  const h = 38 / globalScale
-                  const x = node.x - w / 2
-                  const y = node.y - r - h - 8 / globalScale
-                  ctx.fillStyle = "rgba(15,23,42,0.92)"
-                  ctx.fillRect(x, y, w, h)
-                  ctx.textAlign = "center"
-                  ctx.textBaseline = "middle"
-                  ctx.fillStyle = "#fff"
-                  ctx.fillText(title, node.x, y + h / 2 - 8 / globalScale)
-                  ctx.font = `${10 / globalScale}px system-ui, sans-serif`
-                  ctx.fillStyle = "rgba(255,255,255,0.65)"
-                  ctx.fillText(sub, node.x, y + h / 2 + 8 / globalScale)
-                }
-              }}
-              nodeLabel={(n: any) => nodeLabel(n)}
-              nodePointerAreaPaint={(node: any, color: string, ctx: any) => {
-                ctx.beginPath()
-                ctx.arc(node.x, node.y, 12, 0, 2 * Math.PI)
+                ctx.arc(node.x, node.y, r + 6 / globalScale, 0, 2 * Math.PI)
+                ctx.strokeStyle = "rgba(79,70,229,1)"
+                ctx.lineWidth = 3.5 / globalScale
+                ctx.stroke()
+              }
+              ctx.beginPath()
+              ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
+              if (node.have) {
                 ctx.fillStyle = color
                 ctx.fill()
-              }}
-              linkWidth={(l: any) => (l.connected || l.kind ? 1 : 0.6 + l.weight * 1.8)}
-              linkColor={(l: any) =>
-                l.connected
-                  ? "rgba(99,102,241,0.7)"
-                  : l.kind === "offer"
-                    ? "rgba(250,204,21,0.85)"
-                    : l.kind === "need"
-                      ? "rgba(239,68,68,0.85)"
-                      : `rgba(100,116,139,${0.18 + l.weight * 0.5})`
+              } else {
+                ctx.strokeStyle = color
+                ctx.lineWidth = 1.8 / globalScale
+                ctx.stroke()
               }
-              linkLineDash={(l: any) => (l.connected || l.kind ? null : [3, 3])}
-              linkLabel={(l: any) =>
-                l.connected
-                  ? "weave"
-                  : l.kind === "offer"
-                    ? "same group — offers"
-                    : l.kind === "need"
-                      ? "same group — needs"
-                      : `${Math.round(l.weight * 100)}% fit`
+              const label =
+                node.what.length > 14 ? `${node.what.slice(0, 13)}…` : node.what
+              ctx.font = `${11 / globalScale}px system-ui, sans-serif`
+              ctx.textAlign = "center"
+              ctx.textBaseline = "top"
+              ctx.fillStyle = "rgba(255,255,255,0.95)"
+              ctx.fillText(label, node.x, node.y + r + 2 / globalScale)
+
+              // persistent tooltip while this node is selected
+              if (node.id === selected?.id) {
+                const title = `${node.have ? "We have" : "We need"} ${node.what}`
+                const sub = `${node.group}${node.km != null ? ` · ${node.km} km` : ""}`
+                ctx.font = `600 ${12 / globalScale}px system-ui, sans-serif`
+                const w =
+                  Math.max(
+                    ctx.measureText(title).width,
+                    ctx.measureText(sub).width
+                  ) +
+                  16 / globalScale
+                const h = 38 / globalScale
+                const x = node.x - w / 2
+                const y = node.y - r - h - 8 / globalScale
+                ctx.fillStyle = "rgba(15,23,42,0.92)"
+                ctx.fillRect(x, y, w, h)
+                ctx.textAlign = "center"
+                ctx.textBaseline = "middle"
+                ctx.fillStyle = "#fff"
+                ctx.fillText(title, node.x, y + h / 2 - 8 / globalScale)
+                ctx.font = `${10 / globalScale}px system-ui, sans-serif`
+                ctx.fillStyle = "rgba(255,255,255,0.65)"
+                ctx.fillText(sub, node.x, y + h / 2 + 8 / globalScale)
               }
-              linkDirectionalParticles={0}
-              onNodeClick={(n: any) => {
-                setSelected(n as Posting)
-                toggle(n.id)
-              }}
-              onBackgroundClick={() => setSelected(null)}
-            />
-            {selected && (
-              <div className="absolute bottom-10 left-3 right-3 rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {selected.have ? "We have" : "We need"} {selected.what}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {selected.group}
-                      {selected.km != null && ` · ${selected.km} km`}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      selected.shape === "physical"
-                        ? "bg-emerald-500/10 text-emerald-700"
-                        : selected.shape === "remote"
-                          ? "bg-sky-500/10 text-sky-700"
-                          : "bg-amber-500/10 text-amber-700"
-                    }`}
-                  >
-                    {SHAPE_LABEL[selected.shape]}
-                  </span>
+            }}
+            nodeLabel={(n: any) => nodeLabel(n)}
+            nodePointerAreaPaint={(node: any, color: string, ctx: any) => {
+              ctx.beginPath()
+              ctx.arc(node.x, node.y, 12, 0, 2 * Math.PI)
+              ctx.fillStyle = color
+              ctx.fill()
+            }}
+            linkWidth={(l: any) =>
+              l.connected || l.kind ? 1 : 0.6 + l.weight * 1.8
+            }
+            linkColor={(l: any) =>
+              l.connected
+                ? "rgba(99,102,241,0.7)"
+                : l.kind === "offer"
+                  ? "rgba(250,204,21,0.85)"
+                  : l.kind === "need"
+                    ? "rgba(239,68,68,0.85)"
+                    : `rgba(100,116,139,${0.18 + l.weight * 0.5})`
+            }
+            linkLineDash={(l: any) => (l.connected || l.kind ? null : [3, 3])}
+            linkLabel={(l: any) =>
+              l.connected
+                ? "weave"
+                : l.kind === "offer"
+                  ? "same group — offers"
+                  : l.kind === "need"
+                    ? "same group — needs"
+                    : `${Math.round(l.weight * 100)}% fit`
+            }
+            linkDirectionalParticles={0}
+            onNodeClick={(n: any) => {
+              setSelected(n as Posting)
+              toggle(n.id)
+            }}
+            onBackgroundClick={() => setSelected(null)}
+          />
+          {selected && (
+            <div className="absolute bottom-10 left-3 right-3 rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium">
+                    {selected.have ? "We have" : "We need"} {selected.what}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selected.group}
+                    {selected.km != null && ` · ${selected.km} km`}
+                  </p>
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.type}</span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{selected.temporality}</span>
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                      selected.urgency === "high"
-                        ? "bg-red-500/10 text-red-600"
-                        : selected.urgency === "medium"
-                          ? "bg-amber-500/10 text-amber-600"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {URGENCY_LABEL[selected.urgency]}
-                  </span>
-                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    selected.shape === "physical"
+                      ? "bg-emerald-500/10 text-emerald-700"
+                      : selected.shape === "remote"
+                        ? "bg-sky-500/10 text-sky-700"
+                        : "bg-amber-500/10 text-amber-700"
+                  }`}
+                >
+                  {SHAPE_LABEL[selected.shape]}
+                </span>
               </div>
-            )}
-            {isMatched && (
-              <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-medium text-white">
-                <CheckCircle2 className="size-3.5" />
-                Matched
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">
+                  {selected.type}
+                </span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px]">
+                  {selected.temporality}
+                </span>
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                    selected.urgency === "high"
+                      ? "bg-red-500/10 text-red-600"
+                      : selected.urgency === "medium"
+                        ? "bg-amber-500/10 text-amber-600"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {URGENCY_LABEL[selected.urgency]}
+                </span>
               </div>
-            )}
+            </div>
+          )}
+          {isMatched && (
+            <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-medium text-white">
+              <CheckCircle2 className="size-3.5" />
+              Matched
+            </div>
+          )}
 
           {/* how-it-works floating chip */}
           <div className="absolute left-3 top-3 rounded-lg border bg-background/85 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
@@ -529,93 +639,120 @@ export function NeedsOffersMockup() {
               </button>
             </div>
             <div className="flex-1 overflow-auto border-b p-3">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search the space…"
-              className="w-full rounded-md border bg-background px-2.5 py-1.5 text-xs shadow-sm"
-            />
-            {search.trim() && (
-              <div className="mt-2 space-y-1">
-                {searchResults.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No matches in this zone.</p>
-                ) : (
-                  searchResults.map((p) => (
-                    <div key={p.id} className="rounded-md border p-2 text-xs">
-                      <div className="flex items-center justify-between gap-2">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search the space…"
+                className="w-full rounded-md border bg-background px-2.5 py-1.5 text-xs shadow-sm"
+              />
+              {search.trim() && (
+                <div className="mt-2 space-y-1">
+                  {searchResults.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No matches in this zone.
+                    </p>
+                  ) : (
+                    searchResults.map((p) => (
+                      <div key={p.id} className="rounded-md border p-2 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            onClick={() =>
+                              setExpanded(expanded === p.id ? null : p.id)
+                            }
+                            className="min-w-0 flex-1 truncate text-left hover:text-foreground"
+                          >
+                            <span className="text-muted-foreground">
+                              {p.have ? "have" : "need"}
+                            </span>{" "}
+                            {p.what}
+                          </button>
+                          <button
+                            onClick={() => toggle(p.id)}
+                            className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition hover:bg-primary/20"
+                          >
+                            {myWeave.includes(p.id) ? "remove" : "weave in"}
+                          </button>
+                        </div>
+                        {expanded === p.id && (
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {p.group} · {p.type} · {p.temporality}
+                            {p.km != null ? ` · ${p.km} km` : ""}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+              <p className="mt-3 text-xs font-medium text-muted-foreground">
+                In your weave
+              </p>
+              {myWeave.length === 0 ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tap nodes on the left — they&apos;ll outline and draw together
+                  here.
+                </p>
+              ) : (
+                <div className="mt-2 space-y-1.5">
+                  {myWeave.map((id) => {
+                    const p = visiblePostings.find((x) => x.id === id)
+                    if (!p) return null
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs"
+                      >
+                        <span className="truncate">
+                          <span className="text-muted-foreground">
+                            {p.have ? "have" : "need"}
+                          </span>{" "}
+                          {p.what}
+                        </span>
                         <button
-                          onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-                          className="min-w-0 flex-1 truncate text-left hover:text-foreground"
+                          onClick={() => toggle(id)}
+                          className="shrink-0 text-muted-foreground hover:text-foreground"
                         >
-                          <span className="text-muted-foreground">{p.have ? "have" : "need"}</span> {p.what}
-                        </button>
-                        <button
-                          onClick={() => toggle(p.id)}
-                          className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition hover:bg-primary/20"
-                        >
-                          {myWeave.includes(p.id) ? "remove" : "weave in"}
+                          ✕
                         </button>
                       </div>
-                      {expanded === p.id && (
-                        <p className="mt-1 text-[11px] text-muted-foreground">
-                          {p.group} · {p.type} · {p.temporality}
-                          {p.km != null ? ` · ${p.km} km` : ""}
-                        </p>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-            <p className="mt-3 text-xs font-medium text-muted-foreground">In your weave</p>
-            {myWeave.length === 0 ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Tap nodes on the left — they&apos;ll outline and draw together here.
-              </p>
-            ) : (
-              <div className="mt-2 space-y-1.5">
-                {myWeave.map((id) => {
-                  const p = visiblePostings.find((x) => x.id === id)
-                  if (!p) return null
-                  return (
-                    <div key={id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
-                      <span className="truncate">
-                        <span className="text-muted-foreground">{p.have ? "have" : "need"}</span> {p.what}
-                      </span>
-                      <button onClick={() => toggle(id)} className="shrink-0 text-muted-foreground hover:text-foreground">
-                        ✕
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-            {myWeave.length >= 2 && (
-              <p className="mt-2 text-[11px] text-indigo-600">
-                {myWeave.length - 1} link{myWeave.length > 2 ? "s" : ""} drawn — ✕ a card to unlink.
-              </p>
-            )}
-            {myWeave.length >= 2 && !commenced && (
-              <button
-                onClick={() => setCommenced(true)}
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
-              >
-                <Repeat className="size-4" />
-                {myWeave.length >= 3 ? "Close this loop →" : "Match this pair →"}
-              </button>
-            )}
-            {commenced && (
-              <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-700">
-                <p className="font-semibold">Validating — checking the story for gaps</p>
-                <p className="mt-1 text-amber-700/80">
-                  Loop closed. The AI is checking transport, timing, quantity and commitment before it settles.
+                    )
+                  })}
+                </div>
+              )}
+              {myWeave.length >= 2 && (
+                <p className="mt-2 text-[11px] text-indigo-600">
+                  {myWeave.length - 1} link{myWeave.length > 2 ? "s" : ""} drawn
+                  — ✕ a card to unlink.
                 </p>
-              </div>
-            )}
+              )}
+              {myWeave.length >= 2 && !commenced && (
+                <button
+                  onClick={() => setCommenced(true)}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+                >
+                  <Repeat className="size-4" />
+                  {myWeave.length >= 3
+                    ? "Close this loop →"
+                    : "Match this pair →"}
+                </button>
+              )}
+              {commenced && (
+                <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-700">
+                  <p className="font-semibold">
+                    Validating — checking the story for gaps
+                  </p>
+                  <p className="mt-1 text-amber-700/80">
+                    Loop closed. The AI is checking transport, timing, quantity
+                    and commitment before it settles.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* urgent needs in this zone — collapsible */}
-            <div className={`overflow-auto border-t ${urgentOpen ? "flex-1" : ""}`}>
+            <div
+              className={`overflow-auto border-t ${urgentOpen ? "flex-1" : ""}`}
+            >
               <button
                 onClick={() => setUrgentOpen(!urgentOpen)}
                 className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
@@ -626,16 +763,23 @@ export function NeedsOffersMockup() {
                     {highPriorityNeeds.length}
                   </span>
                 </span>
-                <ChevronDown className={`size-3.5 transition-transform ${urgentOpen ? "" : "-rotate-90"}`} />
+                <ChevronDown
+                  className={`size-3.5 transition-transform ${urgentOpen ? "" : "-rotate-90"}`}
+                />
               </button>
               {urgentOpen && (
                 <div className="px-3 pb-3">
                   {highPriorityNeeds.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Nothing urgent here.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Nothing urgent here.
+                    </p>
                   ) : (
                     <div className="space-y-1">
                       {highPriorityNeeds.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs"
+                        >
                           <button
                             onClick={() => setSelected(p)}
                             className="truncate text-left hover:text-foreground"
@@ -669,12 +813,16 @@ export function NeedsOffersMockup() {
               <span className="size-2.5 rounded-full bg-amber-500" /> funding
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full border-2 border-muted-foreground/50" /> need
+              <span className="size-2.5 rounded-full border-2 border-muted-foreground/50" />{" "}
+              need
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-6 border-t-2 border-dashed border-slate-400" /> fit
+              <span className="h-0.5 w-6 border-t-2 border-dashed border-slate-400" />{" "}
+              fit
             </span>
-            <span className="ml-auto">{visiblePostings.length} postings in view</span>
+            <span className="ml-auto">
+              {visiblePostings.length} postings in view
+            </span>
           </div>
         </div>
       )}
@@ -686,7 +834,9 @@ export function NeedsOffersMockup() {
               key={p.id}
               onClick={() => toggle(p.id)}
               className={`rounded-lg border bg-card p-3 text-left shadow-sm transition hover:border-primary/40 ${
-                myWeave.includes(p.id) ? "border-primary/60 ring-1 ring-primary/30" : ""
+                myWeave.includes(p.id)
+                  ? "border-primary/60 ring-1 ring-primary/30"
+                  : ""
               }`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -710,11 +860,19 @@ export function NeedsOffersMockup() {
                 {p.km != null && ` · ${p.km} km`}
               </p>
               <div className="mt-1 flex flex-wrap gap-1">
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{p.type}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{p.temporality}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">
+                  {p.type}
+                </span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">
+                  {p.temporality}
+                </span>
                 <span
                   className={`rounded px-1.5 py-0.5 text-[10px] ${
-                    p.urgency === "high" ? "bg-red-500/10 text-red-600" : p.urgency === "medium" ? "bg-amber-500/10 text-amber-600" : "bg-muted text-muted-foreground"
+                    p.urgency === "high"
+                      ? "bg-red-500/10 text-red-600"
+                      : p.urgency === "medium"
+                        ? "bg-amber-500/10 text-amber-600"
+                        : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {URGENCY_LABEL[p.urgency]}
@@ -732,7 +890,8 @@ export function NeedsOffersMockup() {
             <div className="flex-1">
               <p className="text-sm font-medium">A matched pair</p>
               <p className="text-xs text-muted-foreground">
-                When an offer and a need link up, it closes right away — no ceremony.
+                When an offer and a need link up, it closes right away — no
+                ceremony.
               </p>
             </div>
             <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
@@ -744,7 +903,8 @@ export function NeedsOffersMockup() {
             <div className="flex-1">
               <p className="text-sm font-medium">A three-party loop</p>
               <p className="text-xs text-muted-foreground">
-                Compost → seed → storage, closing back on itself. Needs its story validated.
+                Compost → seed → storage, closing back on itself. Needs its
+                story validated.
               </p>
             </div>
             <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700">

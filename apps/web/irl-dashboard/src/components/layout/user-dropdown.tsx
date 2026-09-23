@@ -9,7 +9,6 @@ import type { LocaleType } from "@/types"
 
 import { ensureLocalizedPathname } from "@/lib/i18n"
 
-import { MemberAvatar } from "@/components/member-avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -20,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { MemberAvatar } from "@/components/member-avatar"
 
 export function UserDropdown({
   dictionary,
@@ -51,7 +51,11 @@ export function UserDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent forceMount>
         <DropdownMenuLabel className="flex gap-2">
-          <MemberAvatar sub={user?.id} avatar={user?.avatar} name={displayName} />
+          <MemberAvatar
+            sub={user?.id}
+            avatar={user?.avatar}
+            name={displayName}
+          />
           <div className="flex flex-col overflow-hidden">
             <p className="text-sm font-medium truncate">{displayName}</p>
             <p className="text-xs text-muted-foreground font-semibold truncate">

@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 
-import { radii, themes } from "@/configs/themes"
-import { useSettings } from "@/hooks/use-settings"
 import type { ModeType, RadiusType, ThemeType } from "@/types"
+
+import { radii, themes } from "@/configs/themes"
+
+import { useSettings } from "@/hooks/use-settings"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "http://localhost:3001"
@@ -49,12 +51,17 @@ export function AppearanceSync() {
         }
         if (
           typeof prefs.mode === "string" &&
-          (prefs.mode === "light" || prefs.mode === "dark" || prefs.mode === "system")
+          (prefs.mode === "light" ||
+            prefs.mode === "dark" ||
+            prefs.mode === "system")
         ) {
           next.mode = prefs.mode as ModeType
           changed = true
         }
-        if (typeof prefs.radius === "number" && radii.includes(prefs.radius as RadiusType)) {
+        if (
+          typeof prefs.radius === "number" &&
+          radii.includes(prefs.radius as RadiusType)
+        ) {
           next.radius = prefs.radius as RadiusType
           changed = true
         }

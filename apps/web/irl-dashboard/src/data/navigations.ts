@@ -1,4 +1,5 @@
 import type { NavigationType } from "@/types"
+
 import { generatedApps } from "@/data/apps.generated"
 
 // Side navigation organized by member personas:
@@ -126,5 +127,5 @@ for (const app of generatedApps) {
 }
 
 export const navigationsData: NavigationType[] = sections.filter(
-  (s) => s.items.length > 0,
+  (s) => s.items.length > 0
 )

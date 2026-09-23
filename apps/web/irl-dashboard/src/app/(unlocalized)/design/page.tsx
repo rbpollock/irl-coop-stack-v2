@@ -1,8 +1,11 @@
 import Link from "next/link"
 import { ArrowRight, BookOpen } from "lucide-react"
 
+import type { DocStatus } from "@/lib/design-docs"
+
+import { getCategories } from "@/lib/design-docs"
+
 import { DocsSearch } from "@/components/docs-search"
-import { getCategories, type DocStatus } from "@/lib/design-docs"
 
 export const metadata = {
   title: { absolute: "Design Docs — irl.coop" },
@@ -39,9 +42,9 @@ export default function DesignIndexPage() {
 
       <div className="mx-auto mb-10 flex max-w-2xl flex-col items-center gap-3 rounded-xl border bg-muted/40 p-5 text-center">
         <p className="text-sm text-muted-foreground">
-          Looking for the consolidated overview? The group model — Safe-as-group,
-          the shared pathways, the ZK treasury, and the glossary — is published as
-          a standalone document.
+          Looking for the consolidated overview? The group model —
+          Safe-as-group, the shared pathways, the ZK treasury, and the glossary
+          — is published as a standalone document.
         </p>
         <Link
           href="/group-model.html"
@@ -72,7 +75,9 @@ export default function DesignIndexPage() {
                   </span>
                 </div>
                 <h3 className="text-base font-bold">{doc.title}</h3>
-                <p className="text-sm text-muted-foreground">{doc.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {doc.description}
+                </p>
                 <span className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-primary">
                   Read{" "}
                   <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
