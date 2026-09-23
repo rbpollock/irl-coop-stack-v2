@@ -30,6 +30,7 @@ conditions.
 | [0005-interaction-surface](0005-interaction-surface.md) — D5: in-session Hermes tool (+ Markdown record) | accepted |
 | [0006-first-experiment-task](0006-first-experiment-task.md) — D6: first experiment = commit/title/changelog drafts | accepted |
 | [0007-safety-gates](0007-safety-gates.md) — D7: deterministic safety/approval boundaries (G0) | accepted |
+| [0008-classifier-selection](0008-classifier-selection.md) — D8: router classifier = deterministic + local | proposed |
 | Decision map (D1–D9 index + dependencies) | [decision-map.md](decision-map.md) |
 
 ## Rubric (stable)

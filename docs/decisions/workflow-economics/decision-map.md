@@ -84,13 +84,12 @@ All paths are absolute under `/home/service/.hermes/hermes-agent/` unless noted.
 | D5 | Smallest report/interaction surface | D1, D2 | 5th (accepted) |
 | D6 | One low-risk task class for the first local-model experiment | D2 | 6th (accepted) |
 | D7 | Mandatory deterministic safety/approval boundaries | none (hard constraint) | **blocks D8/D9** (accepted) |
-| D8 | Classifier for routing: local decision model vs structured output vs deterministic | **PARKED — revisit after RAG fix** (see below) | D2, D5, D6, D7 | after RAG fix; D6 bench gates it |
+| D8 | Classifier for routing: local decision model vs structured output vs deterministic | **proposed** (O4/hybrid: deterministic + local) — 0008 | D2, D5, D6, D7 | after RAG fix (now fixed) |
 | D9 | Success metrics + thresholds | define with D2 | D2, D3 | 7th |
 
-> **D8 defer (2026-09-22):** the local classifier decision is parked until the
-> RAG retrieval quality (dimension mismatch + weak embedder findings in D3-area
-> work) is fixed. Revisit trigger: RAG retrieval fixed + measured; then new
-> Open-jev feasibility probe + D6 bench verdict before choosing a classifier.
+> **Unparked 2026-09-22:** D8 is proposed (0008) — hybrid local model
+> (deterministic + Open-Jex). RAG fix completed (1024-dim), so the D-im blame
+> gate is satisfied; D8 final asks D6-bench acceptance data before lock-in.
 
 **Key dependency note:** D1 (boundary) is a thin gate that does **not** block
 D2–D7 in principle, but the user's "one decision at a time" rule means we
