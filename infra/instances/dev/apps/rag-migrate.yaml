@@ -4,9 +4,9 @@ name: rag-migrate
 pillar: workflow
 enabled: true
 type: image
-image: irlcoop/rag-api:0.1.0
+image: irlcoop/rag-api:0.1.0-1024
 command: ["python", "-m", "app.db.migration_runner"]
 restart: "no"
 env:
   DATABASE_URL: "postgresql://rag:${SECRET:postgres.rag}@172.17.0.1:5432/rag"
-  EMBEDDING_DIMENSIONS: "1536"
+  EMBEDDING_DIMENSIONS: "1024"

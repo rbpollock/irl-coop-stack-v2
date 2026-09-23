@@ -10,9 +10,13 @@ image: irlcoop/embed-rerank:0.1.0
 ports:
   - "8001:8000"
 env:
-  EMBED_MODEL: "BAAI/bge-small-en-v1.5"
+  EMBED_MODEL: "BAAI/bge-large-en-v1.5"
   RERANK_MODEL: "BAAI/bge-reranker-v2-m3"
   INFERENCE_API_KEY: "${SECRET:rag.inference}"
+volumes:
+  - rag_hf_cache:/root/.cache/huggingface
+named_volumes:
+  rag_hf_cache: {}
 restart: unless-stopped
 healthcheck:
   test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 5).close()"]
