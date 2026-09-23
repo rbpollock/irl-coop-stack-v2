@@ -1,0 +1,57 @@
+{
+  "days": 45,
+  "sessions": 102,
+  "hours": 219.8,
+  "tokens": "4.9B",
+  "tokens_raw": 4918085238,
+  "cache_pct": 99,
+  "reasoning_pct": 0,
+  "models": [
+    {
+      "model": "deepseek-v4-pro",
+      "calls": 75,
+      "tokens": 49636396
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "calls": 16,
+      "tokens": 16477752
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "calls": 3,
+      "tokens": 5302507
+    },
+    {
+      "model": "gemini-flash-lite-latest",
+      "calls": 3,
+      "tokens": 1842621
+    }
+  ],
+  "longest": {
+    "hours": 398.9,
+    "title": "Plan FusionPBX browserphone dashboard integration"
+  },
+  "challenging": [
+    "Design group dashboard interface",
+    "Plan intro video strategy for irl.coop",
+    "Plan FusionPBX browserphone dashboard integration",
+    "Continue NocoDB rebuild A2+A3 client cert",
+    "Determine irl-coop funding and membership",
+    "Design Hermes plugin decision workflow"
+  ],
+  "decisions": [
+    "Design group dashboard interface",
+    "Design Hermes plugin decision workflow"
+  ],
+  "artifacts": [
+    "docs/decisions/workflow-economics/0001-boundary-form-factor.md",
+    "docs/decisions/workflow-economics/0002-primary-goal.md",
+    "docs/decisions/workflow-economics/0003-data-observed.md",
+    "docs/decisions/workflow-economics/0004-data-storage.md",
+    "docs/decisions/workflow-economics/0005-interaction-surface.md",
+    "docs/decisions/workflow-economics/0006-first-experiment-task.md",
+    "docs/decisions/workflow-economics/0007-safety-gates.md",
+    "docs/decisions/workflow-economics/0008-classifier-selection.md"
+  ]
+}

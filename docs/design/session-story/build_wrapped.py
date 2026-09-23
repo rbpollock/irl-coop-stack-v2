@@ -1,118 +1,102 @@
 #!/usr/bin/env python3
-"""build_wrapped.py — a 'SessionRolled' (Spotify-Wrapped vibe) deck from the
-Jev-scored storyboard → HyperFrames render/index.html. Deterministic, no fetch.
+"""build_wrapped.py — portrait (1080x1920) 'SessionRolled' deck from stats.json.
+Deterministic; no fetch; rendered to MP4 by HyperFrames.
 """
 import json
 import html as _h
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "storyboard.json"
+STATS = ROOT / "stats.json"
 OUT = ROOT / "render" / "index.html"
+
+PAL = ["#0b1020", "#101e38", "#192545", "#291b4e", "#0f2428", "#28290f",
+       "#2a152e", "#152c36", "#0f3a2a", "#080a0f"]
 
 
 def esc(s):
-    return _h.escape(str(s or "")[:140])
+    return _h.escape(str(s or "")[:130])
 
 
-def fmt(n):
-    n = int(n or 0)
-    if n >= 1_000_000:
-        s = f"{n / 1_000_000:.1f}M"
-        return s[:-2] if s.endswith(".0M") else s
-    return f"{n:,}"
-
-
-def main():
-    data = json.loads(SRC.read_text())
-    beats = data.get("beats", [])
-    days = data.get("days", 45)
-    total = len(beats)
-    tok = sum((b.get("magnitude") or 0) for b in beats)
-    best = max(beats, key=lambda b: b.get("confidence", 0) or 0)
-    biggest = max(beats, key=lambda b: b.get("magnitude", 0) or 0)
-    acts = {"I": 0, "II": 0, "III": 0}
-    for b in beats:
-        a = str(b.get("act", "I")).replace("Act", "").strip()
-        acts[a if a in acts else "I"] += 1
-
-    slides = [
-        dict(kick="YOUR SEASON", big="SessionRolled",
-             tag=f"{total} sessions  ·  {days} days", foot="a workloop by irl.coop",
-             bg="#0b1020", c="#f3f6fb", count=0),
-        dict(kick="THE STANDOUT", big=f"{int(best.get('confidence',0)*100)}%",
-             tag="the one scene that stuck",
-             foot=f"{best.get('title','')}  ·  {fmt(best.get('magnitude'))} tok",
-             bg="#101e38", c="#6fd2ff", count=0),
-        dict(kick="HEAVIEST PUSH", big=fmt(biggest.get("magnitude", 0)),
-             tag="model tokens in one session",
-             foot=f"{biggest.get('title','')}", bg="#221a3e", c="#d6b0ff", count=0),
-        dict(kick="THREE ACTS", big=f"I · {acts['I']}   II · {acts['II']}   III · {acts['III']}",
-             tag="setup · tension · resolve", foot="your 45 days in three shapes",
-             bg="#0c2b24", c="#a7f2ce", count=0),
-        dict(kick="SEASON · IN TOKENS", title="", big="",
-             tag="tokens through the stack — almost all cache-warm",
-             foot="the work, without the waste", bg="#231426", c="#ffb86b", count=tok),
-        dict(kick="THAT'S A WRAP", title="same stack", bottom="a new story",
-             tag="made by the loop, for the loop", foot="see irl.coop",
-             bg="#080a10", c="#f3f6fb", count=0),
-    ]
-
-    frags, tls = [], []
-    t = 0.0
-    for i, s in enumerate(slides):
-        dur = s.get("dur", 1.5)
-        start = t
-        t += dur + 0.25
-        bid = f"n{i}" if s.get("count") else ""
-        body = s.get("title") or s.get("big") or ""
-        frags.append(
-            f'<div class="clip slide" id="sn{i}" data-start="{start:.2f}" data-duration="{dur:.2f}" '
-            f'data-track-index="{i}" style="background:{s["bg"]}">'
-            f'<div class="k">{esc(s["kick"])}</div>'
-            f'<div class="big"{(" id="+bid) if bid else ""}>{esc(body)}</div>'
-            f'<div class="tag">{esc(s["tag"])}</div>'
-            f'<div class="foot">{esc(s["foot"])}</div></div>'
+def build(cards):
+    frag, tl = [], []
+    acc = 0.0
+    for i, c in enumerate(cards):
+        dur = c.get("d", 2.2 if c["kind"] in ("cover", "end") else 1.8)
+        st = acc
+        acc += dur + 0.28
+        bg = PAL[i % len(PAL)]
+        kick = c.get("kick", "")
+        if c["kind"] == "list":
+            rows = "".join(f'<div class="li">{esc(x)}</div>' for x in c.get("items", []))
+            body = f'<div class="title">{esc(c.get("title", ""))}</div><div class="rows">{rows}</div>'
+        else:
+            body = (f'<div class="big">{esc(c.get("big", ""))}</div>'
+                    f'<div class="sub">{esc(c.get("sub", ""))}</div>')
+            if c.get("foot"):
+                body += f'<div class="foot">{esc(c["foot"])}</div>'
+        frag.append(
+            f'<div class="clip slide" id="sn{i}" data-start="{st:.2f}" data-duration="{dur:.2f}" '
+            f'data-track-index="{i}" style="background:{bg}"><div class="kick">{esc(kick)}</div>{body}</div>'
         )
-        tls.append(f'tl.fromTo("#sn{i}",{{autoAlpha:0}},{{autoAlpha:1,duration:0.32}},{start:.2f});')
-        tls.append(f'tl.fromTo("#sn{i} .big",{{opacity:0,y:34}},'
-                   f'{{opacity:1,y:0,duration:0.55,ease:"power2.out"}},{start + 0.18:.2f});')
-        if s.get("count"):
-            tls.append(f'var p{i}={{v:0}}; tl.to(p{i},{{v:{int(s["count"])},duration:1.05,ease:"power2.out",'
-                       f'onUpdate:function(){{var e=document.getElementById("{bid}");if(e)e.textContent=fmt(p{i}.v);}}}},'
-                       f'{start + 0.2:.2f});')
-        tls.append(f'tl.to("#sn{i}",{{autoAlpha:0,duration:0.26}},{start + dur:.2f});')
+        tl.append(f'tl.fromTo("#sn{i}",{{autoAlpha:0}},{{autoAlpha:1,duration:0.3}},{st:.2f});')
+        tl.append(f'tl.fromTo("#sn{i} .big,#sn{i} .rows,#sn{i} .title",'
+                  f'{{opacity:0,y:30}},{{opacity:1,y:0,duration:0.5,ease:"power2.out"}},{st + 0.2:.2f});')
+        tl.append(f'tl.to("#sn{i}",{{autoAlpha:0,duration:0.24}},{st + dur:.2f});')
 
-    tljs = "\n".join(tls)
-    frag = "\n".join(frags)
-
+    tljs = "\n".join(tl)
+    frag_html = "\n".join(frag)
     html = (
-        "<!doctype html>\n<html lang=\"en\"><head>\n<meta charset=\"UTF-8\">\n"
-        "<meta name=\"viewport\" content=\"width=1920, height=1080\">\n"
-        "<link href=\"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap\" rel=\"stylesheet\">\n"
-        "<script src=\"https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js\"></script>\n"
-        "<style>\n"
-        "body{margin:0;overflow:hidden;width:1920px;height:1080px;background:#080a10;"
-        "font-family:'Space Grotesk',system-ui,sans-serif;color:#f3f6fb}\n"
+        "<!doctype html><html><head><meta charset=\"UTF-8\">"
+        "<meta name=\"viewport\" content=\"width=1080,height=1920\">"
+        "<link href=\"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap\" rel=\"stylesheet\">"
+        "<script src=\"https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js\"></script>"
+        "<style>"
+        "body{margin:0;overflow:hidden;width:1080px;height:1920px;background:#070a0f;"
+        "font-family:'Space Grotesk',ui-sans-serif,sans-serif;color:#f4f7fc}"
         ".slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;"
-        "padding:0 220px;opacity:0}\n"
-        ".k{font-size:26px;letter-spacing:.34em;text-transform:uppercase;color:#9fb0c6;margin-bottom:18px}\n"
-        ".big{font-size:150px;font-weight:700;letter-spacing:-.03em;line-height:1;max-width:20ch}"
-        ".tag{font-size:36px;margin-top:18px;color:#cfe0f2}\n"
-        ".foot{font-size:34px;margin-top:54px;color:#fff;opacity:.7}\n"
-        "</style>\n</head><body>\n"
-        f"<div id=\"root\" data-composition-id=\"main\" data-start=\"0\" data-duration=\"{(t - 0.25):.1f}\" "
-        f"data-width=\"1920\" data-height=\"1080\">\n{frag}\n</div>\n<script>\n"
-        "function fmt(v){var n=Math.round(v);if(n>=1e6){var s=(n/1e6).toFixed(1);"
-        "return s.replace(/\\.0$/,'')+'M'}return n.toLocaleString();}\n"
-        "window.__timelines=window.__timelines||{};\n"
-        f"const tl=gsap.timeline({{paused:true}});\n{tljs}\n"
-        "window.__timelines['main']=tl; tl.seek(0);\n"
-        "</script></body></html>\n"
+        "padding:130px 90px;opacity:0}"
+        ".kick{font-size:30px;letter-spacing:.34em;text-transform:uppercase;color:#97a9c2;margin-bottom:56px}"
+        ".big{font-size:196px;font-weight:700;letter-spacing:-.045em;line-height:1}"
+        ".sub{font-size:44px;margin-top:42px;color:#d6e4f4}"
+        ".foot{font-size:34px;margin-top:72px;color:#94a7bf}"
+        ".title{font-size:54px;font-weight:700;margin-bottom:26px}"
+        ".li{font-size:42px;margin:22px 0;color:#eef3fb;line-height:1.25}"
+        "</style></head><body>"
+        f"<div id=\"root\" data-composition-id=\"main\" data-start=\"0\" "
+        f"data-duration=\"{(acc - 0.28):.1f}\" data-width=\"1080\" data-height=\"1920\">{frag_html}</div>"
+        "<script>window.__timelines=window.__timelines||{};const tl=gsap.timeline({paused:true});\n"
+        + tljs +
+        "\nwindow.__timelines['main']=tl; tl.seek(0);</script></body></html>"
     )
     OUT.write_text(html)
-    print(f"wrote {OUT} ({total} sessions · {fmt(tok)} tokens · {(t - 0.25):.1f}s)")
+    print(f"wrote {OUT} · {len(cards)} slides · {(acc - 0.28):.1f}s")
 
 
 if __name__ == "__main__":
-    main()
+    stats = json.loads(STATS.read_text())
+    arts = [f.split("/")[-1] for f in (stats.get("artifacts") or [])]
+    days = stats.get("days", 45)
+    cards = [
+        dict(kind="cover", kick="YOUR SEASON", big="SessionRolled",
+             sub=f"{stats['sessions']} sessions · {days} days", foot="the work, wrapped"),
+        dict(kind="stat", kick="IN CONVERSATION", big=f"{stats['hours']} h",
+             sub="estimated hours back-and-forth", foot=f"across {stats['sessions']} sessions"),
+        dict(kind="stat", kick="AI TOKENS", big=stats["tokens"],
+             sub="through the stack this season", foot="kept warm"),
+        dict(kind="stat", kick="KEPT WARM", big=f"{stats.get('cache_pct', 99)}%",
+             sub="served from cache", foot="the preamble, never re-bought"),
+        dict(kind="stat", kick="THE WORKHORSE", big="deepseek-pro",
+             sub="the model that carried it", foot="flash in the wings"),
+        dict(kind="stat", kick="THE MARATHON", big=f"{stats['longest']['hours']} h",
+             sub="longest single thread", foot=stats["longest"]["title"]),
+        dict(kind="list", kick="THE HARDEST", title="where we pushed back",
+             items=stats.get("challenging", [])[:4], d=2.5),
+        dict(kind="list", kick="THE CALLS", title="decisions made & resolved",
+             items=stats.get("decisions", [])[:4], d=2.3),
+        dict(kind="list", kick="THE ARTIFACTS", title="shipped & archived",
+             items=arts, d=2.6),
+        dict(kind="end", kick="THE WRAP", big="see irl.coop",
+             sub="45 days in one pass", foot="made with the loop"),
+    ]
+    build(cards)
