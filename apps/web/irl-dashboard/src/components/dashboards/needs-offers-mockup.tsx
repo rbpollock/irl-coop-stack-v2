@@ -355,14 +355,14 @@ export function NeedsOffersMockup() {
           <ForceGraph2D
             width={graphSize.width}
             height={graphSize.height}
-            ref={(fg: any) => {
+            ref={((fg: any) => {
               fgRef.current = fg
               if (fg && !appliedRef.current) {
                 appliedRef.current = true
                 applyForces(fg)
               }
-            }}
-              graphData={{ nodes: graphNodes, links: graphLinks }}
+            }) as any}
+            graphData={{ nodes: graphNodes, links: graphLinks }}
               nodeId="id"
               linkSource="source"
               linkTarget="target"
