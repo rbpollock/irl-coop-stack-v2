@@ -4,6 +4,9 @@ import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { ArrowUpRight, Loader2, Search } from "lucide-react"
+import GitHubSlugger from "github-slugger"
+
+const slugger = new GitHubSlugger()
 
 const COOP_API_URL = process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
 const DOCS_AREA_ID = process.env.NEXT_PUBLIC_RAG_DOCS_AREA_ID ?? "e418da84-6d62-4b31-aeff-fb2a5cff63d2"
@@ -17,18 +20,20 @@ type Context = {
   source: string
 }
 
-function resolveLink(documentName: string | null): { href: string; label: string } | null {
+function resolveLink(documentName: string | null, heading: string | null): { href: string; label: string } | null {
   if (!documentName) return null
   if (documentName.startsWith("group-")) {
     const slug = documentName.slice("group-".length).replace(/\.md$/, "")
     return { href: `/groups/${slug}`, label: "View group" }
   }
   const slug = documentName.replace(/\.md$/, "")
-  return { href: `/design/${slug}`, label: "Read more" }
+  // Anchor to the exact section shown when the card carries a heading.
+  const href = heading ? `/design/${slug}#${slugger.slug(heading)}` : `/design/${slug}`
+  return { href, label: heading ? "Jump to section" : "Read more" }
 }
 
 function ResultCard({ context: c }: { context: Context }) {
-  const link = resolveLink(c.document_name)
+  const link = resolveLink(c.document_name, c.heading)
   const inner = (
     <>
       {c.heading && <p className="mb-1 text-xs font-semibold text-primary">{c.heading}</p>}

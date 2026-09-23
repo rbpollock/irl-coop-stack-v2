@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react"
 import { notFound } from "next/navigation"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import rehypeSlug from "rehype-slug"
 
 import { cn } from "@/lib/utils"
 import {
@@ -80,7 +81,7 @@ export default async function DesignDocPage({
           All design docs
         </Link>
         <article className="prose max-w-3xl prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-a:text-primary prose-pre:bg-muted text-foreground">
-          <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>{content}</Markdown>
         </article>
       </div>
     </div>
