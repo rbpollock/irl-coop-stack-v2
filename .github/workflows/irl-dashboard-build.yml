@@ -1,0 +1,49 @@
+name: irl-dashboard-build
+
+# Keep the Next dashboard buildable in CI so a formatting/lint regression can't
+# quietly rot the app. Mirrors the local gates: prettier + eslint (via eslint
+# config) + `next build` must pass. `no-explicit-any` is warn (not a gate); a
+# non-empty eslint/prettier complaint that is a real error still fails the build.
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/web/irl-dashboard/**"
+      - "apps/web/irl-dashboard/pnpm-lock.yaml"
+  pull_request:
+    paths:
+      - "apps/web/irl-dashboard/**"
+      - "apps/web/irl-dashboard/pnpm-lock.yaml"
+
+concurrency:
+  group: dashboard-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web/irl-dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/irl-dashboard/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (next lint targets the eslint config)
+        run: pnpm exec eslint .
+
+      - name: Build
+        run: pnpm exec next build
