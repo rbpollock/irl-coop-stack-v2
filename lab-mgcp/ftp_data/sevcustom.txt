@@ -1,0 +1,2 @@
+# sevcustom.txt — IP 230 custom overrides
+sntpserver 192.168.18.20

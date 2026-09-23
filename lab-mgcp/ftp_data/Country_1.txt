@@ -1,0 +1,28 @@
+# Country_1.txt (, ) tones 1 cadences 0
+# file created by release\elitecfg
+RingDefine	1,500,600,0,0,22000,22000,0,0,2,0,0x3001,60,0x0801,60,2,1,2000,1,0,0,4000,0,0
+RingDefine	2,500,600,0,0,22000,22000,0,0,2,0,0x3001,60,0x0801,60,4,1,800,1,0,0,400,2,0,1,800,3,0,0,4000,0,0
+RingMap		L/rg,1
+RingMap		L/r1,2
+ToneDefine	1,350,440,0,0,16020,16020,0,0,1,0,0x1821,0,1,1,0,0,0
+ToneDefine	2,312,392,0,0,16020,16020,0,0,1,0,0x1821,0,1,1,0,0,0
+ToneDefine	3,480,620,0,0,16020,16020,0,0,2,0,0x3801,250,0x0000,250,1,1,0,0,0
+ToneDefine	4,480,620,0,0,16020,16020,0,0,2,0,0x3801,500,0x0000,500,1,1,0,0,0
+ToneDefine	5,440,480,0,0,16020,16020,0,0,2,0,0x3801,2000,0x0000,4000,1,1,0,0,0
+ToneDefine	6,440,0,0,0,16020,0,0,0,3,0,0x3001,300,0x4100,0,0x0060,0,1,1,0,0,0
+ToneDefine	7,350,440,0,0,16020,16020,0,0,4,10,0x3801,100,0x1880,100,0x6100,0,0x1821,0,1,1,0,0,0
+ToneDefine	8,440,620,0,0,16020,16020,0,0,2,0,0x3001,250,0x0801,250,1,1,0,0,0
+ToneDefine	9,350,440,0,0,16020,16020,0,0,4,10,0x3801,100,0x1880,100,0x6100,0,0x0060,0,1,1,0,0,0
+ToneMap		L/dl,1
+ToneMap		L/s(0),2
+ToneMap		L/ro,3
+ToneMap		L/bz,4
+ToneMap		G/rt,5
+ToneMap		L/wt,6
+ToneMap		L/sl,7
+ToneMap		L/s(1),8
+ToneMap		L/s(3),9
+DateTimeFormat         "\a, \b \d \Y \h:\m\p"
+DateTimeFormat2        "\n/\d/\Y \h:\m\p"
+DectDateTimeFormat       "\a, \n/\d \h:\m\p"
+DectCountry    "United States of America"

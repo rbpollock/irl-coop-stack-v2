@@ -185,18 +185,20 @@ A movement's growth is its invoice.
 | Chat (Slack Enterprise Grid, low end of the negotiated range) | $110,000/mo | $550,000/mo |
 | Docs (Notion Business) | $30,000/mo | $120,000/mo |
 | Mail (Office 365 E1 — the cheapest *uncapped* SKU) | $15,000/mo | $60,000/mo |
-| **Commercial floor** | **$295,000/mo · $3.54M/yr** | **$1,370,000/mo · $16.44M/yr** |
+| Project management (Asana Starter, self-serve) | $1,648.50/mo | $4,396.00/mo |
+| **Commercial floor** | **$296,648.50/mo · $3.56M/yr** | **$1,434,396.00/mo · $17.21M/yr** |
 | **irl.coop node** | **$2,026/mo · $24,318/yr** | **$6,024/mo · $72,288/yr** |
-| Per participant / year | $354 vs **$2.43** | $329 vs **$1.45** |
-| Ratio | **146×** | **227×** |
+| Per participant / year | $355.98 vs **$2.43** | $344.26 vs **$1.45** |
+| Ratio | **146×** | **238×** |
 
-Project management is *excluded* from the commercial column because no verified rate exists at
-that volume — so the commercial figure is a **floor**, not an estimate, and the model says so.
+Project management *is* priced — Asana Starter is self-serve with no user cap, so it stays
+purchasable at 150–400 seats (only the Enterprise tier is sales-led). The commercial figure is
+still a **floor**, not an estimate, and the model says so.
 The identity line is list price and would come down in an enterprise agreement; the Slack line
 uses the lowest verified negotiated rate. Both biases run in the argument's *disfavour*, on
 purpose.
 
-Note the direction of travel: 146× → 227×. The commercial curve is linear in participants; the
+Note the direction of travel: 146× → 238×. The commercial curve is linear in participants; the
 node's is nearly flat (hosts scale with load, stewardship scales sublinearly, and per-
 participant cost *falls* from $2.43 to $1.45). The gap widens with success.
 
@@ -500,6 +502,8 @@ A comparison with only one side's asterisks is an advertisement. These are the c
 - **Egress is where the storage bill actually lives — and the node's limit is its uplink** — S3 charges $0.09/GB out; R2 charges nothing; the node's disks charge nothing either because the bytes ride the co-op's own connection. But that connection is a domestic or office uplink: a group serving 1 TB/mo of video from a home line will feel it in bandwidth, not in a line item. Self-hosting moves the cost from the invoice to the pipe — it does not delete it.
 - **Chain transaction costs are NOT in this model** — Chain = Base mainnet (decided 2026-09-13), so on-chain writes cost real money: deposits, withdrawals, transfers, Tier-2 anchor writes, timelock upkeep, and monthly distribution runs. The node's $73/mo infrastructure line carries no chain cost at all. It is deliberately un-priced rather than guessed — gas has no list price, and a made-up per-transaction figure would discredit the rest of the model. It is also the ONE out-flow that grows as the commons economy works as designed (frequency x groups x members), so it needs a measured rate before it ships.
 - **The platform never holds member funds — and that shapes the whole comparison** — Money lives in group Safes; the fiat bridge is a vertical fund that is itself a group; the platform fee is $0.00 and that is CONFIGURED, not merely claimed (hievents.yaml APP_SAAS_STRIPE_APPLICATION_FEE_PERCENT = 0). BYO payment rails were considered and REJECTED on 2026-09-13 because a single account holder breaks governance-controlled finance. Consequence for this model: the group's own money handling is not a line the platform can price, because the platform is not in the path.
+- **Peer.xyz merchant fees are NOT MODELLED** — The fiat to USDC rail bills the merchant, not the payer (feePayer: MERCHANT, verified 2026-09-13), so every card payment is an out-flow the platform carries. The fee schedule has not been enumerated, so no number is asserted here. Like gas, this is the cost of the money path working rather than of the platform running.
+- **The fiat rail's swap markup is a MEMBER cost, not a platform cost, and is not modelled** — The provider caps its markup on the fiat->USDC swap at 20% (maxFeeConfig.valuePercentage, confirmed 2026-09-13). It is paid by the payer — the price of an untraced non-KYC settlement — so it does not appear in this model's platform lines, but it can be a fifth of a dues payment. No number is asserted: the real markup is per-quote and must be shown to the payer before they pay.
 
 #### Derived figures (assumption stated)
 
@@ -547,24 +551,24 @@ Three independent vendors stop selling at ~250-300 users, and a fourth at ~500. 
 | identity | Okta | Workforce Identity — Core Essentials (list) | $14.00 | 10,000 | $140,000.00 |
 | chat | Slack | Enterprise Grid (2,000+ active users) | $11.00 | 10,000 | $110,000.00 |
 | docs_wiki | Notion | Business (list, per member) | $20.00 | 1,500 | $30,000.00 |
+| project_management | Asana | Starter (self-serve, no user cap) | $10.99 | 150 | $1,648.50 |
 | mail_calendar_docs | Microsoft | Office 365 E1 | $10.00 | 1,500 | $15,000.00 |
-| | | | | **$295,000.00** | |
-
-**Not priced — no verified rate exists at this volume:** project_management (150 seats). These are sales-led enquiries, not purchases, and they are excluded from the total. The commercial figure below is therefore a **floor**.
+| | | | | **$296,648.50** | |
 
 **Rate basis — where these figures are bounds, not quotes:**
 
 - **Okta Workforce Identity — Core Essentials (list)** — LIST price. At 10,000 accounts this is a negotiated enterprise agreement, so treat $14 as an upper bound — the commercial column may be lower, never higher.
 - **Slack Enterprise Grid (2,000+ active users)** — Low end of the verified realised range — chosen because understating the commercial column is the honest direction.
 - **Notion Business (list, per member)** — List price; Enterprise is custom at this volume.
+- **Asana Starter (self-serve, no user cap)** — Self-serve tiers carry no user cap, so they stay purchasable at 150-400 seats; only the Enterprise tier is sales-led. Published range: Trello Standard $5 / Premium $10, ClickUp Unlimited $7 / Business $12, Monday.com Basic $9 / Standard $12 / Pro $19, Asana Starter $10.99 / Advanced $24.99. Cheapest credible full-PM rate used.
 - **Microsoft Office 365 E1** — The cheapest verified enterprise SKU with NO user cap — $10.00/user/mo. The honest floor for mail at 10k+ users, and it is the floor precisely because Business Premium stopped at 300.
 
 | | Commercial | irl.coop node |
 |---|---|---|
-| Per month | **$295,000.00** | **$2,026.50** |
-| Per year | **$3,540,000.00** | **$24,318.00** |
-| Per participant / year | $354.00 | $2.43 |
-| Ratio | **145.6×** | |
+| Per month | **$296,648.50** | **$2,026.50** |
+| Per year | **$3,559,782.00** | **$24,318.00** |
+| Per participant / year | $355.98 | $2.43 |
+| Ratio | **146.4×** | |
 
 Node side: 3 host(s) at $219.00 + 1.5 TB egress at $7.50 + 40 hrs/mo of stewardship at $1,800.00.
 
@@ -577,24 +581,24 @@ Node side: 3 host(s) at $219.00 + 1.5 TB egress at $7.50 + 40 hrs/mo of stewards
 | identity | Okta | Workforce Identity — Core Essentials (list) | $14.00 | 50,000 | $700,000.00 |
 | chat | Slack | Enterprise Grid (2,000+ active users) | $11.00 | 50,000 | $550,000.00 |
 | docs_wiki | Notion | Business (list, per member) | $20.00 | 6,000 | $120,000.00 |
+| project_management | Asana | Starter (self-serve, no user cap) | $10.99 | 400 | $4,396.00 |
 | mail_calendar_docs | Microsoft | Office 365 E1 | $10.00 | 6,000 | $60,000.00 |
-| | | | | **$1,430,000.00** | |
-
-**Not priced — no verified rate exists at this volume:** project_management (400 seats). These are sales-led enquiries, not purchases, and they are excluded from the total. The commercial figure below is therefore a **floor**.
+| | | | | **$1,434,396.00** | |
 
 **Rate basis — where these figures are bounds, not quotes:**
 
 - **Okta Workforce Identity — Core Essentials (list)** — LIST price. At 10,000 accounts this is a negotiated enterprise agreement, so treat $14 as an upper bound — the commercial column may be lower, never higher.
 - **Slack Enterprise Grid (2,000+ active users)** — Low end of the verified realised range — chosen because understating the commercial column is the honest direction.
 - **Notion Business (list, per member)** — List price; Enterprise is custom at this volume.
+- **Asana Starter (self-serve, no user cap)** — Self-serve tiers carry no user cap, so they stay purchasable at 150-400 seats; only the Enterprise tier is sales-led. Published range: Trello Standard $5 / Premium $10, ClickUp Unlimited $7 / Business $12, Monday.com Basic $9 / Standard $12 / Pro $19, Asana Starter $10.99 / Advanced $24.99. Cheapest credible full-PM rate used.
 - **Microsoft Office 365 E1** — The cheapest verified enterprise SKU with NO user cap — $10.00/user/mo. The honest floor for mail at 10k+ users, and it is the floor precisely because Business Premium stopped at 300.
 
 | | Commercial | irl.coop node |
 |---|---|---|
-| Per month | **$1,430,000.00** | **$6,024.00** |
-| Per year | **$17,160,000.00** | **$72,288.00** |
-| Per participant / year | $343.20 | $1.45 |
-| Ratio | **237.4×** | |
+| Per month | **$1,434,396.00** | **$6,024.00** |
+| Per year | **$17,212,752.00** | **$72,288.00** |
+| Per participant / year | $344.26 | $1.45 |
+| Ratio | **238.1×** | |
 
 Node side: 8 host(s) at $584.00 + 8.0 TB egress at $40.00 + 120 hrs/mo of stewardship at $5,400.00.
 
@@ -1013,7 +1017,7 @@ A mode change is a first-class operation, not a migration: the union's `hidden �
 - **A node hosts other people's data — and the data is NOT all encrypted** — This was written as a governance worry. Reading the stack, it is a factual one: MinIO has server-side encryption switched OFF, Postgres rows are plaintext at rest (the design doc says so), and mail and collaborative documents are structurally server-readable. So 'encrypted at rest' would not fix it anyway — at-rest encryption protects a stolen disk, not the operator, who holds the key. See `federation.encryption_reality`.
   *Mitigation:* Scope federation by pillar and say which is which: static assets and E2E content are federation-safe today; mail, docs and DB rows require a TRUSTED node. That is a fine answer for a federation of known orgs — it just has to be stated rather than assumed.
 
-<sub>Cross-check: 37 apps declared in `infra/instances/dev/instance.yaml` — traefik, keycloak, citus, irl-redis, minio, nocodb, stalwart, roundcube, cryptpad, temporal, temporal-ui, formbricks, hievents, webstudio, postiz, plane, coop-api, matrix, element-web, element-call, cinny, livekit, lk-jwt, coturn, freeswitch, fusionpbx, mediamtx, onlyoffice, maps, litefarm, rag, rag-inference, rag-migrate, rag-api, rag-worker, erpnext, wordpress.</sub>
+<sub>Cross-check: 38 apps declared in `infra/instances/dev/instance.yaml` — traefik, keycloak, citus, irl-redis, minio, nocodb, stalwart, roundcube, cryptpad, temporal, temporal-ui, formbricks, hievents, webstudio, postiz, plane, coop-api, matrix, element-web, element-call, cinny, livekit, lk-jwt, coturn, freeswitch, fusionpbx, mediamtx, onlyoffice, maps, litefarm, rag, rag-inference, rag-migrate, rag-api, rag-worker, erpnext, wordpress, peer_xyz_payments.</sub>
 
 <sub>Regenerate: `python3 infra/scripts/cost-model.py` · data: `docs/design/cost-model.data.json`</sub>
 <!-- END GENERATED: cost-model.py -->

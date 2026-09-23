@@ -2,7 +2,7 @@
 name: nocodb
 pillar: storage
 type: image
-image: irlcoop/nocodb-gate-sso:2026.08.8
+image: irlcoop/nocodb-gate-sso:2026.08.12
 env:
   # query-string format (maintainer-confirmed); alphanumeric password —
   # NocoDB's URL parser is fragile with special chars in the standard form
@@ -18,6 +18,16 @@ env:
   # and the empty CHATWOOT_IDENTITY_KEY otherwise produces an "iframe refusal"
   # console error on every page load.
   NC_DISABLE_SUPPORT_CHAT: "true"
+  # A2/A3 per-user identity: directory of per-member client certs (CN = member
+  # role) that the connection factory presents per-request. Mounted read-only
+  # below; see infra/scripts/mint-member-cert.sh.
+  NC_COOP_PG_CERT_DIR: /usr/src/app/docker/pg-client-certs
+  # Cap the per-source knex pool. NocoDB opens ONE pool per external source; with
+  # one base per group (18 sources) the default max=10 would allow 180 connections
+  # and exhaust max_connections=100 (53300 "reserved for SUPERUSER"). min:0 means
+  # idle pools hold nothing, so 2 is plenty for a single-user browse and keeps
+  # worst-case NocoDB demand ~36 connections.
+  NC_DB_POOL_MAX: "2"
 depends_on:
   - postgres
 sidecars:
@@ -79,3 +89,7 @@ dev:
     # activation and declares no fetch listener, so the browser never routes
     # through a SW again. No NocoDB rebuild required; survives regeneration.
     - ./assets/nocodb/sw.js:/usr/src/app/docker/nc-gui/sw.js
+    # Per-member Postgres client certs (A2/A3): the connection factory presents
+    # the cert for the request's member role. Read-only; minted by
+    # infra/scripts/mint-member-cert.sh into secrets/pg-client-certs/ (gitignored).
+    - ./secrets/pg-client-certs:/usr/src/app/docker/pg-client-certs:ro

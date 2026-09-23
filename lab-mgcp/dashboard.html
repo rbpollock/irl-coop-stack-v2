@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MGCP monitor</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+         color: var(--foreground,#e6e6e6); margin: 0; background: transparent; }
+  header { display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+           padding:8px 10px; border-bottom:1px solid var(--border,#333); }
+  header h1 { font-size:13px; margin:0; font-weight:600; }
+  .pill { border:1px solid var(--border,#444); border-radius:6px;
+          padding:2px 8px; font-size:11px; }
+  .pill b { color: var(--accent,#7cc); }
+  .controls { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
+  .controls label { font-size:11px; display:flex; gap:3px; align-items:center;
+                    color: var(--muted-foreground,#999); }
+  #status { color: var(--muted-foreground,#888); font-size:11px; padding:4px 10px; }
+  #log { overflow-y:auto; height: 440px; padding:6px 10px; }
+  .row { display:flex; gap:9px; padding:2px 0; border-bottom:1px solid
+         rgba(128,128,128,.08); }
+  .ts { color: var(--muted-foreground,#888); white-space:nowrap; }
+  .dir { width:30px; text-align:center; font-weight:700; }
+  .dir.RX { color:#4ade80; } .dir.TX { color:#60a5fa; }
+  .first { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+  .err .first { color:#f87171; }
+  .code { font-weight:700; width:30px; text-align:center; }
+  .code.ok { color:#4ade80; } .code.bad { color:#f87171; }
+  .state { color:#fbbf24; font-weight:600; }
+  .sys { color:#94a3b8; font-style:italic; }
+  details summary { cursor:pointer; color:var(--muted-foreground,#888); }
+  details pre { white-space:pre-wrap; color:var(--muted-foreground,#999);
+                margin:2px 0 6px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MGCP monitor</h1>
+  <span class="pill">hook: <b id="st-hook">—</b></span>
+  <span class="pill">conn: <b id="st-conn">—</b></span>
+  <span class="pill">err: <b id="st-err">—</b></span>
+  <div class="controls">
+    <label><input type="checkbox" id="f-rx" checked>RX</label>
+    <label><input type="checkbox" id="f-tx" checked>TX</label>
+    <label><input type="checkbox" id="f-state" checked>state</label>
+    <label><input type="checkbox" id="f-err">err only</label>
+    <label><input type="checkbox" id="f-pause">pause</label>
+    <button id="clear">clear</button>
+  </div>
+</header>
+<div id="status">connecting…</div>
+<div id="log"></div>
+<script>
+const log = document.getElementById('log');
+const $ = (id) => document.getElementById(id);
+const els = {hook:$('st-hook'), conn:$('st-conn'), err:$('st-err')};
+let paused = false, next = 0;
+const API = 'http://localhost:8099/snapshot?since=';
+
+function esc(s) { return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function render(ev) {
+  if (ev.type === 'msg') {
+    const show = (ev.dir === 'RX' ? $('f-rx').checked : $('f-tx').checked);
+    if (!show || ($('f-err').checked && !ev.is_error)) return;
+    const cls = ev.is_error ? ' err' : '';
+    const code = ev.code != null
+      ? `<span class="code ${ev.code>=400?'bad':'ok'}">${ev.code}</span>` : '';
+    const body = (ev.body && ev.body.length > 1)
+      ? `<details><summary>▾</summary><pre>${esc(ev.body.join('\n'))}</pre></details>` : '';
+    log.insertAdjacentHTML('beforeend',
+      `<div class="row${cls}"><span class="ts">${esc(ev.ts.slice(11))}</span>` +
+      `<span class="dir ${ev.dir}">${ev.dir}</span>${code}` +
+      `<span class="first">${esc(ev.first)}</span>${body}</div>`);
+  } else if (ev.type === 'state') {
+    if (!$('f-state').checked) return;
+    let label;
+    if (ev.kind === 'offhook') { label = '▼ OFF-HOOK'; els.hook.textContent='OFF-HOOK'; }
+    else if (ev.kind === 'onhook') { label = '▲ ON-HOOK'; els.hook.textContent='ON-HOOK'; }
+    else if (ev.kind === 'conn') { label = '⚡ ' + ev.connid; els.conn.textContent=ev.connid; }
+    else { label = 'DIGIT ' + ev.digit; }
+    log.insertAdjacentHTML('beforeend',
+      `<div class="row"><span class="ts">${esc(ev.ts.slice(11))}</span>` +
+      `<span class="state">${esc(label)}</span></div>`);
+  } else if (ev.type === 'sys') {
+    log.insertAdjacentHTML('beforeend',
+      `<div class="row"><span class="sys">${esc(ev.msg)}</span></div>`);
+  }
+  if (ev.type === 'msg' && ev.is_error) els.err.textContent = ev.code + ' ' + ev.desc;
+  while (log.children.length > 600) log.removeChild(log.firstChild);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function poll() {
+  if (paused) return;
+  try {
+    const r = await fetch(API + next);
+    const data = await r.json();
+    data.events.forEach(render);
+    next = data.next;
+    $('status').textContent = 'live · ' + next + ' events';
+  } catch (e) {
+    $('status').textContent = 'disconnected · retrying';
+  }
+}
+
+$('clear').onclick = () => { log.innerHTML = ''; };
+$('f-pause').onchange = (e) => { paused = e.target.checked; if (!paused) poll(); };
+$('f-rx').onchange = $('f-tx').onchange = $('f-state').onchange = $('f-err').onchange =
+  () => { log.innerHTML=''; next=0; poll(); };
+
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>

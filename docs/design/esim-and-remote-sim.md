@@ -126,6 +126,18 @@ directory. Worth a call on principle as much as on product.
 floLIVE. These SIMs are made for machines and their numbers are IoT-class, so treat them as
 infrastructure numbers, not verification numbers.
 
+**The line-type caveat that may sink the Telnyx-SIM hope.** Telnyx's own Number Lookup API — the
+very tool it sells for *"line type intelligence … mobile, landline, or VoIP"* — returns `type: "voip"`
+for a Telnyx-owned number in its own documented example (`+13129457420 → carrier.name "Telnyx/4",
+carrier.type "voip", portability.line_type "voip"`). That is Telnyx's own carrier data describing a
+Telnyx number as VoIP-class. Whether a *Wireless* SIM's mobile number (`enable_voice` → a real
+`+E.164` MSISDN) reports the same way is the thing the $3 test must answer first — because if it does,
+it inherits exactly the "invalid phone number" rejection from Instagram that the whole comparison was
+written to avoid. A programmable SIM's number and a VoIP trunk's number may chart differently, but the
+burden is now on the test: **do not assume a Wireless SIM's number is mobile-class until a lookup
+says so.** Reaching for the SIM's assigned number and running one Number Lookup — $0.0015 — settles it
+before any signup is attempted.
+
 **Not this lane:** consumer MVNOs such as Tello. Their terms ban unattended and automated use.
 
 ### The script

@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  freeswitch:
+    image: irlcoop/freeswitch:spike-opus
+    command: ["-nonat", "-nf"]
+    ports:
+      - "2427:2427/udp"
+      - "2727:2727/udp"
+      - "5000:5000/tcp"
+    volumes:
+      - ./mod_mgcp:/usr/src/freeswitch/src/mod/endpoints/mod_mgcp
+      - ./event_socket.conf.xml:/usr/local/freeswitch/conf/autoload_configs/event_socket.conf.xml
+
+  ftp:
+    image: python:3-slim
+    network_mode: host
+    command: sh -c "pip install pyftpdlib && python -m pyftpdlib -p 21 -w -d /ftp -V --nat-address=192.168.18.20"
+    volumes:
+      - ./ftp_data:/ftp
+

@@ -1,0 +1,3 @@
+# sevgcustom.txt — IP 230g (SEVG) custom overrides.
+# The 230g's custom file is sevgcustom.txt (NOT sevcustom.txt, which is the
+# plain IP 230). Custom/device-level overrides go here.[truncated]

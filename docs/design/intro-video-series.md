@@ -69,12 +69,22 @@ working feature to be true, which is why they are the two most valuable videos i
 > against systemic challenges, or a larger status quo poised against your direction — which is usually
 > anti-cooperation and pro-monopolistic-capital."*
 
+**The second axis, 2026-09-18 — the hidden cost is the cost of coordination:**
+
+> *"The hidden cost this series measures is the cost of coordination itself. Coordinating with
+> digital tools has a price, and that price limits how people cooperate. The experiment that is
+> irl.coop depends on lowering that barrier — and then observing the metrics of cooperation (the
+> regenerative and cooperativeness scores) and the changes across the verticals, in real life."*
+
+V3, V8 and V9 are not pricing videos. They measure **this**: what coordination costs when the tools
+are rented, and what changes when that cost falls.
+
 **Every episode is a measurement of the same gradient**, which is why the series coheres:
 
 | Episode | The part of the current it measures |
 |---|---|
 | V9 *The 300-user wall* | The menu ends at 300 users — growth is punished at the moment it would matter |
-| V3/V8 *What this costs* | Scale is priced; the free tier is someone else's business model |
+| V3/V8 *What this costs* | Coordination is priced — the tools of cooperation are rented, and their cost limits who cooperates |
 | V11 *The discussion that didn't happen* | Legibility is the entry price — so groups self-censor before anyone acts |
 | V4 *Why we're a cooperative* | Continuity is rented, and a vendor can be bought or ban you |
 | V2 *One login, every tool* | Exit is expensive, so the switching cost grows with use |
@@ -116,7 +126,7 @@ and its sources).
 |---|---|---|---|
 | 1 | **The divergence** — per-seat vs node cost across 40 → 10k → 50k, log $ | The whole argument in one image | V9 opener |
 | 2 | **The wall** — four vendors' self-serve ceilings against a 10,000-participant bar | "It isn't expensive, it's not for sale" | V9 0:40 |
-| 3 | **Three ways to buy it** at 40 members — $2,319 / $341 / $77.50 | The base model | V3 3:00 |
+| 3 | **Three ways to buy it** at 40 members — $2,319 / $341 / $77.50 | Built as three stacked columns: per-seat (9 line items) / per-org (7 subscriptions) / shared node — *why* the commercial stack is large, not just that it is | V3 3:00 |
 | 4 | **Redundancy costs pennies** — 3 replicas, $0.07 owned vs $0.78 on S3 | The federation thesis | V10 1:00 |
 | 5 | **Per participant, per year** — $354 vs $2.43, both nearly flat | Survives "you assumed fewer seats" | V9 close |
 
@@ -127,6 +137,39 @@ self-serve menu covers.
 
 **Caveat before publishing:** the storyboard's figures are transcribed from the model, not
 generated from it, so they can drift. Wire it to `cost-model.py --json` first.
+
+## 2c. The full animation map — six charts + two diagrams
+
+Animation is spent on exactly four things (§0): the cost model, the value-flow diagram, the
+self-sustaining arithmetic, and the fear loop. §2b covers the cost model's five charts; this is
+the rest of the map so the conceptual vision is one place, not scattered.
+
+**Six data charts** — all six render from `cost-model.py --json` through the same pipeline as
+chart 1 (`docs/design/cost-model-animation.py`), so none of them can drift:
+
+| # | Chart | One idea | Used in |
+|---|---|---|---|
+| 1 | The divergence — per-seat vs node, 40 → 10k → 50k, log $ | The whole argument in one image | V9 opener |
+| 2 | The wall — four vendors' self-serve ceilings vs a 10,000 bar | It isn't expensive, it's not for sale | V9 0:40 |
+| 3 | Three ways to buy it at 40 — $2,319 / $341 / $77.50 | Built as three **stacked** columns: per-seat (9 per-person line items) / per-org (7 subscriptions) / shared node — shows *why* the commercial stack is large, not just that it is | V3 3:00 |
+| 4 | Redundancy costs pennies — $0.07 owned vs $0.78 S3 | The federation thesis | V10 1:00 |
+| 5 | Per participant, per year — $354 vs $2.43, nearly flat | Survives "you assumed fewer seats" | V9 close |
+| 6 | The crossover — fixed node cost vs groups × contribution | It pays for itself at N groups | V8 |
+
+Chart 6 is the self-sustaining line: `--json` carries `crossover_total` ("13 groups at
+$25/mo") and `crossover_node` ("0 extra groups — member contributions cover it alone").
+**Illustrative** until the real node cost and irl.coop pricing replace the placeholders (§4C, §6).
+
+**Two hand-drawn diagrams** — conceptual, not data, so specced here rather than generated:
+
+| Diagram | One idea | The shape | Used in |
+|---|---|---|---|
+| **The value flow** | Value circulates in a co-op; it exits in a platform | Two panels: members → dues → treasury → node + steward → members (a loop that returns), vs members → subscription → vendor → shareholders (a line that leaves) | V6 |
+| **The fear loop** | Nothing written down is the cheapest link — break it there | A cycle: fear → nothing written → nothing provable → fragile → more fear | V11 1:15 |
+
+Value-flow source: `money-in-and-out.md` + `digest-group-shapes-event-bus-proofs-economy.md`
+(the commons economy). Fear-loop source: `cost-model.data.json` → `chilling_effect.the_loop`.
+Same rules as §2b apply to the diagrams: one idea, 8–12s, ≤7 elements, animate the divergence.
 
 ## 3. The hero videos — beat sheets
 

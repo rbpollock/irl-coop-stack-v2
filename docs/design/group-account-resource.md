@@ -210,3 +210,6 @@ The group page redesign is **paused** until this resource exists, per Robbie: th
 mocking up. When it lands, the "Accounts" panel reads from `accounts` + `account_roles`, and the health
 strip is "anchor status per account." No mockup until the data model — now including the operation
 model above — is agreed.
+
+The *interface* model has since been agreed and is recorded in `group-home.md` (one graph, three
+axes — zoom / lens / tense). The mockup itself still waits on the data model here.

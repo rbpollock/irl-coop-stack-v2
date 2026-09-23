@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { verifyBearer } from "./verify-jwt";
+import { sessionFromRequest } from "./auth";
 import { makeS3Client } from "./s3-client";
 
 // --- Unified file panel (Phase 1: the docs bucket + virtual folders).
@@ -60,6 +61,23 @@ interface DocObject {
   name: string;
   size: number;
   modified: string;
+}
+
+// --- Resolve the caller from a Bearer coop JWT OR the coop_session cookie.
+// NocoDB's SPA sits on nocodb.irl.coop and holds coop_session (.irl.coop,
+// SameSite=Lax) — it cannot attach a Bearer header. Same-site credentialed
+// fetch sends the cookie, so read-only file ops accept either. Write ops
+// (folder CRUD) stay Bearer-only.
+function verifyRequest(request: any, reply: any): any | null {
+  if ((request.headers.authorization ?? "").startsWith("Bearer ")) {
+    return verifyBearer(request, reply);
+  }
+  const session = sessionFromRequest(request);
+  if (!session) {
+    reply.code(401).send({ error: "invalid_session" });
+    return null;
+  }
+  return session;
 }
 
 // --- Sanitize an object key for the docs source. Preserves spaces + unicode
@@ -135,7 +153,7 @@ function verifyShareToken(token: string): { source: string; key: string } | null
 export default async function filesRoutes(fastify: FastifyInstance): Promise<void> {
   // --- Aggregated listing: folders + docs-bucket objects (seat-scoped).
   fastify.get("/api/v1/files", async (request, reply) => {
-    const claims = verifyBearer(request, reply);
+    const claims = verifyRequest(request, reply);
     if (!claims) return;
     const store = storeFor(claims.sub);
     const docs = await listDocsObjects(claims.sub);
@@ -372,7 +390,7 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
       }
       objectKey = authed.key;
     } else {
-      const claims = verifyBearer(request, reply);
+      const claims = verifyRequest(request, reply);
       if (!claims) return;
       objectKey = `docs/${claims.sub}/${key}`;
     }
@@ -387,7 +405,7 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
 
   // --- Share: mint a variant-B relay token for one object.
   fastify.post("/api/v1/files/:source/:key/share", async (request, reply) => {
-    const claims = verifyBearer(request, reply);
+    const claims = verifyRequest(request, reply);
     if (!claims) return;
     const source = (request.params as any).source as string;
     const keyParam = (request.params as any).key as string;
@@ -441,7 +459,7 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
       }
       objectKey = authed.key;
     } else {
-      const claims = verifyBearer(request, reply);
+      const claims = verifyRequest(request, reply);
       if (!claims) return;
       objectKey = `docs/${claims.sub}/${key}`;
     }

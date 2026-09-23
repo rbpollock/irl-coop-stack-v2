@@ -1,0 +1,14 @@
+# shore_001049421b38.txt — device-specific config for this IP 230g (MAC 001049421B38).
+# The phone fetches BOTH its MAC file AND the base shore_sevg.txt (plus tries
+# sevcustom.txt / sevapp.bin). Keep the full field set here so the phone has
+# everything regardless of which files it actually reads.
+DHCP 1
+RtcpEnable 1
+5004Enable 1
+DscpAudio 0
+KeepAlive 240
+MaxJitter 50
+RtpBase 10000
+MgcServers 192.168.18.20
+2833PayType 102
+sntpserver 192.168.18.20

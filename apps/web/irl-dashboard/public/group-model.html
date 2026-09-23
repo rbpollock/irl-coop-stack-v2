@@ -111,7 +111,7 @@
 
 <div class="abstract">
   <h2>Abstract</h2>
-  <p>irl.coop is organized around a single primitive: the <b>group</b>. Rather than a separate "organization" entity layered on top of user accounts, a group <em>is</em> a Safe smart contract — the same ERC-4337 account a person holds, deployed with an N-of-M owner set instead of a 1-of-1 passkey. Membership is the owner set (on-chain truth); a Citus projection renders it for applications (off-chain projection). Every application consumes the group as its own tenant object through a single indirection row, <code>resource_scopes {group_id, app, resource_key}</code>, and a per-request identity variable, <code>app.sub</code>, enforced by Postgres row-level security. Groups are born from a five-axis declarative <em>shape</em> (roles, apps, config, governance, proofs), assembled by composition rather than inheritance, and — by default — <em>hidden</em>: membership is provable in zero-knowledge but never enumerable. A central event bus (source → event → notification → channel) and a Temporal provisioning reconciler tie the model together, with a private shielded treasury, ERC-7715 permission-grant delegation, and a ZK regenerative-score metric as the economic and reputational spine.</p>
+  <p>irl.coop is organized around a single primitive: the <b>group</b>. Rather than a separate "organization" entity layered on top of user accounts, a group <em>is</em> a Safe smart contract — the same ERC-4337 account a person holds, deployed with an N-of-M owner set instead of a 1-of-1 passkey. Membership is the seat set; the narrower on-chain owner set is <b>governance</b>, and where the two differ is the shape a group can move over its life (§9.1). A Citus projection renders both for applications. Every application consumes the group as its own tenant object through a single indirection row, <code>resource_scopes {group_id, app, resource_key}</code>, and a per-request identity variable, <code>app.sub</code>, enforced by Postgres row-level security. Groups are born from a five-axis declarative <em>shape</em> (roles, apps, config, governance, proofs), assembled by composition rather than inheritance, and — by default — <em>hidden</em>: membership is provable in zero-knowledge but never enumerable. A central event bus (source → event → notification → channel) and a Temporal provisioning reconciler tie the model together, with a private shielded treasury, ERC-7715 permission-grant delegation, and a ZK regenerative-score metric as the economic and reputational spine.</p>
 </div>
 
 <nav class="toc">
@@ -243,10 +243,10 @@
       <line x1="554" y1="70" x2="420" y2="128" stroke="#5a5a5a" stroke-width="1.3" marker-end="url(#arr)"/>
       <line x1="126" y1="250" x2="300" y2="188" stroke="#5a5a5a" stroke-width="1.3" marker-end="url(#arr)"/>
       <line x1="554" y1="250" x2="420" y2="188" stroke="#5a5a5a" stroke-width="1.3" marker-end="url(#arr)"/>
-      <text x="360" y="300" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11.5" fill="#5a5a5a">edges = memberships (seats) &#183; membership = the owner set</text>
+      <text x="360" y="300" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11.5" fill="#5a5a5a">edges = memberships (seats) &#183; governance = the owner set — the two separate as the shape changes</text>
     </svg>
   </div>
-  <figcaption><b>Figure 2.</b> The cooperative graph. Individual accounts are 1-of-1 Safes; a group is the same contract with an N-of-M owner set. A person is a member <em>iff</em> their Safe address is in the owner set.</figcaption>
+  <figcaption><b>Figure 2.</b> The cooperative graph. Individual accounts are 1-of-1 Safes; a group is the same contract with an N-of-M owner set. The owner set is the <em>governance</em> set; a person is a member by holding a <em>seat</em> — and the two differ whenever a group's shape draws that boundary (§9.1).</figcaption>
 </figure>
 
 <p>The model is split into two layers:</p>
@@ -330,7 +330,7 @@
 <h2 id="s6">6&nbsp;&nbsp;Governance</h2>
 <p>Voting is <b>Safe transactions with a UX layer</b>: propose (any <code>member</code> creates a proposal with title, options, quorum %, deadline, optional transaction payload) → deliberate (announced to the governance Matrix room) → vote (members sign the proposal hash with <b>EIP-1271</b> — the personal Safe's signature) → count (quorum % of the owner set by deadline) → execute (a Safe transaction, or a recorded on-chain signed statement). The deterministic vote id is <code>H(groupId, nonce, proposerSub)</code>.</p>
 <p>Group-shape governance splits the meta-axis into <b>constitutional</b> (amendment rules, quorum, admission/expulsion — hard to change) and <b>ordinary</b> (app bundle, delivery prefs, role assignments — shifted under the constitutional process). A split is a constitutional event producing two new group records seeded from the parent's <em>current state</em>, not the original shape.</p>
-<p>Membership is binary (a Safe address is or is not in the owner set); "ownership implies membership ONLY — a Safe in another's owner-set is a seat in its decisions, nothing more." Reserved powers are not a special owner role but a co-owner seat + allowance/session-key module + guard module + timelock guard. Relationship edges are typed over four dimensions — Governance (owner seats · threshold), Infrastructure (namespace · mailboxes · quotas), Trust (OIDC · SMTP · Matrix · arbitration), Economics (funding · sponsorship) — yielding the relationship types <code>member-of</code>, <code>subgroup-of</code>, <code>federated-with</code>, <code>sponsored-by</code>.</p>
+<p>Governance is binary — a Safe address is or is not in the elected owner set; membership is a seat, and the boundary between the two is the group's moveable shape (§9.1). "ownership implies membership ONLY — a Safe in another's owner-set is a seat in its decisions, nothing more." Reserved powers are not a special owner role but a co-owner seat + allowance/session-key module + guard module + timelock guard. Relationship edges are typed over four dimensions — Governance (owner seats · threshold), Infrastructure (namespace · mailboxes · quotas), Trust (OIDC · SMTP · Matrix · arbitration), Economics (funding · sponsorship) — yielding the relationship types <code>member-of</code>, <code>subgroup-of</code>, <code>federated-with</code>, <code>sponsored-by</code>.</p>
 
 <h2 id="s7">7&nbsp;&nbsp;Data scoping &amp; projection</h2>
 <p>The projection enforces visibility in Postgres, "not the app — no app-level bypass." Identity is <code>app.sub</code>, a per-request session variable set by coop-api. <code>FORCE ROW LEVEL SECURITY</code> plus a <code>BYPASSRLS</code> helper role (<code>coop_rls</code>) make policies fire even for the table-owner connection.</p>
@@ -398,6 +398,93 @@
 
 <p><b>Shape = seed, not cage.</b> All five axes are <em>initial values</em> written to the group's Postgres record at provisioning; afterwards the group's record is authoritative and the shape is never re-read. <b>Composition, not inheritance</b>: shapes assemble primitives rather than extend a base ("Men's circle" is a custom composition, not a subclass of "group"), so a built-in shape evolving later never silently changes existing groups. Three lifecycles: <b>built-in</b> (curated, git), <b>custom</b> (per-group, Postgres), and <b>shared</b> (a group exports its shape to a public blueprint library; others adopt/remix). The library shares <em>structure</em> (roles, apps, governance, proof schema), never <em>records</em> (members, votes, metrics) — a blueprint commons, not a data commons.</p>
 <p><b>Child relationships are a rights set, not a flag.</b> A child group is an autonomous Safe holding a <code>subgroup-of</code> edge (governance + infrastructure: shares the parent's namespace, terms declare veto/reserved-powers/autonomy) and possibly a <code>sponsored-by</code> edge (economics: the funding allocation with caps and budget-transfer authority on the edge). The child is a full group — own Safe, own treasury, own seats and governance; strip the binding and it is independent. A sub-project becomes a child group by <b>promotion, not subclassing</b>.</p>
+
+<h3>9.1&nbsp;&nbsp;Shape &amp; lifecycle — the group as a living thing</h3>
+<p>A group is not a fixed type; it is a <b>living shape</b>. A project &mdash; with one or many people and a shared aim &mdash; can <b>graduate through a ceremony</b> into a group, declaring its starting shape and its cadence. From there a group <em>grows</em>: it promotes a child, merges with a peer, devolves a slice, splits in two. The platform's real work is carrying these <b>flows and transitions</b>. Three figures show it: the five axes (Fig. 9), the ceremony that births a group (Fig. 10), and the natural growth that follows (Fig. 11).</p>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 330" role="img" aria-label="The five-axis shape, with governance drawn as the axis that moves over a group's life">
+      <defs><marker id="m9a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <rect x="50" y="24" width="180" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/>
+      <text x="48" y="46" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#0e5a4a">roles</text>
+      <text x="48" y="64" font-family="monospace" font-size="9.5" fill="#333">auth + notify vocab</text>
+      <rect x="270" y="24" width="180" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/>
+      <text x="288" y="46" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#0e5a4a">apps</text>
+      <text x="288" y="64" font-family="monospace" font-size="9.5" fill="#333">provision + hooks</text>
+      <rect x="490" y="24" width="180" height="54" rx="5" fill="#fff" stroke="#0e5a4a"/>
+      <text x="508" y="46" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#0e5a4a">config</text>
+      <text x="508" y="64" font-family="monospace" font-size="9.5" fill="#333">delivery + urgency</text>
+      <rect x="268" y="120" width="184" height="80" rx="6" fill="#0e5a4a"/>
+      <text x="360" y="144" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="13" font-weight="600">the shape</text>
+      <text x="360" y="163" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9.5">a five-seed, written at birth</text>
+      <text x="360" y="180" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9.5">record &mdash; not the boss</text>
+      <rect x="40" y="240" width="190" height="50" rx="5" fill="#fff" stroke="#0e5a4a"/>
+      <text x="58" y="262" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#0e5a4a">proofs</text>
+      <text x="58" y="278" font-family="monospace" font-size="9.5" fill="#333">what it can show, no internals</text>
+      <rect x="500" y="232" width="180" height="66" rx="5" fill="#0e5a4a"/>
+      <text x="516" y="254" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#fff">governance</text>
+      <text x="516" y="272" fill="#cfe3dc" font-family="monospace" font-size="9.5">the meta-axis &middot; constitutional</text>
+      <text x="516" y="286" fill="#cfe3dc" font-family="monospace" font-size="9.5">&amp; ordinary &middot; the one that MOVES</text>
+      <line x1="88" y1="78" x2="298" y2="118" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#m9a)"/>
+      <line x1="360" y1="78" x2="360" y2="118" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#m9a)"/>
+      <line x1="570" y1="78" x2="422" y2="118" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#m9a)"/>
+      <line x1="420" y1="200" x2="500" y2="244" stroke="#0e5a4a" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#m9a)"/>
+      <text x="410" y="214" font-family="monospace" font-size="9.5" fill="#0e5a4a">moves over time</text>
+      <line x1="148" y1="200" x2="170" y2="238" stroke="#0e5a4a" stroke-width="1.3" marker-end="url(#m9a)"/>
+    </svg>
+  </div>
+  <figcaption><b>Figure 9.</b> The five-axis shape seed. <code>roles · apps · config · proofs</code> are inward/outward surfaces; <code>governance</code> is the <b>moving meta-axis</b> &mdash; the one a group can move along by changing its threshold, membership policy, or amendment rules. The others are edited; <code>governance</code> is <em>amended</em>.</figcaption>
+</figure>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 300" role="img" aria-label="A project graduates through a ceremony into a group, choosing its starting shape and cadence">
+      <defs><marker id="m9b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <rect x="36" y="96" width="186" height="84" rx="7" fill="#fff" stroke="#0e5a4a"/>
+      <circle cx="64" cy="132" r="5" fill="#0e5a4a"/><circle cx="90" cy="132" r="5" fill="#0e5a4a"/><circle cx="116" cy="132" r="5" fill="#0e5a4a"/>
+      <text x="50" y="152" font-family="system-ui,sans-serif" font-size="12.5" font-weight="600" fill="#0e5a4a">a project</text>
+      <text x="50" y="170" font-family="monospace" font-size="9.5" fill="#333">one or many people · an aim</text>
+      <path d="M232,132 C 300,118 430,120 500,124" fill="none" stroke="#0e5a4a" stroke-width="1.8" marker-end="url(#m9b)"/>
+      <circle cx="340" cy="132" r="7" fill="#0e5a4a"/>
+      <text x="340" y="120" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9.5" fill="#5a5a5a" font-style="italic">a ceremony</text>
+      <rect x="520" y="96" width="172" height="88" rx="7" fill="#0e5a4a"/>
+      <text x="606" y="118" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="12.5" font-weight="600">the group</text>
+      <text x="606" y="136" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9">a living shape</text>
+      <text x="606" y="152" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9">starting shape + cadence</text>
+      <text x="360" y="246" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#5a5a5a" font-style="italic">the platform carries the flow — a project can graduate on its own timetable</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 10.</b> The graduation ceremony. A project — with one person or many — can become a group through a deliberate <b>ceremony</b> (a promotion operation). In the same motion it decides its <b>starting shape</b> (the five axes) and its <b>cadence</b> — light and weekly, or deliberate and seasonal. The platform's job is to carry the flow, not to prescribe it.</figcaption>
+</figure>
+
+<figure>
+  <div class="fig">
+    <svg viewBox="0 0 720 340" role="img" aria-label="A group grows naturally — promotes a child, merges with a peer, devolves a slice, splits in two — like a tree or a network of connections">
+      <defs><marker id="m9c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0e5a4a"/></marker></defs>
+      <g font-family="system-ui,sans-serif">
+        <rect x="300" y="140" width="130" height="70" rx="7" fill="#0e5a4a"/>
+        <text x="365" y="176" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="600">a group</text>
+        <text x="365" y="195" text-anchor="middle" fill="#cfe3dc" font-family="monospace" font-size="9.5">wearing a shape</text>
+        <rect x="18" y="250" width="120" height="44" rx="6" fill="#fff" stroke="#0e5a4a"/><text x="30" y="271" font-size="10.5" font-weight="600" fill="#0e5a4a">devolves a slice</text><text x="30" y="286" font-family="monospace" font-size="8.5" fill="#333">down its chain</text>
+        <rect x="578" y="18" width="140" height="48" rx="6" fill="#fff" stroke="#0e5a4a"/><text x="590" y="36" font-size="10.5" font-weight="600" fill="#0e5a4a">promotes a child</text><text x="590" y="52" font-family="monospace" font-size="8.5" fill="#333">a project graduates</text>
+        <rect x="578" y="256" width="130" height="44" rx="6" fill="#fff" stroke="#0e5a4a"/><text x="590" y="279" font-size="10.5" font-weight="600" fill="#0e5a4a">splits in two</text>
+        <rect x="18" y="18" width="130" height="48" rx="6" fill="#fff" stroke="#0e5a4a"/><text x="30" y="36" font-size="10.5" font-weight="600" fill="#0e5a4a">merges with a peer</text><text x="30" y="52" font-family="monospace" font-size="8.5" fill="#333">grown together</text>
+      </g>
+      <path d="M332,140 C 322,98 292,74 270,60" fill="none" stroke="#0e5a4a" stroke-width="1.6" marker-end="url(#m9c)"/>
+      <text x="260" y="98" font-family="monospace" font-size="9.5" fill="#0e5a4a">merges</text>
+      <path d="M396,148 C 474,116 520,86 548,58" fill="none" stroke="#0e5a4a" stroke-width="1.6" marker-end="url(#m9c)"/>
+      <text x="474" y="100" font-family="monospace" font-size="9.5" fill="#0e5a4a">promotes</text>
+      <path d="M356,210 C 330,236 258,252 236,262" fill="none" stroke="#0e5a4a" stroke-width="1.6" marker-end="url(#m9c)"/>
+      <text x="244" y="244" font-family="monospace" font-size="9.5" fill="#0e5a4a">devolves</text>
+      <path d="M428,208 C 500,222 540,246 566,256" fill="none" stroke="#0e5a4a" stroke-width="1.6" marker-end="url(#m9c)"/>
+      <text x="498" y="252" font-family="monospace" font-size="9.5" fill="#0e5a4a">splits</text>
+      <rect x="150" y="306" width="420" height="24" rx="6" fill="#f0f0f0" stroke="#0e5a4a" stroke-dasharray="5 4"/>
+      <text x="360" y="322" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#5a5a5a">freeze · contest — the brakes, kept behind a door</text>
+    </svg>
+  </div>
+  <figcaption><b>Figure 11.</b> Growth is a flow, not a ladder. A group buds a child, merges with a peer, devolves a slice down its chain, or splits in two — like a tree growing or a network connecting. No one of these is "more right" than another; each is a transition the platform supports as first-class, with the brakes (<code>freeze</code>, <code>contest</code>) stored behind a door.</figcaption>
+</figure>
 
 <h2 id="s10">10&nbsp;&nbsp;Event bus &amp; provisioning</h2>
 
@@ -1143,6 +1230,7 @@ drift     = declared − actual                             (missing → provisi
   <li>group-scoping.md — RLS (<code>coop_can_view_group</code> et al.), <code>resource_scopes</code>, hidden-norm (§§3, 7).</li>
   <li>event-bus-and-group-shapes.md — the five-axis shape, the event bus, provisioning reconciler, commons economy (§§9, 10).</li>
   <li>group-shape-scenarios.md — the skill-sharing economy scenarios (§10).</li>
+  <li>group-shape-and-lifecycle.md — the group as a living shape: the graduation ceremony, the lifecycle flows, and the shape's levers (§9).</li>
   <li>zk-membership-graph-proofs.md — membership/role/relationship/distance proofs, tiers of hidden, delivery keys (§12).</li>
   <li>private-treasury-guards-ledgers.md — the shielded treasury, guards, ledger taxonomy, settlement (§11).</li>
   <li>delegation-and-session-keys.md — ERC-4337/ERC-7715 delegation, session/delivery/agent keys, the delegation registry (§5).</li>

@@ -47,6 +47,31 @@ unnecessary. Per-user *role* yes, per-user *password* no (the latter lands plain
 
 Stub enterprise probes; port only against the public contract; never clone `nocodb-ee` private code.
 
+## Provisioning — one base per group (settled mechanism)
+
+Settled this session (Robbie: "A — but the bases should organize themselves meaningfully; also
+provision bases for all existing groups to catch up"). The mechanism:
+
+1. **Per-group Postgres schema** `grp_<slug>` (sanitized slug) for named groups; `grp_personal_<id>`
+   for personal groups (no slug). One schema = one group's data surface.
+2. **Narrowed views in that schema** — one per group table (`groups`, `group_members`,
+   `resource_scopes`, `events`, `dues_policy`, `dues_waiver`, `tier2_entry`, `tier2_signature`,
+   `payment_intent`, `telephony_resources`), each `security_invoker = true` AND
+   `WHERE group_id = <this group>` (or `id = <this group>` for `groups`). Explicit column lists,
+   same shape as the global `*_view` relations. Double-safe: the view narrows to the group, and RLS
+   still fires under the member's cert role so a non-member sees zero rows even through the base.
+3. **GRANTs** — `USAGE` on the schema + `SELECT` on its views to `coop_member`.
+4. **NocoDB base per group** — external source over the group's schema (`searchPath: [<schema>]`),
+   same `irlcoop` integration / `coop` connection. Base title = the group's name. The cert dispatch
+   in CustomKnex already applies (source database is still `irlcoop`), so member identity flows.
+5. **`coop_provision_group_base(uuid)`** — SECURITY DEFINER (owner postgres), idempotent, creates
+   the schema + views + grants. Backfill = loop it over every `groups` row.
+6. **Personal base = the lens** — a personal group's base is the member's lens; federation across
+   member-group bases is **B2** (not yet built), so personal bases look sparse until then.
+
+Pending cleanup (after the new model is proven): retire the old shared "Coop" base and update the
+`verify-coop-rls` / journey scripts that still reference it.
+
 ## What this supersedes
 
 - The "Coop base" / "Coop Groups" / "Projects" pre-made bases are **dead naming** — the confusing

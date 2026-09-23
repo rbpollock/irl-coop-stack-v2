@@ -1090,6 +1090,16 @@
         "verified_on": "2026-09-13",
         "source": "notion.com/pricing via review roundup",
         "note": "List price; Enterprise is custom at this volume."
+      },
+      {
+        "slice": "project_management",
+        "vendor": "Asana",
+        "product": "Starter (self-serve, no user cap)",
+        "rate": 10.99,
+        "no_user_cap": true,
+        "verified_on": "2026-09-18",
+        "source": "asana.com/pricing (Starter/Advanced list 'Unlimited' users; seat increments to 500+)",
+        "note": "Self-serve tiers carry no user cap, so they stay purchasable at 150-400 seats; only the Enterprise tier is sales-led. Published range: Trello Standard $5 / Premium $10, ClickUp Unlimited $7 / Business $12, Monday.com Basic $9 / Standard $12 / Pro $19, Asana Starter $10.99 / Advanced $24.99. Cheapest credible full-PM rate used."
       }
     ],
     "nonprofit_programs": [

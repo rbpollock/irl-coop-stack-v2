@@ -10,6 +10,12 @@ Wants=docker.service network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+# Run as the stack's own user (docker-group member): stack-up.sh needs no root
+# (docker compose + host-process checks only), and this keeps the status
+# snapshot at /var/lib/irl-coop/stack-status.json owned by `service` so manual
+# runs of stack-report.py don't hit a root-owned file (PermissionError).
+User=service
+Group=service
 ExecStart=/home/service/development/irl-coop-stack-v2/infra/scripts/stack-up.sh
 Environment=STACK_REPORT=/var/lib/irl-coop/stack-status.json
 

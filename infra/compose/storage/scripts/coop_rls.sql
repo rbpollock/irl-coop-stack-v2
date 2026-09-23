@@ -60,13 +60,17 @@ CREATE TABLE IF NOT EXISTS coop_member_role (
   revoked_at  timestamptz
 );
 
--- NOT SECURITY DEFINER: current_user must read the SESSION's SET ROLE target, not the
--- function owner (a SECURITY DEFINER owned by coop_rls would alias current_user to coop_rls
--- and never match the caller). The mapping table is read-only role->sub metadata (no secrets),
--- so it GRANTs SELECT to PUBLIC and the function runs with caller privileges.
+-- coop_role_sub() resolves the session's AUTHENTICATED role (session_user) to a member
+-- sub. It MUST use session_user, not current_user: the RLS helper functions
+-- (coop_is_member / coop_can_view_group / coop_is_owner / ...) are SECURITY DEFINER owned
+-- by coop_rls, and inside them current_user aliases to coop_rls — a cert-authenticated
+-- member would never match. session_user is fixed at login (cert CN -> role) and SURVIVES
+-- SECURITY DEFINER context, so it is the only reliable handle. NOT SECURITY DEFINER (the
+-- mapping read runs as the caller; the table is PUBLIC-readable role->sub metadata, no
+-- secrets).
 CREATE OR REPLACE FUNCTION coop_role_sub() RETURNS text AS $$
   SELECT sub FROM coop_member_role
-   WHERE role_name = current_user AND revoked_at IS NULL
+   WHERE role_name = session_user AND revoked_at IS NULL
 $$ LANGUAGE sql STABLE;
 GRANT SELECT ON coop_member_role TO PUBLIC;
 
@@ -76,6 +80,33 @@ CREATE OR REPLACE FUNCTION coop_current_sub() RETURNS text AS $$
     NULLIF(current_setting('app.sub', true), '')::text
   )
 $$ LANGUAGE sql STABLE;
+
+-- ---------------------------------------------------------------------------
+-- Member connection roles (A2/A3: per-user identity via client cert).
+-- A member is a LOGIN role whose client cert CN == role name (hostssl ... cert
+-- in pg_hba). The role inherits coop_member (a NOLOGIN group) so it gets the
+-- projection table privileges WITHOUT holding them directly; RLS policies do
+-- the row-level scoping via coop_current_sub() -> coop_role_sub() -> session_user.
+-- Membership in coop_member (not per-role grants) keeps the grant surface stable
+-- as members join/leave, and pg_hba matches `+coop_member` so no per-member
+-- pg_hba edit is needed.
+-- ---------------------------------------------------------------------------
+DO $member$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'coop_member') THEN
+    CREATE ROLE coop_member NOLOGIN;
+  END IF;
+END
+$member$;
+
+-- The member-facing projection (the same six tables the "Coop" external source
+-- mounts today). Table-level grants are broad by design: FORCE RLS + the write
+-- policies below are the real gate, so an over-grant here cannot leak a row.
+GRANT SELECT, INSERT, UPDATE, DELETE ON groups, group_members, resource_scopes,
+  events, notification_reads, notification_digests, profiles TO coop_member;
+
+-- Catalog tables have no RLS (any authenticated member reads).
+GRANT SELECT ON grants, roles, role_grants, telephony_templates TO coop_member;
 
 -- membership (any seat)
 CREATE OR REPLACE FUNCTION coop_is_member(gid uuid) RETURNS boolean
@@ -1010,3 +1041,98 @@ SECURITY DEFINER SET search_path = public AS $$
    ORDER BY w.obligation
 $$ LANGUAGE sql STABLE;
 ALTER FUNCTION coop_dues_waiver_counts(uuid, date, date) OWNER TO coop_rls;
+
+-- ---------------------------------------------------------------------------
+-- Member-facing projection views (NocoDB Step B / one-base-per-group substrate).
+-- ---------------------------------------------------------------------------
+-- Each view is SECURITY INVOKER (Postgres 15+): it executes with the VIEWER's
+-- privileges, so the base table's FORCE RLS policies fire under the viewer's
+-- identity (session_user == the cert-authenticated member role) and scope rows
+-- per-user. This is the correct answer to the spike's security lesson — a naive
+-- view runs as its OWNER and defeats RLS; security_invoker re-instates it.
+-- Every column list is explicit (no bare SELECT *) — the narrowed-view rule.
+-- The views are GRANTed SELECT to coop_member so a member's cert connection can
+-- read them; the row-level scoping is RLS, never the view's WHERE clause.
+
+-- groups: the member-facing group record (no internal created_by leakage beyond
+-- what RLS already shows; kind personal|coop, slug, safe_address).
+CREATE OR REPLACE VIEW groups_view WITH (security_invoker = true) AS
+  SELECT id, name, description, privacy, kind, slug, safe_address, created_at, updated_at
+    FROM groups;
+
+-- group_members: seats joined to the group name (name only for groups RLS already
+-- lets the viewer see).
+CREATE OR REPLACE VIEW group_members_view WITH (security_invoker = true) AS
+  SELECT gm.group_id, g.name AS group_name, gm.sub, gm.roles, gm.alias, gm.visibility, gm.created_at
+    FROM group_members gm
+    JOIN groups g ON g.id = gm.group_id;
+
+-- resource_scopes: what apps/resources a group has scoped, with the group name.
+CREATE OR REPLACE VIEW resource_scopes_view WITH (security_invoker = true) AS
+  SELECT rs.group_id, g.name AS group_name, rs.app, rs.resource_key, rs.scoped_by, rs.scoped_at
+    FROM resource_scopes rs
+    JOIN groups g ON g.id = rs.group_id;
+
+-- events: the group activity stream (payload is the raw jsonb; type + occurred_at
+-- for ordering).
+CREATE OR REPLACE VIEW events_view WITH (security_invoker = true) AS
+  SELECT id, group_id, source, source_event_id, type, payload, occurred_at, created_at
+    FROM events;
+
+-- notification state is user-scoped (read your own read/digest rows).
+CREATE OR REPLACE VIEW notification_reads_view WITH (security_invoker = true) AS
+  SELECT user_sub, event_id, read_at, cleared_at FROM notification_reads;
+
+CREATE OR REPLACE VIEW notification_digests_view WITH (security_invoker = true) AS
+  SELECT user_sub, event_id, sent_at FROM notification_digests;
+
+-- profiles: the member's own profile row (user-scoped by RLS).
+CREATE OR REPLACE VIEW profiles_view WITH (security_invoker = true) AS
+  SELECT sub, email, display_name, avatar, onboarded, onboarded_at, offerings, created_at, updated_at
+    FROM profiles;
+
+-- dues: policy (group-scoped read) and waivers (member sees their own).
+CREATE OR REPLACE VIEW dues_policy_view WITH (security_invoker = true) AS
+  SELECT id, group_id, version, cadence, grace_days, obligations, waiver, status, decided_by, created_at
+    FROM dues_policy;
+
+CREATE OR REPLACE VIEW dues_waiver_view WITH (security_invoker = true) AS
+  SELECT id, group_id, sub, period, obligation, granted_by, authority, note, created_at
+    FROM dues_waiver;
+
+-- tier2 ledger + signatures: group-scoped read (member sees their groups' entries).
+CREATE OR REPLACE VIEW tier2_entry_view WITH (security_invoker = true) AS
+  SELECT entry_id, group_id, seq, prev, period, kind, subject, subject_kind,
+         counterparty, scope, quantity, unit, happened_at, recorded_at, late,
+         payload, refs, state, created_by
+    FROM tier2_entry;
+
+CREATE OR REPLACE VIEW tier2_signature_view WITH (security_invoker = true) AS
+  SELECT entry_id, group_id, signer, class, authority, valid_from, valid_to, signed_at, sig
+    FROM tier2_signature;
+
+-- payment_intent: the payer sees their own; a bookkeeper sees the group's (RLS).
+CREATE OR REPLACE VIEW payment_intent_view WITH (security_invoker = true) AS
+  SELECT id, group_id, payer_sub, rail, provider_ref, amount, currency, destination,
+         status, received_amount, pay_url, created_at, settled_at
+    FROM payment_intent;
+
+-- telephony_resources: member-readable group resources (system-provisioned).
+CREATE OR REPLACE VIEW telephony_resources_view WITH (security_invoker = true) AS
+  SELECT id, group_id, group_telephony_id, resource_type, external_ref, config, created_at
+    FROM telephony_resources;
+
+-- Member base-table grants required for security_invoker views (the invoker must
+-- hold SELECT on the underlying tables). Already granted for the six projection
+-- tables + profiles; extend for the dues/ledger/payment/telephony surface.
+GRANT SELECT ON dues_policy, dues_waiver, tier2_entry, tier2_signature,
+  payment_intent, telephony_resources TO coop_member;
+
+-- The views themselves: SELECT to coop_member (member roles inherit).
+GRANT SELECT ON
+  groups_view, group_members_view, resource_scopes_view, events_view,
+  notification_reads_view, notification_digests_view, profiles_view,
+  dues_policy_view, dues_waiver_view, tier2_entry_view, tier2_signature_view,
+  payment_intent_view, telephony_resources_view
+TO coop_member;
+

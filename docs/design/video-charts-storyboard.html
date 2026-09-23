@@ -33,6 +33,7 @@
   .noden { fill: none; stroke: var(--acc); stroke-width: 2.5; }
   .dotc { fill: var(--dim); } .dotn { fill: var(--acc); }
   .bar { fill: var(--acc); } .barc { fill: var(--dim); }
+  .tag { fill: var(--acc); font-size: 11px; font-weight: 600; }
   .barw { fill: none; stroke: var(--line); }
   table { border-collapse: collapse; width: 100%; font-size: 12px; }
   th, td { text-align: left; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); }
@@ -160,7 +161,7 @@
   <h2>3 · Three ways to buy the same capability (40 members)</h2>
   <figure>
     <svg viewBox="0 0 620 205" width="620" height="205" role="img"
-         aria-label="Monthly cost at 40 members: per-seat stack $2319, mid-tier subscriptions $341, node $78">
+         aria-label="Monthly cost at 40 members: per-seat stack $2319, mid-tier subscriptions $341, node $78 — the per-seat column built up from nine line items">
       <line class="ax" x1="90" y1="160" x2="600" y2="160"/>
       <rect class="barc" x="110" y="30"    width="86" height="130" rx="3"/>
       <rect class="barc" x="250" y="140.9" width="86" height="19.1" rx="3"/>
@@ -169,19 +170,23 @@
       <text class="lb2" x="293" y="135" text-anchor="middle">$340.54</text>
       <text class="lb2" x="484" y="152">$77.50</text>
       <text class="lb2" x="153" y="176" text-anchor="middle">per-seat stack</text>
-      <text class="lb"  x="153" y="190" text-anchor="middle">9 slices, SSO tier</text>
+      <text class="lb"  x="153" y="190" text-anchor="middle">9 per-person line items</text>
       <text class="lb2" x="293" y="176" text-anchor="middle">mid-tier</text>
       <text class="lb"  x="293" y="190" text-anchor="middle">7 subscriptions</text>
       <text class="lb2" x="433" y="176" text-anchor="middle">irl.coop</text>
-      <text class="lb"  x="433" y="190" text-anchor="middle">1 shared node</text>
+      <text class="lb"  x="433" y="190" text-anchor="middle">1 shared node (running)</text>
+      <text class="tag" x="153" y="56" text-anchor="middle">same work, three</text>
+      <text class="tag" x="153" y="70" text-anchor="middle">ways to pay</text>
     </svg>
     <figcaption>
-      <div class="idea">Three ways to buy the same capability — and the smallest bar funds
-      everything the other two charge for separately.</div>
-      <div class="meta"><span class="shot">on screen 3:00–3:20</span> · one chart, three bars, no
-      log scale, no legend — the labels do the work. Per-seat uses the <code>standard</code> tier
-      (SSO-grade), the mid-tier is the cheapest credible entry per slice, irl.coop is running cost
-      including carrier numbers.</div>
+      <div class="idea">Same work, three ways to pay — and the per-seat column is tall
+      because it is nine per-person line items, not because the product costs more.</div>
+      <div class="meta"><span class="shot">on screen 3:00–3:20</span> · built up live as stacked
+      columns so the viewer SEEs why the commercial stack is large (the per-seat column
+      accumulates to $2,319, the per-org column to $340.54 across 7 subscriptions), while one
+      shared node is a single thin bar at $77.50. No log scale, no legend — the labels do the work.
+      Per-seat uses the <code>standard</code> tier (SSO-grade), the mid-tier is the cheapest
+      credible entry per slice, irl.coop is running cost including carrier numbers.</div>
     </figcaption>
   </figure>
 

@@ -1,0 +1,12 @@
+# shore_sev.txt — IP 230 (SEV) base configuration (reconstructed from ShoreTel
+# "Customizing IP Phones" field list). Values are best-effort; the phone only
+# needs the network/identity fields to leave "Requesting Service".
+DHCP 1
+RtcpEnable 1
+5004Enable 1
+DscpAudio 0
+KeepAlive 240
+MaxJitter 50
+RtpBase 10000
+MgcServers 192.168.18.20
+2833PayType 102

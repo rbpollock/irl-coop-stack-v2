@@ -1,0 +1,18 @@
+# shore_sevg.txt — IP 230g (SEVG) base configuration.
+# Keys are the firmware's exact names (per the binary's config table).
+dhcp 1
+Include "Country_$Country.txt"
+Include "Language_$Language.txt"
+rtcpenable 1
+5004enable 1
+dscpaudio 0
+keepalive 240
+maxjitter 50
+rtpbase 10000
+mgcservers 192.168.18.20, 192.168.18.20
+mgcauthenticate 0
+2833PayType 102
+sntpserver 192.168.18.20
+
+appname sevgap_99_99_99.ebin
+bootname sevgap_99_99_99.ebin

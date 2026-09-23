@@ -23,6 +23,7 @@ import {
   Scale,
   Search,
   Sprout,
+  TriangleAlert,
   Video,
   Waypoints,
   X,
@@ -248,6 +249,16 @@ export function PhoneHome() {
     <div className="flex gap-6 items-start relative">
       {/* Main content area */}
       <div className="flex-1 space-y-8 min-w-0">
+        {/* Under-development notice */}
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-900 dark:text-amber-200">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+          <p className="text-xs leading-relaxed">
+            <span className="font-semibold">irl.coop is under active development.</span>{" "}
+            Features are subject to change, the platform is still experimental, and data loss is
+            likely. Please don&apos;t rely on it for anything you can&apos;t afford to lose.
+          </p>
+        </div>
+
         {/* Search — docs, public groups and rooms */}
         <section>
           <DocsSearch className="max-w-none" prioritizeGroups />
