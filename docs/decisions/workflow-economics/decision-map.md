@@ -77,15 +77,15 @@ All paths are absolute under `/home/service/.hermes/hermes-agent/` unless noted.
 
 | # | Decision | Meaning | Depends on | Suggested order |
 |---|---|---|---|---|
-| D1 | Boundary / form factor: plugin vs standalone service vs repo tool vs combo | Where the deliverable lives and what it may touch | none (gate) | **1st (this phase)** |
-| D2 | What v1 optimizes first | scopes everything else | D1 | 2nd (accepted) |
-| D3 | What data can safely+realistically be observed in v1 | already largely answered by findings above | D1 | 3rd (accepted) |
-| D4 | Storage: metadata only vs opt-in redacted vs rich task records | D1, D3 | 4th (accepted) |
-| D5 | Smallest report/interaction surface | D1, D2 | 5th (accepted) |
-| D6 | One low-risk task class for the first local-model experiment | D2 | 6th (accepted) |
-| D7 | Mandatory deterministic safety/approval boundaries | none (hard constraint) | **blocks D8/D9** (accepted) |
-| D8 | Classifier for routing: local decision model vs structured output vs deterministic | **proposed** (O4/hybrid: deterministic + local) — 0008 | D2, D5, D6, D7 | after RAG fix (now fixed) |
-| D9 | Success metrics + thresholds | define with D2 | D2, D3 | 7th |
+| D1 | Boundary / form factor | → **accepted: O4 local workbench on Hermes data** (reports+decision cards; plugin only later) | none (gate) | 1st (accepted O4) |
+| D2 | What v1 optimizes first | routing workbench | D1 | 2nd (accepted) |
+| D3 | What data can safely+realistically be observed in v1 | metadata only | D1 | 3rd (accepted) |
+| D4 | Storage for the data | rich local task records, content-free | D1, D3 | 4th (accepted) |
+| D5 | Smallest report/interaction surface | in-session Hermes tool + Markdown | D1, D2 | 5th (accepted) |
+| D6 | One low-risk task class for the first local-model experiment | commit/title/changelog drafts | D2 | 6th (accepted) |
+| D7 | Mandatory deterministic safety/approval boundaries | G0 — recommend only, human approves | none (hard) | **blocks D8/D9** (accepted) |
+| D8 | Router classifier | hybrid: deterministic + local Open-Jev (probe passed) | D2, D5, D6, D7 | proposed (D6 bench gates final) |
+| D9 | Success metrics + thresholds | the M1–M8 bar (below) | D2, D3 | accepted |
 
 > **Unparked 2026-09-22:** D8 is proposed (0008) — hybrid local model
 > (deterministic + Open-Jex). RAG fix completed (1024-dim), so the D-im blame

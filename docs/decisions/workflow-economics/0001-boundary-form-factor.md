@@ -1,6 +1,6 @@
 # 0001 — Boundary / form factor (D1)
 
-Status: **proposed** (needs human decision)
+Status: **accepted** (O4 — local workbench on Hermes data; recommendations-first; plugin deferred until a metric needs it)
 Date: 2026-09-22 · Owner: Robbie
 
 ## Decision statement (one bounded question)

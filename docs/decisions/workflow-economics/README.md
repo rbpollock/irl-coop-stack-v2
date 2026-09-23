@@ -23,14 +23,15 @@ conditions.
 
 | Record | Status |
 |---|---|
-| [0001-boundary-form-factor](0001-boundary-form-factor.md) — D1: plugin vs standalone vs combination | proposed (phase 0) |
-| [0002-primary-goal](0002-primary-goal.md) — D2: v1 primary goal = local decision/routing workbench | accepted |
-| [0003-data-observed](0003-data-observed.md) — D3: observe metadata structure only | accepted |
-| [0004-data-storage](0004-data-storage.md) — D4: rich local task records, content-free | accepted |
-| [0005-interaction-surface](0005-interaction-surface.md) — D5: in-session Hermes tool (+ Markdown record) | accepted |
-| [0006-first-experiment-task](0006-first-experiment-task.md) — D6: first experiment = commit/title/changelog drafts | accepted |
-| [0007-safety-gates](0007-safety-gates.md) — D7: deterministic safety/approval boundaries (G0) | accepted |
-| [0008-classifier-selection](0008-classifier-selection.md) — D8: router classifier = deterministic + local | proposed |
+| [0001-boundary-form-factor](0001-boundary-form-factor.md) — D1: boundary | accepted (O4 workbench) |
+| [0002-primary-goal](0002-primary-goal.md) — D2: routing workbench | accepted |
+| [0003-data-observed](0003-data-observed.md) — D3: metadata only | accepted |
+| [0004-data-storage](0004-data-storage.md) — D4: rich local task records | accepted |
+| [0005-interaction-surface](0005-interaction-surface.md) — D5: in-session tool | accepted |
+| [0006-first-experiment-task](0006-first-experiment-task.md) — D6: commit/title drafts | accepted |
+| [0007-safety-gates](0007-safety-gates.md) — D7: G0 recommend-only | accepted |
+| [0008-classifier-selection](0008-classifier-selection.md) — D8: hybrid router | proposed (D6 gates) |
+| [0009-success-metrics](0009-success-metrics.md) — D9: M1–M8 bar | accepted |
 | Decision map (D1–D9 index + dependencies) | [decision-map.md](decision-map.md) |
 
 ## Rubric (stable)
