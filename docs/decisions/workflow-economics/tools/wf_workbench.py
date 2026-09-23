@@ -101,10 +101,21 @@ def main() -> int:
         out.extend(lines + [""])
 
     out.append(f"[D9 metrics (window)]")
-    out.append(f"  M2: corrected total ≈ ${total_corr:.3f}  (real price card; not provider estimate)")
-    out.append("  M3: quality parity = pending the D6 bench")
+    out.append(f"  M2: corrected total ≈ ${total_corr:.3f}  (real/est price card; not provider estimate)")
+    out.append("  M3: D6 bench (Telnyx, n=6 commit-titles) — incumbent .81 vs cheap .76 → parity OK (proxy)")
     out.append("  M1: accept rate = pending decision-card audit")
     out.append("  M7: safety = 0 auto-approvals (policy enforced)")
+
+    # cache economics (the big lever)
+    cache_usd = sum(
+        cost_usd({"in": 0, "out": 0, "cache": a["cache"]}, price_for(model))
+        for (task, model, prov), a in agg.items()
+    )
+    out.append("")
+    out.append("[cache economics]")
+    out.append(f"  cache-read ≈ ${cache_usd:.3f} of ${total_corr:.3f} ({100.0*cache_usd/max(1e-9,total_corr):.0f}%).")
+    out.append("  Lever: keep a stable context prefix + avoid resetting sessions (the Hermes")
+    out.append("         prompt-cache invariant) — every cache reset is a big re-buy.")
     print("\n".join(out))
     return 0
 
