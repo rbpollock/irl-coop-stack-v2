@@ -14,7 +14,7 @@ const targets = [
   ["needs-effers", "/en/dashboards/needs-offers"],
   ["calls", "/en/apps/calls"],
   ["dashboard", "/en"],
-  ["design", "/en/design"],
+  ["cinny", "https://cinny.irl.coop"],
 ]
 
 const browser = await chromium.launch()
@@ -42,8 +42,8 @@ try {
   try { await page.waitForSelector("input[type=submit]", { timeout: 15000 }); await page.click("input[type=submit]") } catch {}
   await page.waitForURL(`${BASE}/**`, { timeout: 30000 })
 
-  for (const [name, path] of targets) {
-    await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded", timeout: 45000 })
+  for (const [name, url] of targets) {
+    await page.goto(url.startsWith("http") ? url : `${BASE}${url}`, { waitUntil: "domcontentloaded", timeout: 45000 })
     await page.waitForTimeout(4000)
     const file = `${OUT}/${name}.png`
     await page.screenshot({ path: file })

@@ -110,7 +110,7 @@ if __name__ == "__main__":
     stats = json.loads(STATS.read_text())
     verts = stats.get("vertical", [])
     v = {s.get("name"): s for s in verts}
-    shots = ["art/shot_dash.png", "art/shot_cinny.png", "art/shot_design.png"]
+    shots = ["art/needs-effers.png", "art/calls.png", "art/dashboard.png", "art/cinny.png"]
 
     idn, edg, wf = v.get("identity") or {}, v.get("edge") or {}, v.get("workflow") or {}
     cards = [
