@@ -20,11 +20,16 @@ def esc(s):
 
 def build(cards):
     frag, tl = [], []
-    acc = 0.0
+    durs = [c.get("d", 2.2 if c.get("kind") in ("cover", "end") else 1.8) for c in cards]
+    starts = []
+    a = 0.0
+    for d in durs:
+        starts.append(a)
+        a += d
+    total = a
     for i, c in enumerate(cards):
-        dur = c.get("d", 2.2 if c["kind"] in ("cover", "end") else 1.8)
-        st = acc
-        acc += dur + 0.28
+        st = starts[i]
+        dur = durs[i]
         bg = PAL[i % len(PAL)]
         kick = c.get("kick", "")
         if c["kind"] == "list":
@@ -39,7 +44,7 @@ def build(cards):
             f'<div class="clip slide" id="sn{i}" data-start="{st:.2f}" data-duration="{dur:.2f}" '
             f'data-track-index="{i}" style="background:{bg}"><div class="kick">{esc(kick)}</div>{body}</div>'
         )
-        tl.append(f'tl.fromTo("#sn{i}",{{autoAlpha:0}},{{autoAlpha:1,duration:0.3}},{st:.2f});')
+        tl.append(f'tl.fromTo("#sn{i}",{{autoAlpha:0}},{{autoAlpha:1,duration:0.32}},{st:.2f});')
         tl.append(f'tl.fromTo("#sn{i} .big,#sn{i} .rows,#sn{i} .title",'
                   f'{{opacity:0,y:30}},{{opacity:1,y:0,duration:0.5,ease:"power2.out"}},{st + 0.2:.2f});')
         tl.append(f'tl.to("#sn{i}",{{autoAlpha:0,duration:0.24}},{st + dur:.2f});')
@@ -64,13 +69,13 @@ def build(cards):
         ".li{font-size:42px;margin:22px 0;color:#eef3fb;line-height:1.25}"
         "</style></head><body>"
         f"<div id=\"root\" data-composition-id=\"main\" data-start=\"0\" "
-        f"data-duration=\"{(acc - 0.28):.1f}\" data-width=\"1080\" data-height=\"1920\">{frag_html}</div>"
+        f"data-duration=\"{(total):.1f}\" data-width=\"1080\" data-height=\"1920\">{frag_html}</div>"
         "<script>window.__timelines=window.__timelines||{};const tl=gsap.timeline({paused:true});\n"
         + tljs +
         "\nwindow.__timelines['main']=tl; tl.seek(0);</script></body></html>"
     )
     OUT.write_text(html)
-    print(f"wrote {OUT} · {len(cards)} slides · {(acc - 0.28):.1f}s")
+    print(f"wrote {OUT} · {len(cards)} slides · {(total):.1f}s")
 
 
 if __name__ == "__main__":
@@ -79,24 +84,39 @@ if __name__ == "__main__":
     days = stats.get("days", 45)
     cards = [
         dict(kind="cover", kick="YOUR SEASON", big="SessionRolled",
-             sub=f"{stats['sessions']} sessions · {days} days", foot="the work, wrapped"),
+             sub=f"{stats['sessions']} sessions · {days} days", foot="the work, wrapped", d=2.2),
         dict(kind="stat", kick="IN CONVERSATION", big=f"{stats['hours']} h",
-             sub="estimated hours back-and-forth", foot=f"across {stats['sessions']} sessions"),
+             sub="estimated hours back-and-forth", foot=f"across {stats['sessions']} sessions", d=1.8),
         dict(kind="stat", kick="AI TOKENS", big=stats["tokens"],
-             sub="through the stack this season", foot="kept warm"),
+             sub="through the stack this season", foot="kept warm", d=1.8),
         dict(kind="stat", kick="KEPT WARM", big=f"{stats.get('cache_pct', 99)}%",
-             sub="served from cache", foot="the preamble, never re-bought"),
-        dict(kind="stat", kick="THE WORKHORSE", big="deepseek-pro",
-             sub="the model that carried it", foot="flash in the wings"),
+             sub="served from cache", foot="the preamble, never re-bought", d=1.8),
+
+        # ——— the heart: what got made ———
+        dict(kind="cover", kick="THE HEART", big="what got built",
+             sub="the fact · not the chatter", foot="made, then shown", d=1.7),
+        dict(kind="list", kick="THE DECISIONS", title="the ADR set you resolved",
+             items=arts[:8], d=2.6),
+        dict(kind="list", kick="THE STACK", title="sovereign infra you hardened",
+             items=["rag: local bge · 1024-dim embeddings",
+                    "rerank brought back onto the docs search",
+                    "docs search now jumps to the exact section",
+                    "the isolation / RLS layers"], d=2.6),
+        dict(kind="list", kick="THE TOOLS", title="did the work, earned its fuel",
+             items=["workbench: corrected-cost decision card",
+                    "the D6 paired bench (cheap ∥ strong)",
+                    "the jev scene-scorer",
+                    "session-story renderer"], d=2.4),
+        dict(kind="list", kick="THE DIRECTOR", title="a model that only decided",
+             items=["Open-Jev scored the scenes, kept it honest",
+                    "no choke — it abstains at 0.5",
+                    "recommendation-only, all approvals yours"], d=2.4),
+
         dict(kind="stat", kick="THE MARATHON", big=f"{stats['longest']['hours']} h",
-             sub="longest single thread", foot=stats["longest"]["title"]),
+             sub="longest single thread", foot=stats["longest"]["title"], d=1.8),
         dict(kind="list", kick="THE HARDEST", title="where we pushed back",
-             items=stats.get("challenging", [])[:4], d=2.5),
-        dict(kind="list", kick="THE CALLS", title="decisions made & resolved",
-             items=stats.get("decisions", [])[:4], d=2.3),
-        dict(kind="list", kick="THE ARTIFACTS", title="shipped & archived",
-             items=arts, d=2.6),
-        dict(kind="end", kick="THE WRAP", big="see irl.coop",
-             sub="45 days in one pass", foot="made with the loop"),
+             items=stats.get("challenging", [])[:3], d=2.0),
+        dict(kind="end", kick="THE WRAP", big="irl.coop",
+             sub="45 days in one pass", foot="made with the loop", d=2.2),
     ]
     build(cards)
