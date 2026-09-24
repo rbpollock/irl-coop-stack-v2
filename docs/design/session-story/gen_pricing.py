@@ -9,10 +9,14 @@ OUT = os.path.dirname(os.path.abspath(__file__))
 SVG = os.path.join(OUT, "render", "art", "pricing.svg")
 
 # --- model (labeled estimates) ---
-COMM_PER_SEAT_MO = 22.0      # email+chat+events+storage blended, non-nonprofit list
+# Commercial = ONE seat of EACH tool irl.coop replaces, public list, non-nonprofit:
+#   Workspace 14 + Slack 8.75 + Zoom 13.33 + phone 26 + Asana 13.49 + Airtable 20 +
+#   Typeform 8 + Cal.com 12 + CRM 25 + Drive 12 + Mailchimp 10 + Eventbrite 10 + Notion 10
+COMM_PER_SEAT_MO = 182.57    # per person, per month — the whole stack rented
 IRL_BASE_MO = 40.0           # shared member-run baseline (hardware+storage)
 IRL_PER_SEAT_MO = 1.0        # marginal, shared — NOT per-seat licensing
 YEAR = 12
+YMAX = 500000
 
 def comm(seats): return seats * COMM_PER_SEAT_MO * YEAR
 def irl(seats):  return (IRL_BASE_MO + seats * IRL_PER_SEAT_MO) * YEAR
@@ -21,7 +25,6 @@ def irl(seats):  return (IRL_BASE_MO + seats * IRL_PER_SEAT_MO) * YEAR
 W, H = 1000, 620
 L, R, T, B = 120, 940, 110, 520
 XMAX = 3000
-YMAX = 300000
 
 def X(s): return L + (R - L) * (s ** 0.5) / (XMAX ** 0.5)     # sqrt so low end is visible
 def Y(v): return B - (B - T) * min(v, YMAX) / YMAX
@@ -60,7 +63,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewB
 {''.join(rows)}
 <text x="{R-150}" y="{Y(comm(3000))-18:.0f}" fill="#ff6b6b" font-size="22" font-weight="600" font-family="Inter,sans-serif">commercial (per seat)</text>
 <text x="{R-210}" y="{Y(irl(3000))+34:.0f}" fill="#5eead4" font-size="22" font-weight="600" font-family="Inter,sans-serif">irl.coop (shared)</text>
-<text x="{L}" y="{B+80}" fill="#6b7d99" font-size="19" font-family="Inter,sans-serif">estimate · irl.coop cost is shared across members, never passed to one user · labor unpriced</text>
+<text x="{L}" y="{B+80}" fill="#6b7d99" font-size="19" font-family="Inter,sans-serif">estimate · one seat of each tool irl.coop replaces (~$183/mo) · irl.coop cost is shared across members, never passed to one user · labor unpriced</text>
 </svg>'''
 
 os.makedirs(os.path.dirname(SVG), exist_ok=True)
