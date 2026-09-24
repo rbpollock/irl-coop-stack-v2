@@ -1,9 +1,9 @@
 {
-  "days": 45,
-  "sessions": 102,
-  "hours": 219.8,
-  "tokens": "4.9B",
-  "tokens_raw": 4918085238,
+  "days": 74,
+  "sessions": 133,
+  "hours": 314.8,
+  "tokens": "6.7B",
+  "tokens_raw": 6650895624,
   "cache_pct": 99,
   "reasoning_pct": 0,
   "models": [
@@ -14,18 +14,18 @@
     },
     {
       "model": "deepseek-v4-flash",
-      "calls": 16,
-      "tokens": 16477752
+      "calls": 22,
+      "tokens": 25650421
     },
     {
-      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
-      "calls": 3,
-      "tokens": 5302507
+      "model": "gemini-3.5-flash",
+      "calls": 18,
+      "tokens": 7033640
     },
     {
-      "model": "gemini-flash-lite-latest",
-      "calls": 3,
-      "tokens": 1842621
+      "model": "gemini-3.1-flash-lite",
+      "calls": 6,
+      "tokens": 5953035
     }
   ],
   "longest": {
@@ -36,13 +36,12 @@
     "Design group dashboard interface",
     "Plan intro video strategy for irl.coop",
     "Plan FusionPBX browserphone dashboard integration",
-    "Continue NocoDB rebuild A2+A3 client cert",
-    "Determine irl-coop funding and membership",
-    "Design Hermes plugin decision workflow"
+    "Dashboard Keycloak Google Auth Setup",
+    "Catching Up on Work",
+    "Continue NocoDB rebuild A2+A3 client cert"
   ],
   "decisions": [
-    "Design group dashboard interface",
-    "Design Hermes plugin decision workflow"
+    "Design group dashboard interface"
   ],
   "artifacts": [
     "docs/decisions/workflow-economics/0001-boundary-form-factor.md",
