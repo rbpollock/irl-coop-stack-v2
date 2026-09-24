@@ -109,24 +109,38 @@ def build(cards):
 if __name__ == "__main__":
     stats = json.loads(STATS.read_text())
     verts = stats.get("vertical", [])
+    v = {s.get("name"): s for s in verts}
     shots = [f"art/{p}" for p in ("shot_design.png", "shot_doc.png", "shot_matrix.png")]
 
-    cards = [dict(kind="cover", kick="irl.coop", big="irl.coop",
-                  sub="a season of building the stack",
-                  foot="six pillars, one roof", d=2.6)]
-    for v in verts:
-        has = (v.get("hours") or 0) > 0
-        cards.append(dict(
-            kind="stat", kick=f"{v['name']}",
-            big=v["comp"],
-            sub=(f"about {v['hours']} hrs, {v['tokens']} tokens" if has else "we did this one by hand"),
-            foot=f"{LINE[v['name']]}. {HARD[v['name']]}.",
-            d=2.3))
-    cards += [
-        dict(kind="cover", kick="the real proof", big="what runs today",
-             sub="actual screens, not mockups", cap="", d=1.7),
-        dict(kind="grid", kick="in the wild", cap="the app, alive",
-             items=shots, d=3.4),
+    idn, edg, wf = v.get("identity") or {}, v.get("edge") or {}, v.get("workflow") or {}
+    cards = [
+        dict(kind="cover", kick="our own stack", big="irl.coop",
+             sub="we built the whole thing ourselves",
+             foot="identity · edge · mail · data · cache · workflows", d=2.6),
+
+        dict(kind="stat", kick="start with the door", big="one identity",
+             sub="everyone logs in through the same realm",
+             foot="Keycloak does the joining", d=2.2),
+
+        dict(kind="stat", kick="the part nobody really sees", big="it was hard",
+             sub="identity, the edge, and the moves — that was the grind",
+             foot="doesn't look like much; a lot happened underneath", d=2.4),
+
+        dict(kind="stat", kick="where the energy really went", big="the spread",
+             sub=(f"identity {idn.get('hours',0)}h / {idn.get('tokens','0')} · "
+                  f"edge {edg.get('hours',0)}h / {edg.get('tokens','0')} · "
+                  f"workflow {wf.get('hours',0)}h / {wf.get('tokens','0')}"),
+             foot="the measured spread, no more", d=2.8),
+
+        dict(kind="stat", kick="the ones that stayed quiet", big="cache · data · mail",
+             sub="the work still got done, it just didn't shout",
+             foot="no headlines, same roof", d=2.4),
+
+        dict(kind="cover", kick="proof, not promise", big="the app lives",
+             sub="actual screens", foot="", d=1.7),
+        dict(kind="grid", kick="for real", cap="running as you watch",
+             items=shots, d=3.6),
+
         dict(kind="end", kick="the point", big="irl.coop",
              sub="built for the loop, kept by you", foot="", d=2.3),
     ]
