@@ -70,8 +70,6 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewB
 <path d="{path(irl)}" fill="none" stroke="#5eead4" stroke-width="5" stroke-linecap="round"/>
 {''.join(rows)}
 {callout}
-<text x="{R-250}" y="{Y(comm(3000))-92:.0f}" fill="#ff6b6b" font-size="30" font-weight="600" font-family="Inter,sans-serif">commercial (per seat)</text>
-<text x="{R-250}" y="{Y(irl(3000))-92:.0f}" fill="#5eead4" font-size="30" font-weight="600" font-family="Inter,sans-serif">irl.coop (shared)</text>
 <text x="{L}" y="{B+96}" fill="#8ea3c2" font-size="26" font-family="Inter,sans-serif">estimate · one seat of each tool irl.coop replaces (~$183/mo) · shared across members, never one user · labor unpriced</text>
 </svg>'''
 

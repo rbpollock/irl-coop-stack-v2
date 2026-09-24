@@ -55,7 +55,12 @@ def build(cards):
             lis = "".join(f'<div class="li">{esc(x)}</div>' for x in c.get("items", []))
             body = f'<div class="title">{esc(c.get("title",""))}</div><div class="rows">{lis}</div>'
         elif c.get("img"):
-            body = f'<div class="showcase"><img src="{esc(c["img"])}"></div>'
+            leg = ""
+            if c.get("legend"):
+                leg = '<div class="legend">' + "".join(
+                    f'<span><i style="background:{col}"></i>{esc(txt)}</span>'
+                    for txt, col in c["legend"]) + '</div>'
+            body = f'{leg}<div class="showcase"><img src="{esc(c["img"])}"></div>'
         else:
             big = c.get("big", "")
             body = f'<div class="big">{esc(big)}</div>'
@@ -102,6 +107,9 @@ def build(cards):
         ".g img{width:100%;height:auto;border-radius:12px;border:1px solid rgba(255,255,255,.12)}"
         ".showcase{display:flex;justify-content:center;align-items:center;margin-top:20px}"
         ".showcase img{width:100%;max-width:940px;height:auto;border-radius:12px}"
+        ".legend{display:flex;gap:44px;margin:6px 0 26px}"
+        ".legend span{font-size:32px;font-weight:600;color:#dbe6f5;display:flex;align-items:center}"
+        ".legend i{width:22px;height:22px;border-radius:50%;margin-right:14px;display:inline-block}"
         ".title{font-size:60px;font-weight:700;margin-bottom:34px}"
         ".rows{display:flex;flex-direction:column;gap:26px}"
         ".li{font-size:40px;line-height:1.25;color:#eef3fb}"
@@ -153,8 +161,9 @@ if __name__ == "__main__":
         dict(kind="grid", kick="for real", cap="running as you watch",
              items=shots, d=3.6),
 
-        dict(kind="shot", kick="what it costs, at every size", title="",
-             sub="", d=4.6, img="art/pricing.svg"),
+        dict(kind="shot", kick="what a group stops renting, per year",
+             title="", sub="", d=4.6, img="art/pricing.svg",
+             legend=[("commercial (per seat)", "#ff6b6b"), ("irl.coop (shared)", "#5eead4")]),
         dict(kind="list", kick="what's left before launch", title="the road to live",
              items=[
                  "money — a non-custodial vault, then the treasury",
