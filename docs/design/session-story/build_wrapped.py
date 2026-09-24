@@ -142,6 +142,6 @@ if __name__ == "__main__":
              items=shots, d=3.6),
 
         dict(kind="end", kick="the point", big="irl.coop",
-             sub="built for the loop, kept by you", foot="", d=2.3),
+             sub="built together, stays ours", foot="", d=2.3),
     ]
     build(cards)
