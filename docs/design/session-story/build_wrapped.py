@@ -98,40 +98,28 @@ def build(cards):
 if __name__ == "__main__":
     stats = json.loads(STATS.read_text())
     arts = [f.split("/")[-1] for f in (stats.get("artifacts") or [])]
-    days = stats.get("days", 45)
     cards = [
-        dict(kind="cover", kick="YOUR SEASON", big="SessionRolled",
-             sub=f"{stats['sessions']} sessions · {days} days", foot="the work, wrapped", d=2.2),
-        dict(kind="stat", kick="IN CONVERSATION", big=f"{stats['hours']} h",
-             sub="estimated hours back-and-forth", foot=f"across {stats['sessions']} sessions", d=1.8),
-        dict(kind="stat", kick="AI TOKENS", big=stats["tokens"],
-             sub="through the stack this season", foot="full account", d=1.8),
+        dict(kind="cover", kick="THE ROOT STACK", big="irl.coop",
+             sub="sovereign infra, told in layers", foot="keycloak · traefik · postgres · redis · stalwart · temporal", d=2.6),
 
-        # ——— the heart: what got made ———
+        dict(kind="stat", kick="PILLAR · IDENTITY", big="Keycloak",
+             sub="one realm", foot="every app logs in here", d=2.2),
+        dict(kind="stat", kick="PILLAR · EDGE", big="Traefik",
+             sub="the gateway", foot="wildcard TLS, live routes", d=2.2),
+        dict(kind="stat", kick="PILLAR · CACHE", big="Redis",
+             sub="the fast lane", foot="shared, prefixed, always hot", d=2.2),
+        dict(kind="stat", kick="PILLAR · DATA", big="Postgres",
+                     sub="the one store", foot="rows scoped, fault-scoped", d=2.2),
+        dict(kind="stat", kick="PILLAR · MAIL", big="Stalwart",
+             sub="your mail, yours", foot="DKIM'd and under your roof", d=2.2),
+        dict(kind="stat", kick="PILLAR · WORKFLOW", big="Temporal",
+             sub="jobs that never drop", foot="queued, retried, idempotent", d=2.2),
+
         dict(kind="cover", kick="THE HEART", big="what got built",
-             sub="the fact · not the chatter", foot="made, then shown", d=1.7),
+             sub="the docs, arrayed", foot=None, d=1.6),
         dict(kind="grid", kick="THE ARTIFACTS", title="the docs · arrayed",
-             items=[f"art/art{j}.png" for j in range(min(8, len(arts)))], d=3.0),
-        dict(kind="list", kick="THE STACK", title="sovereign infra you hardened",
-             items=["rag: local bge · 1024-dim embeddings",
-                    "rerank brought back onto the docs search",
-                    "docs search now jumps to the exact section",
-                    "the isolation / RLS layers"], d=2.6),
-        dict(kind="list", kick="THE TOOLS", title="did the work, earned its fuel",
-             items=["workbench: corrected-cost decision card",
-                    "the D6 paired bench (cheap ∥ strong)",
-                    "the jev scene-scorer",
-                    "session-story renderer"], d=2.4),
-        dict(kind="list", kick="THE DIRECTOR", title="a model that only decided",
-             items=["Open-Jev scored the scenes, kept it honest",
-                    "no choke — it abstains at 0.5",
-                    "recommendation-only, all approvals yours"], d=2.4),
-
-        dict(kind="stat", kick="THE MARATHON", big=f"{stats['longest']['hours']} h",
-             sub="longest single thread", foot=stats["longest"]["title"], d=1.8),
-        dict(kind="list", kick="THE HARDEST", title="where we pushed back",
-             items=stats.get("challenging", [])[:3], d=2.0),
+             items=[f"art/art{j}.png" for j in range(min(8, len(arts)))], d=3.2),
         dict(kind="end", kick="THE WRAP", big="irl.coop",
-             sub="45 days in one pass", foot="made with the loop", d=2.2),
+             sub="the stack stays yours", foot="made with the loop", d=2.2),
     ]
     build(cards)
