@@ -88,9 +88,7 @@ if __name__ == "__main__":
         dict(kind="stat", kick="IN CONVERSATION", big=f"{stats['hours']} h",
              sub="estimated hours back-and-forth", foot=f"across {stats['sessions']} sessions", d=1.8),
         dict(kind="stat", kick="AI TOKENS", big=stats["tokens"],
-             sub="through the stack this season", foot="kept warm", d=1.8),
-        dict(kind="stat", kick="KEPT WARM", big=f"{stats.get('cache_pct', 99)}%",
-             sub="served from cache", foot="the preamble, never re-bought", d=1.8),
+             sub="through the stack this season", foot="full account", d=1.8),
 
         # ——— the heart: what got made ———
         dict(kind="cover", kick="THE HEART", big="what got built",
