@@ -154,7 +154,7 @@ if __name__ == "__main__":
              items=shots, d=3.6),
 
         dict(kind="shot", kick="what it costs, at every size", title="",
-             sub="", d=3.6, img="art/pricing.svg"),
+             sub="", d=4.6, img="art/pricing.svg"),
         dict(kind="list", kick="what's left before launch", title="the road to live",
              items=[
                  "money — a non-custodial vault, then the treasury",
@@ -162,7 +162,7 @@ if __name__ == "__main__":
                  "calling — the phone rail, a number that's ours",
                  "pen-test the isolation before anyone trusts it",
                  "booking, calendar, contacts, workflow",
-             ], d=4.4),
+             ], d=5.4),
 
         dict(kind="end", kick="the point", big="irl.coop",
              sub="built together, stays ours", foot="", d=2.3),
