@@ -38,23 +38,27 @@ def path(fn):
     pts.append(f"{X(XMAX):.1f},{Y(fn(XMAX)):.1f}")
     return "M" + " L".join(pts)
 
-marks = [(1, "you"), (8, "small"), (40, "medium"), (400, "neighborhood"), (3000, "civic")]
+marks = [(1, "you"), (8, "small"), (40, "med"), (400, "neighborhood"), (3000, "civic")]
 
 rows = []
 for s, lab in marks:
     c, i = comm(s), irl(s)
+    # anchor the end labels inward so they never run off the right edge
+    anch = "end" if s == 3000 else ("start" if s == 1 else "middle")
     rows.append(f'<circle cx="{X(s):.0f}" cy="{Y(c):.0f}" r="8" fill="#ff6b6b"/>'
                 f'<circle cx="{X(s):.0f}" cy="{Y(i):.0f}" r="8" fill="#5eead4"/>'
-                f'<text x="{X(s):.0f}" y="{B+42}" fill="#c3d2e8" font-size="27" '
-                f'font-family="Inter,sans-serif" text-anchor="middle">{lab}</text>')
+                f'<text x="{X(s):.0f}" y="{B+42}" fill="#c3d2e8" font-size="24" '
+                f'font-family="Inter,sans-serif" text-anchor="{anch}">{lab}</text>')
 
-# big end-value callouts (the key numbers)
+# big end-value callouts (the key numbers), placed clear of the axis + tick labels
+def money(v):
+    return f"${v/1_000_000:.1f}M" if v >= 1_000_000 else f"${v/1000:.0f}k"
 k_comm, k_irl = comm(3000), irl(3000)
 callout = (
-    f'<text x="{R}" y="{Y(k_comm)-26:.0f}" fill="#ff6b6b" font-size="54" font-weight="800" '
-    f'font-family="Inter,sans-serif" text-anchor="end">${k_comm/1000:.0f}k/yr</text>'
-    f'<text x="{R}" y="{Y(k_irl)-26:.0f}" fill="#5eead4" font-size="54" font-weight="800" '
-    f'font-family="Inter,sans-serif" text-anchor="end">${k_irl/1000:.0f}k/yr</text>')
+    f'<text x="{R}" y="{Y(k_comm)-30:.0f}" fill="#ff6b6b" font-size="58" font-weight="800" '
+    f'font-family="Inter,sans-serif" text-anchor="end">{money(k_comm)}/yr</text>'
+    f'<text x="{R}" y="{Y(k_irl)-30:.0f}" fill="#5eead4" font-size="58" font-weight="800" '
+    f'font-family="Inter,sans-serif" text-anchor="end">{money(k_irl)}/yr</text>')
 
 grid = []
 for v in range(0, YMAX + 1, 60000):
