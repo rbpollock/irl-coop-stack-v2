@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""build_wrapped.py — portrait (1080x1920) irl.coop stack recap from stats.json.
-Cover → per-pillar (time + tokens + made/hard) → artifact grid → wrap.
-Deterministic; rendered to MP4 by HyperFrames.
+"""build_wrapped.py — irl.coop recap, portrait 1080x1920, humanized voice.
+Cover -> six pillars (time+tokens + a plain line) -> real product screenshots
+-> wrap. Deterministic; rendered to MP4 by HyperFrames.
 """
 import json
 import html as _h
@@ -10,17 +10,35 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 STATS = ROOT / "stats.json"
 OUT = ROOT / "render" / "index.html"
-PAL = ["#0d1426", "#172038", "#233043", "#1c1233", "#0c2b26", "#30200f",
-       "#1d1030", "#2a1a1f", "#122337", "#0b0e18"]
+PAL = ["#0d1526", "#1a2442", "#233043", "#1b122f", "#0f2a24", "#33210f",
+       "#1a1232", "#17282f", "#163029", "#0a0d16"]
+
+# human lines, one per vertical
+LINE = {
+    "identity": "one realm, every door",
+    "edge": "routes and a wildcard done well",
+    "cache": "fast, shared, tidy",
+    "data": "one Postgres, rows scoped right",
+    "mail": "mail under your own roof",
+    "workflow": "jobs that survive a jolt",
+}
+HARD = {
+    "identity": "the hard part: keep the broker honest",
+    "edge": "certs and live rewrites, by hand",
+    "cache": "the spend hides in the cache",
+    "data": "the embedding war, settled at 1024",
+    "mail": "OIDC on a mail server is fiddly",
+    "workflow": "sidecars that fix themselves",
+}
 
 
 def esc(s):
-    return _h.escape(str(s or "")[:160])
+    return _h.escape(str(s or "")[:200])
 
 
 def build(cards):
     frag, tl = [], []
-    durs = [c.get("d", 2.1) for c in cards]
+    durs = [c.get("d", 2.3) for c in cards]
     starts = []
     a = 0.0
     for dd in durs:
@@ -29,12 +47,10 @@ def build(cards):
     for i, c in enumerate(cards):
         st, dur = starts[i], durs[i]
         bg = PAL[i % len(PAL)]
-        kick = c.get("kick", "")
         if c["kind"] == "grid":
-            cells = ""
-            for j, src in enumerate(c.get("items", [])):
-                cells += f'<div class="g" id="g{i}_{j}"><img src="{esc(src)}"></div>'
-            body = f'<div class="title">{esc(c["title"])}</div><div class="rows grid">{cells}</div>'
+            cells = "".join(
+                f'<div class="g" id="g{i}_{j}"><img src="{esc(s)}"></div>' for j, s in enumerate(c["items"]))
+            body = f'<div class="cap">{esc(c.get("cap",""))}</div><div class="grid">{cells}</div>'
         else:
             big = c.get("big", "")
             body = f'<div class="big">{esc(big)}</div>'
@@ -44,79 +60,74 @@ def build(cards):
                 body += f'<div class="foot">{esc(c["foot"])}</div>'
         frag.append(
             f'<div class="clip slide" id="sn{i}" data-start="{st:.2f}" data-duration="{dur:.2f}" '
-            f'data-track-index="{i}" style="background:{bg}"><div class="kick">{esc(kick)}</div>{body}</div>'
-        )
+            f'data-track-index="{i}" style="background:{bg}"><div class="kick">{esc(c.get("kick",""))}'
+            f'</div>{body}</div>')
         tl.append(f'tl.set("#sn{i}",{{autoAlpha:0}});')
         tl.append(f'tl.set("#sn{i}",{{autoAlpha:1}},{st:.2f});')
         tl.append(f'tl.set("#sn{i}",{{autoAlpha:0}},{st + dur:.2f});')
         if c["kind"] == "grid":
-            for j in range(len(c.get("items", []))):
+            for j in range(len(c["items"])):
                 tl.append(f'tl.fromTo("#g{i}_{j}",{{opacity:0,scale:0.94}},'
-                          f'{{opacity:1,scale:1,duration:0.3,ease:"power2.out"}},{st + 0.15 + j * 0.08:.2f});')
-        elif c["kind"] == "stat":
-            tl.append(f'tl.fromTo("#sn{i} .big",{{opacity:0,y:30}},'
-                      f'{{opacity:1,y:0,duration:0.32,ease:"power2.out"}},{st + 0.1:.2f});')
-            tl.append(f'tl.fromTo("#sn{i} .sub",{{opacity:0}},{{opacity:1,duration:0.3}},{st + 0.55:.2f});')
-            tl.append(f'tl.fromTo("#sn{i} .foot",{{opacity:0}},{{opacity:1,duration:0.3}},{st + 0.95:.2f});')
+                          f'{{opacity:1,scale:1,duration:0.3}},{st + 0.2 + j * 0.09:.2f});')
         else:
             tl.append(f'tl.fromTo("#sn{i} .big",{{opacity:0,y:30}},'
-                      f'{{opacity:1,y:0,duration:0.4,ease:"power2.out"}},{st + 0.1:.2f});')
+                      f'{{opacity:1,y:0,duration:0.32}},{st + 0.1:.2f});')
+            tl.append(f'tl.fromTo("#sn{i} .sub",{{opacity:0}},{{opacity:1,duration:0.3}},{st + 0.5:.2f});')
+            tl.append(f'tl.fromTo("#sn{i} .foot",{{opacity:0}},{{opacity:1,duration:0.3}},{st + 0.9:.2f});')
 
     tljs = "\n".join(tl)
     frag_html = "\n".join(frag)
-    total = a
     html = (
         "<!doctype html><html><head><meta charset=\"UTF-8\">"
         "<meta name=\"viewport\" content=\"width=1080,height=1920\">"
-        "<link href=\"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap\" rel=\"stylesheet\">"
+        "<link href=\"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&display=swap\" rel=\"stylesheet\">"
         "<script src=\"https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js\"></script>"
         "<style>"
-        "body{margin:0;overflow:hidden;width:1080px;height:1920px;background:#05070d;"
+        "body{margin:0;overflow:hidden;width:1080px;height:1920px;background:#07090f;"
         "font-family:'Space Grotesk',sans-serif;color:#f4f7fc}"
         ".slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;"
         "padding:120px 92px;opacity:0}"
-        ".kick{font-size:26px;letter-spacing:.32em;text-transform:uppercase;color:#8fa2c2;margin-bottom:46px}"
-        ".big{font-size:150px;font-weight:700;letter-spacing:-.04em;line-height:1;max-width:17ch}"
-        ".sub{font-size:40px;margin-top:30px;color:#d9e6f6}"
-        ".foot{font-size:30px;margin-top:64px;color:#9fb2cd;line-height:1.4}"
-        ".title{font-size:52px;font-weight:700;margin-bottom:24px}"
-        ".grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px}"
+        ".kick{font-size:24px;letter-spacing:.3em;text-transform:uppercase;color:#8fa2c2;margin-bottom:44px}"
+        ".big{font-size:150px;font-weight:900;letter-spacing:-.045em;line-height:.98;color:#f4f7fc}"
+        ".sub{font-size:42px;margin-top:30px;color:#d9e6f6;line-height:1.25}"
+        ".foot{font-size:30px;margin-top:60px;color:#9fb2cd;line-height:1.45}"
+        ".cap{font-size:44px;font-weight:700;margin-bottom:30px}"
+        ".grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}"
         ".g{opacity:0;scale:.94}"
-        ".g img{width:100%;height:auto;border-radius:10px;border:1px solid rgba(255,255,255,.14)}"
+        ".g img{width:100%;height:auto;border-radius:12px;border:1px solid rgba(255,255,255,.12)}"
         "</style></head><body>"
-        f"<div id=\"root\" data-composition-id=\"main\" data-start=\"0\" "
-        f"data-duration=\"{total:.1f}\" data-width=\"1080\" data-height=\"1920\">{frag_html}</div>"
+        f"<div id=\"rp\" data-composition-id=\"main\" data-start=\"0\" "
+        f"data-duration=\"{a:.1f}\" data-width=\"1080\" data-height=\"1920\">{frag_html}</div>"
         "<script>window.__timelines=window.__timelines||{};const tl=gsap.timeline({paused:true});\n"
         + tljs +
         "\nwindow.__timelines['main']=tl; tl.seek(0);</script></body></html>"
     )
     OUT.write_text(html)
-    print(f"wrote {OUT} · {len(cards)} slides · {total:.1f}s")
+    print(f"wrote {OUT} · {len(cards)} slides · {a:.1f}s")
 
 
 if __name__ == "__main__":
     stats = json.loads(STATS.read_text())
-    arts = [f"art/art{j}.png" for j in range(min(8, len(stats.get("artifacts") or [])))]
     verts = stats.get("vertical", [])
+    shots = [f"art/{p}" for p in ("shot_design.png", "shot_doc.png", "shot_matrix.png")]
 
-    cards = [
-        dict(kind="cover", kick="THE ROOT STACK", big="irl.coop",
-             sub="sovereign infra, told in layers",
-             foot="keycloak · traefik · redis · postgres · stalwart · temporal", d=2.6),
-    ]
+    cards = [dict(kind="cover", kick="irl.coop", big="irl.coop",
+                  sub="a season of building the stack",
+                  foot="six pillars, one roof", d=2.6)]
     for v in verts:
-        has = (v.get("hours") or 0) > 0 or (v.get("tokens", "0") != "0")
+        has = (v.get("hours") or 0) > 0
         cards.append(dict(
-            kind="stat", kick=f"PILLAR · {v['name'].upper()}",
+            kind="stat", kick=f"{v['name']}",
             big=v["comp"],
-            sub=f"≈ {v['hours']} h  ·  {v['tokens']} tok" if has else "",
-            foot=f"made — {v['done']}\nthe hard — {v['chal']}", d=2.3))
+            sub=(f"about {v['hours']} hrs, {v['tokens']} tokens" if has else "we did this one by hand"),
+            foot=f"{LINE[v['name']]}. {HARD[v['name']]}.",
+            d=2.3))
     cards += [
-        dict(kind="cover", kick="THE HEART", big="what got built",
-             sub="the docs, arrayed", d=1.6),
-        dict(kind="grid", kick="THE ARTIFACTS", title="the docs · arrayed",
-             items=arts, d=3.2),
-        dict(kind="end", kick="THE WRAP", big="irl.coop",
-             sub="the stack stays yours", foot="made with the loop", d=2.2),
+        dict(kind="cover", kick="the real proof", big="what runs today",
+             sub="actual screens, not mockups", cap="", d=1.7),
+        dict(kind="grid", kick="in the wild", cap="the app, alive",
+             items=shots, d=3.4),
+        dict(kind="end", kick="the point", big="irl.coop",
+             sub="built for the loop, kept by you", foot="", d=2.3),
     ]
     build(cards)
