@@ -142,9 +142,10 @@ if __name__ == "__main__":
              sub="everyone logs in through the same realm",
              foot="one sign-in, for every door", d=2.2),
 
-        dict(kind="stat", kick="the part nobody really sees", big="it was hard",
-             sub="identity, the edge, and the moves — that was the grind",
-             foot="doesn't look like much; a lot happened underneath", d=2.4),
+        dict(kind="stat", kick="the part nobody really sees", big="the hard parts",
+             sub="own certs that renew themselves · mail that lands and isn't junk · "
+                 "six tools acting like one",
+             foot="why the good parts hold up", d=2.4),
 
         dict(kind="stat", kick="who we spent the time on instead", big="where the hours went",
              sub=(f"identity {idn.get('hours',0)}h ({idn.get('tokens','0')} tokens) · "
