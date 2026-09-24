@@ -146,11 +146,11 @@ if __name__ == "__main__":
              sub="identity, the edge, and the moves — that was the grind",
              foot="doesn't look like much; a lot happened underneath", d=2.4),
 
-        dict(kind="stat", kick="where the energy really went", big="the spread",
-             sub=(f"identity {idn.get('hours',0)}h / {idn.get('tokens','0')} · "
-                  f"edge {edg.get('hours',0)}h / {edg.get('tokens','0')} · "
-                  f"workflow {wf.get('hours',0)}h / {wf.get('tokens','0')}"),
-             foot="the measured spread, no more", d=2.8),
+        dict(kind="stat", kick="who we spent the time on instead", big="where the hours went",
+             sub=(f"identity {idn.get('hours',0)}h ({idn.get('tokens','0')} tokens) · "
+                  f"edge {edg.get('hours',0)}h ({edg.get('tokens','0')}) · "
+                  f"workflow {wf.get('hours',0)}h ({wf.get('tokens','0')})"),
+             foot="hours and tokens we spent — days of work, not a bill", d=2.8),
 
         dict(kind="stat", kick="the ones that stayed quiet", big="cache · data · mail",
              sub="the work still got done, it just didn't shout",
