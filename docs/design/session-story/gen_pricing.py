@@ -43,27 +43,36 @@ marks = [(1, "you"), (8, "small"), (40, "medium"), (400, "neighborhood"), (3000,
 rows = []
 for s, lab in marks:
     c, i = comm(s), irl(s)
-    rows.append(f'<circle cx="{X(s):.0f}" cy="{Y(c):.0f}" r="6" fill="#ff6b6b"/>'
-                f'<circle cx="{X(s):.0f}" cy="{Y(i):.0f}" r="6" fill="#5eead4"/>'
-                f'<text x="{X(s):.0f}" y="{B+34}" fill="#9fb0cc" font-size="20" '
+    rows.append(f'<circle cx="{X(s):.0f}" cy="{Y(c):.0f}" r="8" fill="#ff6b6b"/>'
+                f'<circle cx="{X(s):.0f}" cy="{Y(i):.0f}" r="8" fill="#5eead4"/>'
+                f'<text x="{X(s):.0f}" y="{B+42}" fill="#c3d2e8" font-size="27" '
                 f'font-family="Inter,sans-serif" text-anchor="middle">{lab}</text>')
+
+# big end-value callouts (the key numbers)
+k_comm, k_irl = comm(3000), irl(3000)
+callout = (
+    f'<text x="{R}" y="{Y(k_comm)-26:.0f}" fill="#ff6b6b" font-size="54" font-weight="800" '
+    f'font-family="Inter,sans-serif" text-anchor="end">${k_comm/1000:.0f}k/yr</text>'
+    f'<text x="{R}" y="{Y(k_irl)-26:.0f}" fill="#5eead4" font-size="54" font-weight="800" '
+    f'font-family="Inter,sans-serif" text-anchor="end">${k_irl/1000:.0f}k/yr</text>')
 
 grid = []
 for v in range(0, YMAX + 1, 60000):
     grid.append(f'<line x1="{L}" y1="{Y(v):.0f}" x2="{R}" y2="{Y(v):.0f}" stroke="#1e2a3d"/>'
-                f'<text x="{L-14}" y="{Y(v)+7:.0f}" fill="#6b7d99" font-size="18" '
+                f'<text x="{L-14}" y="{Y(v)+9:.0f}" fill="#8ea3c2" font-size="26" '
                 f'font-family="Inter,sans-serif" text-anchor="end">${v//1000}k</text>')
 
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">
 <rect width="{W}" height="{H}" fill="none"/>
-<text x="{L}" y="52" fill="#eef3fb" font-size="30" font-weight="700" font-family="Inter,sans-serif">what a group stops renting, per year</text>
+<text x="{L}" y="58" fill="#eef3fb" font-size="42" font-weight="700" font-family="Inter,sans-serif">what a group stops renting, per year</text>
 {''.join(grid)}
 <path d="{path(comm)}" fill="none" stroke="#ff6b6b" stroke-width="5" stroke-linecap="round"/>
 <path d="{path(irl)}" fill="none" stroke="#5eead4" stroke-width="5" stroke-linecap="round"/>
 {''.join(rows)}
-<text x="{R-150}" y="{Y(comm(3000))-18:.0f}" fill="#ff6b6b" font-size="22" font-weight="600" font-family="Inter,sans-serif">commercial (per seat)</text>
-<text x="{R-210}" y="{Y(irl(3000))+34:.0f}" fill="#5eead4" font-size="22" font-weight="600" font-family="Inter,sans-serif">irl.coop (shared)</text>
-<text x="{L}" y="{B+80}" fill="#6b7d99" font-size="19" font-family="Inter,sans-serif">estimate · one seat of each tool irl.coop replaces (~$183/mo) · irl.coop cost is shared across members, never passed to one user · labor unpriced</text>
+{callout}
+<text x="{R-250}" y="{Y(comm(3000))-92:.0f}" fill="#ff6b6b" font-size="30" font-weight="600" font-family="Inter,sans-serif">commercial (per seat)</text>
+<text x="{R-250}" y="{Y(irl(3000))-92:.0f}" fill="#5eead4" font-size="30" font-weight="600" font-family="Inter,sans-serif">irl.coop (shared)</text>
+<text x="{L}" y="{B+96}" fill="#8ea3c2" font-size="26" font-family="Inter,sans-serif">estimate · one seat of each tool irl.coop replaces (~$183/mo) · shared across members, never one user · labor unpriced</text>
 </svg>'''
 
 os.makedirs(os.path.dirname(SVG), exist_ok=True)
