@@ -7,6 +7,12 @@ file sharing), and the docs host (docs-host-onlyoffice.md). Builds on the
 single-storage backbone: all four sources now live on the coop MinIO
 (`docs`, `stalwart`, `matrix-media`, `plane` buckets).
 
+> The **sharing UI, gating, and gated playback** layer on top of this panel
+> is specced separately in `file-gating-and-media-rooms.md` — share dialog,
+> short grant URLs, seat-gated streams, and media rooms (a player with the
+> group's chat beside it). This doc defines the projection; that one defines
+> how a file is *given to someone*.
+
 ## 1. Principles
 
 1. **One view, many sources.** The Files panel is a per-user projection over every source bucket on the coop MinIO. It shows pointers with real names, never raw keys, and never copies blobs.
