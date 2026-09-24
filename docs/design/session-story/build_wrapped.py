@@ -35,6 +35,12 @@ def build(cards):
         if c["kind"] == "list":
             rows = "".join(f'<div class="li">{esc(x)}</div>' for x in c.get("items", []))
             body = f'<div class="title">{esc(c.get("title", ""))}</div><div class="rows">{rows}</div>'
+        elif c["kind"] == "grid":
+            cells = ""
+            for j, src in enumerate(c.get("items", [])):
+                cells += f'<div class="g" id="g{i}_{j}"><img src="{esc(src)}"></div>'
+            body = (f'<div class="title">{esc(c.get("title", ""))}</div>'
+                    f'<div class="rows grid">{cells}</div>')
         else:
             body = (f'<div class="big">{esc(c.get("big", ""))}</div>'
                     f'<div class="sub">{esc(c.get("sub", ""))}</div>')
@@ -44,10 +50,18 @@ def build(cards):
             f'<div class="clip slide" id="sn{i}" data-start="{st:.2f}" data-duration="{dur:.2f}" '
             f'data-track-index="{i}" style="background:{bg}"><div class="kick">{esc(kick)}</div>{body}</div>'
         )
-        tl.append(f'tl.fromTo("#sn{i}",{{autoAlpha:0}},{{autoAlpha:1,duration:0.32}},{st:.2f});')
-        tl.append(f'tl.fromTo("#sn{i} .big,#sn{i} .rows,#sn{i} .title",'
-                  f'{{opacity:0,y:30}},{{opacity:1,y:0,duration:0.5,ease:"power2.out"}},{st + 0.2:.2f});')
-        tl.append(f'tl.to("#sn{i}",{{autoAlpha:0,duration:0.24}},{st + dur:.2f});')
+        tl.append(f'tl.set("#sn{i}",{{autoAlpha:0}});')
+        tl.append(f'tl.set("#sn{i}",{{autoAlpha:1}},{st:.2f});')
+        if i + 1 < len(cards):
+            tl.append(f'tl.set("#sn{i}",{{autoAlpha:0}},{st + dur:.2f});')
+        if c["kind"] == "grid":
+            for j in range(len(c.get("items", []))):
+                tl.append(f'tl.fromTo("#g{i}_{j}",{{opacity:0,scale:0.94}},'
+                          f'{{opacity:1,scale:1,duration:0.3,ease:"power2.out"}},{st + 0.1 + j * 0.08:.2f});')
+        else:
+            tl.append(f'tl.fromTo("#sn{i} .big,#sn{i} .rows,#sn{i} .title",'
+                      f'{{opacity:0,y:30}},{{opacity:1,y:0,duration:0.32,ease:"power2.out"}},{st + 0.1:.2f});')
+        tl.append(f'tl.set("#sn{i}",{{autoAlpha:0}},{st + dur:.2f});')
 
     tljs = "\n".join(tl)
     frag_html = "\n".join(frag)
@@ -67,6 +81,9 @@ def build(cards):
         ".foot{font-size:34px;margin-top:72px;color:#94a7bf}"
         ".title{font-size:54px;font-weight:700;margin-bottom:26px}"
         ".li{font-size:42px;margin:22px 0;color:#eef3fb;line-height:1.25}"
+        ".grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px}"
+        ".g{opacity:0;scale:.92}"
+        ".g img{width:100%;height:auto;border-radius:10px;border:1px solid rgba(255,255,255,.14)}"
         "</style></head><body>"
         f"<div id=\"root\" data-composition-id=\"main\" data-start=\"0\" "
         f"data-duration=\"{(total):.1f}\" data-width=\"1080\" data-height=\"1920\">{frag_html}</div>"
@@ -93,8 +110,8 @@ if __name__ == "__main__":
         # ——— the heart: what got made ———
         dict(kind="cover", kick="THE HEART", big="what got built",
              sub="the fact · not the chatter", foot="made, then shown", d=1.7),
-        dict(kind="list", kick="THE DECISIONS", title="the ADR set you resolved",
-             items=arts[:8], d=2.6),
+        dict(kind="grid", kick="THE ARTIFACTS", title="the docs · arrayed",
+             items=[f"art/art{j}.png" for j in range(min(8, len(arts)))], d=3.0),
         dict(kind="list", kick="THE STACK", title="sovereign infra you hardened",
              items=["rag: local bge · 1024-dim embeddings",
                     "rerank brought back onto the docs search",
