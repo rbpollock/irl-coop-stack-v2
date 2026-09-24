@@ -51,6 +51,11 @@ def build(cards):
             cells = "".join(
                 f'<div class="g" id="g{i}_{j}"><img src="{esc(s)}"></div>' for j, s in enumerate(c["items"]))
             body = f'<div class="cap">{esc(c.get("cap",""))}</div><div class="grid">{cells}</div>'
+        elif c["kind"] == "list":
+            lis = "".join(f'<div class="li">{esc(x)}</div>' for x in c.get("items", []))
+            body = f'<div class="title">{esc(c.get("title",""))}</div><div class="rows">{lis}</div>'
+        elif c.get("img"):
+            body = f'<div class="showcase"><img src="{esc(c["img"])}"></div>'
         else:
             big = c.get("big", "")
             body = f'<div class="big">{esc(big)}</div>'
@@ -95,6 +100,13 @@ def build(cards):
         ".grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}"
         ".g{opacity:0;scale:.94}"
         ".g img{width:100%;height:auto;border-radius:12px;border:1px solid rgba(255,255,255,.12)}"
+        ".showcase{display:flex;justify-content:center;align-items:center;margin-top:20px}"
+        ".showcase img{width:100%;max-width:940px;height:auto;border-radius:12px}"
+        ".title{font-size:60px;font-weight:700;margin-bottom:34px}"
+        ".rows{display:flex;flex-direction:column;gap:26px}"
+        ".li{font-size:40px;line-height:1.25;color:#eef3fb}"
+        ".li:before{content:'';display:inline-block;width:12px;height:12px;border-radius:50%;"
+        "background:#5eead4;margin-right:22px;vertical-align:middle}"
         "</style></head><body>"
         f"<div id=\"rp\" data-composition-id=\"main\" data-start=\"0\" "
         f"data-duration=\"{a:.1f}\" data-width=\"1080\" data-height=\"1920\">{frag_html}</div>"
@@ -140,6 +152,17 @@ if __name__ == "__main__":
              sub="actual screens", foot="", d=1.7),
         dict(kind="grid", kick="for real", cap="running as you watch",
              items=shots, d=3.6),
+
+        dict(kind="shot", kick="what it costs, at every size", title="",
+             sub="", d=3.2, img="art/pricing.svg"),
+        dict(kind="list", kick="what's left before launch", title="the road to live",
+             items=[
+                 "money — a non-custodial vault, then the treasury",
+                 "group ops — the group model, coop as first tenant",
+                 "calling — the phone rail, a number that's ours",
+                 "pen-test the isolation before anyone trusts it",
+                 "booking, calendar, contacts, workflow",
+             ], d=3.6),
 
         dict(kind="end", kick="the point", big="irl.coop",
              sub="built together, stays ours", foot="", d=2.3),
