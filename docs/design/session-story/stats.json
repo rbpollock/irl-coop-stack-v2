@@ -3,7 +3,7 @@
   "sessions": 133,
   "hours": 314.8,
   "tokens": "6.7B",
-  "tokens_raw": 6650895624,
+  "tokens_raw": 6668165637,
   "cache_pct": 99,
   "reasoning_pct": 0,
   "models": [
@@ -52,5 +52,61 @@
     "docs/decisions/workflow-economics/0006-first-experiment-task.md",
     "docs/decisions/workflow-economics/0007-safety-gates.md",
     "docs/decisions/workflow-economics/0008-classifier-selection.md"
+  ],
+  "vertical": [
+    {
+      "name": "identity",
+      "comp": "Keycloak",
+      "hours": 24.0,
+      "tokens": "846.5M",
+      "calls": 2,
+      "done": "one Keycloak realm · SSO everywhere",
+      "chal": "the broker & service-account roles kept honest"
+    },
+    {
+      "name": "edge",
+      "comp": "Traefik",
+      "hours": 12.0,
+      "tokens": "333.5M",
+      "calls": 1,
+      "done": "wildcard TLS · live routes",
+      "chal": "cert renewal + atomic route rewrites"
+    },
+    {
+      "name": "cache",
+      "comp": "Redis",
+      "hours": 0.0,
+      "tokens": "0",
+      "calls": 0,
+      "done": "shared, prefixed lanes",
+      "chal": "prompt-cache is where the spend hid"
+    },
+    {
+      "name": "data",
+      "comp": "Postgres",
+      "hours": 0.0,
+      "tokens": "0",
+      "calls": 0,
+      "done": "one Postgres · RLS-scoped",
+      "chal": "the 384-vs-1536 embedding war → fixed at 1024"
+    },
+    {
+      "name": "mail",
+      "comp": "Stalwart",
+      "hours": 0.0,
+      "tokens": "0",
+      "calls": 0,
+      "done": "Stalwart · DKIM'd, under your roof",
+      "chal": "the OIDC directory & DKIM path"
+    },
+    {
+      "name": "workflow",
+      "comp": "Temporal",
+      "hours": 12.0,
+      "tokens": "156.3M",
+      "calls": 1,
+      "done": "Temporal · jobs that don't drop",
+      "chal": "the gate sidecars that self-heal"
+    }
   ]
 }

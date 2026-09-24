@@ -9,7 +9,24 @@ from pathlib import Path
 
 HOME = os.path.expanduser("~/.hermes/state.db")
 OUT = Path(__file__).resolve().parent / "stats.json"
-DECISION_RE = re.compile(r"(decid|design|architecture|proposal|adr| plan |group|federation|sso|rag|vault|safe)", re.I)
+DECISION_RE = re.compile(r"(decid|design|architecture|proposal|adr| plan |group|rag|federation)", re.I)
+
+_DONE = {
+    "identity": "one Keycloak realm · SSO everywhere",
+    "edge": "wildcard TLS · live routes",
+    "cache": "shared, prefixed lanes",
+    "data": "one Postgres · RLS-scoped",
+    "mail": "Stalwart · DKIM'd, under your roof",
+    "workflow": "Temporal · jobs that don't drop",
+}
+_CHAL = {
+    "identity": "the broker & service-account roles kept honest",
+    "edge": "cert renewal + atomic route rewrites",
+    "cache": "prompt-cache is where the spend hid",
+    "data": "the 384-vs-1536 embedding war → fixed at 1024",
+    "mail": "the OIDC directory & DKIM path",
+    "workflow": "the gate sidecars that self-heal",
+}
 
 
 def _fmt(n):
@@ -75,6 +92,39 @@ def main():
     decisions = [t for t in heavy if DECISION_RE.search(t)][:4]
     model_top = sorted(model.items(), key=lambda kv: -kv[1][1])[:4]
 
+    # bucket per vertical pillar
+    VERT = [
+        ("identity", "Keycloak", ["keycloak", "identity", "oauth", "oauth2", "sso", " realm",
+                                  "broker", "authorization", "authorize", "google", "saml"]),
+        ("edge", "Traefik", ["traefik", "edge", "proxy", "route", "cert", "tls", "caddy",
+                             "nginx", "wildcard", "dns", "proxy-traefik"]),
+        ("cache", "Redis", ["redis", "cache", "prompt-cache", "semantic"]),
+        ("data", "Postgres", ["postgres", "database", "citus", "store", "sql", "pg", "rls",
+                             "vector", "embed", "index", "schema", "backfill", "rag", "noco",
+                             "query", "bulk", "citus"]),
+        ("mail", "Stalwart", ["stalwart", "mail", "smtp", "imap", "imap", "dkim", "roundcube", "email"]),
+        ("workflow", "Temporal", ["temporal", "workflow", "outbox", "worker", "cron", "job", "digest"]),
+    ]
+    vert = {k: {"h": 0.0, "t": 0, "n": 0} for k, _, _ in VERT}
+    for r in rows:
+        blob = " ".join([r["title"] or "", r["cwd"] or "", r["git_repo_root"] or ""]).lower()
+        hit = None
+        for k, _, words in VERT:
+            if any(w in blob for w in words):
+                hit = k
+                break
+        if not hit:
+            continue
+        t0 = float(r["started_at"])
+        end = float(r["ended_at"] or r["last_activity_at"] or t0)
+        vert[hit]["h"] += min(max(0.0, end - t0), 12 * 3600) / 3600
+        vert[hit]["t"] += (r["input_tokens"] or 0) + (r["output_tokens"] or 0) + (r["cache_read_tokens"] or 0)
+        vert[hit]["n"] += 1
+    verticals = [dict(name=k, comp=c, hours=round(vert[k]["h"], 1),
+                      tokens=_fmt(vert[k]["t"]), calls=vert[k]["n"],
+                      done=_DONE[k], chal=_CHAL[k])
+                 for k, c, _ in VERT]
+
     # artifacts: git-tracked outputs of this repo
     ROOT = OUT.parent
     repo = ROOT
@@ -104,6 +154,7 @@ def main():
         challenging=heavy,
         decisions=decisions,
         artifacts=major,
+        vertical=verticals,
     )
     OUT.write_text(json.dumps(stat, ensure_ascii=False, indent=2))
     print(json.dumps(stat, ensure_ascii=False, indent=2))
