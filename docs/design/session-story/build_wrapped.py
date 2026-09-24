@@ -18,7 +18,7 @@ LINE = {
     "identity": "one realm, every door",
     "edge": "routes and a wildcard done well",
     "cache": "fast, shared, tidy",
-    "data": "one Postgres, rows scoped right",
+    "data": "one data store, rows scoped right",
     "mail": "mail under your own roof",
     "workflow": "jobs that survive a jolt",
 }
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
         dict(kind="stat", kick="start with the door", big="one identity",
              sub="everyone logs in through the same realm",
-             foot="Keycloak does the joining", d=2.2),
+             foot="one sign-in, for every door", d=2.2),
 
         dict(kind="stat", kick="the part nobody really sees", big="it was hard",
              sub="identity, the edge, and the moves — that was the grind",
