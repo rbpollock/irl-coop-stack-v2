@@ -5,6 +5,9 @@ It runs, it has real users in a supervised pilot, and large parts of what it pro
 rather than built. [What works today](#what-works-today--and-what-does-not) says which, and
 [`docs/REALITY.md`](docs/REALITY.md) says it domain by domain with the evidence.
 
+currently deployed as a proof-of-concept at [irl.coop](https://irl.coop)
+**Please do not store any sensitive data or use any money you can't afford to lose**
+
 ---
 
 ## 1. Why this exists
