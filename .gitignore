@@ -70,3 +70,9 @@ test-results/
 *.lo
 *.la
 *.lai
+
+# ── Oversized rendered video masters ───────────────────────────────
+# GitHub rejects any blob >100MB, so these full-res renders stay OUT of git
+# (kept on disk; the assemble scripts and the smaller cuts remain tracked).
+docs/design/video/goodbye-group-gouging-approved.mp4
+docs/design/video/goodbye-group-gouging-sync2.mp4
