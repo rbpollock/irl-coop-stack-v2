@@ -8,6 +8,7 @@ set -euo pipefail
 
 CIRCOM=/mnt/storage/zk/bin/circom
 SNARKJS=/home/service/development/irl-coop-stack-v2/node_modules/.bin/snarkjs
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 CIRCUIT="${1:-circuits/spend.circom}"
 OUT="${2:-/mnt/storage/zk/build}"
@@ -28,7 +29,9 @@ VK="$OUT/${NAME}_vk.json"
 PTO="${ZK_PTO:-15}"
 
 echo "== compile ($CIRCOM) =="
-"$CIRCOM" "$CIRCUIT" --r1cs --wasm --sym -o "$OUT"
+CIRCOMLIB="$ROOT/node_modules/circomlib/circuits"
+CIRCROOT="$(dirname "$CIRCUIT")"
+"$CIRCOM" "$CIRCUIT" --r1cs --wasm --sym -o "$OUT" -l "$CIRCOMLIB" -l "$CIRCROOT"
 
 echo "== powers of tau (new bn128 $PTO) =="
 "$SNARKJS" powersoftau new bn128 "$PTO" "$PTAU0"
@@ -55,4 +58,6 @@ echo "== done =="
 echo "  verifier key  : $VK"
 echo "  verifier.sol  : $VERIFIER_SOL"
 echo "  proving key   : $OUT/${NAME}_final.zkey"
-echo "  (wire the verifier.sol into the pool's setVerifier for the P2 gate.)"
+echo "  (off-chain model: snarkjs proves/verifies the spend; the pool only"
+echo "   seals the nullifier + tracks the root. verifier.sol is the off-chain"
+echo "   check artifact; an on-chain pairing path is a future option, not v0.)"

@@ -4,9 +4,16 @@ include "merkle.circom";   // MerklePathCheck — shared by the whole family
 
 // --- the v0 spend proof ---
 template Spend() {
-    // public
-    signal input root;          // on-chain merkle root the note lives in
+    // Public inputs: root + nullifierHash are made public at the `main`
+    // declaration (see component main {public [root, nullifierHash]} below) —
+    // that is the circom 2.x mechanism (inputs are private by default,
+    // advertised public at main). Public-signal order emitted by the verifier is
+    // outputs first, then the public inputs in declaration order, so:
+    //   [outputCommitment, root, nullifierHash]
+    // The pool adapter (Groth16PoolVerifier) MUST pack exactly that order.
+    signal input root;          // the on-chain merkle root the note lives in
     signal input nullifierHash; // pool marks this spent
+    signal output outputCommitment;
 
     // private
     signal input leaf;          // the note commitment in the tree
@@ -34,8 +41,7 @@ template Spend() {
     component outc = Poseidon(2);
     outc.inputs[0] <== secretOut;
     outc.inputs[1] <== 1;
-    signal output outputCommitment;
     outputCommitment <== outc.out;
 }
 
-component main = Spend();
+component main {public [root, nullifierHash]} = Spend();

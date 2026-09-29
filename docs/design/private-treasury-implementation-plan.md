@@ -310,3 +310,24 @@ pool, Poseidon+Groth16) and custom-wire it (my recommendation — fast as a conc
 a bespoke dual-lamin circuit ourselves and take the engineering risk? We can also (c) pause at P1 (a
 correct storage+nullifier pool + full reach logic, no proving) as a PR the actual zk layer lands on top.
 Options bcd about effort/sovereignty. Each is defensible; recommend (a) then (c)."
+
+---
+
+## 10. Operating model — RESOLVED (2026-09-29, the P2 wiring decision)
+
+The proof is verified **off-chain** and the pool seals the nullifier + root (the
+plan's table in §8). This is not "we couldn't wire it on-chain" — it is the
+deliberate per-cost/v0 choice: routine spend ~$0.2–0.35 off-chain vs an
+on-chain Groth16 pairing (~$0.5+ with the bn254 precompile wedge). No pool byte
+change is needed; `IShieldedPoolVerifier` stays the seam a relayer would use.
+
+Consequences, recorded so no one re-introduces the on-chain adapter:
+- The ceremony produces `spend_Verifier.sol` (a Groth16Pairing contract) but it
+  is the **off-chain** check artifact — the permissionless relayer proves the
+  spend against it and submits nullifier + new root to the pool.
+- An on-chain `Groth16PoolVerifier` adapter was tried and **withdrawn** (it
+  would force a keccak↕Poseidon root to mean on-chain pairing — the expensive
+  path the table avoids). Do not re-add it for v0. The off-chain relay keeps
+  the pool honest (nullifier set + root progression both on-chain) per §8.
+- `spend.circom` now exposes root + nullifierHash as **public** (was private)
+  so the relayer can anchor to them; ceremony rebuilt with that shape.
