@@ -148,38 +148,48 @@ contract ShieldedPool {
         emit ShieldedDeposit(bytes32(commitment), amount);
     }
 
-    /// Spend a note: burn the input nullifier, record an output commitment. The
-    /// proof is verified (P2 real, P1 no-op); authorization is off-chain (Safe
-    /// mandate, §1a). `issuanceAmount` is carried for the event / relayer; real
-    /// conservation is proven in the zk proof (P2) not asserted here.
+    /// Spend a note: burn the input nullifier, record an output state.
+    ///
+    /// RELAYER MODEL (§8, resolved 2026-09-29): the proof is verified OFF-chain by
+    /// a permissionless relayer; the pool does not rebuild a merkle tree here. The
+    /// relayer supplies `newRoot` — the Poseidon root after the note leaves the tree.
+    /// The pool seals the nullifier and adopts `newRoot` as the authoritative root,
+    /// anchoring the transition to the PREVIOUS root through the verifier seam.
+    ///
+    /// (Keccak `_insert` is intentionally NOT called on spend: the on-chain tree was
+    /// a P1 storage model; the treasury's truth is the Poseidon root the relayer
+    /// commits. Deposit's keccak insertion remains for P1, superseded at P3.)
     function spend(
         bytes32 inputNullifier,
         bytes32 outputCommitment,
-        uint256 amountOut,
+        uint256 amount,
+        uint256 newRoot,
         bytes calldata proof
     ) external {
         if (paused) revert Paused();
         if (nullifiers[inputNullifier]) revert DoubleSpend();
-        // authorization (Safe-mandate) is off-chain: no Safe to call here. The
-        // zero-knowledge movement is checked via the pluggable verifier:
+        // The verifier seam anchors: verifySpend(oldRoot = current root, ...).
         bytes32[] memory ins = new bytes32[](1);
         ins[0] = inputNullifier;
         bytes32[] memory outs = new bytes32[](1);
         outs[0] = outputCommitment;
         if (!verifier.verifySpend(bytes32(root), outs, ins, proof)) revert UnverifiedProof();
         nullifiers[inputNullifier] = true;
-        _insert(uint256(outputCommitment));
-        emit ShieldedSpend(inputNullifier, outputCommitment, amountOut);
+        root = newRoot;   // authoritative Poseidon root transition (relayer-committed)
+        emit ShieldedSpend(inputNullifier, outputCommitment, amount);
+        emit RootUpdated(root);
     }
 
     /// Unshield: redeem a note for real USDC to `recipient`. Nullifier must be
-    /// unspent and the proof pass the verifier. P1: Noop passes anything, so this
-    /// MUST NOT be pointed at real USDC until P2 wires a real verifier — the
-    /// integration test marks the seam as "trusted only with a real verifier".
+    /// unspent and the proof pass the seam. RELAYER MODEL: `newRoot` is the
+    /// Poseidon root after the note is withdrawn (committed by the relayer).
+    /// P1: Noop passes anything, so this MUST NOT be pointed at real USDC until
+    /// the relayer/verifier gate is authoritative — see plan §10.
     function redeem(
         bytes32 inputNullifier,
         address recipient,
         uint256 amountOut,
+        uint256 newRoot,
         bytes calldata proof
     ) external {
         if (paused) revert Paused();
@@ -189,8 +199,10 @@ contract ShieldedPool {
         bytes32[] memory outs = new bytes32[](0);
         if (!verifier.verifySpend(bytes32(root), outs, ins, proof)) revert UnverifiedProof();
         nullifiers[inputNullifier] = true;
+        root = newRoot;   // Poseidon root transition (relayer-committed)
         IERC20Minimal(usdc).transfer(recipient, amountOut);
         emit UnshieldedWithdrawal(recipient, amountOut);
+        emit RootUpdated(root);
     }
 
     function spent(bytes32 n) external view returns (bool) { return nullifiers[n]; }

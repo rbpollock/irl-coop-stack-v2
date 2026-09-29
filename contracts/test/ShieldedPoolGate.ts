@@ -47,7 +47,7 @@ describe("ShieldedPool (P1 gate closers)", function () {
     const want = amt * 2n;
     const rBefore = await usdc.balanceOf(recipient.address);
     await expect(
-      pool.connect(depositor).redeem(id("c"), recipient.address, want, "0x")
+      pool.connect(depositor).redeem(id("c"), recipient.address, want, 1234n, "0x")
     ).to.be.reverted; // token transfer would fail: pool only holds `amt` USDC
     const rAfter = await usdc.balanceOf(recipient.address);
     expect(rAfter).to.equal(rBefore); // nothing moved, nothing minted

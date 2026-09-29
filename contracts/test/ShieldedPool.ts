@@ -69,16 +69,16 @@ describe("ShieldedPool (P1)", function () {
   it("won't double-spend a nullifier", async function () {
     await shield("in-a", ethers.parseEther("50"));
     const n = ethers.id("note-1-secret");
-    await pool.connect(depositor).spend(n, ethers.id("out-a"), ethers.parseEther("25"), "0x");
+    await pool.connect(depositor).spend(n, ethers.id("out-a"), ethers.parseEther("25"), 1234n, "0x");
     expect(await pool.spent(n)).to.equal(true);
-    await expect(pool.connect(depositor).spend(n, ethers.id("x"), 1, "0x"))
+    await expect(pool.connect(depositor).spend(n, ethers.id("x"), 1n, 1234n, "0x"))
       .to.be.revertedWithCustomError(pool, "DoubleSpend");
   });
 
   it("the proof seam is real — a rejecting verifier blocks a spend", async function () {
     await pool.setVerifier(await rejecting.getAddress());
     await shield("c2", ethers.parseEther("30"));
-    await expect(pool.connect(depositor).spend(ethers.id("n2"), ethers.id("o2"), 1, "0x"))
+    await expect(pool.connect(depositor).spend(ethers.id("n2"), ethers.id("o2"), 1n, 1234n, "0x"))
       .to.be.revertedWithCustomError(pool, "UnverifiedProof");
   });
 
@@ -87,7 +87,7 @@ describe("ShieldedPool (P1)", function () {
     await shield("c3", amt);
     const initialRec = await usdc.balanceOf(recipient.address);
     const n = ethers.id("n-secret-3");
-    await pool.connect(depositor).redeem(n, recipient.address, amt, "0x");
+    await pool.connect(depositor).redeem(n, recipient.address, amt, 1234n, "0x");
     expect(await usdc.balanceOf(recipient.address)).to.equal(initialRec + amt);
     expect(await pool.spent(n)).to.equal(true);
     // the pool no longer holds that USDC
@@ -100,10 +100,10 @@ describe("ShieldedPool (P1)", function () {
     // swap to the rejecting verifier blocks, swap back works
     await pool.setVerifier(await rejecting.getAddress());
     await shield("c4", ethers.parseEther("5"));
-    await expect(pool.connect(depositor).spend(ethers.id("n4"), ethers.id("o4"), 1, "0x"))
+    await expect(pool.connect(depositor).spend(ethers.id("n4"), ethers.id("o4"), 1n, 1234n, "0x"))
       .to.be.revertedWithCustomError(pool, "UnverifiedProof");
     await pool.setVerifier(await noop.getAddress());
-    await pool.connect(depositor).spend(ethers.id("n4"), ethers.id("o5"), 1, "0x"); // now allowed
+    await pool.connect(depositor).spend(ethers.id("n4"), ethers.id("o5"), 1n, 1234n, "0x"); // now allowed
     expect(await pool.spent(ethers.id("n4"))).to.equal(true);
   });
 });
