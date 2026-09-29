@@ -1,48 +1,6 @@
 pragma circom 2.0.0;
 include "poseidon.circom";
-include "mux1.circom";
-
-// --- Poseidon Merkle membership (fixed depth), using circomlib Mux1 ----------
-template MerklePathCheck(depth) {
-    signal input leaf;
-    signal input root;
-    signal input path[depth];
-    signal input sides[depth];
-
-    // sides must be a bit (a non-boolean side is spoofable branching)
-    for (var i = 0; i < depth; i++) {
-        sides[i] * (sides[i] - 1) === 0;
-    }
-
-    // pre-allocate components (circom 2.x cannot declare a component in a loop)
-    component h[depth];
-    component selA[depth];
-    component selB[depth];
-    for (var i = 0; i < depth; i++) {
-        h[i] = Poseidon(2);
-        selA[i] = Mux1();
-        selB[i] = Mux1();
-    }
-
-    signal hash[depth+1];
-    hash[0] <== leaf;
-
-    for (var i = 0; i < depth; i++) {
-        // side==0: (hash,path); side==1: (path,hash)
-        selA[i].c[0] <== hash[i];
-        selA[i].c[1] <== path[i];
-        selA[i].s   <== sides[i];
-
-        selB[i].c[0] <== path[i];
-        selB[i].c[1] <== hash[i];
-        selB[i].s   <== sides[i];
-
-        h[i].inputs[0] <== selA[i].out;
-        h[i].inputs[1] <== selB[i].out;
-        hash[i+1] <== h[i].out;
-    }
-    root === hash[depth];
-}
+include "merkle.circom";   // MerklePathCheck — shared by the whole family
 
 // --- the v0 spend proof ---
 template Spend() {
