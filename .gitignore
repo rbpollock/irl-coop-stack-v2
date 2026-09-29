@@ -64,3 +64,9 @@ infra/instances/dev/config/element-call/
 infra/instances/dev/etc/coturn/
 # test-runner output (vitest/jest artifacts, not repo content)
 test-results/
+
+# ── libtool object/archive output (lab-mgcp FreeSWITCH module build) ──
+.libs/
+*.lo
+*.la
+*.lai
