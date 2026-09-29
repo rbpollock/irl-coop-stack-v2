@@ -38,9 +38,8 @@ def main():
         color = ACTS[ab][1]
         mag = b.get("magnitude", 0) or 0
         r = min(24, max(4, 6 + mag / 3e6))
-        conf = min(1.0, b.get("confidence", 0.5))
-        story = bool(b.get("story"))
-        op = round(0.25 + 0.62 * conf, 2) if story else 0.16
+        conf = min(1.0, b.get("confidence", 0.0))
+        op = round(0.10 + 0.62 * conf, 2)
         x = 190 + (i + 0.5) / max(1, total) * (W - 390)
         y = 360 + (i % 4) * 86
         ts = round(1.1 + i * 6.4 / max(1, total), 3)
@@ -49,7 +48,7 @@ def main():
             f'width:{2*r:.0f}px;height:{2*r:.0f}px;background:{color};opacity:{op}"></div>'
         )
         tl.append(f'tl.fromTo("#d{i}",{{scale:0,opacity:0}},{{scale:1,opacity:{op},duration:0.4}},{ts});')
-        if story:
+        if conf >= 0.15:
             clips.append(
                 f'<div class="clip cap" id="c{i}" style="left:{x:.0f}px;top:{y-20:.0f}px">'
                 f'{esc(b["title"])}<span class="act_ey">{esc(b["act"])}</span></div>')
