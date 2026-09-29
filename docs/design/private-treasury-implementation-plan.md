@@ -331,3 +331,7 @@ Consequences, recorded so no one re-introduces the on-chain adapter:
   the pool honest (nullifier set + root progression both on-chain) per §8.
 - `spend.circom` now exposes root + nullifierHash as **public** (was private)
   so the relayer can anchor to them; ceremony rebuilt with that shape.
+- **Confirmed 2026-09-29**: the corrected 3-public-signal key proves + verifies a
+  real spend end-to-end (`snarkjs groth16 verify` → OK; public.json =
+  [outputCommitment, root, nullifierHash]; vk nPublic=3). The public anchor the
+  off-chain relayer depends on is fully exercised.
