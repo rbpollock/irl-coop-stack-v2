@@ -18,7 +18,9 @@
     "@types/chai": "^4.3.20",
     "@types/mocha": "^10.0.10",
     "@types/node": "^26.1.1",
+    "circomlib": "^2.0.5",
     "hardhat": "^2.29.0",
+    "snarkjs": "^0.7.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },

@@ -17,6 +17,7 @@
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
     "@types/node": "^26.1.1",
+    "circomlib": "^2.0.5",
     "tailwindcss": "^4.3.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
