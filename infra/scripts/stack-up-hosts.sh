@@ -61,6 +61,11 @@ start coop-api 3001 /api/auth/config apps/coop-api npm run dev
 # member-facing API. Health path is its own /health.
 start peer_xyz_payments 3010 /health apps/peer_xyz_payments npm run dev
 
+# treasury-relayer — the off-chain proof gate for the shielded pool. Internal
+# only (no proxy route). Verifies Groth16 spends against the ceremony key;
+# /health confirms it loaded spend_vk.json (fail-loud if the ceremony is missing).
+start treasury-relayer 3020 /health apps/treasury-relayer npm run dev
+
 # hardhat — local chain + Safe contract deploy on a fresh node.
 if start hardhat 8545 / contracts npx hardhat node; then
   ok "hardhat already up — contracts assumed deployed"

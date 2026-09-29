@@ -16,7 +16,7 @@ import Fastify from "fastify";
 // NO pool write just yet (the pool is on a local hardhat for P1), so for now it
 // VERIFIES and emits the relay decision. The pool-wire step is gated on a deploy.
 
-import { verifyRelay, type RelayParams } from "./verify";
+import { verifyRelay, type RelayParams, type RelayOutcome } from "./verify";
 
 const PORT = Number(process.env.RELAYER_PORT ?? 3020);
 const KEY_PATH = process.env.ZK_KEY_DIR
@@ -55,9 +55,28 @@ fastify.post("/relay", async (request, reply) => {
   if (!root || !outputCommitment || !inputNullifier || !proof) {
     return reply.code(400).send({ ok: false, error: "root, outputCommitment, inputNullifier and proof are required" });
   }
+  // Validate the proof SHAPE before calling the (expensive, strict) verifier:
+  // a malformed proof is a 400, not a 500. The snarkjs Groth16 proof wire form
+  // is [..., 1] per group: pi_a[3], pi_b[3] (each of its 2 rows a [x,y]),
+  // pi_c[3].
+  const pA = Array.isArray(proof.pi_a) && proof.pi_a.length > 2;
+  const pB = Array.isArray(proof.pi_b) && proof.pi_b.length > 2 &&
+    Array.isArray(proof.pi_b[0]) && proof.pi_b[0].length > 1 &&
+    Array.isArray(proof.pi_b[1]) && proof.pi_b[1].length > 1;
+  const pC = Array.isArray(proof.pi_c) && proof.pi_c.length > 2;
+  if (!pA || !pB || !pC) {
+    return reply.code(400).send({ ok: false, error: "malformed proof (expected snarkjs wire form: pi_a*, pi_b[2][2], pi_c*)" });
+  }
 
   const p: RelayParams = { root, outputCommitment, inputNullifier, proof };
-  const r = await verifyRelay(vk, p);
+  let r: RelayOutcome;
+  try {
+    r = await verifyRelay(vk, p);
+  } catch (err) {
+    // Structural failure in the verifier (not a rejected proof) — surface as 400
+    // so a bad proof is never treated as server trouble.
+    return reply.code(400).send({ ok: false, error: `proof rejected: ${(err as Error).message}` });
+  }
   if (!r.ok) {
     return reply.code(400).send({ ok: false, error: r.reason ?? "proof rejected" });
   }

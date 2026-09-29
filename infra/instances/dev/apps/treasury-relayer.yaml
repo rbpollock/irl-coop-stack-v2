@@ -1,0 +1,23 @@
+# treasury-relayer — the OFF-CHAIN proof gate for the shielded pool.
+#
+# Declared as an internal app (mirror of peer_xyz_payments): it is the only
+# process that runs the Groth16 pairing check. coop-api never holds the proving
+# logic; the relayer verifies spend proofs against the ceremony's spend_vk.json
+# and cross-checks the caller's anchors (root / outputCommitment / nullifier)
+# against the proof's public signals. Permissionless: proof is the gate — anyone
+# may call /relay; 400 unless the pairing + anchors hold.
+#
+# INTERNAL ONLY: no proxy route, no OIDC, no nav entry. The pool-submit seam on
+# the local hardhat chain is wired separately (P3); for now this service is the
+# verified proof gate.
+name: treasury-relayer
+pillar: workflow
+type: source
+source: apps/treasury-relayer
+enabled: true
+env:
+  RELAYER_PORT: "3020"
+  # Everything the relayer proves against. The ceremony writes spend_vk.json
+  # into /mnt/storage/zk/keys (persistent; NOT infra/out/ — the generator
+  # rmtree's out/).
+  ZK_KEY_DIR: /mnt/storage/zk/keys

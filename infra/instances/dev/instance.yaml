@@ -51,6 +51,7 @@ apps:
   - wordpress
   - peer_xyz_payments
   - zk-proving
+  - treasury-relayer
 
 # which pillars actually run on the dev box today (deployment concern — the
 # compose artifacts for all apps are generated regardless)
