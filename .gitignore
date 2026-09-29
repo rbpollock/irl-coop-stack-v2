@@ -76,3 +76,14 @@ test-results/
 # (kept on disk; the assemble scripts and the smaller cuts remain tracked).
 docs/design/video/goodbye-group-gouging-approved.mp4
 docs/design/video/goodbye-group-gouging-sync2.mp4
+
+# ── HyperFrames render artifacts (docs/design/session-story/render/) ──
+# The composition SOURCE stays tracked (index.html, hyperframes.json,
+# art/art0-7.png, art/shot_*.png, pricing.svg). These are generated output:
+# the CLI writes the agent scaffolding, the renders are MP4 output, and the
+# two loose captures were taken during the build.
+docs/design/session-story/render/renders/
+docs/design/session-story/render/AGENTS.md
+docs/design/session-story/render/CLAUDE.md
+docs/design/session-story/render/art/design.png
+docs/design/session-story/render/art/fail.png

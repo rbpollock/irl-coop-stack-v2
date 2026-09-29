@@ -486,6 +486,15 @@ router `0x0165878A594ca255338adfa4d48449f69242Eb8F`, destination a real provisio
 `0x3848b3479BD55B93E497ed6eaDd33B0b18Ac655c`. Driven end to end on-chain: transfer -> held ->
 swept -> the Safe received it, router left at 0.
 
+> **Correction (2026-09-29): that on-chain drive DID happen, but it does not survive in the running
+> stack.** It was executed against a local Hardhat node that has since been restarted with a fresh
+> chain (local chain state is ephemeral — a new `hardhat node` is a new blockchain). `eth_getCode`
+> on the live local node returns `0x` for that router address today, so **there is currently no
+> deployed router anywhere, and none of the "verified on 2026-09-13" chain facts are re-runnable
+> against the present node without re-deploying.** The router behavior itself is covered by
+> `contracts/test/CoopUsdcRouter.ts` (in-memory contracts, asserting transfer/sweep properties),
+> but that is a unit test against fresh deployments, not a demonstration against a live network.
+
 **Settlement arrives by webhook, and so do REVERSALS** (verified 14/14, 2026-09-13).
 
 The provider's own types carry nineteen event types, and the two that matter most are not
