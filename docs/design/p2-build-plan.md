@@ -1,4 +1,34 @@
-# P2 — the real proving layer (pre-mount build plan)
+## The spend suite — one more than "a spend circuit"
+
+The shielded treasury is not one circuit. It is a **family** of zero-knowledge statements, one per
+"badge type" the coop proves about a real event. Plan §8 specifies the spend; this table is the
+whole v0/v1 surface:
+
+| Circuit | Proves (in-proof) | Public inputs | Status |
+|---|---|---|---|
+| `spend` (exists) | a note is in the tree, nullifier fresh, output is a real note | root, nullifierHash | P2 in progress |
+| `geolocation` | "someone in region R at time T" without the exact coordinate | region(geohashed) | v1 design |
+| `balance` | "balance ≥ X" for a note, without the full amount | X (public), committed balance | v1 |
+| `contribution` | "contributed ≥ N hours/" without the ledger | N, tree root | feeds entitlement (§3) |
+| `credential` | "holds role/blib + expiry" without the identity | signer root, expiry | v1 |
+| `authorship` | "I minted this object" w/out linking wallet  | objectId, nullifier | v1 |
+| `badge` | a proof-over-proof (zk-badge gates) | predicate id | v2 (spec §9) |
+
+**Rule:** every statement is a *scoped* relevance: minimum disclosure — prove the predicate without
+publishing the underlying ledger, amount, coordinate, or identity (the repo's "commitment, not copy"
+principle). These compose; badges are proofs-over-proofs.
+
+**Sequencing:** `spend` is the enabled-P2 core. Geolocation/balance/contribution/credentials/
+authorship are a **named v1 family** that rides the same Groth16/Poseidon/prover toolchain this P2
+setup installs and proves — so the toolchain work is shared, only the in-circuit claims differ.
+
+## Quadratic-select (the canonical fix)
+
+The spend circuit initially rejected with `T3001: Non quadratic constraints` because the Merkle-path
+combine used a ternary (`sides==0 ? a : b`) / `(1-s)*hash + s*path` — not accepted in circom 2.x
+metadata in the direct form. The PROVEN patterns are circomlib primitives (`Mux1`/`Mux4`,
+`IsZero`) or a explicit `sides*(sides-1)==0` boolean check + quaternary-select. That is the fix P2
+uses — not hand-rolled ternary.
 
 Status: P2 kickoff · 2026-09-29 · toolchain target `/mnt/storage` (surfy-backed event)
 Related: `private-treasury-implementation-plan.md` §Stage 2, `proven-zk-options.md` (Groth16/Poseidon
