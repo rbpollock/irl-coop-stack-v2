@@ -1,0 +1,81 @@
+# P2 — the real proving layer (pre-mount build plan)
+
+Status: P2 kickoff · 2026-09-29 · toolchain target `/mnt/storage` (surfy-backed event)
+Related: `private-treasury-implementation-plan.md` §Stage 2, `proven-zk-options.md` (Groth16/Poseidon
+selected), `docs/design/private-treasury-implementation-plan.md` §8 (off-chain verify).
+
+## Pre-req: the disk
+
+`/dev/sda1` → `ext4`, mounted `/mnt/storage`, owned `service:service`. This is the zk toolchain +
+proof + `.zkey` store. The toolchain lives on `/mnt/storage/zk` so the 91%-full NVMe `/` does not
+absorb the build. (Do it at the console:
+
+```
+sudo mkfs.ext4 /dev/sda1
+sudo mkdir -p /mnt/storage
+sudo mount /dev/sda1 /mnt/storage
+sudo chown -R service:service /mnt/storage
+echo '/dev/sda1 /mnt/storage ext4 defaults 0 0' | sudo tee -a /etc/fstab
+```
+
+)
+
+## The toolchain (fresh, on /mnt/storage)
+
+- rustup (for circom build), circom (cargo install), snarkjs (npm -g or local)
+- Set `CARGO_HOME=/mnt/storage/zk/cargo` and `RUSTUP_HOME=/mnt/storage/zk/rustup` so the hundreds
+  of MB of rust compile land on the big disk, not `/`.
+- Verify in order: `circom --version`, `snarkjs --version`.
+
+## Sanity gate (before the real circuit)
+
+Prove the toolchain end to end with a trivial circuit (e.g. `x*x == y`) even before the spend
+circuit — confirms compile → setup → witness → prove → verify all work on this host, so the real
+circuit build starts from a known-good pipeline.
+
+## The spend circuit (deployed vs the seam P1 proved)
+
+We already proved **the pool-plus-verifier seam works** (P1: RejectingVerifier blocks spend, Noop
+admits). P2's job is to replace the Noop with a real Groth16 verifier whose proof the pool verifies.
+Circuit must attest, against public `oldRoot`:
+
+- (a) existence: the input nullifier's commitment is a leaf in the Merkle tree at `oldRoot`
+- (b) conservation: Σ(in amounts) == Σ(out amounts), all values >= 0
+- (c) fresh commitments: outputs are new notes, `hash(secret, owner, value)`
+- (not in-circuit: Safe-mandate authorization is off-chain — plan §1a/§8)
+
+Poseidon (recommended) or Sha256 Merkle. Fixed `TREE_DEPTH=32` to match the pool.
+
+## Wiring (the seam）
+
+The verifier must call `IShieldedPoolVerifier.verifySpend(oldRoot, outCommitments, inputNullifiers, proof)` — the exact shape P1 already fixed. So the Groth16 verifier.sol is wrapped:
+
+```solidity
+contract Groth16PoolVerifier is IShieldedPoolVerifier {
+  function verifySpend(bytes32 oldRoot, bytes32[] calldata out, bytes32[] calldata ins, bytes calldata proof)
+      external view override returns (bool) {
+    // decode proof (a,b,c) + public inputs [oldRoot, ...out, ...ins]
+    return Groth16Verifier.verifyProof(elements(a,b,c), inputs);
+  }
+}
+```
+
+Then point the pool's `setVerifier(address(Groth16PoolVerifier))`. No pool byte change.
+
+## Test — the off-chain seam honoured
+
+With the real verifier: a legitimate spend (real note + real proof) passes; a forged
+proof / wrong conservation / double-nullifier reverts. This is the P2 hard gate (plan P2).
+
+## Deliverables
+
+- `contracts/circuits/spend.circom` (deposit + spend)
+- `contracts/test/Groth16PoolVerifier.ts` (integration vs the pool)
+- a `contracts/scripts` zkey/proof pipeline (snarkjs) — reproducible
+- pool wrong-proof reverts; real-proof passes
+- `.zkey`/`verifier.sol` stored under `/mnt/storage/zk`
+
+## Waiting on: the mount.
+
+No P2 build can run until `/mnt/storage` exists. Everything written here is ready; the moment the
+drive is mounted, step 1 (toolchain) begins.
