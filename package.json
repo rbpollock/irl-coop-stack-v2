@@ -23,6 +23,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "circomlibjs": "^0.1.7",
     "js-yaml": "^5.2.2"
   }
 }

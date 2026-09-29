@@ -128,7 +128,18 @@ proof / wrong conservation / double-nullifier reverts. This is the P2 hard gate 
 - pool wrong-proof reverts; real-proof passes
 - `.zkey`/`verifier.sol` stored under `/mnt/storage/zk`
 
-## Waiting on: the mount.
+## The P2 gate is closed.
 
-No P2 build can run until `/mnt/storage` exists. Everything written here is ready; the moment the
-drive is mounted, step 1 (toolchain) begins.
+The mount happened, the toolchain is on `/mnt/storage/zk` (built from source),
+and the ceremony ran. A real spend witness verifies against the ceremony key:
+
+- `snarkjs groth16 prove` + `verify` → **`[INFO] snarkJS: OK!`** (exit 0); the
+  witness satisfies all 17,674 constraints (`wtns check` clean).
+- Artifacts in `/mnt/storage/zk/keys/`: `spend_final.zkey`, `spend_vk.json`,
+  `spend_Verifier.sol` (the seam contract), the r1cs/wasm intermediates.
+
+What remains is **not a build step** — it's the deliberate `setVerifier` wiring
+(flip `zk-proving` to `enabled: true`, deploy real verifier, `setVerifier`) to
+replace the P1 `NoopVerifier`. The ceremony doc (`groth16-ceremony.md`) governs
+that as the honest single-operator launch tier with the member attestation
+rotation path.
