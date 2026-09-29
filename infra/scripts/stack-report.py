@@ -139,6 +139,45 @@ def compose_definition(base, override=None):
     return {n: {"restart": None, "healthcheck": False} for n in names}, False
 
 
+def zk_probe():
+    """P2 proving-layer status for the report's declared-vs-running view.
+
+    zk-proving is not a compose service — it's a bootstrap whose artifact (a
+    Groth16 verifier + key) plugs into the pool. Present it as a single row so a
+    missing setup is a visible red flag, not a silent gap (per the flag-not-fatal
+    rule). stdlib-only, no network.
+    """
+    spec_path = os.path.join(APPS, "zk-proving.yaml")
+    if not os.path.isfile(spec_path):
+        return {"declared": False, "status": "undeclared"}
+    # enabled? read via the same shallow spec parse
+    enabled = True
+    try:
+        for line in open(spec_path):
+            if line.startswith("enabled:"):
+                enabled = line.split(":", 1)[1].strip().lower() != "false"
+    except OSError:
+        enabled = True
+    key_dir = os.environ.get("ZK_KEY_DIR", "/mnt/storage/zk/keys")
+    name = "spend"  # single-key-per-pool decision
+    vk = os.path.join(key_dir, f"{name}_vk.json")
+    proving = os.path.join(key_dir, f"{name}_final.zkey")
+    have = os.path.isfile(vk) and os.path.isfile(proving)
+    if not enabled:
+        status = "declared (not wired)"
+    elif have:
+        status = "setup present — verifier can be wired"
+    else:
+        status = "KEY MISSING — run the one-time ceremony (flag, not fatal)"
+    return {
+        "declared": True,
+        "enabled": enabled,
+        "key_dir": key_dir,
+        "have_setup": have,
+        "status": status,
+    }
+
+
 def declared_composes():
     """[(id, kind, pillar, base, {service: {restart, healthcheck}}, resolved)]"""
     out = []
@@ -340,6 +379,7 @@ def reconcile():
         "roles": {name: role for name, role, _ in roles},
         "pillars": pillars,
         "orphans": orphans,
+        "zk": zk_probe(),
     }
 
 
@@ -362,6 +402,11 @@ def fmt(data):
         bits.append(f"{s['jobs_not_run']} job(s) not run")
     bits.append(f"{s['orphans']} undeclared container(s)")
     lines.append("  " + " · ".join(bits))
+    zk = data.get("zk")
+    if zk and zk.get("declared"):
+        _mark = "\033[33mFLAG\033[0m" if not zk.get("have_setup") and zk.get("enabled") else (
+            "\033[2m—\033[0m" if not zk.get("enabled") else "\033[32mOK\033[0m")
+        lines.append(f"  {_mark} zk-proving  [{zk['status']}]")
     for p in data["pillars"]:
         mark = "\033[32mOK\033[0m" if p["problems"] == 0 else f"\033[31m{p['problems']} ISSUE(S)\033[0m"
         label = p["pillar"] if p["kind"] == "tree" else f"{p['id'].split(':', 1)[1]} (source)"

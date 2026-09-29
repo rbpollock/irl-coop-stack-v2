@@ -72,6 +72,16 @@ for spec in "$ROOT"/infra/instances/dev/apps/*.yaml; do
     else
       fail "$name up failed"
     fi
+  elif [ "$name" = "zk-proving" ]; then
+    # The P2 proving layer isn't a container — it's a bootstrap whose artifact
+    # (Groth16 verifier/key) plugs into the pool. Bring it up via stack-prove.sh,
+    # which flags a missing setup (never fails the stack): a missing key is a
+    # visible gap, not a silent one.
+    if bash "$ROOT/infra/scripts/stack-prove.sh"; then
+      ok "zk-proving handled (flag semantics: missing key = readable gap, not failure)"
+    else
+      fail "zk-proving setup check failed"
+    fi
   else
     printf '  \033[2mSKIP\033[0m %s (no docker compose — host process)\n' "$name"
   fi

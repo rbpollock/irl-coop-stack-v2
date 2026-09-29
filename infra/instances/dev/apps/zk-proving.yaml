@@ -1,0 +1,27 @@
+# zk-proving — the P2 (circom/Groth16) proving layer as a declared stack citizen.
+#
+# This is NOT a service: it is a bootstrap whose artifact (a Groth16 verifier +
+# proving key) plugs into the ShieldedPool's IShieldedPoolVerifier seam. It is
+# declared here so the stack knows it exists, can bring it up idempotently, and
+# can FLAG a missing proof-setup rather than silently not having one.
+#
+# enabled: false  → declared-but-not-wired. The stack reports it, but stack-up
+#   will NOT try to replace the pool's NoopVerifier with a real one. Flipping to
+#   true is the seam: stack-up then runs stack-prove.sh, which wires the real
+#   verifier if the setup exists, or reports 'key missing — run the ceremony'.
+#   The user's rule: a missing key is FLAGGED, never fatal to the bring-up.
+#
+# Artifacts live on /mnt/storage/zk (the repurposed sda1), NOT in infra/out/ —
+# the generator rmtree's out/ every run and a finished zkey must never die there.
+name: zk-proving
+pillar: workflow
+type: source
+source: contracts/zk
+enabled: false
+env:
+  ZK_HOME: /mnt/storage/zk
+  ZK_KEY_DIR: /mnt/storage/zk/keys
+  ZK_CIRCUIT_DIR: contracts/circuits
+  ZK_PIPELINE: contracts/scripts/zk_pipeline.sh
+# No proxy, no OIDC, no port. The verifier.sol it produces is compiled/linked on
+# the local chain (hardhat :8545); nothing of the proving layer is network-visible.
