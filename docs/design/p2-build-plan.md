@@ -14,15 +14,38 @@ whole v0/v1 surface:
 | `authorship` | "I minted this object" w/out linking wallet  | objectId, nullifier | v1 |
 | `badge` | a proof-over-proof (zk-badge gates) | predicate id | v2 (spec §9) |
 
-**Rule:** every statement is a *scoped* relevance: minimum disclosure — prove the predicate without
-publishing the underlying ledger, amount, coordinate, or identity (the repo's "commitment, not copy"
-principle). These compose; badges are proofs-over-proofs.
+**Rule:** every statement is a *scoped* minimum-disclosure predicate whose proofs anchor to the
+tree/root. These compose; badges are proofs-over-proofs. See `p2-build-plan.md`'s
+**member-authorable proof pathway**: (A) a parameterized witness app that lets a member supply their
+own inputs to a trusted, known circuit (client-side prover + coop anchors the result), and (B) a
+reviewed submission path for a member-authored *new* circuit type, admitted to the family only after
+it passes the minimum-disclosure gate. Targeted v1/v2.
 
 **Sequencing:** `spend` is the enabled-P2 core. Geolocation/balance/contribution/credentials/
 authorship are a **named v1 family** that rides the same Groth16/Poseidon/prover toolchain this P2
 setup installs and proves — so the toolchain work is shared, only the in-circuit claims differ.
 
-## Quadratic-select (the canonical fix)
+## Member-authorable proofs — a pathway, not a feature-flag
+
+Every proof above is worth more if a member of irl.coop — not just a developer with a Rust
+toolchain — can **create and submit a new proof type** without asking the coop to write circom.
+Two ways to read this, and both are real:
+
+| Pathway | Who | What it needs |
+|---|---|---|
+| **A. Named / parameterized (v1)** | a member picks a known circuit + supplies a witness (their seat, my geolocation, my contribution) | a **witness-inputs UI + a prover that runs locally/client-side**; the circuit is fixed and trusted; the **coop signs/anchors the result**. Easiest, and probably 90% of the need |
+| **B. New circuit type (v2)** | a power-user/member authors a **new predicate** | the circuit gets a **reviewed submission path**: a sandboxed compile → setup → test harness, a gate (does it prove a minimal-disclosure claim under the family rules?), and a registry entry so the public verifier key is committed. **Not self-serve for safety — a member-authored circuit enters the family after review** |
+
+**The invariant:** any member-authored circuit must still satisfy the family rules — a scoped,
+minimum-disclosure predicate whose proofs anchor to the tree/root — *before* it's admitted to the
+safe registry. The review gate in (B) avoids "anyone can make a circuit that leaks"; the low barrier
+of (A) avoids "only devs can make predicates."
+
+**Sequencing:** (A) ships alongside the spend circuit — the pipeline is proven, so a member-facing
+witness app is the bridge. (B) is the "proof-authoring" pathway this note stands in for: when a
+co-op member has a genuinely new claim ("we raised X for Y", "worked in this field", "this is our
+object"), there is a **known route from idea → circom → reviewed → registered**, with the knotty zk
+work handled and expected.
 
 The spend circuit initially rejected with `T3001: Non quadratic constraints` because the Merkle-path
 combine used a ternary (`sides==0 ? a : b`) / `(1-s)*hash + s*path` — not accepted in circom 2.x
