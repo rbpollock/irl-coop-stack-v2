@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Declared-edge storage</title>
+<style>
+  :root { --ink: var(--foreground); --dim: var(--muted-foreground); --line: var(--border);
+          --card-bg: var(--card); --hi: var(--accent); }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: inherit; color: var(--ink); font-size: 13.5px; line-height: 1.5; }
+  .wrap { width: 780px; }
+  h1 { font-size: 17px; margin: 0 0 2px 0; font-weight: 600; letter-spacing: -0.01em; }
+  .sub { color: var(--dim); margin: 0 0 16px 0; }
+  .layer { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+           background: var(--card-bg); }
+  .lh { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .tag { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--dim);
+         border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; }
+  .lh b { font-weight: 600; }
+  .why { color: var(--dim); font-size: 12.5px; }
+  svg { display: block; }
+  .node { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.2; }
+  .node.acc { stroke: var(--hi); stroke-width: 1.6; }
+  .node.solid { fill: var(--hi); stroke: var(--hi); }
+  .lbl { fill: var(--ink); font-size: 11px; font-family: inherit; }
+  .lbl.dim { fill: var(--dim); }
+  .lbl.tr { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+  .lbl.on { fill: var(--card-bg); }
+  .edge { stroke: var(--line); stroke-width: 1.2; fill: none; }
+  .edge.acc { stroke: var(--hi); stroke-width: 1.4; }
+  .edge.dash { stroke-dasharray: 3 3; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .card { flex: 1 1 0; min-width: 168px; border: 1px solid var(--line); border-radius: 8px;
+          padding: 9px 11px; background: var(--card-bg); cursor: pointer; }
+  .card:hover { border-color: var(--hi); }
+  .card h4 { margin: 0 0 3px 0; font-size: 12.5px; font-weight: 600; }
+  .card p { margin: 0; font-size: 12px; color: var(--dim); }
+  #detail { margin-top: 10px; border-left: 2px solid var(--hi); padding: 2px 0 2px 12px;
+            min-height: 54px; }
+  #detail b { font-weight: 600; }
+  #detail code { font-size: 11.5px; }
+  .ask { margin-top: 8px; font-size: 11.5px; color: var(--dim); }
+  .ask span { border-bottom: 1px dotted var(--dim); cursor: pointer; }
+  .ask span:hover { color: var(--hi); border-color: var(--hi); }
+  .k { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Declared-edge storage</h1>
+  <p class="sub">One primitive, twice: an off-chain set + an on-chain commitment + O(1) revocation.
+     Tier&nbsp;2 already works this way. Edges should too.</p>
+
+  <!-- LAYER 1 -->
+  <div class="layer">
+    <div class="lh"><span class="tag">Layer 1</span><b>The chain — commitment, not content</b></div>
+    <svg width="740" height="196" viewBox="0 0 740 196">
+      <!-- leaves -->
+      <rect class="node" x="8"   y="30" width="86" height="26" rx="5"/>
+      <rect class="node" x="8"   y="66" width="86" height="26" rx="5"/>
+      <rect class="node" x="8"   y="102" width="86" height="26" rx="5"/>
+      <rect class="node" x="8"   y="138" width="86" height="26" rx="5"/>
+      <text class="lbl" x="51" y="47" text-anchor="middle">edge leaf</text>
+      <text class="lbl dim" x="51" y="83" text-anchor="middle">edge leaf</text>
+      <text class="lbl dim" x="51" y="119" text-anchor="middle">edge leaf</text>
+      <text class="lbl dim" x="51" y="155" text-anchor="middle">edge leaf</text>
+
+      <!-- tree -->
+      <path class="edge" d="M94 43 H130 V90 H160"/>
+      <path class="edge" d="M94 79 H130"/>
+      <path class="edge" d="M94 115 H130 V96 H160"/>
+      <path class="edge" d="M94 151 H130 V104 H160"/>
+      <rect class="node" x="160" y="76" width="78" height="26" rx="5"/>
+      <rect class="node" x="160" y="108" width="78" height="26" rx="5"/>
+      <text class="lbl dim" x="199" y="93" text-anchor="middle">period root</text>
+      <text class="lbl dim" x="199" y="125" text-anchor="middle">period root</text>
+      <path class="edge" d="M238 89 H270 V99 H300"/>
+      <path class="edge" d="M238 121 H270 V107 H300"/>
+      <rect class="node acc" x="300" y="88" width="150" height="30" rx="6"/>
+      <text class="lbl" x="375" y="107" text-anchor="middle">root of the edge set</text>
+      <path class="edge acc" d="M450 103 H486"/>
+      <rect class="node solid" x="486" y="86" width="118" height="34" rx="6"/>
+      <text class="lbl on" x="545" y="107" text-anchor="middle">anchored on Base</text>
+
+      <!-- revocation -->
+      <rect class="node" x="486" y="140" width="118" height="34" rx="6"/>
+      <text class="lbl" x="545" y="161" text-anchor="middle">revoked-leaves set</text>
+      <path class="edge dash" d="M545 140 V120" />
+      <text class="lbl dim tr" x="620" y="161">O(1) kill — no root rewrite</text>
+
+      <text class="lbl dim" x="8" y="182">only the root and a revocation set ever touch the chain — never the terms</text>
+    </svg>
+  </div>
+
+  <!-- LAYER 2 -->
+  <div class="layer">
+    <div class="lh"><span class="tag">Layer 2</span><b>The projection — rebuildable, queryable</b></div>
+    <div class="row">
+      <div class="card" data-k="proj">
+        <h4>The edges table</h4>
+        <p>from · to · type · terms · nonce · validity window. Rebuilds from chain events.</p>
+      </div>
+      <div class="card" data-k="terms">
+        <h4>The terms (off-chain)</h4>
+        <p>Guard parameters: what is shared, what the parent may do, caps, expiry.</p>
+      </div>
+      <div class="card" data-k="read">
+        <h4>Who reads it</h4>
+        <p><span class="k">coop_has_grant</span> scopes access; the guard enforces terms; both query here.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEAF -->
+  <div class="layer" style="margin-bottom:0">
+    <div class="lh"><span class="tag">Leaf anatomy</span><b>Why terms stay off-chain</b></div>
+    <svg width="740" height="72" viewBox="0 0 740 72">
+      <rect class="node" x="2"  y="18" width="78" height="28" rx="5"/><text class="lbl" x="41" y="36" text-anchor="middle">from</text>
+      <text class="lbl dim" x="86" y="37" text-anchor="middle">‖</text>
+      <rect class="node" x="94" y="18" width="78" height="28" rx="5"/><text class="lbl" x="133" y="36" text-anchor="middle">to</text>
+      <text class="lbl dim" x="178" y="37" text-anchor="middle">‖</text>
+      <rect class="node" x="186" y="18" width="78" height="28" rx="5"/><text class="lbl" x="225" y="36" text-anchor="middle">type</text>
+      <text class="lbl dim" x="270" y="37" text-anchor="middle">‖</text>
+      <rect class="node acc" x="278" y="18" width="112" height="28" rx="5"/><text class="lbl" x="334" y="36" text-anchor="middle">terms_hash</text>
+      <text class="lbl dim" x="396" y="37" text-anchor="middle">‖</text>
+      <rect class="node" x="404" y="18" width="70" height="28" rx="5"/><text class="lbl" x="439" y="36" text-anchor="middle">nonce</text>
+      <path class="edge acc" d="M474 32 H506"/>
+      <rect class="node solid" x="506" y="14" width="76" height="36" rx="6"/><text class="lbl on" x="544" y="36" text-anchor="middle">H → leaf</text>
+      <path class="edge dash" d="M334 46 V64 H620"/>
+      <text class="lbl dim" x="588" y="62" text-anchor="end">the terms are a commitment here, and a document off-chain</text>
+    </svg>
+    <div class="ask">Same shape as the Tier-2 ledger — the hours are off-chain, the root is anchored.
+      <span data-k="same">Ask: is an edge just a Tier-2 entry between groups?</span>
+      &nbsp;·&nbsp;
+      <span data-k="types">Ask: what leaf types exist?</span>
+    </div>
+  </div>
+
+  <div id="detail"><b>Click anything above.</b> The design question is which parts must be
+    unforgeable by the operator (on-chain) and which merely need to be provable (off-chain).</div>
+</div>
+
+<script>
+const D = {
+  proj: "<b>The projection is Layer 2, and that is load-bearing.</b> It is the queryable copy: joins against seats, roles, grants and scopes. It is <i>rebuildable</i> from chain events plus the recorded terms, which is what makes 'the projection is disposable' true. Any edge query the app needs goes here.",
+  terms: "<b>Terms are the guard's parameters, not prose.</b> What is shared (namespace, mailboxes, quotas); what the parent may do; caps; expiry. They live off-chain and are enforced by the child's own guard — self-binding, so the child cannot opt out. Only terms_hash goes on-chain.",
+  read: "<b>Two different readers, deliberately.</b> <span class='k'>coop_has_grant(gid, g)</span> scopes <i>access</i> by joining group_members — already group-scoped, so it needs no edge record at all. The <i>guard</i> enforces terms on-chain. Access is scoped by seats; control is enforced by the guard. The edge record is what makes the terms auditable and tightenable.",
+  same: "<b>Nearly — and that is the point.</b> Tier 2 is an off-chain hash-chained set of entries with a Merkle root anchored to Base and O(1) revocation. An edge set is the same construction with different leaf contents: relationships instead of hours. So the registry does not need new infrastructure — it needs the Tier-2 machinery pointed at a second set of leaves.",
+  types: "<b>Four types, from four orthogonal dimensions.</b> <i>member-of</i> (governance only — the default), <i>subgroup-of</i> (governance + infra), <i>federated-with</i> (trust, no control), <i>sponsored-by</i> (economics, no control). The type is a dimension combination. The rule that makes it safe: <b>ownership implies membership ONLY</b> — everything else is declared, never inferred.",
+  proj_ask: null
+};
+document.querySelectorAll('.card').forEach(c => c.addEventListener('click', () => {
+  const k = c.dataset.k; if (D[k]) document.getElementById('detail').innerHTML = D[k];
+}));
+document.querySelectorAll('.ask span').forEach(s => s.addEventListener('click', () => {
+  document.getElementById('detail').innerHTML = D[s.dataset.k] || '';
+}));
+</script>
+</body>
+</html>

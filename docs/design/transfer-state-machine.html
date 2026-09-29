@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A transfer's state machine</title>
+<style>
+  :root { --ink: var(--foreground); --dim: var(--muted-foreground); --line: var(--border);
+          --card-bg: var(--card); --hi: var(--accent); }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: inherit; color: var(--ink); font-size: 13.5px; line-height: 1.5; }
+  .wrap { width: 790px; }
+  h1 { font-size: 17px; margin: 0 0 2px 0; font-weight: 600; letter-spacing: -0.01em; }
+  .sub { color: var(--dim); margin: 0 0 14px 0; }
+  svg { display: block; }
+  .node { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.2; cursor: pointer; }
+  .node:hover { stroke: var(--hi); }
+  .node.acc { stroke: var(--hi); stroke-width: 1.7; }
+  .node.solid { fill: var(--hi); stroke: var(--hi); }
+  .node.term { stroke-dasharray: 3 2.5; cursor: pointer; }
+  .node.lane { fill: none; stroke: var(--line); stroke-dasharray: 2 3; }
+  .lbl { fill: var(--ink); font-size: 10.5px; font-family: inherit; pointer-events: none; }
+  .lbl.dim { fill: var(--dim); }
+  .lbl.on { fill: var(--card-bg); }
+  .lbl.tr { font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; }
+  .edge { stroke: var(--line); stroke-width: 1.2; fill: none; }
+  .edge.acc { stroke: var(--hi); stroke-width: 1.5; }
+  .edge.term { stroke-dasharray: 3 2.5; }
+  .edge.fast { stroke: var(--hi); stroke-width: 1.3; stroke-dasharray: 4 3; }
+  .ea { fill: var(--line); }
+  .ea.acc { fill: var(--hi); }
+  #detail { margin-top: 12px; border-left: 2px solid var(--hi); padding: 2px 0 2px 12px; min-height: 76px; }
+  #detail b { font-weight: 600; }
+  .k { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 9px; font-size: 11.5px; color: var(--dim); }
+  .legend i { display: inline-block; width: 22px; height: 11px; vertical-align: -1px; margin-right: 5px;
+              border: 1.2px solid var(--line); border-radius: 3px; }
+  .legend i.s { background: var(--hi); border-color: var(--hi); }
+  .legend i.t { border-style: dashed; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>A transfer's state machine</h1>
+  <p class="sub">coop-api owns every state below. The chain owns exactly one, and it is the one that
+     cannot be argued with. Click any state.</p>
+
+  <svg width="790" height="330" viewBox="0 0 790 330">
+    <!-- ============ HAPPY PATH ============ -->
+    <text class="lbl dim tr" x="2" y="14">the normal path — human authority</text>
+
+    <rect class="node"      x="2"   y="24" width="86"  height="30" rx="6" data-k="drafted"/>
+    <text class="lbl" x="45"  y="43" text-anchor="middle">drafted</text>
+
+    <path class="edge" d="M88 39 H100"/><polygon class="ea" points="100,39 95,36.5 95,41.5"/>
+
+    <rect class="node"      x="100" y="24" width="112" height="30" rx="6" data-k="awaiting"/>
+    <text class="lbl" x="156" y="43" text-anchor="middle">awaiting authority</text>
+
+    <path class="edge" d="M212 39 H224"/><polygon class="ea" points="224,39 219,36.5 219,41.5"/>
+
+    <rect class="node"      x="224" y="24" width="96"  height="30" rx="6" data-k="authorized"/>
+    <text class="lbl" x="272" y="43" text-anchor="middle">authorized</text>
+
+    <path class="edge" d="M320 39 H332"/><polygon class="ea" points="332,39 327,36.5 327,41.5"/>
+
+    <rect class="node"      x="332" y="24" width="90"  height="30" rx="6" data-k="guidance"/>
+    <text class="lbl" x="377" y="43" text-anchor="middle">guidance ✓</text>
+
+    <path class="edge" d="M422 39 H434"/><polygon class="ea" points="434,39 429,36.5 429,41.5"/>
+
+    <rect class="node acc"  x="434" y="24" width="96"  height="30" rx="6" data-k="submitted"/>
+    <text class="lbl" x="482" y="43" text-anchor="middle">submitted</text>
+
+    <path class="edge" d="M530 39 H542"/><polygon class="ea" points="542,39 537,36.5 537,41.5"/>
+
+    <rect class="node"      x="542" y="24" width="80"  height="30" rx="6" data-k="settled"/>
+    <text class="lbl" x="582" y="43" text-anchor="middle">settled</text>
+
+    <path class="edge" d="M622 39 H634"/><polygon class="ea" points="634,39 629,36.5 629,41.5"/>
+
+    <rect class="node solid" x="634" y="24" width="104" height="30" rx="6" data-k="recorded"/>
+    <text class="lbl on" x="686" y="43" text-anchor="middle">recorded + anchored</text>
+
+    <!-- fast path -->
+    <path class="edge fast" d="M45 54 V74 H272 V54"/>
+    <text class="lbl dim" x="158" y="86" text-anchor="middle">scoped key — authority resolves instantly, no waiting state</text>
+
+    <!-- guard bracket -->
+    <rect class="node lane" x="434" y="18" width="96" height="42" rx="8" pointer-events="none"/>
+    <text class="lbl dim tr" x="482" y="72" text-anchor="middle">the on-chain guard runs inside this tx</text>
+
+    <!-- ============ OFF-RAMPS ============ -->
+    <text class="lbl dim tr" x="2" y="118">off-ramps — all of them are normal, not exceptional</text>
+
+    <rect class="node term" x="100" y="128" width="96"  height="28" rx="6" data-k="expired"/>
+    <text class="lbl" x="148" y="146" text-anchor="middle">expired</text>
+    <path class="edge term" d="M156 54 V128"/>
+
+    <rect class="node term" x="212" y="128" width="140" height="28" rx="6" data-k="challenged"/>
+    <text class="lbl" x="282" y="146" text-anchor="middle">timelocked / challenged</text>
+    <path class="edge term" d="M272 54 V128"/>
+
+    <rect class="node term" x="392" y="128" width="120" height="28" rx="6" data-k="guardrej"/>
+    <text class="lbl" x="452" y="146" text-anchor="middle">rejected by guard</text>
+    <path class="edge term" d="M474 54 V128"/>
+
+    <rect class="node term" x="560" y="128" width="90"  height="28" rx="6" data-k="failed"/>
+    <text class="lbl" x="605" y="146" text-anchor="middle">failed</text>
+    <path class="edge term" d="M590 54 V128"/>
+
+    <!-- ============ INBOUND LANE ============ -->
+    <text class="lbl dim tr" x="2" y="196">inbound lane — money arriving through a rail</text>
+
+    <rect class="node" x="2"   y="206" width="86" height="30" rx="6" data-k="inpending"/>
+    <text class="lbl" x="45"  y="225" text-anchor="middle">pending</text>
+    <path class="edge" d="M88 221 H100"/><polygon class="ea" points="100,221 95,218.5 95,223.5"/>
+    <rect class="node" x="100" y="206" width="90" height="30" rx="6" data-k="insettled"/>
+    <text class="lbl" x="145" y="225" text-anchor="middle">settled</text>
+    <path class="edge" d="M190 221 H202"/><polygon class="ea" points="202,221 197,218.5 197,223.5"/>
+    <rect class="node" x="202" y="206" width="80" height="30" rx="6" data-k="partial"/>
+    <text class="lbl" x="242" y="225" text-anchor="middle">partial</text>
+    <path class="edge acc" d="M282 221 H298"/><polygon class="ea acc" points="298,221 293,218.5 293,223.5"/>
+    <rect class="node acc" x="298" y="206" width="112" height="30" rx="6" data-k="reversed"/>
+    <text class="lbl" x="354" y="225" text-anchor="middle">reversed (T+130)</text>
+
+    <text class="lbl dim" x="430" y="217">a receipt says “funds arrived”,</text>
+    <text class="lbl dim" x="430" y="232">never “funds are final”.</text>
+
+    <text class="lbl dim tr" x="2" y="286">tier 2 record</text>
+    <path class="edge dash" d="M686 54 V300 H2 V286" style="display:none"/>
+    <text class="lbl dim" x="2" y="312">every terminal state — settled, reversed, rejected, expired — writes one Tier-2 entry and
+      joins the period root. Failure is recorded, not silently absent.</text>
+  </svg>
+
+  <div class="legend">
+    <span><i class="s"></i>on-chain truth</span>
+    <span><i class="t"></i>terminal / off-path</span>
+    <span><i></i>projection state (coop-api)</span>
+  </div>
+
+  <div id="detail"><b>Click a state.</b> The two branches that decide the whole design are
+    <span class="k">rejected by guard</span> and <span class="k">reversed</span> — one is a
+    predictable refusal that must read clearly, the other is the reason a receipt is not a promise.</div>
+</div>
+
+<script>
+const D = {
+  drafted: "<b>An intent exists; nothing is authorised.</b> from, to, amount, currency, purpose, and a deadline. Created by a person, by a rule, or by a distribution run. coop-api owns this record — it is not on-chain and holds no authority.",
+  awaiting: "<b>coop-api has resolved <i>which</i> class is required and is collecting it.</b> Sub-shapes: N owner signatures against a threshold; one role-holder approval; or a vote with quorum and a deadline. The waiting is real time — and therefore the intent needs an expiry.",
+  authorized: "<b>Authority satisfied, nothing executed.</b> This is the dangerous window if it is unbounded, which is why it carries a deadline and optionally a timelock. Note for distributions: the <b>vote ratifies the percentages</b>, not each payment — one mandate authorises a whole run.",
+  guidance: "<b>App-layer guidance — advisory, never authoritative.</b> It exists to give a clear error <i>before</i> gas is spent and to explain <i>which</i> declared rule would fail. It must never be the enforcement point; if the two disagree, the guard is right and the guidance is a bug.",
+  submitted: "<b>The only state the chain owns, and the only one that cannot be argued with.</b> The guard runs inside this transaction, before the transfer. It is self-binding: it applies to every owner including the founder, and removing it requires the authority it protects. If it reverts, the transfer does not exist.",
+  settled: "<b>Value moved.</b> Confirmed and final in the ordinary sense — except that inbound rail settlements are not final, which is the inbound lane below.",
+  recorded: "<b>The books close over it.</b> A Tier-2 entry is written and joins the period root anchored to Base. This is what makes the transfer <i>provable later without being published</i> — the anchor carries the root, not the ledger.",
+  expired: "<b>The authority window closed.</b> Deadlines on intents, on votes, and on scoped keys all land here. Cheap to draw, and it is the state that stops `authorized` becoming a standing permission.",
+  challenged: "<b>A timelock window, with a challenge path.</b> A sensitive transfer pends for a notice period so compromise can be raced and cancelled — the circuit-breaker pattern, where one holder can trigger a freeze and unfreezing needs the full quorum. This is where reversal is still possible.",
+  guardrej: "<b>The guard refused, on-chain, and the reason is one of the declared terms.</b> Cap exceeded, recipient not on the allowlist, key expired, rate limit hit, or the beneficiary is also the authoriser. <b>This is a feature, not an error path</b> — and the app-layer guidance above exists mainly so people meet it here less often.",
+  failed: "<b>Execution failed for a reason nobody declared.</b> Gas, a revert in the callee, a dead RPC. Distinguish it from <span class='k'>rejected by guard</span> in the UI: one means 'the rules said no', the other means 'the machine broke'.",
+  inpending: "<b>An inbound rail payment, before settlement is known.</b> The provider's quote can fail, order creation can fail, and a P2P counterparty may simply not exist — so this state precedes any assumption that money is coming.",
+  insettled: "<b>A signed delivery arrived and was recorded.</b> `rail_event` dedupes on (rail, event_id); the same event id across 7 retry attempts with a fresh signature is why both are checked.",
+  partial: "<b>First-class, not an edge case.</b> A P2P rail settles partially — the provider's own types include `PARTIALLY_FULFILLED` and `ORDER_PARTIALLY_CHARGEBACKED`. This is why 'the money arrived' is not boolean.",
+  reversed: "<b>The T+130 window, as data.</b> `PAYMENT_CHARGEBACKED`, `ORDER_PARTIALLY_CHARGEBACKED` and the `REFUND_*` family all arrive here, after settlement. It is the reason a receipt means <i>funds arrived</i> and never <i>funds are final</i> — and the reason the vertical fund exists to absorb the window."
+};
+document.querySelectorAll('[data-k]').forEach(n => n.addEventListener('click', () => {
+  const d = D[n.dataset.k];
+  if (d) document.getElementById('detail').innerHTML = d;
+}));
+</script>
+</body>
+</html>

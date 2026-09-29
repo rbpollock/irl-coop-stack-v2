@@ -22,10 +22,16 @@ env:
   PEER_PAY_API_KEY: ${VAULT:peerpay.api_key}
   PEER_PAY_API_BASE_URL: https://api.pay.peer.xyz
   PEER_PAY_CHECKOUT_BASE_URL: https://pay.peer.xyz
-  # The provider posts webhooks to us. Its types expose no signature scheme, so authenticity
-  # comes from a CUSTOM HEADER carrying a derived secret, configured on the provider side as a
-  # customHeaders entry. Fails closed if unset.
-  # Shown ONCE by `peer-pay-cli webhooks create`; a self-derived value could never match it.
+  # The provider posts webhooks to us and SIGNS them:
+  #   HMAC-SHA256(secret, "<X-Webhook-Timestamp>.<rawBody>"), hex, in X-Webhook-Signature,
+  #   with X-Webhook-Timestamp and X-Webhook-Id alongside, inside a 300s replay window.
+  # CORRECTED — an earlier version of this comment claimed the provider exposed no signature
+  # scheme and that authenticity came from a custom header. That was wrong, and the mistake was
+  # reading the provider's TypeScript types (which carry only customHeaders) and treating one
+  # client's types as the provider's contract. The docs are the contract; the types are one
+  # client's view. Recorded in docs/design/money-in-and-out.md §3.7.
+  # The secret is shown ONCE when the webhook is created — capture it straight into the vault as
+  # peerpay.webhook_secret, or delete the webhook and create it again. It cannot be re-read.
   PEER_PAY_WEBHOOK_SECRET: ${VAULT:peerpay.webhook_secret}
   # Where to forward a translated settlement. The coop-api route is authenticated with the
   # same rail token the rail presents on outbound calls (one trust boundary, both directions).

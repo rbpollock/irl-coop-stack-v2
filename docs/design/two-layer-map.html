@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The two layers — what is unforgeable, what is provable, what is merely stored</title>
+<style>
+  :root { --ink: var(--foreground); --dim: var(--muted-foreground); --line: var(--border);
+          --card-bg: var(--card); --hi: var(--accent); }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: inherit; color: var(--ink); font-size: 13px; line-height: 1.45; }
+  .wrap { width: 800px; }
+  h1 { font-size: 17px; margin: 0 0 2px 0; font-weight: 600; letter-spacing: -0.01em; }
+  .sub { color: var(--dim); margin: 0 0 14px 0; }
+  .bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  button { font: inherit; font-size: 12px; color: var(--ink); background: var(--card-bg);
+           border: 1px solid var(--line); border-radius: 7px; padding: 5px 11px; cursor: pointer; }
+  button:hover { border-color: var(--hi); }
+  button.on { border-color: var(--hi); color: var(--hi); }
+  .sum { font-size: 12px; color: var(--dim); }
+  .sum b { color: var(--hi); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: 148px 168px 236px 236px; gap: 1px;
+          background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .h { background: var(--card-bg); padding: 8px 10px; font-size: 10.5px; text-transform: uppercase;
+       letter-spacing: .07em; color: var(--dim); }
+  .h b { display: block; text-transform: none; letter-spacing: 0; text-transform: none;
+         color: var(--ink); font-size: 12.5px; font-weight: 600; margin-top: 2px; }
+  .c { background: var(--card-bg); padding: 8px 10px; }
+  .c.dom { cursor: pointer; }
+  .c.dom:hover { outline: 1px solid var(--hi); outline-offset: -1px; }
+  .c.dom b { font-weight: 600; font-size: 12.5px; }
+  .c .it { font-size: 11.5px; }
+  .c .it + .it { margin-top: 3px; }
+  .chip { display: inline-block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em;
+          border: 1px solid var(--line); border-radius: 20px; padding: 0 6px; margin-right: 5px;
+          color: var(--dim); vertical-align: 1px; }
+  .chip.u { border-color: var(--hi); color: var(--hi); }
+  .k { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+  .empty { color: var(--dim); }
+
+  body.sim .lost { opacity: .38; }
+  body.sim .lost .chip { border-style: dashed; }
+  body.sim .c [data-lost]::after {
+    content: "LOST"; font-size: 9px; letter-spacing: .07em; color: var(--hi);
+    border: 1px dashed var(--hi); border-radius: 20px; padding: 0 6px; margin-left: 5px; vertical-align: 1px; }
+
+  #detail { margin-top: 12px; border-left: 2px solid var(--hi); padding: 2px 0 2px 12px; min-height: 62px; }
+  #detail b { font-weight: 600; }
+  .foot { margin-top: 10px; color: var(--dim); font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The two layers — and the third one nobody labels</h1>
+  <p class="sub">Layer 1 is unforgeable by the operator. Layer 2 is merely stored. Unless a fact is
+     <i>derivable</i>, "just rebuild the projection" silently loses it.</p>
+
+  <div class="bar">
+    <button id="sim">Simulate a rebuild from chain + anchors</button>
+    <span class="sum" id="sum"></span>
+  </div>
+
+  <div class="grid">
+    <div class="h">Domain</div>
+    <div class="h"><b>Layer 1</b>on-chain — unforgeable</div>
+    <div class="h"><b>Layer 2a</b>derived — rebuildable</div>
+    <div class="h"><b>Layer 2b</b>uncommitted — load-bearing</div>
+
+    <div class="c dom" data-k="auth"><b>Authority</b></div>
+    <div class="c"><div class="it"><span class="chip u">unforgeable</span>Safe owner set + threshold</div></div>
+    <div class="c"><div class="it"><span class="chip">derived</span>seats and roles, read from the owner set</div></div>
+    <div class="c empty">—</div>
+
+    <div class="c dom" data-k="value"><b>Value</b></div>
+    <div class="c">
+      <div class="it"><span class="chip u">unforgeable</span>USDC transfers in/out · pool notes, commitments, nullifiers</div>
+    </div>
+    <div class="c"><div class="it"><span class="chip">derived</span>the on-chain movement ledger</div></div>
+    <div class="c"><div class="it" data-lost><span class="chip">uncommitted</span>webhook-sourced: <span class="k">payment_intent</span>, <span class="k">rail_event</span>, provider refs</div></div>
+
+    <div class="c dom" data-k="edges"><b>Edges</b></div>
+    <div class="c"><div class="it"><span class="chip u">unforgeable</span>the edge-set root + the revoked-leaves set</div></div>
+    <div class="c"><div class="it"><span class="chip">derived</span>edge rows, rebuilt from the root</div></div>
+    <div class="c"><div class="it" data-lost><span class="chip">uncommitted</span>the terms themselves — hash-only, so the document lives nowhere else</div></div>
+
+    <div class="c dom" data-k="tier2"><b>Participation</b></div>
+    <div class="c"><div class="it"><span class="chip u">unforgeable</span>period roots anchored to Base</div></div>
+    <div class="c"><div class="it"><span class="chip">derived</span>entries, verifiable against the root</div></div>
+    <div class="c empty">—</div>
+
+    <div class="c dom" data-k="bindings"><b>App bindings</b></div>
+    <div class="c empty">—</div>
+    <div class="c empty">—</div>
+    <div class="c"><div class="it" data-lost><span class="chip">uncommitted</span><span class="k">resource_scopes</span> — Plane projects, NocoDB bases, Matrix rooms, Postiz</div></div>
+
+    <div class="c dom" data-k="tel"><b>Telephony</b></div>
+    <div class="c empty">—</div>
+    <div class="c empty">—</div>
+    <div class="c"><div class="it" data-lost><span class="chip">uncommitted</span>the DID ↔ group mapping — a purchased number, not a derivation</div></div>
+
+    <div class="c dom" data-k="onb"><b>Onboarding</b></div>
+    <div class="c empty">—</div>
+    <div class="c"><div class="it"><span class="chip">derived</span>login roles — regenerated from <span class="k">master.key</span></div></div>
+    <div class="c"><div class="it" data-lost><span class="chip">uncommitted</span>canonical username/email, profile state, dues policies</div></div>
+  </div>
+
+  <div id="detail"><b>Click a domain.</b> Or run the rebuild simulation — the interesting column is the
+    third one, which is the only tier with no commitment behind it and no derivation path back.</div>
+
+  <p class="foot">Truth flows one way: chain → projection, never the reverse except through an
+    authorised transaction. Where the two disagree, the chain wins — and a disagreement should be
+    surfaced, not reconciled silently.</p>
+</div>
+
+<script>
+const D = {
+  auth: "<b>A seat's on-chain truth is the owner set.</b> The projection says “X holds an owner role in G”; the chain says “X's account is in G's Safe owner set”. Those can drift, and the drift is detectable — which is the point of keeping the projection honest. Note the unanimity invariant lives here too: <span class='k'>threshold ≤ owners − 1</span>, enforced by the guard.",
+  value: "<b>Two different provenances, and only one of them is on-chain.</b> A USDC transfer is chain-derived and rebuildable. A fiat settlement is not — it arrives by webhook and exists only in <span class='k'>payment_intent</span>/<span class='k'>rail_event</span>, which the chain never saw. So an inbound payment's coop-side record is <b>uncommitted</b> until something anchors it.",
+  edges: "<b>The root commits the edge; it does not contain it.</b> Hash-only means the terms are provable but not recoverable — so for now the terms are Layer 2b, and that is a deliberate deferral, not an oversight. Committing terms wholesale would move them to 2a at the cost of publishing them.",
+  tier2: "<b>The cleanest case.</b> Off-chain entries, hash-chained, period roots anchored. Drop the table and it genuinely rebuilds — this is the pattern the edge registry should copy, and the reason the staging is safe.",
+  bindings: "<b>Not rebuildable, and it looks like configuration.</b> A Plane project id, a NocoDB base, a Matrix room — you can recreate the resource, but the id changes and continuity is lost. Nothing on-chain references these. This is configuration that behaves like state.",
+  tel: "<b>The sharpest case.</b> A DID is a purchased asset. Losing the mapping does not lose a derivation — it loses the number. Nothing about it is on-chain.",
+  onb: "<b>Half derived, half not.</b> Login roles regenerate from <span class='k'>master.key</span> (a real derivation). The canonical username, profile state and dues policies do not — they are records, and they need a backup, not a rebuild."
+};
+document.querySelectorAll('.c.dom').forEach(n => n.addEventListener('click', () => {
+  const d = D[n.dataset.k];
+  if (d) document.getElementById('detail').innerHTML = d;
+}));
+const btn = document.getElementById('sim'), body = document.body;
+btn.addEventListener('click', () => {
+  body.classList.toggle('sim');
+  const on = body.classList.contains('sim');
+  btn.classList.toggle('on', on);
+  const n = document.querySelectorAll('[data-lost]').length;
+  document.getElementById('sum').innerHTML = on
+    ? '<b>' + n + ' fact groups</b> would be lost — none is on-chain, none is derivable.'
+    : '';
+});
+</script>
+</body>
+</html>
