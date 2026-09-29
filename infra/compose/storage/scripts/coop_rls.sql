@@ -108,21 +108,164 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON groups, group_members, resource_scopes,
 -- Catalog tables have no RLS (any authenticated member reads).
 GRANT SELECT ON grants, roles, role_grants, telephony_templates TO coop_member;
 
--- membership (any seat)
+-- ---------------------------------------------------------------------------
+-- Seat holders are Safes (D-16 — docs/design/seat-holder-is-a-safe.md).
+-- A seat's holder is a Safe: a person's 1-of-1 Safe, or another group's Safe
+-- (which is what makes a group a MEMBER of another group). `sub` is retained as
+-- the identity that EXERCISES a person seat, and as the resolution fallback
+-- while a member's 1-of-1 Safe is not yet deployed.
+--
+-- Access FLOWS from a declared seat (the seat IS the declaration). Governance
+-- and economics rights do NOT — they are terms on the relationship record and
+-- must be declared separately. A collective acquires no authority over a member
+-- co-op merely because that co-op holds a seat.
+-- ---------------------------------------------------------------------------
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS holder_kind text NOT NULL DEFAULT 'person';
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS holder_safe text;
+
+-- A GROUP seat has no person, so `sub` is NULL for it and the old primary key
+-- (group_id, sub) cannot express it. The uniqueness key becomes the HOLDER: the
+-- Safe when known, else the person's sub (the pre-Deployment fallback). `sub` is
+-- relaxed to NULL and the primary key is replaced by an equivalent unique index,
+-- so a seat remains one per holder per group.
+-- ORDER MATTERS: `sub` is implicitly NOT NULL while it is part of the primary key,
+-- so the key must be dropped BEFORE the NOT NULL can be relaxed. (Caught by the
+-- scratch harness — this fails outright against the live shape.)
+ALTER TABLE group_members DROP CONSTRAINT IF EXISTS group_members_pkey;
+ALTER TABLE group_members ALTER COLUMN sub DROP NOT NULL;
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS holder_key text
+  GENERATED ALWAYS AS (COALESCE(holder_safe, sub)) STORED;
+CREATE UNIQUE INDEX IF NOT EXISTS group_members_holder_uniq
+  ON group_members (group_id, holder_key);
+
+DO $holder$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'group_members_holder_kind_check') THEN
+    ALTER TABLE group_members ADD CONSTRAINT group_members_holder_kind_check
+      CHECK (holder_kind IN ('person','group'));
+  END IF;
+END
+$holder$;
+
+-- backfill: a person seat is held by that member's own 1-of-1 Safe, where it exists
+UPDATE group_members gm
+   SET holder_safe = (
+     SELECT g.safe_address FROM groups g
+      WHERE g.kind = 'personal' AND g.created_by = gm.sub AND g.safe_address IS NOT NULL
+   )
+ WHERE gm.holder_kind = 'person' AND gm.holder_safe IS NULL;
+
+CREATE INDEX IF NOT EXISTS group_members_holder_safe_idx
+  ON group_members (holder_safe) WHERE holder_safe IS NOT NULL;
+
+-- The caller's OWN 1-of-1 Safe (depth 0 only) — NOT the transitively-reached set.
+CREATE OR REPLACE FUNCTION coop_own_safe() RETURNS text
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT g.safe_address FROM groups g
+   WHERE g.kind = 'personal' AND g.created_by = coop_current_sub()
+     AND g.safe_address IS NOT NULL
+   LIMIT 1
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_own_safe() OWNER TO coop_rls;
+
+-- The Safes the caller may ACT AS (visibility):
+--   (a) their own 1-of-1 Safe;
+--   (b) the Safe of every group where they hold a DIRECT person seat — being a
+--       member of a co-op means you act as that co-op ("context is a property of
+--       the action");
+--   (c) closure: the Safe of any group whose seat is held by a Safe already in the
+--       set — which is how a member of a co-op reaches the collective their co-op
+--       joined.
+-- UNION (not UNION ALL) dedups, so a cycle (A seats B, B seats A) terminates on its
+-- own; the depth bound is belt-and-braces. SECURITY DEFINER + BYPASSRLS-owned so the
+-- walk can read groups/group_members without re-entering the policies it implements.
+CREATE OR REPLACE FUNCTION coop_current_safes() RETURNS text[]
+SECURITY DEFINER SET search_path = public AS $$
+  WITH RECURSIVE walk(safe, depth) AS (
+    SELECT coop_own_safe(), 0 WHERE coop_own_safe() IS NOT NULL
+    UNION
+    SELECT g.safe_address, 0
+      FROM group_members gm
+      JOIN groups g ON g.id = gm.group_id
+     WHERE gm.holder_kind = 'person'
+       AND (gm.holder_safe = coop_own_safe()
+            OR (gm.holder_safe IS NULL AND gm.sub = coop_current_sub()))
+       AND g.safe_address IS NOT NULL
+    UNION
+    SELECT cg.safe_address, w.depth + 1
+      FROM walk w
+      JOIN group_members gs
+        ON gs.holder_safe = w.safe AND gs.holder_kind = 'group'
+      JOIN groups cg
+        ON cg.id = gs.group_id AND cg.safe_address IS NOT NULL
+     WHERE w.depth < 8
+  )
+  SELECT COALESCE(ARRAY(SELECT DISTINCT safe FROM walk WHERE safe IS NOT NULL), ARRAY[]::text[])
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_current_safes() OWNER TO coop_rls;
+
+-- The caller's SEATS, in one place. Every read path that used to join
+-- `group_members gm ON gm.sub = coop_current_sub()` must use this instead, or a
+-- member who reaches a group THROUGH a group seat (their co-op holds the seat)
+-- would not see it — which is the difference between nesting being recorded and
+-- nesting being navigable. SECURITY DEFINER + BYPASSRLS-owned, like the rest.
+CREATE OR REPLACE FUNCTION coop_my_seats()
+RETURNS TABLE (
+  group_id    uuid,
+  sub         text,
+  roles       text[],
+  alias       text,
+  visibility  text,
+  holder_kind text,
+  holder_safe text,
+  created_at  timestamptz
+)
+SECURITY DEFINER SET search_path = public AS $$
+  SELECT gm.group_id, gm.sub, gm.roles, gm.alias, gm.visibility,
+         gm.holder_kind, gm.holder_safe, gm.created_at
+    FROM group_members gm
+   WHERE (gm.holder_safe IS NOT NULL AND gm.holder_safe = ANY (coop_current_safes()))
+      OR (gm.holder_safe IS NULL AND gm.sub = coop_current_sub())
+$$ LANGUAGE sql STABLE;
+ALTER FUNCTION coop_my_seats() OWNER TO coop_rls;
+
+-- membership (any seat): held by a Safe the caller may act as, OR a person seat
+-- with a NULL holder_safe still keyed to the caller's sub (the pre-Deployment
+-- fallback — see the spec §4.3).
 CREATE OR REPLACE FUNCTION coop_is_member(gid uuid) RETURNS boolean
 SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (
-    SELECT 1 FROM group_members gm WHERE gm.group_id = gid AND gm.sub = coop_current_sub()
+    SELECT 1 FROM group_members gm
+     WHERE gm.group_id = gid
+       AND (
+         (gm.holder_safe IS NOT NULL AND gm.holder_safe = ANY (coop_current_safes()))
+         OR (gm.holder_safe IS NULL AND gm.sub = coop_current_sub())
+       )
   )
 $$ LANGUAGE sql STABLE;
 ALTER FUNCTION coop_is_member(uuid) OWNER TO coop_rls;
 
--- ownership (seat with role 'owner')
+-- (coop_own_safe() is defined above, before coop_current_safes(), because a
+--  SQL-language function body is validated at CREATE time.)
+
+-- ownership (a DIRECT person seat carrying role 'owner').
+--
+-- Deliberately does NOT traverse a group seat. VISIBILITY flows through a group
+-- seat; ADMINISTRATION does not — otherwise every member of a member co-op could
+-- administer the collective, which is precisely the inheritance the model forbids
+-- ("nothing is inherited, everything is declared"). A co-op's representatives
+-- administer through their OWN person seats carrying explicit roles.
 CREATE OR REPLACE FUNCTION coop_is_owner(gid uuid) RETURNS boolean
 SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (
     SELECT 1 FROM group_members gm
-    WHERE gm.group_id = gid AND gm.sub = coop_current_sub() AND 'owner' = ANY(gm.roles)
+     WHERE gm.group_id = gid
+       AND gm.holder_kind = 'person'
+       AND 'owner' = ANY(gm.roles)
+       AND (
+         (gm.holder_safe IS NOT NULL AND gm.holder_safe = coop_own_safe())
+         OR (gm.holder_safe IS NULL AND gm.sub = coop_current_sub())
+       )
   )
 $$ LANGUAGE sql STABLE;
 ALTER FUNCTION coop_is_owner(uuid) OWNER TO coop_rls;

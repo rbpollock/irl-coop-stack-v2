@@ -137,8 +137,15 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
           [safeAddress, name, slug, privacy, claims.sub],
         );
         const row = group.rows[0];
+        // The creator's seat is held by their OWN 1-of-1 Safe when it exists — the
+        // new group's Safe is the group's account, not the person's seat holder.
+        // A NULL holder_safe keeps the seat resolvable by `sub` until that Safe is
+        // deployed (docs/design/seat-holder-is-a-safe.md §4.3).
         await client.query(
-          `INSERT INTO group_members (group_id, sub, roles, visibility) VALUES ($1, $2, $3, 'canonical')`,
+          `INSERT INTO group_members (group_id, sub, roles, visibility, holder_kind, holder_safe)
+           VALUES ($1, $2, $3, 'canonical', 'person',
+                   (SELECT safe_address FROM groups
+                     WHERE kind = 'personal' AND created_by = $2 AND safe_address IS NOT NULL))`,
           [row.id, claims.sub, ["owner"]],
         );
         return row;
@@ -170,7 +177,7 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
         `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.kind, g.created_at,
                 gm.roles, gm.alias, gm.visibility
          FROM groups g
-         LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.sub = coop_current_sub()
+         LEFT JOIN coop_my_seats() gm ON gm.group_id = g.id
          ORDER BY g.created_at DESC`,
       );
       return rows;
@@ -191,7 +198,7 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
         `SELECT g.id, g.safe_address, g.name, g.description, g.privacy, g.kind, g.created_at,
                 gm.roles, gm.alias, gm.visibility
          FROM groups g
-         LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.sub = coop_current_sub()
+         LEFT JOIN coop_my_seats() gm ON gm.group_id = g.id
          ORDER BY g.created_at DESC`,
       );
       return rows;
@@ -235,35 +242,89 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     return reply.send(row);
   });
 
-  // Invite / seat a member in a group.
+  // Invite / seat a holder in a group.
+  //
+  // A seat's HOLDER is a Safe (D-16 — docs/design/seat-holder-is-a-safe.md): the
+  // subject's own 1-of-1 Safe for a person, or ANOTHER GROUP'S Safe — which is how
+  // a group becomes a member of another group (a collective of co-ops).
+  //
+  //   { sub, roles?, alias?, visibility? }        -> a person seat
+  //   { group_id, roles?, alias?, visibility? }   -> a group seat
   fastify.post("/api/v1/groups/:id/members", async (request, reply) => {
     const claims = verifyBearer(request, reply);
     if (!claims) return;
     const groupId = (request.params as any).id;
     const body = (request.body ?? {}) as Record<string, any>;
     const sub = typeof body.sub === "string" ? body.sub.trim() : "";
+    const heldGroup = typeof body.group_id === "string" ? body.group_id.trim() : "";
     const roles = Array.isArray(body.roles) ? body.roles.map(String) : [];
     const alias = typeof body.alias === "string" ? body.alias.trim().slice(0, 80) : null;
     const visibility = VISIBILITY.includes(body.visibility) ? body.visibility : "canonical";
-    if (!sub) return reply.code(400).send({ error: "sub is required" });
 
-    const ok = await withIdentity(claims.sub, async (client) => {
-      if (!(await isOwner(client, groupId, claims.sub))) return false;
+    if (!sub && !heldGroup) {
+      return reply.code(400).send({ error: "one of sub (a person) or group_id (a group) is required" });
+    }
+    if (sub && heldGroup) {
+      return reply.code(400).send({ error: "sub and group_id are mutually exclusive — a seat has one holder" });
+    }
+
+    type SeatOutcome =
+      | { status: "forbidden" }
+      | { status: "no_safe" }
+      | { status: "seated"; seat: Record<string, unknown> };
+
+    const outcome = await withIdentity(claims.sub, async (client): Promise<SeatOutcome> => {
+      if (!(await isOwner(client, groupId, claims.sub))) return { status: "forbidden" };
+
+      if (heldGroup) {
+        // A seat is held by a Safe, so a group with no account yet cannot hold one.
+        // Its people can still be seated as persons meanwhile.
+        const { rows } = await client.query(
+          `SELECT safe_address FROM groups WHERE id = $1 AND safe_address IS NOT NULL`,
+          [heldGroup],
+        );
+        if (!rows[0]) return { status: "no_safe" };
+        await client.query(
+          `INSERT INTO group_members (group_id, sub, roles, alias, visibility, holder_kind, holder_safe)
+           VALUES ($1, NULL, $2, $3, $4, 'group', $5)
+           ON CONFLICT (group_id, holder_key)
+           DO UPDATE SET roles = EXCLUDED.roles, alias = EXCLUDED.alias, visibility = EXCLUDED.visibility`,
+          [groupId, roles, alias, visibility, rows[0].safe_address],
+        );
+        return {
+          status: "seated",
+          seat: { holder_kind: "group", holder_safe: rows[0].safe_address, held_group: heldGroup },
+        };
+      }
+
       await client.query(
-        `INSERT INTO group_members (group_id, sub, roles, alias, visibility)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (group_id, sub)
-         DO UPDATE SET roles = EXCLUDED.roles, alias = EXCLUDED.alias, visibility = EXCLUDED.visibility`,
+        `INSERT INTO group_members (group_id, sub, roles, alias, visibility, holder_kind, holder_safe)
+         VALUES ($1, $2, $3, $4, $5, 'person',
+                 (SELECT safe_address FROM groups
+                   WHERE kind = 'personal' AND created_by = $2 AND safe_address IS NOT NULL))
+         ON CONFLICT (group_id, holder_key)
+         DO UPDATE SET roles = EXCLUDED.roles, alias = EXCLUDED.alias, visibility = EXCLUDED.visibility,
+                       holder_safe = COALESCE(group_members.holder_safe, EXCLUDED.holder_safe)`,
         [groupId, sub, roles, alias, visibility],
       );
-      return true;
+      return { status: "seated", seat: { holder_kind: "person", sub, roles, alias, visibility } };
     });
-    if (!ok) return reply.code(403).send({ error: "not a group owner" });
-    return reply.code(201).send({ group_id: groupId, sub, roles, alias, visibility });
+
+    if (outcome.status === "forbidden") return reply.code(403).send({ error: "not a group owner" });
+    if (outcome.status === "no_safe") {
+      return reply
+        .code(409)
+        .send({ error: "the held group has no account (Safe) yet — a seat must be held by a Safe" });
+    }
+    return reply.code(201).send({ group_id: groupId, ...outcome.seat });
   });
 
   // Seat roster — members can see who else is seated. The group management
   // page reads this for the members table (membership is the gate).
+  //
+  // A seat's holder is a Safe (D-16). A person seat carries `sub`; a GROUP seat
+  // carries the held group's name and slug instead — which is how a collective
+  // lists its member co-ops.
   fastify.get("/api/v1/groups/:id/members", async (request, reply) => {
     const claims = verifyBearer(request, reply);
     if (!claims) return;
@@ -271,8 +332,16 @@ export default async function groupRoutes(fastify: FastifyInstance): Promise<voi
     const rows = await withIdentity(claims.sub, async (client) => {
       if (!(await isMember(client, groupId, claims.sub))) return null;
       const { rows } = await client.query(
-        `SELECT sub, roles, alias, visibility, created_at
-         FROM group_members WHERE group_id = $1 ORDER BY created_at ASC`,
+        `SELECT gm.sub, gm.roles, gm.alias, gm.visibility, gm.created_at,
+                gm.holder_kind, gm.holder_safe,
+                hg.id   AS holder_group_id,
+                hg.name AS holder_group_name,
+                hg.slug AS holder_group_slug
+           FROM group_members gm
+           LEFT JOIN groups hg
+             ON gm.holder_kind = 'group' AND hg.safe_address = gm.holder_safe
+          WHERE gm.group_id = $1
+          ORDER BY gm.created_at ASC`,
         [groupId],
       );
       return rows;

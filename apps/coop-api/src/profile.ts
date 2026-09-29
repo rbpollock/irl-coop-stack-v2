@@ -21,7 +21,7 @@ export default async function profileRoutes(fastify: FastifyInstance): Promise<v
         `SELECT g.id, g.safe_address, g.name, g.privacy, g.kind, g.created_at,
                 gm.roles
          FROM groups g
-         LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.sub = coop_current_sub()
+         LEFT JOIN coop_my_seats() gm ON gm.group_id = g.id
          ORDER BY g.created_at ASC`,
       );
       return rows;

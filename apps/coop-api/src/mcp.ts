@@ -55,9 +55,9 @@ const LOCAL_TOOLS: McpTool[] = [
       return withIdentity(sub, async (client) => {
         // Explicit membership gate (mirrors decisions.ts) — don't rely on RLS alone.
         const member = await client.query(
-          `SELECT 1 FROM group_members gm JOIN groups g ON g.id = gm.group_id
-            WHERE (g.slug = $1 OR g.id::text = $1) AND gm.sub = $2`,
-          [slug, sub],
+          `SELECT 1 FROM coop_my_seats() gm JOIN groups g ON g.id = gm.group_id
+            WHERE (g.slug = $1 OR g.id::text = $1)`,
+          [slug],
         )
         if ((member.rowCount ?? 0) === 0) return { decisions: [] }
         const { rows } = await client.query(

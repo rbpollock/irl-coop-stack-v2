@@ -63,14 +63,33 @@ CREATE UNIQUE INDEX IF NOT EXISTS groups_personal_created_by_uniq
   ON groups (created_by) WHERE kind = 'personal';
 
 CREATE TABLE IF NOT EXISTS group_members (
-  group_id   uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-  sub        text NOT NULL,
-  roles      text[] NOT NULL DEFAULT '{}',
-  alias      text,
-  visibility text NOT NULL DEFAULT 'canonical' CHECK (visibility IN ('role-only','alias','canonical')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (group_id, sub)
+  group_id    uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  sub         text,
+  roles       text[] NOT NULL DEFAULT '{}',
+  alias       text,
+  visibility  text NOT NULL DEFAULT 'canonical' CHECK (visibility IN ('role-only','alias','canonical')),
+  holder_kind text NOT NULL DEFAULT 'person' CHECK (holder_kind IN ('person','group')),
+  holder_safe text,
+  holder_key  text GENERATED ALWAYS AS (COALESCE(holder_safe, sub)) STORED,
+  created_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- Seat holders are Safes (D-16 — docs/design/seat-holder-is-a-safe.md). A group
+-- seat has no person, so the person cannot be the uniqueness key — the holder is.
+-- The primary key is deliberately NOT (group_id, sub); the table is a projection
+-- whose identity is the holder. Applied to existing databases by the ALTER block
+-- below (CREATE TABLE IF NOT EXISTS is a no-op once the table exists).
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS holder_kind text NOT NULL DEFAULT 'person';
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS holder_safe text;
+-- ORDER MATTERS: sub is implicitly NOT NULL while it is part of the primary key,
+-- so the key must be dropped BEFORE the NOT NULL can be relaxed.
+-- (No backticks in this block: the DDL is a JS template literal.)
+ALTER TABLE group_members DROP CONSTRAINT IF EXISTS group_members_pkey;
+ALTER TABLE group_members ALTER COLUMN sub DROP NOT NULL;
+ALTER TABLE group_members ADD COLUMN IF NOT EXISTS holder_key text
+  GENERATED ALWAYS AS (COALESCE(holder_safe, sub)) STORED;
+CREATE UNIQUE INDEX IF NOT EXISTS group_members_holder_uniq
+  ON group_members (group_id, holder_key);
 
 CREATE TABLE IF NOT EXISTS resource_scopes (
   group_id     uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -670,6 +689,10 @@ export async function getRolesAndGrants(
   sub: string,
 ): Promise<{ roles: string[]; grants: string[] }> {
   return withIdentity(sub, async (client) => {
+    // DIRECT SEATS ONLY. Do NOT repoint these at coop_my_seats(): capability grants
+    // must not flow through a group seat, or every member of a member co-op would
+    // inherit the collective's roles. Visibility traverses; authority does not.
+    // (docs/design/seat-holder-is-a-safe.md §4.2)
     const rolesRes = await client.query<{ name: string }>(
       `SELECT DISTINCT unnest(roles) AS name FROM group_members WHERE sub = $1`,
       [sub],
@@ -700,11 +723,9 @@ export async function getRelatedGroups(sub: string): Promise<string[]> {
     await client.query("SELECT coop_ensure_personal_group()");
     const { rows } = await client.query<{ id: string }>(
       `SELECT g.id
-         FROM group_members gm
-         JOIN groups g ON g.id = gm.group_id
-        WHERE gm.sub = $1
+         FROM coop_my_seats() ms
+         JOIN groups g ON g.id = ms.group_id
         ORDER BY g.created_at ASC`,
-      [sub],
     );
     return rows.map((r) => r.id);
   });
@@ -720,12 +741,11 @@ export async function getGroupSeats(
   return withIdentity(sub, async (client) => {
     await client.query("SELECT coop_ensure_personal_group()");
     const { rows } = await client.query<{ slug: string; name: string; roles: string[] }>(
-      `SELECT COALESCE(g.slug, g.id::text) AS slug, g.name, gm.roles
-         FROM group_members gm
-         JOIN groups g ON g.id = gm.group_id
-        WHERE gm.sub = $1 AND g.kind = 'coop'
+      `SELECT COALESCE(g.slug, g.id::text) AS slug, g.name, ms.roles
+         FROM coop_my_seats() ms
+         JOIN groups g ON g.id = ms.group_id
+        WHERE g.kind = 'coop'
         ORDER BY g.created_at ASC`,
-      [sub],
     );
     return rows;
   });

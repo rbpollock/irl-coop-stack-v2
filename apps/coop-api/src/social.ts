@@ -18,7 +18,7 @@ export default async function socialRoutes(fastify: FastifyInstance): Promise<vo
          FROM groups g
          JOIN resource_scopes rs ON rs.group_id = g.id AND rs.app = 'postiz'
          WHERE EXISTS (
-           SELECT 1 FROM group_members gm WHERE gm.group_id = g.id AND gm.sub = coop_current_sub()
+           SELECT 1 FROM coop_my_seats() gm WHERE gm.group_id = g.id
          )
          ORDER BY g.created_at`,
       );
