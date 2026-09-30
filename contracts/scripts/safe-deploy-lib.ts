@@ -136,6 +136,67 @@ export async function execSafeTx(
 }
 
 /**
+ * Close cousin of execSafeTx: the SAFE executes a transaction whose gas is paid
+ * by a SPONSOR (any EOA — NOT an owner), while the threshold is met solely by the
+ * owner signatures. This is the relayer/AA sponsorship shape: `sponsor` is the
+ * caller of `execTransaction` (and pays the gas), `signers` are the owners who
+ * approve; they need not be the same as `sponsor`.
+ *
+ * On Hardhat gas is ~free, so the unit here is NOT cost metering — it is the
+ * PROOF that the classic Safe multi-sig can be broadcast by a third party at
+ * all (which is the entire premise of sponsorship: the signers are passkeys /
+ * JWT owners with no gas, and a relayer carries their tx). The Safe-native
+ * refund path (`gasPrice`/`gasToken`/`refundReceiver`) is left zero/absent in
+ * dev; on a real chain the sponsor is expected to set a refund (see
+ * `sponsorSafeTxWithRefund` for the ERC-20-token variant).
+ */
+export async function sponsorSafeTx(
+  safe: any,
+  signers: any[],
+  sponsor: any,
+  { to, value = 0n, data = "0x", operation = Operation.Call }: { to: string; value?: bigint; data?: string; operation?: number },
+) {
+  const nonce = await safe.nonce();
+  const domain = {
+    chainId: (await ethers.provider.getNetwork()).chainId,
+    verifyingContract: await safe.getAddress(),
+  };
+  const message = {
+    to,
+    value,
+    data,
+    operation,
+    safeTxGas: 0n,
+    baseGas: 0n,
+    gasPrice: 0n,
+    gasToken: ethers.ZeroAddress,
+    refundReceiver: ethers.ZeroAddress,
+    nonce,
+  };
+  const signed: { owner: string; sig: string }[] = [];
+  for (const s of signers) {
+    signed.push({ owner: await s.getAddress(), sig: await s.signTypedData(domain, SAFE_TX_TYPES, message) });
+  }
+  signed.sort((a, b) => (a.owner.toLowerCase() < b.owner.toLowerCase() ? -1 : 1));
+  const packed = ethers.concat(signed.map((x) => x.sig));
+  // The SPONSOR submits — the Safe validates the packed signatures; msg.sender
+  // does not need to be an owner.
+  const tx = await safe.connect(sponsor).execTransaction(
+    to,
+    value,
+    data,
+    operation,
+    0n,
+    0n,
+    0n,
+    ethers.ZeroAddress,
+    ethers.ZeroAddress,
+    packed,
+  );
+  return await tx.wait();
+}
+
+/**
  * Deploy a contract with the Safe as the deployer (CREATE2, so the address is predictable).
  * Returns the address; the caller should then assert the deployment is what it claims.
  */
