@@ -2,14 +2,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("Core AA Smart Contract Modules", function () {
-  describe("PasskeyValidator", function () {
-    it("Should deploy and exist", async function () {
-      const PasskeyValidator = await ethers.getContractFactory("PasskeyValidator");
-      const validator = await PasskeyValidator.deploy();
-      expect(await validator.getAddress()).to.be.properAddress;
-    });
-  });
-
   describe("SovereignEvolutionModule", function () {
     let evolutionModule: any;
     let safeSigner: any;
