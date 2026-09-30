@@ -26,6 +26,35 @@ shapes), `irl-coop-group.md` (Safe-as-coop, seats), `published-items-as-groups.m
 - [ ] Decide the mixed-node vocabulary (open question 1) — what a node *is* before
       drawing it.
 
+## Phase 0.5 — the "act" layer is already real (head start, Sep 2026)
+The authoritative layer every hot-verb action rides on is **built and green**, so the
+graph's "act" column is funded, not aspirational. Do NOT treat these as UI to invent;
+wire the UI onto them:
+- [x] **Session keys** (`SessionKeyModule`, a real Safe-1.4.1 module) — a non-owner
+      "bot" EOA drives a group Safe up to a daily budget (native + declared ERC-20),
+      gated owner-governed (enableSessionKey is only-Safe). Verified 8/8 incl. the
+      opt-in allow-list, which is **default-permissive** (never a jail): off = budget-
+      only; armed = per-target / per-selector whitelist, plain value transfers pass.
+      This is the mechanism for `platform-views.md` §3 "authorized by the caller's
+      session key" and group-home.md §4 **hot verbs** ("an edge you draw, not a button").
+- [x] **Sovereign handover** (`POST /api/safe/sovereign` + `PasskeyOwner`) — the
+      backend-owned Safe becomes user-owned: one Safe swapOwner tx renounces the
+      backend key and installs an EIP-1271 passkey owner. This is the **cold /
+      character-sheet** side of `group-home.md` §5 — an ownership change is an
+      ATTESTATION, not a micro-step. Cap leak: a session key can spend within a day's
+      budget; a leaked back-end key was made powerless by handover.
+- [x] **Deployment authority** — group Safe IS the deployer (`SafeAsDeployer` 9/9); no
+      group signer key exists anywhere (see account-and-key-model.md §deployment).
+
+Consequence for the build queue: the graph's **action** edges can render real
+(accept-match / fund / run-keeper = a session-key-authorized Temporal signal), and the
+**ownership** transition can be a ceremonial attestation room instead of a bare API.
+UI seam to keep in mind while building Phases 1–2: before any button fires a hot verb,
+it resolves "whose session key / which budget runs it," and before any cold verb
+(dissolve, handover, successor — group-home.md §4 door), it resolves the ownership
+attestation. Both are now services, not promises. What's NOT yet built: the graph
+*page* that draws the playable loop (Phase 1) — that is the last mile.
+
 ## Phase 1 — the graph core (the playable loop)
 - [ ] One graph surface, three axes: **zoom**, **lens**, **tense** (`group-home.md` §2).
 - [ ] Zoom = navigation. person-as-group nesting: `subgroup-of` tree (`§2.1`); members
