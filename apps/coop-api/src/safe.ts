@@ -99,6 +99,14 @@ function parseSaltNonce(raw: unknown): bigint {
   return n;
 }
 
+const OWNER_MANAGER_IFACE = new ethers.Interface([
+  "function swapOwner(address prevOwner, address oldOwner, address newOwner)",
+  "function getOwners() view returns (address[])",
+]);
+const SAFE_IFACE = new ethers.Interface([
+  "function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)",
+]);
+
 export default async function safeRoutes(fastify: FastifyInstance): Promise<void> {
   const env = {
     rpcUrl: process.env.RPC_URL ?? "http://127.0.0.1:8545",
@@ -166,4 +174,126 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
   };
   fastify.post("/api/safe/deploy", deploy);
   fastify.post("/api/onboard", deploy); // legacy alias
+
+  // Sovereign handover: the backend signer, which currently owns the Safe
+  // 1-of-1, renounces itself and installs a user-representing owner (e.g. a
+  // PasskeyOwner EIP-1271 contract) as the new 1-of-1 owner. This is the
+  // production face of the ownership transition proven at the contract level
+  // in contracts/test/SafeOwnershipPasskey.ts: one Safe execTransaction ->
+  // swapOwner(SENTINEL, backend, passkeyOwner), threshold unchanged (1).
+  // The Safe remains deterministic-address and uncorrelatable; coop-api still
+  // never persists the identity->address mapping.
+  fastify.post("/api/safe/sovereign", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    if (!env.factory || !env.singleton || !env.backendKey) {
+      return reply.code(503).send({ error: "safe contracts not configured" });
+    }
+    try {
+      const { safeAddress, passkeyOwner, saltNonce } = request.body as {
+        safeAddress?: unknown;
+        passkeyOwner?: unknown;
+        saltNonce?: unknown;
+      };
+      if (typeof safeAddress !== "string" || !ethers.isAddress(safeAddress)) {
+        return reply.code(400).send({ error: "safeAddress required" });
+      }
+      if (typeof passkeyOwner !== "string" || !ethers.isAddress(passkeyOwner)) {
+        return reply.code(400).send({ error: "passkeyOwner required (an EIP-1271 owner contract address)" });
+      }
+      const salt = parseSaltNonce(saltNonce);
+
+      const provider = new ethers.JsonRpcProvider(env.rpcUrl);
+      const backendSigner = new ethers.Wallet(env.backendKey, provider);
+      const backendAddr = backendSigner.address;
+      if (backendAddr.toLowerCase() === passkeyOwner.toLowerCase()) {
+        return reply.code(400).send({ error: "passkeyOwner cannot be the backend signer" });
+      }
+
+      const safe = new ethers.Contract(safeAddress, OWNER_MANAGER_IFACE, provider);
+      // Reject if this Safe isn't actually the backend-owned one we predicted for
+      // this caller's salt — otherwise handover would touch someone else's Safe.
+      const predicted = predictSafeAddress({
+        factory: env.factory,
+        singleton: env.singleton,
+        initializer: defaultInitializer(),
+        saltNonce: salt,
+      });
+      if (predicted.toLowerCase() !== safeAddress.toLowerCase()) {
+        return reply.code(400).send({ error: "safeAddress does not match this saltNonce's predicted Safe" });
+      }
+      const code = await provider.getCode(safeAddress);
+      if (code === "0x") {
+        return reply.code(400).send({ error: "safe not deployed on this chain" });
+      }
+
+      const owners: string[] = await safe.getOwners();
+      if (owners.length !== 1 || owners[0].toLowerCase() !== backendAddr.toLowerCase()) {
+        return reply.code(400).send({ error: "Safe is not backend-owned 1-of-1; handover refuses" });
+      }
+
+      // The one action the Safe will execute: swapOwner(SENTINEL, backend, passkeyOwner).
+      // prevOwner = SENTINEL_OWNERS (0x1) because the backend is the sole owner and
+      // therefore the head of the owner linked list.
+      const swapCalldata = OWNER_MANAGER_IFACE.encodeFunctionData("swapOwner", [
+        "0x0000000000000000000000000000000000000001", // SENTINEL_OWNERS
+        backendAddr,
+        passkeyOwner,
+      ]);
+
+      // Safe 1.4.1 execTransaction — the backend is a plain EOA owner, so the
+      // signatures blob is a single 65-byte ECDSA(r,s,v) over the EIP-712
+      // safeTxHash, not the contract-owner static slot used for PasskeyOwner.
+      const safeContract = new ethers.Contract(safeAddress, SAFE_IFACE, backendSigner);
+      const nonce: bigint = await safeContract.nonce();
+      const to = safeAddress; // the Safe executes swapOwner on itself
+      const data = swapCalldata;
+      const operation = 0; // Enum.Operation.Call
+      const safeTxGas = 0n;
+      const baseGas = 0n;
+      const gasPrice = 0n;
+      const gasToken = ethers.ZeroAddress;
+      const refundReceiver = ethers.ZeroAddress;
+      const safeTxHash = await safeContract.getTransactionHash(
+        to, 0n, data, operation, safeTxGas, baseGas, gasPrice, gasToken, refundReceiver, nonce
+      );
+
+      const sig = backendSigner.signingKey.sign(ethers.getBytes(safeTxHash));
+      // Safe 1.4.1 contract-owner reading order for sig: [r | s | v]; EOA sig is
+      // compact r,s (32+32) + a final v byte in the legacy recovery-id form.
+      const backendSig = ethers.concat([
+        ethers.zeroPadValue(sig.r, 32),
+        ethers.zeroPadValue(sig.s, 32),
+        ethers.toBeHex(sig.v), // 27/28 style
+      ]);
+
+      const tx = await safeContract.execTransaction.staticCall(
+        to, 0n, data, operation, safeTxGas, baseGas, gasPrice, gasToken, refundReceiver, backendSig
+      );
+      const receipt = await (await safeContract.execTransaction(
+        to, 0n, data, operation, safeTxGas, baseGas, gasPrice, gasToken, refundReceiver, backendSig
+      )).wait();
+      if (!receipt) throw new Error("sovereign handover transaction failed");
+
+      // Verify: the Safe is now owned 1-of-1 by the passkey owner.
+      const newOwners: string[] = await new ethers.Contract(safeAddress, OWNER_MANAGER_IFACE, provider).getOwners();
+      if (
+        newOwners.length !== 1 ||
+        newOwners[0].toLowerCase() !== passkeyOwner.toLowerCase()
+      ) {
+        return reply.code(500).send({ error: "handover executed but owner set did not change as expected" });
+      }
+      request.log.info({ chainId: (await provider.getNetwork()).chainId }, "safe handed to sovereign owner");
+      return reply.send({
+        safeAddress,
+        oldOwner: backendAddr,
+        newOwner: passkeyOwner,
+        txHash: receipt.hash,
+        message: "Safe ownership handed to the passkey/EIP-1271 owner; backend renounced",
+      });
+    } catch (err: any) {
+      request.log.error({ err: err.message }, "safe sovereign failed");
+      return reply.code(500).send({ error: err.message });
+    }
+  });
 }
