@@ -17,6 +17,8 @@ import {
 import type { Posting, Shape } from "@/lib/needs-offers.data"
 
 import { REGIONS, buildLinks, buildPostings } from "@/lib/needs-offers.data"
+import { useSession } from "next-auth/react"
+import { commitSessionSpend } from "@/lib/weave-session"
 
 // Needs/offers — a force-directed "solution space". Color = shape; line length =
 // fit (shorter = stronger); dashed links are loose connections. Selecting nodes
@@ -138,6 +140,11 @@ export function NeedsOffersMockup() {
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [urgentOpen, setUrgentOpen] = useState(true)
   const [commenced, setCommenced] = useState(false)
+  const [committing, setCommitting] = useState(false)
+  const [commitError, setCommitError] = useState<string | null>(null)
+  const [commitTx, setCommitTx] = useState<string | null>(null)
+  const { data: session } = useSession()
+  const token = session?.accessToken
 
   const myWeaveRef = useRef<Set<string>>(new Set())
   myWeaveRef.current = new Set(myWeave)
@@ -324,6 +331,32 @@ export function NeedsOffersMockup() {
     setMyWeave((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     )
+
+  // The hot-verb action: committing a drawn connection as a REAL Safe move through
+  // coop-api → SessionKeyModule. Refuses loudly (budget / allow-list / not
+  // configured) rather than faking success — the honest ceiling is set on-chain.
+  const handleCommit = async () => {
+    if (!token) {
+      setCommitError("Not signed in — no session key to spend with.")
+      return
+    }
+    setCommitting(true)
+    setCommitError(null)
+    // This weave is mock data, so the counterparty `target` is a placeholder
+    // (zero address). The real thing that IS enforced is the session
+    // budget/allow-list the coop module carries — the demo reaches it past the
+    // address gate and surfaces the actual configured/unconfigured state.
+    const target = "0x0000000000000000000000000000000000000000"
+    try {
+      const r = await commitSessionSpend(token, target, "1")
+      setCommitTx(r?.txHash ?? "")
+      setCommenced(true)
+    } catch (err: any) {
+      setCommitError(err?.message ?? "Could not fire the connection.")
+    } finally {
+      setCommitting(false)
+    }
+  }
 
   const nodeLabel = (n: Posting) => {
     const verb = n.have ? "We have" : "We need"
@@ -727,14 +760,22 @@ export function NeedsOffersMockup() {
               )}
               {myWeave.length >= 2 && !commenced && (
                 <button
-                  onClick={() => setCommenced(true)}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+                  onClick={handleCommit}
+                  disabled={committing}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-60"
                 >
                   <Repeat className="size-4" />
-                  {myWeave.length >= 3
+                  {committing
+                    ? "Firing the session spend…"
+                    : myWeave.length >= 3
                     ? "Close this loop →"
                     : "Match this pair →"}
                 </button>
+              )}
+              {commitError && (
+                <p className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 p-2 text-[11px] text-red-700">
+                  {commitError}
+                </p>
               )}
               {commenced && (
                 <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-700">
@@ -745,6 +786,11 @@ export function NeedsOffersMockup() {
                     Loop closed. The AI is checking transport, timing, quantity
                     and commitment before it settles.
                   </p>
+                  {commitTx && (
+                    <p className="mt-1.5 font-mono text-[10px] text-indigo-600">
+                      session spend tx: {commitTx}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

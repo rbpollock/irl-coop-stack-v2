@@ -2,6 +2,11 @@ import type { FastifyInstance } from "fastify";
 import { ethers } from "ethers";
 import { verifyBearer } from "./verify-jwt";
 
+const SESSION_MODULE_IFACE = new ethers.Interface([
+  // SessionKeyModule (contracts/contracts/modules/SessionKeyModule.sol)
+  "function executeSpend(address target, uint256 value, bytes data, uint8 operation, address token, uint256 amountIn) returns (bool)",
+]);
+
 // ---------------------------------------------------------------------------
 // Uncorrelatable Safe provisioning (Option 1: deterministic derivation, no
 // storage). Safe proxy addresses are CREATE2-deterministic, so the address is
@@ -113,6 +118,8 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
     factory: process.env.SAFE_PROXY_FACTORY_ADDRESS ?? "",
     singleton: process.env.SAFE_SINGLETON_ADDRESS ?? "",
     backendKey: process.env.SAFE_BACKEND_SIGNER_KEY ?? "",
+    sessionModule: process.env.SAFE_SESSION_MODULE_ADDRESS ?? "",
+    sessionKey: process.env.SESSION_KEY ?? "",
     jwtSecret: process.env.JWT_SECRET ?? "local-development-secret-irl-coop-v4",
   };
 
@@ -293,6 +300,54 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
       });
     } catch (err: any) {
       request.log.error({ err: err.message }, "safe sovereign failed");
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // Session-key automation (the graph's "hot verb" act). The dashboard draws an
+  // edge (accept a match, fund a Move, run-a-keeper) and calls here; the coop
+  // signs as the session bot and drives the group Safe's SessionKeyModule, which
+  // is a Safe-1.4.1 module enabled on that group Safe (budget + allow-list
+  // enforced on-chain in SessionKeyModule, not here — this route only relays and
+  // pays gas). Not an owner, cannot rename/steal; only a bounded daily spend.
+  fastify.post("/api/safe/session/execute", async (request, reply) => {
+    const claims = verifyBearer(request, reply);
+    if (!claims) return;
+    if (!env.sessionModule || !env.sessionKey) {
+      return reply.code(503).send({ error: "safe session module not configured" });
+    }
+    try {
+      const body = request.body as any;
+      const target = body?.target;
+      const token: string = body?.token ?? ethers.ZeroAddress;
+      const amountIn: bigint = ethers.parseUnits(String(body?.amountIn ?? "0"), 6); // default USDC 6dp
+      if (typeof target !== "string" || !ethers.isAddress(target)) {
+        return reply.code(400).send({ error: "target required" });
+      }
+      const data: string = body?.data ?? "0x";
+      const operation: number = body?.operation ?? 0;
+      const value: bigint = ethers.parseEther(String(body?.value ?? "0"));
+
+      const provider = new ethers.JsonRpcProvider(env.rpcUrl);
+      const bot = new ethers.Wallet(env.sessionKey, provider);
+      const module = new ethers.Contract(env.sessionModule, SESSION_MODULE_IFACE, bot);
+
+      const ok = await module.executeSpend.staticCall(target, value, data, operation, token, amountIn);
+      if (!ok) return reply.code(400).send({ error: "module dry-run rejected the spend (budget or allowlist)" });
+
+      const tx = await module.executeSpend(target, value, data, operation, token, amountIn);
+      const receipt = await tx.wait();
+      request.log.info({ chainId: (await provider.getNetwork()).chainId }, "session spend executed");
+      return reply.send({
+        txHash: receipt?.hash,
+        target,
+        value: value.toString(),
+        token,
+        amountIn: amountIn.toString(),
+        message: "session-key Safe spend executed via the group Safe",
+      });
+    } catch (err: any) {
+      request.log.error({ err: err.message }, "safe session execute failed");
       return reply.code(500).send({ error: err.message });
     }
   });
