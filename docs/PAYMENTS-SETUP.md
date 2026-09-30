@@ -134,17 +134,9 @@ payment test is a mainnet test. **Do not create real groups on Sepolia** — aut
 live on the chain, so a Sepolia group is throwaway in a way a mainnet group is not.
 
 ```
-# 0. ADD THE BASE NETWORK FIRST — it does not exist. hardhat.config.ts defines only `local`
-#    and `base-sepolia`, so `--network base` dies with an unknown network even though
-#    networks.json carries a verified `base` entry. Add to the `networks` block:
-#
-#      base: {
-#        url: "https://mainnet.base.org",
-#        chainId: 8453,
-#        accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-#      },
-#
-#    plus the matching npm scripts — contracts/package.json wires only local and base-sepolia.
+# 0. BASE NETWORK — DONE (repo commit c8ea5b6): hardhat.config.ts now defines `base`
+#    (url https://mainnet.base.org, chainId 8453). `npx hardhat run <s> --network base`
+#    resolves. Add npm mirror-scripts only if you want them; the wrapper needs none.
 
 # 1. Re-verify the token address ON CHAIN. A token address taken on trust sends funds nowhere.
 #    networks.json records how each address was verified and when (base USDC verified 2026-09-13).
@@ -304,7 +296,7 @@ Recorded rather than smoothed over.
 | 6 | **`apiKeyIpAllowlist` is empty** on the merchant. Worth setting to the host's egress IP before going live |
 | 7 | **The merchant fee is not modelled** in the cost model |
 | 8 | `STRIPE_SECRET_KEY` is still empty in `hievents.yaml` (events can't take payment), and `money-in-and-out.md` §5.2 is explicit that the fix is **not** to point groups at personal payment accounts — that is a governance regression |
-| 9 | **Base mainnet is not a configured hardhat network.** `hardhat.config.ts` defines only `local` (chainId implicit) and `base-sepolia` (84532). `networks.json` has a verified `base` entry, but the hardhat side does not — so `deploy_router_testnet.sh base …` fails on an unknown network, and `contracts/package.json` has no `base` script either. **The mainnet deploy path has never been runnable from this repo as it stands.** The chain deployment that was proven on 2026-09-13 was the LOCAL chain |
+| 9 | **RESOLVED (was: Base mainnet not a configured hardhat network).** `hardhat.config.ts` now has `base` (chainId 8453, fixed `c8ea5b6`) and `whoami --network base` resolves. `deploy_router_testnet.sh base …` is runnable as written. Remaining external pre-req: a `DEPLOY_KEY_FILE` (0600) with a funded mainnet deployer — that key file is human-created |
 
 ---
 
