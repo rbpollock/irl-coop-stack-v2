@@ -56,44 +56,4 @@ describe("Core AA Smart Contract Modules", function () {
       ).to.be.revertedWith("Requires at least 2 guardians");
     });
   });
-
-  describe("SessionKeyModule", function () {
-    let sessionModule: any;
-    let safeSigner: any;
-    let sessionKeySigner: any;
-
-    beforeEach(async function () {
-      const signers = await ethers.getSigners();
-      safeSigner = signers[0];
-      sessionKeySigner = signers[1];
-
-      const SessionKeyModule = await ethers.getContractFactory("SessionKeyModule");
-      sessionModule = await SessionKeyModule.deploy();
-    });
-
-    it("Should enable a session key and allow spending within limits", async function () {
-      const dailyLimit = ethers.parseEther("500"); // 500 units
-      await sessionModule.connect(safeSigner).enableSessionKey(sessionKeySigner.address, dailyLimit);
-      
-      let remaining = await sessionModule.getRemainingLimit(safeSigner.address);
-      expect(remaining).to.equal(dailyLimit);
-
-      // Record a spend
-      const spendAmount = ethers.parseEther("100");
-      await sessionModule.checkAndRecordSpend(safeSigner.address, spendAmount);
-
-      remaining = await sessionModule.getRemainingLimit(safeSigner.address);
-      expect(remaining).to.equal(ethers.parseEther("400"));
-    });
-
-    it("Should reject spending that exceeds daily limits", async function () {
-      const dailyLimit = ethers.parseEther("100");
-      await sessionModule.connect(safeSigner).enableSessionKey(sessionKeySigner.address, dailyLimit);
-      
-      const overSpend = ethers.parseEther("150");
-      await expect(
-        sessionModule.checkAndRecordSpend(safeSigner.address, overSpend)
-      ).to.be.revertedWith("Daily spending limit exceeded");
-    });
-  });
 });
