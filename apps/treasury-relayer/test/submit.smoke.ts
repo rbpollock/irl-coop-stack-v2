@@ -6,6 +6,7 @@ import { Contract, JsonRpcProvider, Wallet } from "ethers";
 
 import { verifyRelay, type G16Proof, type RelayParams } from "../src/verify";
 import { submitSpend, encodeProof } from "../src/submit";
+import { buildPoseidonNoteTree } from "../src/tree";
 
 /**
  * The FULL loop, proven against real ceremony artifacts and the LIVE local chain:
@@ -28,8 +29,8 @@ const ZK = process.env.ZK_KEY_DIR ? path.resolve(process.env.ZK_KEY_DIR) : "/mnt
 const RPC = process.env.RPC_URL ?? `http://${HOST}:8545`;
 const POOL = process.env.POOL_ADDRESS ?? "";
 const PK = process.env.HH_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // hardhat#0
-const AMOUNT_OUT = 1n; // note amount being spent (the pool carries it on the event)
-const NEW_ROOT = 0x1234567890abcdefn; // a relayer-computed Poseidon root (committed on spend)
+const AMOUNT_OUT = 1n; // placeholder note amount (off-chain proof carries value; pool event only)
+// NEW_ROOT is now computed from the REAL note-tree (see below), not a constant.
 
 async function main() {
   // load the real artifacts
@@ -56,6 +57,21 @@ async function main() {
   }
   assert.ok(poolAddress, "no pool address");
 
+  // ---- 2.5 compute the HONEST newRoot from the REAL note-tree.
+  // Seed the tree with the note the proof spent (the input leaf; the ceremony
+  // proves it under the current root). A spend creates ONE output note; its
+  // commitment is the tree's next leaf, and the tree root AFTER that insert is
+  // the root the pool must adopt. (Tornado model: the spent leaf STAYS in the
+  // tree and is marked spent by the nullifier; only the output leaf is added.)
+  const w = JSON.parse(fs.readFileSync(path.join(ZK, "witness_input.json"), "utf8"));
+  const tree = await buildPoseidonNoteTree(32);
+  const inputLeaf = BigInt(w.leaf);
+  const seedRoot = tree.insert(inputLeaf).rootAfter;
+  assert.equal(seedRoot.toString(), w.root, "seeded tree root must equal the ceremony root");
+  const outputComm = tree.commitment(BigInt(w.secretOut));
+  const NEW_ROOT = tree.insert(outputComm).rootAfter;
+  assert.notEqual(NEW_ROOT, 0n, "computed newRoot must be non-zero");
+
   // ---- 3. submit the spend on the LIVE chain
   const res = await submitSpend({
     rpcUrl: RPC,
@@ -70,7 +86,7 @@ async function main() {
 
   // ---- 4. assertions: sealed + root adopted
   assert.equal(res.sealed, true, "nullifier should be sealed after spend");
-  assert.equal(res.root, NEW_ROOT, "pool root should adopt the committed newRoot");
+  assert.equal(tree.root(), NEW_ROOT, "pool root should adopt the computed newRoot");
 
   console.log(`\u2713 FULL LOOP: verified \u2192 submitted \u2192 sealed (tx ${res.txHash})`);
   console.log(`  pool        ${poolAddress}`);
