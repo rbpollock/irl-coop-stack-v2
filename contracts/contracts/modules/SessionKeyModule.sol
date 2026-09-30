@@ -54,10 +54,60 @@ contract SessionKeyModule {
     error NotSessionKey();
     error NoSessionKey();
     error DailyLimitExceeded();
+    error NotAllowed(); // selector/target not on the allow-list (only when armed)
 
     constructor(address _safe) {
         require(_safe != address(0), "no safe");
         SAFE = _safe;
+    }
+
+    // ---- Call allow-list (OPT-IN; never restrictive by default) ----
+    // `listEnabled` defaults to false: with it off, executeSpend is budget-only
+    // and can call anything the Safe could. The Safe can arm the list to
+    // restrict the bot to whitelisted targets/selectors. The list only ever
+    // NARROWS — empty/off means open.
+    bool public listEnabled;
+    // Whole-contract permission: target.EVERY-SELECTOR allowed.
+    mapping(address => bool) public whitelistedTargets;
+    // Per-function permission: selector on that target allowed.
+    mapping(address => mapping(bytes4 => bool)) public whitelistedSelectors;
+
+    event ListArmed(address indexed safe, bool armed);
+    event WhitelistSet(address indexed safe, address target, bytes4 selector, bool allowed);
+
+    /** @dev Arm/disable the allow-list. Owner-governed (safe-only). */
+    function setListEnabled(bool _on) external onlySafe {
+        listEnabled = _on;
+        emit ListArmed(SAFE, _on);
+    }
+
+    /**
+     * @notice Whitelist a target (whole contract) OR a single selector on it.
+     *        selector == 0x00000000 means the whole target is whitelisted.
+     */
+    function authorize(address _target, bytes4 _selector, bool _allow) external onlySafe {
+        require(_target != address(0), "no target");
+        if (_selector == bytes4(0)) {
+            whitelistedTargets[_target] = _allow;
+        } else {
+            whitelistedSelectors[_target][_selector] = _allow;
+        }
+        emit WhitelistSet(SAFE, _target, _selector, _allow);
+    }
+
+    /**
+     * @notice Default-permissive gate: open when the list is off, or when the
+     * call is a whole-target whitelist, or the selector is whitelisted. A plain
+     * native transfer (no calldata / no selector) always passes — the budget
+     * is the limit, the list is an added rail, not a jail.
+     */
+    function _allowed(address _target, bytes calldata _data) internal view returns (bool) {
+        if (!listEnabled) return true;
+        if (whitelistedTargets[_target]) return true;
+        // no selector (0-{2,3}-byte data) = simple native transfer
+        if (_data.length < 4) return true;
+        bytes4 sel = bytes4(_data);
+        return whitelistedSelectors[_target][sel];
     }
 
     modifier onlySafe() {
@@ -100,6 +150,7 @@ contract SessionKeyModule {
         uint256 amountIn
     ) external returns (bool) {
         if (msg.sender != config.sessionKey) revert NotSessionKey();
+        if (!_allowed(target, data)) revert NotAllowed();
         _rollDay();
 
         uint256 cost = (token == address(0)) ? value : amountIn;

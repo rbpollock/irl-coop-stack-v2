@@ -144,4 +144,58 @@ describe("SessionKeyModule vs a live group Safe", () => {
     expect(await usdc.balanceOf(f.bot.address)).to.equal(amount);
     expect(await f.module.getRemainingLimit(f.safeAddr)).to.equal(ethers.parseUnits("60", 6));
   });
+
+  it("is default-permissive until the Safe arms the allow-list", async () => {
+    const f = await fixture();
+    const daily = ethers.parseEther("100");
+    await setupSession(f, daily);
+    // Off by default — list disabled, no config needed.
+    expect(await f.module.listEnabled()).to.equal(false);
+
+    // Any call works (budget-only) while off: spend to an arbitrary target.
+    await (await f.bot.sendTransaction({ to: f.safeAddr, value: ethers.parseEther("50") })).wait();
+    await f.module.connect(f.bot).executeSpend(
+      f.bot.address, ethers.parseEther("10"), "0x", Operation.Call, ethers.ZeroAddress, 0n
+    );
+  });
+
+  it("arming the list RESTRICTS the bot to the allow-list (per-target + per-selector)", async () => {
+    const f = await fixture();
+    const daily = ethers.parseEther("100");
+    await setupSession(f, daily);
+    const usdc = await (await ethers.getContractFactory("MockUsdc")).deploy();
+    const usdcAddr = await usdc.getAddress();
+
+    // Owners arm the list and whitelist ONLY MockUsdc.transfer (not mint).
+    await execSafeTx(f.safe, [f.member], {
+      to: f.moduleAddr,
+      data: f.module.interface.encodeFunctionData("setListEnabled", [true]),
+    });
+    const transferSel = usdc.interface.getFunction("transfer")!.selector;
+    await execSafeTx(f.safe, [f.member], {
+      to: f.moduleAddr,
+      data: f.module.interface.encodeFunctionData("authorize", [usdcAddr, transferSel, true]),
+    });
+
+    // transfer is allowed under the armed list.
+    await usdc.mint(f.safeAddr, ethers.parseUnits("100", 6));
+    const data = usdc.interface.encodeFunctionData("transfer", [f.bot.address, ethers.parseUnits("10", 6)]);
+    await f.module.connect(f.bot).executeSpend(
+      usdcAddr, 0n, data, Operation.Call, usdcAddr, ethers.parseUnits("10", 6)
+    );
+
+    // mint is NOT whitelisted → blocked with NotAllowed.
+    await expect(
+      f.module.connect(f.bot).executeSpend(
+        usdcAddr, 0n, usdc.interface.encodeFunctionData("mint", [f.bot.address, 1n]),
+        Operation.Call, usdcAddr, 0n
+      )
+    ).to.be.revertedWithCustomError(f.module, "NotAllowed");
+
+    // a plain native transfer (no selector) to an unlisted address still passes
+    await (await f.bot.sendTransaction({ to: f.safeAddr, value: ethers.parseEther("5") })).wait();
+    await f.module.connect(f.bot).executeSpend(
+      f.bot.address, ethers.parseEther("1"), "0x", Operation.Call, ethers.ZeroAddress, 0n
+    );
+  });
 });
