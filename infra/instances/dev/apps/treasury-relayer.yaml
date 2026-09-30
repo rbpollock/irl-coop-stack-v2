@@ -21,3 +21,8 @@ env:
   # into /mnt/storage/zk/keys (persistent; NOT infra/out/ — the generator
   # rmtree's out/).
   ZK_KEY_DIR: /mnt/storage/zk/keys
+  # NOTE: this is the treasury ledger (SECRETS). Persisted on the mounted
+  # drive, NOT in the repo (a note secret is the private material for the
+  # pool). coop-api delegates note creation here; it reads the secret back
+  # to hand the member.
+  NOTE_DIR: /mnt/storage/treasury-notes
