@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 
-const COOP_API_URL =
-  process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
+import { coopFetch } from "@/lib/coop-api"
 
 export type LiveNotification = {
   id: string
@@ -38,12 +37,7 @@ export function useNotifications() {
 
     const load = async () => {
       try {
-        const res = await fetch(
-          `${COOP_API_URL}/api/v1/notifications?limit=50`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        )
+        const res = await coopFetch("/api/v1/notifications?limit=50", token)
         if (!res.ok) return
         const list = (await res.json()) as LiveNotification[]
         if (cancelled) return
@@ -55,20 +49,20 @@ export function useNotifications() {
     }
 
     const stream = async () => {
+      // Back off on failure instead of hammering: a rejected stream used to
+      // retry every 5s forever while pinning the dead token (~600 401s/hour,
+      // no live arrivals). coopFetch re-reads the session on a 401, so the
+      // refresh lands on the next attempt; a healthy connection resets this.
+      let backoff = 5_000
       while (!cancelled) {
         controller = new AbortController()
         try {
-          const res = await fetch(
-            `${COOP_API_URL}/api/v1/notifications/stream`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "text/event-stream",
-              },
-              signal: controller.signal,
-            }
-          )
-          if (!res.ok || !res.body) throw new Error("stream unavailable")
+          const res = await coopFetch("/api/v1/notifications/stream", token, {
+            headers: { Accept: "text/event-stream" },
+            signal: controller.signal,
+          })
+          if (!res.ok || !res.body) throw new Error(`stream ${res.status}`)
+          backoff = 5_000
           const reader = res.body.getReader()
           const decoder = new TextDecoder()
           let buf = ""
@@ -94,7 +88,8 @@ export function useNotifications() {
           if (cancelled) return
           // backoff before retry (best-effort liveness; durability is the
           // Temporal lane + the poll endpoint, not this loop)
-          await new Promise((r) => setTimeout(r, 5000))
+          await new Promise((r) => setTimeout(r, backoff))
+          backoff = Math.min(backoff * 2, 60_000)
         }
       }
     }
@@ -117,12 +112,8 @@ export function useNotifications() {
         prev.map((n) => (ids.includes(n.id) ? { ...n, read: true } : n))
       )
       try {
-        await fetch(`${COOP_API_URL}/api/v1/notifications/read`, {
+        await coopFetch("/api/v1/notifications/read", token, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify({ event_ids: ids }),
         })
       } catch {
@@ -136,10 +127,7 @@ export function useNotifications() {
     if (!token) return
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     try {
-      await fetch(`${COOP_API_URL}/api/v1/notifications/clear`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      await coopFetch("/api/v1/notifications/clear", token, { method: "POST" })
     } catch {
       /* transient — next poll reloads the authoritative read state */
     }

@@ -1,3 +1,5 @@
+import { coopJson } from "@/lib/coop-api"
+
 // Shared client for the coop-api group surface (/api/v1/groups). Mirrors the
 // inline-fetch pattern already used across the dashboard (webmail, group-wallet):
 // the NextAuth session's access token rides as a Bearer header to
@@ -41,21 +43,7 @@ async function api<T>(
   token: string,
   init?: RequestInit
 ): Promise<T> {
-  const res = await fetch(`${COOP_API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(
-      (body as { error?: string })?.error ?? `Request failed (${res.status})`
-    )
-  }
-  return res.json() as Promise<T>
+  return coopJson<T>(path, token, init)
 }
 
 export function listGroups(token: string) {

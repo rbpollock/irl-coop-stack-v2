@@ -1,3 +1,5 @@
+import { coopJson } from "@/lib/coop-api"
+
 // Client for the coop-api Social Media surface (/api/v1/social) + Decisions
 // (for the "propose connect" path). Mirrors the groups lib's inline-fetch
 // pattern: the NextAuth access token rides as a Bearer header to
@@ -28,21 +30,7 @@ async function api<T>(
   token: string,
   init?: RequestInit
 ): Promise<T> {
-  const res = await fetch(`${COOP_API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(
-      (body as { error?: string })?.error ?? `Request failed (${res.status})`
-    )
-  }
-  return res.json() as Promise<T>
+  return coopJson<T>(path, token, init)
 }
 
 export function getSocialSummary(token: string) {

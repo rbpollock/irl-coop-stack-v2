@@ -8,11 +8,35 @@ import { createHash } from "node:crypto";
 // Password comes from the generator-emitted secrets.env (POSTGRES_COOP,
 // derived from ${SECRET:postgres.coop}); the other params default to the local
 // Citus coordinator. COOP_DB_PASSWORD is a hand-set .env override if ever needed.
-const pool = new Pool({
+// OWNER pool — DDL/ops ONLY (self-provisioning the projection tables at boot).
+// NEVER used for member-facing work: it OWNS the tables, so it can read any row,
+// bypass every policy, and alter the schema. Confining it to boot is the whole
+// point of the member-scoped split — see docs/design/member-scoped-app-access.md §3.
+const ownerPool = new Pool({
   host: process.env.COOP_DB_HOST ?? "172.17.0.1",
   port: Number(process.env.COOP_DB_PORT ?? 5432),
   user: process.env.COOP_DB_USER ?? "coop",
   password: process.env.COOP_DB_PASSWORD ?? process.env.POSTGRES_COOP ?? "",
+  database: process.env.COOP_DB_NAME ?? "irlcoop",
+  max: 2,
+});
+
+// MEMBER-FACING pool — connects as `coop_app`: LOGIN, NOBYPASSRLS, NOT the table
+// owner, and able to `SET LOCAL ROLE` into a member's own role. Each request's
+// transaction enters that role (see withIdentity) so table grants and grp_*
+// schema USAGE bind by ROLE instead of by the app running as the owner.
+// Rollback switch: set COOP_DB_MEMBER_USER=coop to restore the old behaviour.
+const pool = new Pool({
+  host: process.env.COOP_DB_HOST ?? "172.17.0.1",
+  port: Number(process.env.COOP_DB_PORT ?? 5432),
+  user: process.env.COOP_DB_MEMBER_USER ?? "coop_app",
+  // ${SECRET:postgres.coop-app}; falls back to the owner secret so an un-migrated
+  // env still boots rather than silently connecting with an empty password.
+  password:
+    process.env.COOP_DB_MEMBER_PASSWORD ??
+    process.env.POSTGRES_COOP_APP ??
+    process.env.POSTGRES_COOP ??
+    "",
   database: process.env.COOP_DB_NAME ?? "irlcoop",
   max: 5,
 });
@@ -646,8 +670,15 @@ ON CONFLICT (name) DO NOTHING;
 `;
 
 export async function initDb(): Promise<void> {
-  await pool.query(DDL);
-  await pool.query(SEED);
+  // Boot schema/seed runs on the OWNER pool by necessity (DDL + grants), then the
+  // pool is CLOSED so no owner-level connection lingers at runtime — the request
+  // path only ever holds the member-scoped pool.
+  try {
+    await ownerPool.query(DDL);
+    await ownerPool.query(SEED);
+  } finally {
+    await ownerPool.end().catch(() => {});
+  }
 }
 
 // Run a request's queries inside a transaction with the caller's identity set
@@ -655,6 +686,17 @@ export async function initDb(): Promise<void> {
 // transaction touches. `SET LOCAL` is transaction-scoped, so the pooled
 // connection reverts cleanly on commit/rollback and no identity leaks between
 // requests.
+// The member's Postgres role for a sub. MUST match the derivation in
+// infra/scripts/provision-member-certs.sh (tr -cd '[:alnum:]' | cut -c1-8), or the
+// app silently enters the wrong role (or none).
+const MEMBER_ROLE_RE = /^coop_m_[A-Za-z0-9]{1,8}$/;
+function memberRoleForSub(sub: string): string | null {
+  const key = (sub.match(/[A-Za-z0-9]/g) ?? []).join("").slice(0, 8);
+  if (!key) return null;
+  const role = `coop_m_${key}`;
+  return MEMBER_ROLE_RE.test(role) ? role : null;
+}
+
 export async function withIdentity<T>(
   sub: string,
   fn: (client: PoolClient) => Promise<T>,
@@ -662,6 +704,23 @@ export async function withIdentity<T>(
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Enter the member's OWN role so table grants and grp_* schema USAGE bind by
+    // ROLE, not by the app's connection role. This supplies the RIGHTS, not the
+    // identity: the RLS helpers are SECURITY DEFINER, so inside them current_user
+    // is the definer and a SET ROLE'd member is invisible — identity comes from
+    // app.sub below. See docs/design/member-scoped-app-access.md §3.
+    const role = memberRoleForSub(sub);
+    if (role) {
+      const mapped = await client.query(
+        "SELECT 1 FROM coop_member_role WHERE role_name = $1 AND revoked_at IS NULL",
+        [role],
+      );
+      if ((mapped.rowCount ?? 0) > 0) {
+        // Throws when the role isn't granted to the app role — a provisioning gap
+        // we want LOUD, not a silent downgrade to whatever the app role can see.
+        await client.query(`SET LOCAL ROLE ${role}`);
+      }
+    }
     // set_config(..., is_local=true) == SET LOCAL, but parameterizable (SET
     // does not accept $1). Transaction-scoped, so the pooled connection reverts.
     await client.query("SELECT set_config('app.sub', $1, true)", [sub]);
@@ -676,7 +735,7 @@ export async function withIdentity<T>(
   }
 }
 
-export { pool };
+export { pool, ownerPool };
 
 // Resolve a member's roles (seat role names) and grants (role names -> grant
 // capabilities) across ALL their seats — the union used for the OIDC `roles`
@@ -737,11 +796,15 @@ export async function getRelatedGroups(sub: string): Promise<string[]> {
 // self-group, not a coop team. RLS-scoped via withIdentity(sub).
 export async function getGroupSeats(
   sub: string,
-): Promise<{ slug: string; name: string; roles: string[] }[]> {
+): Promise<{ id: string; slug: string; name: string; roles: string[] }[]> {
   return withIdentity(sub, async (client) => {
     await client.query("SELECT coop_ensure_personal_group()");
-    const { rows } = await client.query<{ slug: string; name: string; roles: string[] }>(
-      `SELECT COALESCE(g.slug, g.id::text) AS slug, g.name, ms.roles
+    const { rows } = await client.query<{ id: string; slug: string; name: string; roles: string[] }>(
+      // `id` rides along so consumers that must match on the group UUID (Plane's
+      // projects.group_id) don't have to map back from a slug. Additive: readers
+      // of slug/name/roles are unaffected, and the oauth2-proxy gate header that
+      // forwards `groups` verbatim simply carries one more field.
+      `SELECT g.id, COALESCE(g.slug, g.id::text) AS slug, g.name, ms.roles
          FROM coop_my_seats() ms
          JOIN groups g ON g.id = ms.group_id
         WHERE g.kind = 'coop'

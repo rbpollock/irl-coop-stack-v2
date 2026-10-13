@@ -221,6 +221,14 @@ export async function mintCoopJwt(
       // which the Formbricks gate-SSO route parses. An array-of-objects claim
       // gets Go-%-formatted (invalid JSON) on the way out.
       groups: JSON.stringify(groups),
+      // The SAME seats as a plain STRING ARRAY, for verifiers that require
+      // `groups` to be a list of strings. rag-api rejects anything else
+      // (`any(not isinstance(item, str))` -> InvalidTokenError) and its
+      // rejection is invisible, so it gets its own claim rather than making
+      // `groups` an array: that claim must stay a JSON string for
+      // oauth2-proxy's --oidc-groups-claim (see above). The retrieval tier
+      // reads this one via KEYCLOAK_GROUPS_CLAIM=group_slugs.
+      group_slugs: groups.map((g) => g.slug),
       mediamtx_permissions,
       policy,
     },

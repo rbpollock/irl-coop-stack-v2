@@ -29,6 +29,9 @@ import { verifyBearer } from "./verify-jwt";
 const STACK_ROOT = process.env.STACK_ROOT ?? path.resolve(__dirname, "../../..");
 const COMPOSE_DIR = path.join(STACK_ROOT, "infra/out/dev/compose");
 const APPS_DIR = path.join(STACK_ROOT, "infra/instances/dev/apps");
+/** Host-process apps (no compose, no container) — declared once in the tree and
+ *  read by BOTH this file and infra/scripts/stack-report.py. */
+const HOST_APPS_FILE = path.join(STACK_ROOT, "infra/instances/dev/host-apps.yaml");
 
 type ServiceDecl = { service: string; image?: string; healthcheck?: boolean; restart?: string | boolean };
 type DeclaredCompose = {
@@ -130,6 +133,70 @@ function roleFor(service: string, roles: AppRole[]): { role: string; app: string
 function lifecycleOf(restart: string | boolean | undefined): "job" | "service" {
   // quoted "no" stays a string; an unquoted `restart: no` parses as boolean false
   return restart === ONESHOT_RESTART || restart === false ? "job" : "service";
+}
+
+type HostAppDecl = {
+  name: string;
+  port: number;
+  health: string;
+  probe: string;
+  role: string;
+  description: string;
+};
+
+/**
+ * The host-process fleet from `infra/instances/dev/host-apps.yaml`.
+ *
+ * BLIND SPOT this closes: the reconciler's view of the world is `docker ps`, so
+ * an app with no container was invisible to every status surface. On 2026-10-03
+ * the report read "61/61 core services healthy" while https://api.irl.coop had
+ * been returning 502 for FOUR DAYS — a mid-edit compile error killed the
+ * coop-api dev server on 2026-09-29 and ts-node-dev never respawned. Its
+ * supervisor pid looked healthy the entire time, which is exactly why liveness
+ * must be probed on the port, never inferred from a process list.
+ */
+function hostAppDecls(): HostAppDecl[] {
+  const doc: any = loadYaml(HOST_APPS_FILE);
+  const list = Array.isArray(doc?.hosts) ? doc.hosts : [];
+  return list
+    .map((h: any) => ({
+      name: String(h?.name ?? ""),
+      port: Number(h?.port ?? 0),
+      health: h?.health ? String(h.health) : "/",
+      probe: h?.probe ? String(h.probe) : "http",
+      role: String(h?.role ?? DEFAULT_ROLE).toLowerCase(),
+      description: String(h?.description ?? ""),
+    }))
+    .filter((h: HostAppDecl) => Boolean(h.name) && h.port > 0);
+}
+
+/**
+ * Liveness of ONE host process. Probes 127.0.0.1:<port> — the address the edge
+ * itself targets. ANY HTTP response counts as UP (a 401/403 is a live,
+ * auth-gated server); only a refused or timed-out connection means the process
+ * is gone. Kept deliberately identical to host_probe() in stack-report.py.
+ * Returns null when healthy, else a short human reason.
+ */
+async function probeHostApp(h: HostAppDecl): Promise<string | null> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 3000);
+  try {
+    if (h.probe === "jsonrpc") {
+      const res = await fetch(`http://127.0.0.1:${h.port}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
+        signal: ctl.signal,
+      });
+      return res.ok ? null : `HTTP ${res.status}`;
+    }
+    await fetch(`http://127.0.0.1:${h.port}${h.health || "/"}`, { signal: ctl.signal });
+    return null; // a response of any status proves something is bound + serving
+  } catch {
+    return "not answering";
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** The per-service answer to "how healthy is this one?" */
@@ -330,6 +397,16 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    // Host processes: no container, so `docker ps` cannot see them. Probed on
+    // their own port and surfaced in the summary headline (see hostAppDecls()).
+    const hostApps = await Promise.all(
+      hostAppDecls().map(async (h) => {
+        const fail = await probeHostApp(h);
+        return { ...h, healthy: fail === null, status: fail ?? "answering" };
+      })
+    );
+    const coreHostApps = hostApps.filter((h) => h.role === "core");
+
     const allServices = pillars.flatMap((p) => p.services);
     const coreServices = allServices.filter((s: any) => s.role === "core" && s.lifecycle === "service");
     const jobs = allServices.filter((s: any) => s.lifecycle === "job");
@@ -380,6 +457,15 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
         // --- kept for old consumers: "down" now means CORE SERVICES ACTUALLY DOWN
         down: coreServices.filter((s: any) => !s.healthy).length,
         not_attributed: allServices.filter((s: any) => !s.app).length,
+        // --- host processes: no container, so `docker ps` never sees them.
+        // Counted separately (they are not compose services) but ALWAYS
+        // reported — the leg that was missing when api.irl.coop sat 502 behind
+        // a green report for four days.
+        host_apps: hostApps.length,
+        host_healthy: hostApps.filter((h) => h.healthy).length,
+        core_host_apps: coreHostApps.length,
+        core_host_healthy: coreHostApps.filter((h) => h.healthy).length,
+        core_host_problems: coreHostApps.filter((h) => !h.healthy).length,
       },
       browser_runners: {
         active: runners.filter((r) => r.state === "running").length,
@@ -387,6 +473,7 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
         instances: runners,
       },
       pillars,
+      host_apps: hostApps,
       orphans,
     });
   });

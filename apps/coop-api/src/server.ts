@@ -30,6 +30,7 @@ import usernameRoutes from './username'
 import docsRoutes from './docs'
 import filesRoutes from './files'
 import statusRoutes from './status'
+import assistantRoutes from './assistant'
 import matrixAppserviceRoutes from './matrix'
 import chatRoutes from './chat'
 import chatStsRoutes from './chat-sts'
@@ -191,6 +192,7 @@ fastify.register(internalRoutes)
 fastify.register(hiEventsRoutes)
 fastify.register(weatherRoutes)
 fastify.register(mcpRoutes)
+fastify.register(assistantRoutes)
 
 // Graceful shutdown — releases :3001 deterministically so ts-node-dev's
 // `--respawn` (and any external restart) can rebind immediately. Without this,

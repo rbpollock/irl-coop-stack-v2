@@ -35,6 +35,7 @@ type Context = {
   source?: string
 }
 type Message = { role: "user" | "assistant"; text: string; sources?: Context[] }
+type GroupSeat = { slug: string; name: string; roles?: string[] }
 
 // Call a coop-api MCP tool and unwrap the JSON text content it returns.
 async function callTool(
@@ -112,34 +113,156 @@ async function retrieve(
   return doFetch(Boolean(token))
 }
 
-// On-device generation via Chrome's built-in Prompt API. The current global is
-// `LanguageModel` (the old window.ai.createTextSession() is deprecated). Throws
-// when unavailable so the caller degrades to retrieval-only.
-async function generate(prompt: string): Promise<string> {
+// The member's coop group SEATS — authoritative, read under their own JWT and so
+// RLS-scoped to them. Injected as grounding so "which groups am I in" is
+// answerable, instead of falling through to "not in the coop's knowledge".
+async function loadMyGroups(token: string | undefined): Promise<GroupSeat[]> {
+  if (!token) return []
+  try {
+    const data = (await callTool(token, "list_my_groups", {})) as {
+      groups?: GroupSeat[]
+    }
+    return data.groups ?? []
+  } catch {
+    return []
+  }
+}
+
+// Shared system prompt for both tiers.
+const SYSTEM_PROMPT =
+  "You are the irl.coop assistant — a member-owned helper for a cooperative network. " +
+  "Answer ONLY from the member's memory, the member's coop groups, and the retrieved coop knowledge given below. " +
+  "The member's group list is authoritative: answer questions about which groups they belong to from it directly. " +
+  "Cite coop knowledge ONLY when you actually used a numbered [n] item; never write a bare [n] and never invent a citation. " +
+  "If the answer is in none of those, say you don't have it in the coop's knowledge."
+
+// Preferred tier: on-device generation via Chrome's built-in Prompt API. The
+// current global is `LanguageModel` (the old window.ai.createTextSession() is
+// deprecated). The prompt never leaves the browser. Throws when unavailable.
+async function generateOnDevice(
+  system: string,
+  prompt: string,
+  onDelta: (text: string) => void
+): Promise<string> {
   if (!("LanguageModel" in globalThis)) {
     throw new Error("LanguageModel unavailable")
   }
   const session = await (globalThis as any).LanguageModel.create({
-    initialPrompts: [
-      {
-        role: "system",
-        content:
-          "You are the irl.coop assistant — a member-owned helper for a cooperative network. " +
-          "Answer ONLY from the member's memory and the retrieved coop knowledge. Cite sources as [n]. " +
-          "If neither is relevant, say you don't have it in the coop's knowledge.",
-      },
-    ],
+    initialPrompts: [{ role: "system", content: system }],
   })
-  return await session.prompt(prompt)
+  // promptStreaming() yields the answer as it is produced. Chrome has shipped
+  // both a growing-cumulative and a delta shape for this, so normalise: if a
+  // chunk extends what we already have it is cumulative, else append.
+  let acc = ""
+  for await (const chunk of session.promptStreaming(prompt)) {
+    const piece = String(chunk ?? "")
+    acc = piece.startsWith(acc) ? piece : acc + piece
+    onDelta(acc)
+  }
+  return acc
+}
+
+// Fallback tier: the coop's shared CPU model (llm-inference), reached through
+// coop-api, which holds the provider key — the browser never sees it. This is
+// the provider seam: the harness asks for a completion and the platform tier
+// answers, exactly as a member's own key would later.
+async function generateServer(
+  token: string | undefined,
+  system: string,
+  prompt: string,
+  onDelta: (text: string) => void
+): Promise<string> {
+  const res = await fetch(`${COOP_API_URL}/api/v1/assistant/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      stream: true,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
+    }),
+  })
+  if (!res.ok || !res.body) throw new Error(`shared model failed (${res.status})`)
+
+  // Read the SSE stream ({delta} … {done}) and expose the growing text.
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buf = ""
+  let acc = ""
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    const lines = buf.split("\n")
+    buf = lines.pop() ?? ""
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed.startsWith("data:")) continue
+      const payload = trimmed.slice(5).trim()
+      if (!payload) continue
+      let evt: any
+      try {
+        evt = JSON.parse(payload)
+      } catch {
+        continue
+      }
+      if (evt.delta) {
+        acc += String(evt.delta)
+        onDelta(acc)
+      } else if (evt.error) {
+        throw new Error(String(evt.error))
+      }
+    }
+  }
+  if (!acc) throw new Error("shared model returned nothing")
+  return acc
+}
+
+// On-device first (nothing leaves the browser); the coop's shared model as the
+// fallback when the Prompt API is absent (Firefox, Safari, older Chrome, a
+// low-power device) or a local session fails. Throws only if BOTH fail.
+async function generate(
+  token: string | undefined,
+  system: string,
+  prompt: string,
+  onDelta: (text: string) => void
+): Promise<{ text: string; engine: "device" | "coop" }> {
+  if ("LanguageModel" in globalThis) {
+    try {
+      return {
+        text: await generateOnDevice(system, prompt, onDelta),
+        engine: "device",
+      }
+    } catch {
+      // local session failed — fall through to the coop tier
+    }
+  }
+  return {
+    text: await generateServer(token, system, prompt, onDelta),
+    engine: "coop",
+  }
 }
 
 function buildPrompt(
   memory: MemoryFact[],
+  seats: GroupSeat[],
   contexts: Context[],
   question: string
 ): string {
   const facts =
     memory.map((m) => `- ${m.fact}`).join("\n") || "(nothing remembered yet)"
+  const groups = seats.length
+    ? seats
+        .map(
+          (g) =>
+            `- ${g.name} (${g.slug})${g.roles?.length ? ` — roles: ${g.roles.join(", ")}` : ""}`
+        )
+        .join("\n")
+    : "(the member holds no coop group seats)"
   const ctx = contexts.length
     ? contexts
         .map(
@@ -150,6 +273,8 @@ function buildPrompt(
     : "(no relevant coop knowledge retrieved)"
   return [
     `Member memory:\n${facts}`,
+    "",
+    `Member's coop groups (authoritative):\n${groups}`,
     "",
     `Relevant coop knowledge:\n${ctx}`,
     "",
@@ -175,9 +300,15 @@ export function AssistantPanel() {
   const [proposal, setProposal] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [noAi, setNoAi] = useState(false)
+  const [engine, setEngine] = useState<"device" | "coop" | null>(null)
   const [creds, setCreds] = useState<StsCreds | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // While generating, the spinner stands in for the bubble only until the first
+  // token lands; after that the streaming text is its own progress indicator.
+  const lastMsg = messages[messages.length - 1]
+  const awaitingFirstToken =
+    thinking && (!lastMsg || lastMsg.role !== "assistant" || !lastMsg.text)
 
   const loadMemories = useCallback(async () => {
     if (!token) return
@@ -291,6 +422,8 @@ export function AssistantPanel() {
     setSessionId(crypto.randomUUID())
     setMessages([])
     setProposal(null)
+    setEngine(null)
+    setNoAi(false)
   }
 
   const ask = async () => {
@@ -313,18 +446,36 @@ export function AssistantPanel() {
       } catch {
         // keep going without memory
       }
-      // 2. retrieve context (docs + groups, the union)
-      const [docs, groups] = await Promise.all([
+      // 2. retrieve coop knowledge (docs + groups, the union) AND the member's
+      //    own seats — the latter from the live directory, so membership
+      //    questions are answered from the roster, not from retrieval.
+      const [docs, groupDocs, seats] = await Promise.all([
         retrieve(token, DOCS_AREA_ID, q),
         retrieve(token, GROUPS_AREA_ID, q),
+        loadMyGroups(token),
       ])
-      const contexts = [...groups, ...docs]
+      const contexts = [...groupDocs, ...docs]
 
-      // 3+4. generate (on-device), degrading to retrieval-only
+      // 3+4. generate — on-device first, the coop's shared model as fallback,
+      // degrading to retrieval-only only if neither answers.
+      // Create the assistant bubble up front and fill it as tokens arrive — at
+      // CPU speed a buffered answer is ~25s of dead air on a long reply.
       let answer = ""
+      const onDelta = (text: string) => {
+        answer = text
+        setMessages([...base, { role: "assistant", text, sources: contexts }])
+      }
+      setMessages([...base, { role: "assistant", text: "", sources: contexts }])
       let usedAi = false
       try {
-        answer = await generate(buildPrompt(mem.memories ?? [], contexts, q))
+        const out = await generate(
+          token,
+          SYSTEM_PROMPT,
+          buildPrompt(mem.memories ?? [], seats, contexts, q),
+          onDelta
+        )
+        answer = out.text
+        setEngine(out.engine)
         usedAi = true
       } catch {
         setNoAi(true)
@@ -339,16 +490,23 @@ export function AssistantPanel() {
       // 5. propose one durable fact, surfaced for the member to keep/discard
       if (usedAi) {
         try {
-          const fact = await generate(
-            [
-              "From this exchange, extract ONE durable fact to remember about the member",
-              "(a group they belong to, a need, a preference, or a decision).",
-              'Reply with just the fact, or the single word "nothing".',
-              "",
-              `Member: ${q}`,
-              answer ? `Assistant: ${answer.slice(0, 500)}` : "",
-            ].join("\n")
-          )
+          const fact = (
+            await generate(
+              token,
+              SYSTEM_PROMPT,
+              [
+                "From this exchange, extract ONE durable fact to remember about the member",
+                "(a group they belong to, a need, a preference, or a decision).",
+                'Reply with just the fact, or the single word "nothing".',
+                "",
+                `Member: ${q}`,
+                answer ? `Assistant: ${answer.slice(0, 500)}` : "",
+              ].join("\n"),
+              // the proposal renders in its own box once ready — it must not
+              // stream into the answer bubble
+              () => {}
+            )
+          ).text
           const clean = fact.trim().replace(/^["']|["']$/g, "")
           if (
             clean &&
@@ -437,9 +595,11 @@ export function AssistantPanel() {
                   >
                     <p className="whitespace-pre-wrap break-words">
                       {m.text ||
-                        (m.sources && m.sources.length > 0
-                          ? "Retrieved below — the on-device model isn't available."
-                          : "Nothing relevant found in the coop's knowledge.")}
+                        (thinking
+                          ? ""
+                          : m.sources && m.sources.length > 0
+                            ? "Retrieved below — no model could answer."
+                            : "Nothing relevant found in the coop's knowledge.")}
                     </p>
                     {m.sources && m.sources.length > 0 && (
                       <div className="mt-2 space-y-1 border-t pt-1.5 text-[10px] text-muted-foreground">
@@ -453,7 +613,7 @@ export function AssistantPanel() {
                     )}
                   </div>
                 ))}
-                {thinking && (
+                {awaitingFirstToken && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Loader2 className="size-3.5 animate-spin" />
                     thinking…
@@ -461,8 +621,15 @@ export function AssistantPanel() {
                 )}
                 {noAi && (
                   <p className="text-center text-[11px] text-muted-foreground">
-                    On-device model (Chrome Prompt API) isn&apos;t available —
-                    showing retrieved sources only.
+                    No assistant model could answer — showing retrieved sources
+                    only.
+                  </p>
+                )}
+                {!noAi && engine && (
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    {engine === "device"
+                      ? "Answered on your device — nothing left your browser."
+                      : "Answered by the coop's shared model."}
                   </p>
                 )}
               </div>

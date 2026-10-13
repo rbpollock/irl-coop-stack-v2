@@ -1,5 +1,7 @@
 "use client"
 
+import { coopFetch } from "@/lib/coop-api"
+
 // The weave's "act" seam — funds a drawn connection as a REAL Safe move, through
 // coop-api POST /api/safe/session/execute → SessionKeyModule (Safe-1.4.1 module
 // on the group Safe). Mirrors the dues client's fetch pattern: the NextAuth
@@ -24,14 +26,7 @@ export type SessionSpendResult = {
 }
 
 async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${COOP_API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-  })
+  const res = await coopFetch(path, token, init)
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string }
     const err = new Error(body?.error ?? `Request failed (${res.status})`)

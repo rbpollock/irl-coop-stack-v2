@@ -1,3 +1,5 @@
+import { coopJson } from "@/lib/coop-api"
+
 // Client for the coop-api dues surface (/api/v1/groups/:id/dues/*). Mirrors the
 // group client's inline-fetch pattern: the NextAuth session's access token rides as a
 // Bearer header to NEXT_PUBLIC_COOP_API_URL.
@@ -73,21 +75,7 @@ async function api<T>(
   token: string,
   init?: RequestInit
 ): Promise<T> {
-  const res = await fetch(`${COOP_API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-  })
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    const err = new Error(body?.error ?? `Request failed (${res.status})`)
-    ;(err as Error & { status?: number }).status = res.status
-    throw err
-  }
-  return res.json() as Promise<T>
+  return coopJson<T>(path, token, init)
 }
 
 export type Group = {

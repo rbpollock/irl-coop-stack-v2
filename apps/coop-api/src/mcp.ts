@@ -162,7 +162,18 @@ const LOCAL_TOOLS: McpTool[] = [
 // The deep-agent-rag-stack exposes (or gets a thin MCP adapter to) an MCP
 // endpoint; its tools are merged under "<name>.<tool>".
 
-type Upstream = { name: string; url: string }
+// Upstream policy is DEFAULT-DENY. An upstream must opt in with `public: true`
+// to be LISTED and CALLED by an anonymous caller; otherwise it requires an
+// authenticated member and may additionally require a capability grant. This
+// is what stops "add an app" from silently widening the tool surface: without
+// an explicit declaration an upstream is invisible AND uncallable anonymously.
+type Upstream = { name: string; url: string; public?: boolean; grant?: string }
+
+function upstreamAllowed(u: Upstream, authed: boolean, grants: string[]): boolean {
+  if (u.grant && !grants.includes(u.grant)) return false
+  if (u.public === true) return true
+  return authed
+}
 
 function parseUpstreams(raw?: string): Upstream[] {
   if (!raw) return []
@@ -212,17 +223,40 @@ async function callUpstream(u: Upstream, toolName: string, args: any, authHeader
       params: { name: toolName, arguments: args ?? {} },
     }),
   })
+  // A non-2xx upstream (e.g. rag-api rejecting our token with 401) has no
+  // `.result`, so returning res.json() here used to hand the caller an empty
+  // `{}` that looked like a SUCCESSFUL empty answer — the widget then read "no
+  // context" and the assistant said it had nothing in the coop's knowledge,
+  // while the real cause (a failed login to the retrieval service) was invisible.
+  // Surface it as a JSON-RPC error so it is loud, and so callers can fall back.
+  if (!res.ok) {
+    let detail = ""
+    try {
+      detail = JSON.stringify(await res.json())
+    } catch {
+      detail = await res.text().catch(() => "")
+    }
+    return {
+      error: {
+        code: -32000,
+        message: `upstream ${u.name} HTTP ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+      },
+    }
+  }
   return res.json()
 }
 
 // ---- JSON-RPC dispatch ----
 
 async function listTools(sub: string, grants: string[], authHeader: string): Promise<McpTool[]> {
-  // Anonymous guests: no member-local tools, only the aggregated upstream (public) tools.
-  const local =
-    sub === "anonymous" ? [] : LOCAL_TOOLS.filter((t) => !t.grant || grants.includes(t.grant))
+  const authed = sub !== "anonymous"
+  // Anonymous guests: no member-local tools at all.
+  const local = authed ? LOCAL_TOOLS.filter((t) => !t.grant || grants.includes(t.grant)) : []
   const proxied: McpTool[] = []
   for (const u of UPSTREAMS) {
+    // Default-deny: an upstream that hasn't declared `public` is not even shown
+    // to an anonymous caller (and a grant-gated one is hidden without it).
+    if (!upstreamAllowed(u, authed, grants)) continue
     try {
       proxied.push(...(await fetchUpstreamTools(u, authHeader)))
     } catch {
@@ -287,10 +321,19 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
         case "tools/call": {
           const name = String(body.params?.name ?? "")
           const args = body.params?.arguments ?? {}
+          const authed = sub !== "anonymous"
 
-          // Proxied upstream tool?
+          // Proxied upstream tool? Enforce the SAME policy as listing — hiding a
+          // tool from tools/list is not access control, so a caller who knows the
+          // name must still be refused.
           const upstream = UPSTREAMS.find((u) => name.startsWith(`${u.name}.`))
           if (upstream) {
+            if (!upstreamAllowed(upstream, authed, grants)) {
+              return error(
+                -32002,
+                `missing grant: ${upstream.grant ?? "authenticated member"}`
+              )
+            }
             const localName = name.slice(upstream.name.length + 1)
             const res = await callUpstream(upstream, localName, args, authHeader)
             if (res?.error) return error(-32000, `upstream error: ${res.error.message}`)
@@ -299,6 +342,10 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
 
           const tool = LOCAL_TOOLS.find((t) => t.name === name)
           if (!tool) return error(-32602, `unknown tool: ${name}`)
+          // Member-local tools are never callable anonymously: tools/list hides
+          // them, but this path used to run them with sub="anonymous" — which let
+          // an unauthenticated caller write a member_memory row.
+          if (!authed) return error(-32001, "authentication required")
           if (tool.grant && !grants.includes(tool.grant)) {
             return error(-32002, `missing grant: ${tool.grant}`)
           }

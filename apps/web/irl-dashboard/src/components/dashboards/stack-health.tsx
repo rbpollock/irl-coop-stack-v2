@@ -52,6 +52,18 @@ type BrowserRunnerView = {
   scenario: string | null
 }
 
+/** Host-process apps (`web`, `coop-api`, …) — no container, so they are probed
+ *  on their port instead of read from `docker ps`. Without this leg the panels
+ *  above can read perfectly healthy while api.irl.coop is down. */
+type HostAppView = {
+  name: string
+  port: number
+  role: string
+  description: string
+  healthy: boolean
+  status: string
+}
+
 type StackStatus = {
   generated_at: string
   stack_root: string
@@ -62,6 +74,11 @@ type StackStatus = {
     down: number
     healthy: number
     orphans: number
+    host_apps?: number
+    host_healthy?: number
+    core_host_apps?: number
+    core_host_healthy?: number
+    core_host_problems?: number
   }
   browser_runners: {
     active: number
@@ -69,6 +86,7 @@ type StackStatus = {
     instances: BrowserRunnerView[]
   }
   pillars: PillarView[]
+  host_apps?: HostAppView[]
   orphans: { name: string; image: string; state: string; project: string }[]
 }
 
@@ -267,6 +285,52 @@ export default function StackHealth() {
               </div>
             </div>
           </div>
+
+          {status.host_apps && status.host_apps.length > 0 && (
+            <div className="rounded-lg border bg-card p-4 shadow-sm">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Server className="size-3.5" /> Host apps
+                <span className="ml-auto text-xs">
+                  <span
+                    className={
+                      (s.core_host_problems ?? 0) > 0
+                        ? "font-medium text-red-600"
+                        : "font-medium text-emerald-600"
+                    }
+                  >
+                    {s.core_host_healthy ?? 0}/{s.core_host_apps ?? 0} core
+                  </span>{" "}
+                  · no container, probed on port
+                </span>
+              </div>
+              <div className="mt-2 flex flex-col gap-1">
+                {status.host_apps.map((h) => (
+                  <div
+                    key={h.name}
+                    className="flex items-center justify-between gap-2 text-xs"
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className={`size-1.5 shrink-0 rounded-full ${
+                          h.healthy
+                            ? "bg-emerald-500"
+                            : h.role === "core"
+                              ? "bg-red-500"
+                              : "bg-amber-500"
+                        }`}
+                      />
+                      <span className="truncate font-mono">{h.name}</span>
+                      <span className="text-muted-foreground">:{h.port}</span>
+                    </span>
+                    <span className="truncate text-muted-foreground">
+                      {h.healthy ? "answering" : h.status}
+                      {h.role !== "core" ? " · dev" : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {status.browser_runners && (
             <div className="rounded-lg border bg-card p-4 shadow-sm">
