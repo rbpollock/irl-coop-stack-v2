@@ -15,7 +15,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INSTANCE="${INSTANCE:-dev}"
-RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-sftp:service@surfy:/home/service/irl-backup/restic}"
+RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-sftp:service@surfy:/mnt/usb/irl-backup/restic}"
 RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$ROOT/infra/instances/$INSTANCE/secrets/backup-restic-pass}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519_surfy}"
 DRILL_DIR="${DRILL_DIR:-/mnt/storage/restore-drill}"

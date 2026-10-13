@@ -5,6 +5,7 @@
 26/26 secrets, git bundle readable).
 
 Scripts: `infra/scripts/backup.sh` · `infra/scripts/restore-drill.sh`.
+Destination: **surfy `/mnt/usb/irl-backup/restic`** (the 3.6 TB drive, 3% used).
 Logs: `.logs/backup.log` · `.logs/restore-drill.log`.
 
 ## 1. What this is, and what it is not
@@ -78,7 +79,7 @@ It touches nothing that matters: one disposable database and one temporary direc
 
 1. Get the restic password (§3 — password manager, or the copy on surfy).
 2. On a machine with `restic` and the ssh key:
-   `restic -r sftp:service@surfy:/home/service/irl-backup/restic restore latest --target /tmp/r`
+   `restic -r sftp:service@surfy:/mnt/usb/irl-backup/restic restore latest --target /tmp/r`
 3. Databases: for each file in `/tmp/r/.../db/`, restore with
    `docker exec -i storage-postgres-1 pg_restore -U irlcoop -d <db> --no-owner` (custom
    format), or `psql -f` after `zstd -d` for the roles dump. Create the role/DB set from
@@ -98,7 +99,6 @@ the archive's copy exists for the case where the reproducible path is also gone.
 | Gap | Status |
 |---|---|
 | **Same-site, not offsite** | surfy is on this LAN. Offsite (a third copy elsewhere, or an encrypted object-store target) is unbuilt |
-| **The destination is surfy's home, not the 3.4 TB USB** | `/mnt/usb` is root-owned on surfy, so `service` cannot write there. One command on surfy fixes it: `sudo mkdir -p /mnt/usb/irl-backup && sudo chown service:service /mnt/usb/irl-backup`, then move the repository and point `RESTIC_REPOSITORY` at it |
 | **The password has no password-manager copy** | §3 — the one item that makes recovery assume a surviving machine |
 | **No automated verification of the *restore*** | the drill is scheduled, but nothing alerts on failure yet |
 | **The archive is not itself group-held** | the restic password and the destination are one person's. This is exactly the §2.1 precondition in `group-operated-stack.md` |
