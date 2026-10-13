@@ -67,8 +67,12 @@ and only then installed at mode 0440.
    programs. If a granted script is buggy or does something destructive, it does so as root.
    The mitigation is that the *set* is one file, it is readable, and adding to it needs the
    password.
-2. **`Defaults:service !requiretty` is included**, because the agent invokes commands without a
-   TTY and NOPASSWD alone would still be refused. It relaxes a tty requirement, nothing else.
+2. **No `requiretty` handling is needed here.** The installer first tried
+   `Defaults:service !requiretty` and `visudo` rejected the whole file with
+   `unknown setting: 'requiretty'` — this sudo build does not have it, so there is no TTY
+   requirement to relax. The failure was harmless *because* the installer validates before
+   installing: had it written the file first, `/etc/sudoers.d/` would have been unparseable
+   and `sudo` unusable. Non-interactive `NOPASSWD` works without any extra Defaults.
 3. **The agent's own command-approval gate remains**, so this grant does not mean unattended
    execution — it means a privileged command can be *approved* rather than *handed over*.
 4. **Granted scripts should be argument-free or hardcoded.** `sudo` with NOPASSWD resets the

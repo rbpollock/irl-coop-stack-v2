@@ -66,9 +66,10 @@ tmp="$(mktemp)"
   echo "# Those files and their directory are root-owned, so this grants execution, NOT the"
   echo "# ability to change what executes. Update them with the owner's password."
   echo "#"
-  echo "# !requiretty is included because the agent runs non-interactively (no TTY); without it"
-  echo "# a non-interactive sudo would be refused even with NOPASSWD."
-  echo "Defaults:$RUNAS_USER !requiretty"
+  echo "# No requiretty Defaults line: this sudo build has no such setting (visudo rejects it as"
+  echo "# \"unknown setting: 'requiretty'\"), so there is nothing requiring a TTY to relax."
+  echo "# Validating first is exactly how that was discovered — the installer refused to write a"
+  echo "# broken file rather than leaving sudo unparseable."
   for s in "${SCRIPTS[@]}"; do
     echo "$RUNAS_USER ALL=(root) NOPASSWD: $DEST_DIR/$s"
   done
