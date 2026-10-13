@@ -94,11 +94,59 @@ It touches nothing that matters: one disposable database and one temporary direc
 **Recovery does not need the archive for the code.** The repository is on GitHub as well;
 the archive's copy exists for the case where the reproducible path is also gone.
 
-## 7. Known gaps — stated, not hidden
+## 7. The offsite tier — IPFS (137.184.24.48)
+
+surfy's USB is on this LAN: it survives a dead disk, a bad upgrade, a stolen machine — not
+fire, flood or a break-in. The IPFS node on **`137.184.24.48` is a DigitalOcean box**, so it
+is a genuinely different failure domain, and it is the first offsite copy the stack has had.
+
+`infra/scripts/backup-ipfs.sh`, in ~14 seconds once warm:
+
+1. `restic copy` our repository (on surfy) into a local mirror at `/mnt/storage/restic-mirror`
+   — incremental and integrity-checked, and it leaves a third local copy as a side effect.
+2. `rsync` the mirror to `irlbackup@137.184.24.48:/home/irlbackup/restic`. restic pack files
+   are immutable, so only new packs move.
+3. `ipfs add -r` there and pin the result. IPFS dedups identical blocks, so only new blocks
+   are stored.
+4. Pin the **new** root, then unpin the previous one — the node holds roughly one copy of the
+   current repository, not a growing pile of historical roots.
+5. Record the CID in `infra/backup-cids.json`, which is committed. **That file is the proof:**
+   anyone with a CID can fetch and re-pin it, so the offsite copy is something the group can
+   hold rather than something that depends on one person's server.
+
+**Verified 2026-10-13.** Root CID `QmW59SZGnMbYemKLdYHzECZzhEoR5AYT9FDCCkMhdnTELa`, pinned,
+served by the public gateway, and **the restore drill passed against the fetched-back copy**:
+239/239 tables, 33 roles, 26/26 secrets, git bundle readable.
+
+### What to know about that node — read before touching it
+
+| | |
+|---|---|
+| **Never run `ipfs repo gc` there.** | The node holds **~2,550 recursive pins** — other people's content, including a book collection. A garbage collect could delete data belonging to things we know nothing about. Unpinning our own CIDs is the only modification we make |
+| **Capacity is real** | `StorageMax` is 10 GB and the repo sits at **~69%** (6.6 GB). Ours is ~400 MB and the pin-new-then-unpin-old rule keeps it flat. The script warns past 80% |
+| **The account is `irlbackup`** | Key-only (`passwd -l`), and the key is restricted with `from="64.135.141.73,192.168.18.20,100.122.136.95"` so a copy is useless off this host. It needs **no sudo** — it never touches the IPFS repo directory, only the daemon's local API |
+| **It drives the daemon with `--api`, not `IPFS_API`** | `IPFS_API` does not work on kubo 0.12 — the CLI still looks for a repo in `$HOME/.ipfs`. `ipfs --api /ip4/127.0.0.1/tcp/5001 …` does |
+| **Do not trust `ipfs add` output order to find the root** | `-q` prints a line per file and `-Q` is unreliable for directories on 0.12 with concurrent workers; a pack-file CID resolves fine and looks healthy. The script identifies the root **by its links** (`config`, `data`, `index`, `keys`, `snapshots`) and refuses to record anything else |
+| **kubo 0.12.0 is from 2022 and faces the internet** | End-of-life, with years of CVEs since. A real security item: upgrade it. Related: `PasswordAuthentication` is still `yes` and `PermitRootLogin yes` on that box — do **not** turn those off until you have installed your own key, or you will lock yourself out |
+| **A public gateway means world-readable ciphertext** | Fine, because restic encrypts client-side — but the rule is absolute: **only ever pin encrypted material there.** Anyone with a CID can read and enumerate the bytes |
+
+### Restoring from IPFS
+
+Fetch the repository by CID (rsync from the box, or walk it through the gateway), then it is
+an ordinary restic repository:
+
+```sh
+rsync -a -e ssh irlbackup@137.184.24.48:/home/irlbackup/restic/ /tmp/from-ipfs/
+restic -r /tmp/from-ipfs snapshots          # needs the password, §3
+RESTIC_REPOSITORY=/tmp/from-ipfs infra/scripts/restore-drill.sh
+```
+
+## 8. Known gaps — stated, not hidden
 
 | Gap | Status |
 |---|---|
-| **Same-site, not offsite** | surfy is on this LAN. Offsite (a third copy elsewhere, or an encrypted object-store target) is unbuilt |
+| ~~**Same-site, not offsite**~~ | **CLOSED 2026-10-13** by the IPFS tier (§7) — a DigitalOcean box, offsite, verified by a passing drill. The surfy copy remains same-site, and that is fine: it is the fast, cheap, always-available second copy |
+| **One node is one copy** | The IPFS copy lives on a single server with a single operator. It becomes durable when a second node — or a member — also pins the CID. The CID list is published so that is possible |
 | **The password has no password-manager copy** | §3 — the one item that makes recovery assume a surviving machine |
 | **No automated verification of the *restore*** | the drill is scheduled, but nothing alerts on failure yet |
 | **The archive is not itself group-held** | the restic password and the destination are one person's. This is exactly the §2.1 precondition in `group-operated-stack.md` |

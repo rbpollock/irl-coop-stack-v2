@@ -1,0 +1,13 @@
+{
+  "note": "Mirrors of the restic repository on the off-host IPFS node. The newest run is pinned; older CIDs are the audit trail.",
+  "gateway": "https://ipfs.nftbookbazaar.com",
+  "runs": [
+    {
+      "at": "2026-10-13T18:28:25-04:00",
+      "cid": "QmW59SZGnMbYemKLdYHzECZzhEoR5AYT9FDCCkMhdnTELa",
+      "restic_snapshot": "35d2350e",
+      "repo_bytes": 416040415,
+      "node": "137.184.24.48"
+    }
+  ]
+}
