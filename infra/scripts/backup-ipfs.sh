@@ -54,6 +54,14 @@ log() { printf '%s  %s\n' "$(date -Is)" "$*" | tee -a "$LOGDIR/backup-ipfs.log";
 die() { log "FATAL: $*"; exit 1; }
 
 DRY=""; [ "${1:-}" = "--dry-run" ] && DRY="--dry-run"
+
+# One run at a time. The node is a 1 GB / ~1 vCPU droplet: two concurrent `ipfs add -r`
+# runs saturate it, and the loser came back with EMPTY output and failed — which looked
+# like a mystery until the duplication was found. A lock is the fix, not more retries.
+mkdir -p "$LOGDIR"
+exec 9>"$LOGDIR/.backup-ipfs.lock"
+flock -n 9 || { echo "another backup-ipfs run already holds the lock — not starting a second one"; exit 0; }
+
 log "=== ipfs mirror start → $IPFS_USER@$IPFS_HOST:$IPFS_DIR ==="
 
 # ── 0. the node ──────────────────────────────────────────────────────────────
@@ -103,17 +111,38 @@ rsync -a --delete-after --partial --no-perms --no-owner --no-group \
 # so the root is the line whose final field IS the directory's basename.
 log "ipfs add -r (root identified by name, never by output order)"
 BASE_NAME="$(basename "$IPFS_DIR")"
-ADD_OUT="$("${SSH[@]}" "ipfs --api $IPFS_API add -r --pin=false '$IPFS_DIR' 2>/dev/null" || true)"
-[ -n "$ADD_OUT" ] || die "ipfs add produced no output"
-NEW_CID="$(printf '%s\n' "$ADD_OUT" | awk -v b="$BASE_NAME" '$1=="added" && $NF==b {print $2}' | tail -1)"
+# Let the node FLUSH the rsync first. It has 1 GB of RAM and no swap: adding immediately
+# after a 1 GB push means hashing while the daemon is still absorbing write-back, and on
+# that box the add comes back truncated (33 lines instead of 332) and looks like a mystery.
+# Alone the same add takes ~14 s. Sequencing is the fix.
+log "settling the node after the push (sync)"
+"${SSH[@]}" "sync" >/dev/null 2>&1 || true
+sleep 5
 
-# Still verify it before pinning: a name match on a file called `restic` would be wrong.
+# Stderr (the progress chatter) is kept for diagnosis; stdout is the `added ...` lines.
+# Two attempts, because a truncated walk is the observed failure mode on this box.
+ADD_OUT=""
+for attempt in 1 2; do
+  ADD_OUT="$("${SSH[@]}" "timeout 900 ipfs --api $IPFS_API add -r --pin=false '$IPFS_DIR'" 2>>"$LOGDIR/ipfs-add.stderr" || true)"
+  n=$(printf '%s\n' "$ADD_OUT" | grep -c '^added ' || true)
+  log "  add attempt $attempt: $n lines"
+  # a complete walk ends with a line for every file PLUS the directory itself
+  printf '%s\n' "$ADD_OUT" | awk -v b="$(basename "$IPFS_DIR")" '$1=="added" && $NF==b {found=1} END{exit !found}' && break
+  [ "$attempt" = 1 ] && log "  truncated walk — waiting and retrying"
+  sleep 15
+done
+[ -n "$ADD_OUT" ] || die "ipfs add produced NO output — daemon busy or another run in progress; see $LOGDIR/ipfs-add.stderr"
+
+NEW_CID="$(printf '%s\n' "$ADD_OUT" | awk -v b="$BASE_NAME" '$1=="added" && $NF==b {print $2}' | tail -1)"
+[ -n "$NEW_CID" ] || die "no add-output line names '$BASE_NAME' as the final field — refusing to pin (lines: $(printf '%s\n' "$ADD_OUT" | wc -l))"
+
+# Verify it really is the repository root before pinning: a name match alone could pick a
+# FILE that happens to be called `restic`.
 L="$("${SSH[@]}" "ipfs --api $IPFS_API ls '$NEW_CID'" 2>/dev/null || true)"
 for want in config data index keys snapshots; do
   printf '%s' "$L" | grep -q " $want" \
     || die "root candidate $NEW_CID lacks '$want' — refusing to pin it"
 done
-[ -n "$NEW_CID" ] || die "could not identify the repository root — refusing to record one"
 log "root CID identified by its links: $NEW_CID"
 
 "${SSH[@]}" "ipfs --api $IPFS_API pin add '$NEW_CID'" >/dev/null 2>&1 || die "pin add failed for $NEW_CID"

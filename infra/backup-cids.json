@@ -8,6 +8,13 @@
       "restic_snapshot": "35d2350e",
       "repo_bytes": 416040415,
       "node": "137.184.24.48"
+    },
+    {
+      "at": "2026-10-13T19:30:50-04:00",
+      "cid": "QmdffrAAu5ZkcXPAtLa8p8TmKt1G1ymPb1nKpXTrpD3Rzu",
+      "restic_snapshot": "3dd97c63",
+      "repo_bytes": 1049770259,
+      "node": "137.184.24.48"
     }
   ]
 }
