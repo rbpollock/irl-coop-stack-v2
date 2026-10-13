@@ -31,6 +31,12 @@ without making recovery more possible.
 | **1 — irreplaceable** | every database (custom-format dumps, 19 of them), cluster roles/grants, `infra/instances/dev/secrets/`, `infra/out/dev/secrets.env`, the app `.env` files, the ACME certs, the ansible vault, the instance tree (config only), a `git bundle --all` of the repo, the Matrix signing key | **~284 MiB** | Nothing here can be re-derived. The repositories, tokens and signing material are the stack |
 | **2 — the object store** | MinIO buckets `docs`, `stalwart`, `matrix-media`, `plane` (mirrored per bucket) | ~22 MiB | Real uploaded content — documents, mail blobs, chat media |
 | **3 — deliberately NOT backed up** | model weights (`fetch-model.sh`), the PMTiles basemap + Noto glyphs under `geo-data/` (23 GB, build scripts), container images (built from Dockerfiles), `node_modules` | 23 GB+ | Rebuildable or re-downloadable. Included in the archive they would dominate it and buy nothing |
+| **3e — the named EXCEPTIONS** | images that are **not** rebuildable, saved as golden artifacts (`infra/scripts/golden-images.sh` → `golden/` in the archive) | ~478 MB | Tier 3 says images are rebuildable. For the images where that is false, saying nothing is the bug: the exceptions are written down, saved, and carried into the archive by `backup.sh` |
+
+**Current golden set (2026-10-13):** `irlcoop/nocodb-gate-sso:2026.08.3` (the runtime base the
+NocoDB fork's `Dockerfile.irlcoop` FROMs — a local-only tag) and `:2026.08.12` (deployed, and the
+only home of the compiled nc-gui frontend). Rationale and measurements:
+`docs/IMAGE-PROVENANCE.md` §6.3.
 
 ## 3. The password — the single point of failure
 

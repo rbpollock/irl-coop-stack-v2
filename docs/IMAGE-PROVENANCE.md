@@ -123,7 +123,35 @@ infra/build/images/<app>/*.patch         kept: the human-readable record of our 
   large codebases; a full vendor of all six is **hundreds of MB to a few GB** in the repo. That
   is the price of not depending on someone else's git host, and it is a decision (§7).
 
-### 6.3 NocoDB, specifically
+### 6.3 NocoDB, specifically — measured 2026-10-13, and the answer changed
+
+The fork exists, is public (`rbpollock/nocodb`, branch `irlcoop`, tip `a9097a2`) and builds
+reproducibly. Three measured facts decide what is actually at risk:
+
+1. **The fork does not carry the frontend.** It commits **zero** `_nuxt` files, and its
+   `Dockerfile.irlcoop` builds only the **server** bundle (`dist/bundle.js` via rspack) and
+   drops it into a runtime base image. The nc-gui frontend is never built.
+2. **The runtime base is a local-only tag:** `FROM irlcoop/nocodb-gate-sso:2026.08.3`. Delete
+   that tag and the fork's build recipe stops working.
+3. **The frontend dist is rebuilt per tag, not inherited.** The deployed image's dist is
+   **854 files / 49 MB**; the `.3` base's is **1,143 files**; `.0` differs again. So there is no
+   single "patched chunk" to lift — each tag carries its own compiled frontend.
+
+**Therefore:** NocoDB's irreplaceable part is not a lost patch. It is **compiled frontend
+output that exists only inside the local image tags**, and images are deliberately excluded
+from the backup (tier 3). The named risk is precise: *if every `irlcoop/nocodb-gate-sso` tag
+is pruned or the host dies, the working frontend is gone and the fork cannot rebuild it.*
+
+The real fix is the one the `nocodb-custom-build` skill already implies: **build the frontend
+from nc-gui source at the matching version** so the dist is generated rather than carried.
+Until that exists, either
+
+- keep the tag chain (do **not** prune `2026.08.3` or `2026.08.12`), and treat the deployed
+  image as a **golden artifact** — `docker save` it into the archive, which is the honest
+  exception to the tier-3 rule; or
+- accept the exposure knowingly.
+
+### 6.3.1 original analysis (kept — the source question was the same)
 The fork already exists and already builds reproducibly (`Dockerfile.irlcoop`, pnpm 9 pinned —
 see the `nocodb-custom-build` skill). Two things remain:
 - **vendor the fork** into `vendor/nocodb/` (mechanical: one squashed commit of branch

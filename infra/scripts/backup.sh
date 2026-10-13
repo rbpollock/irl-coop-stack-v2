@@ -27,6 +27,7 @@ STAGING="${STAGING:-/mnt/storage/backup-staging}"
 LOGDIR="$ROOT/.logs"
 LOGFILE="$LOGDIR/backup.log"
 
+GOLDEN_DIR="${GOLDEN_DIR:-/mnt/storage/golden-images}"   # non-rebuildable images (see docs/BACKUP.md)
 PG_CONTAINER="${PG_CONTAINER:-storage-postgres-1}"
 PG_SUPERUSER="${PG_SUPERUSER:-irlcoop}"
 MINIO_CONTAINER="${MINIO_CONTAINER:-storage-minio-1}"
@@ -152,6 +153,14 @@ else
   log "  WARNING: no synapse container found — the Matrix signing key is NOT captured"
 fi
 # belt-and-braces: the whole committed repo as one file (survives losing GitHub)
+# Golden artifacts — images that CANNOT be rebuilt, and so are an explicit exception to
+# the tier-3 rule. Without this, "images are rebuildable" quietly covers the ones that are not.
+if [ -d "$GOLDEN_DIR" ] && [ -n "$(ls -A "$GOLDEN_DIR" 2>/dev/null)" ]; then
+  mkdir -p "$STAGING/golden"
+  cp -a "$GOLDEN_DIR/." "$STAGING/golden/" 2>>"$LOGFILE" \
+    && log "  golden artifacts: $(du -sh "$STAGING/golden" | cut -f1) ($(ls -1 "$STAGING/golden" | wc -l) image(s))"
+fi
+
 log "writing git bundle…"
 git bundle create "$STAGING/etc/repo.bundle" --all >/dev/null 2>&1 || log "  git bundle failed"
 # the escrow copy of the restic password, so the archive is recoverable without this host

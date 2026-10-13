@@ -92,14 +92,25 @@ images:
 
   - tag: irlcoop/nocodb-gate-sso:2026.08.12
     app: nocodb
-    class: C → vendoring in progress
-    recipe: fork github.com/rbpollock/nocodb branch irlcoop (a9097a26), Dockerfile.irlcoop at the fork root
-    note: >
-      The fork is OUTSIDE this monorepo. The image also carries two pre-built minified
-      nc-gui chunks that were copied rather than built (the base-list `loadProjects` chunk
-      and the chatwoot-removal chunk) because the fork's nc-gui source is an older version.
-      Those are binary artifacts — the fix is to vendor nc-gui source at the matching
-      version and re-express both changes as source patches.
+    class: C — NOT yet reproducible from this repo
+    recipe: >
+      fork github.com/rbpollock/nocodb branch irlcoop (tip a9097a2, public), built with the
+      fork's Dockerfile.irlcoop: a node builder produces dist/bundle.js (rspack), which is
+      dropped into the runtime base irlcoop/nocodb-gate-sso:2026.08.3 — A LOCAL-ONLY TAG.
+    depends_on_local_tags:                       # ← do NOT prune these
+      - irlcoop/nocodb-gate-sso:2026.08.3        # the fork's Dockerfile.irlcoop FROM target
+      - irlcoop/nocodb-gate-sso:2026.08.12       # deployed
+    frontend_artifact: >
+      The nc-gui frontend is NOT in the fork (it commits zero _nuxt files) and the build
+      never touches it. Measured 2026-10-13: the deployed image's dist is 854 files / 49 MB,
+      the .3 base's is 1143 files, .0 differs again — so the dist is REBUILT PER TAG and is
+      not inherited unchanged. It exists only inside those local image tags, and images are
+      excluded from the backup (BACKUP.md tier 3).
+    remaining_work: >
+      The real fix is a frontend build from nc-gui source at the matching version (the fork's
+      nc-gui source is an older revision, which is why a compiled chunk was carried by hand).
+      Until then this image is a KNOWN EXCEPTION to "images are rebuildable" and belongs in
+      the golden-artifact set if that is chosen.
 
   - tag: irlcoop/plane-mcp:0.1.0
     app: plane-mcp
