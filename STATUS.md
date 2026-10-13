@@ -578,6 +578,8 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
 
 ## Pending / open
 
+- **IPFS node runs kubo 0.12.0 (March 2022) on a public gateway, as root — deliberately deferred 2026-10-13.** Latest is v0.43.1 (~31 releases, 4.5 years of CVEs). The runbook is written and committed (`infra/scripts/upgrade-ipfs-node.sh`: full repo copy → verified binary → swap → migrate → verify pin count and our CID). It is the first *irreversible* operation in the backup work — a kubo repo migration is forward-only — and that node serves ~2,552 pins of other people's content, so it needs a chosen window. Same box: `PasswordAuthentication yes` and `PermitRootLogin yes` still on; do **not** disable those until you have installed a key *for yourself* there.
+
 - **Direction accepted 2026-10-12 — `docs/design/group-operated-stack.md`:** successorship is a **group**, not a person; the stack is to be operated by the irl.coop group *from within the stack*. Four defaults are taken in its §8 (**vault fix first** · outside capabilities group-held with class-3 named · start at one member · the coop itself is the first proof) and each awaits Robbie's confirmation. Preconditions: the vault is still platform-custodial (verified), the coop group Safe does not exist, and the membership conflict (`irl-coop-group.md` §2 vs D-13) is unresolved.
 - **Communications work is largely UNCOMMITTED** (see the Communications section):
   the fiscal-pitch doc + all five sankeys, the circulation film + its render, both
