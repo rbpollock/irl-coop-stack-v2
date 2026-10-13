@@ -45,7 +45,21 @@ checkable against this tree: the image's `CMD` names a module that is present he
   of the image (`rag-worker` ships as hundreds of MB) and are re-downloadable; including them in
   the repository would add gigabytes for zero recovery value.
 
+## Verified 2026-10-13 — recovered, recipe reconstructed, build NOT yet exercised
+
+- Source recovered and vendored (468 KB; the 18.5 GB image is dependencies + model weights).
+- `Dockerfile.irlcoop` reconstructed from the image's own layer history; its `CMD` names
+  `worker.celery_app.celery_app`, which is in this tree.
+- `requirements.lock.txt` pinned (211 packages) from the deployed image's pip freeze.
+- **The build has not been run.** It installs the document-parsing stack (JRE + the Document AI
+  dependencies) into a multi-GB image, and this host has ~25 GB free on `/` — an 18.5 GB build
+  is not something to start casually. The recipe is in place; exercise it when there is room
+  (or on `/mnt/storage`).
+- Unlike `rag-api`, the **spec does not override this image's CMD** — `infra/instances/dev/apps/rag-worker.yaml`
+  has no `command:`, so the image's own `CMD` is the real runtime path here.
+
 ## Build
+
 
 ```sh
 docker build -t irlcoop/rag-worker:0.1.0 -f vendor/rag-worker/Dockerfile.irlcoop vendor/rag-worker

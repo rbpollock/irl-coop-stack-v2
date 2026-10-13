@@ -28,8 +28,15 @@ docker rm -f p
 
 `Dockerfile.irlcoop` was then reconstructed from the image's **own layer history**
 (`docker history --no-trunc irlcoop/rag-api:0.1.0`), so it reproduces the commands the
-shipping image was actually built from rather than describing them second-hand. It is
-checkable against this tree: the image's `CMD` names a module that is present here.
+shipping image was actually built from rather than describing them second-hand. It is checkable against this tree: the image's `CMD` names a module that is present
+here, and it reproduces byte-for-byte (`langgraph dev --config langgraph.json --host
+0.0.0.0 --port 8000 --no-browser --no-reload`).
+
+**Base image, identified by evidence:** `python:3.12-slim` (Debian 13 trixie, Python
+3.12.14). Verified by probing the deployed image — `gcc`, `git`, `make`, `curl` and `vim`
+are all ABSENT (the full image retains buildpack-deps tooling). A first rebuild used full
+`python:3.12` and came out 2.34 GB against the deployed 906 MB; the slim base is what
+reproduces the size.
 
 ## Reproducibility caveats — read before trusting a rebuild
 
@@ -44,6 +51,44 @@ checkable against this tree: the image's `CMD` names a module that is present he
 - **Not included, deliberately:** model weights and Python dependencies. They are the bulk
   of the image (`rag-api` ships as hundreds of MB) and are re-downloadable; including them in
   the repository would add gigabytes for zero recovery value.
+
+## Verified 2026-10-13 — it builds **and runs**
+
+| Check | Result |
+|---|---|
+| Builds from this directory | yes — `docker build -t irlcoop/rag-api:0.1.0 -f vendor/rag-api/Dockerfile.irlcoop vendor/rag-api` |
+| Size vs deployed | **906 MB — identical** to `irlcoop/rag-api:0.1.0` (the unpinned build came out 930 MB) |
+| Runs the way production runs it | yes — `Up`, `Application startup complete` |
+| HTTP | `/`, `/docs`, `/health`, `/openapi.json` all **200**, matching the deployed control run side by side |
+| CMD fidelity | byte-identical to the deployed image's CMD |
+
+### The finding that made the difference: unpinned dependencies are not a formality
+
+The first rebuild (no lock) **built fine and could not start**:
+
+```
+ModuleNotFoundError: No module named 'psycopg'
+  sqlalchemy/dialects/postgresql/psycopg.py, line 497, in import_dbapi
+```
+
+The original build installed **SQLAlchemy 2.0.52**; today's unpinned resolution installs
+**2.1.4**, and 2.1 switches the default `postgresql://` driver from psycopg2 to **psycopg v3**,
+which this image does not ship. Installing from `requirements.lock.txt` — pinned from the
+deployed image's own `pip freeze` — reproduces a 906 MB image that runs and answers 200s.
+
+**Lesson: pin from a known-good *running image*, not from a manifest.** This lock exists only
+because the deployed image was still on the host to be frozen.
+
+### And the CMD is a decoy
+
+The image's baked `CMD` is `langgraph dev ...`, but that is **not how the service runs** — the
+deploy command comes from `infra/instances/dev/apps/rag-api.yaml`:
+
+    uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+Running the image's own CMD fails in *both* the deployed and the rebuilt image (the langgraph
+dev server wants to load the custom HTTP app and needs env the image does not carry). So a bare
+`docker run` of this image is not a health check — verify it the way the stack runs it.
 
 ## Build
 

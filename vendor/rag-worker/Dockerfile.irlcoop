@@ -1,8 +1,11 @@
-# Reconstructed 2026-10-13 from the deployed image's own layer history
-# (`docker history --no-trunc irlcoop/rag-worker:0.1.0`). This reproduces the layer
-# commands the shipping image was built from — it is not a guess about intent.
-# Verify against the tree: the image's CMD is `celery -A worker.celery_app.celery_app worker`, and src/worker/celery_app.py is in this tree
-FROM python:3.12
+# Recovered 2026-10-13 from the deployed image's own layer history
+# (`docker history --no-trunc irlcoop/rag-worker:0.1.0`) — this reproduces the layer
+# commands the shipping image was built from.
+#
+# Base is slim, identified by evidence: no gcc/git/make in the deployed image.
+# The image is ~18.5 GB, but almost all of that is Python dependencies and model
+# weights — the source itself is 468 KB, which is why this can live in the repo.
+FROM python:3.12-slim
 
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -10,19 +13,26 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=/app/src
 
+# default-jre-headless + the X libraries are the document-parsing stack, exactly as the
+# original layer installed them.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       default-jre-headless libxcb1 libxext6 libxrender1 libsm6 libglib2.0-0 libgl1 \
  && rm -rf /var/lib/apt/lists/*
 
+# Dependencies — lock first. See vendor/rag-api/Dockerfile.irlcoop for why the unpinned
+# path is a trap (newer SQLAlchemy flips the postgres driver and the image cannot start).
 COPY pyproject.toml /app/
-
-# Dependencies come from pyproject.toml at build time (base deps + whatever
-# optional groups INSTALL_OPTIONAL_GROUPS names). The original build did not pin
-# versions, so a rebuild today resolves current releases — see PROVENANCE.md.
+COPY requirements.lock.txt /app/
 ARG INSTALL_OPTIONAL_GROUPS=""
 RUN pip install --upgrade pip && \
-    INSTALL_OPTIONAL_GROUPS="$INSTALL_OPTIONAL_GROUPS" python -c "import os, tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.load(f); deps = list(data['project'].get('dependencies', [])); optional = data['project'].get('optional-dependencies', {}); groups = [item.strip() for item in os.environ.get('INSTALL_OPTIONAL_GROUPS', '').split(',') if item.strip()]; [deps.extend(optional.get(group, [])) for group in groups]; print('\n'.join(dict.fromkeys(deps)))" > requirements.txt && \
-    pip install -r requirements.txt
+    if [ -f requirements.lock.txt ]; then \
+        pip install -r requirements.lock.txt; \
+    else \
+        INSTALL_OPTIONAL_GROUPS="$INSTALL_OPTIONAL_GROUPS" python -c "import os, tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.load(f); deps = list(data['project'].get('dependencies', [])); optional = data['project'].get('optional-dependencies', {}); groups = [item.strip() for item in os.environ.get('INSTALL_OPTIONAL_GROUPS', '').split(',') if item.strip()]; [deps.extend(optional.get(group, [])) for group in groups]; print('\n'.join(dict.fromkeys(deps)))" > requirements.txt; \
+        pip install -r requirements.txt; \
+    fi
 
 COPY . /app
+
+# Verify the reconstruction: this names src/worker/celery_app.py, which is in this tree.
 CMD ["celery", "-A", "worker.celery_app.celery_app", "worker", "--loglevel=INFO"]

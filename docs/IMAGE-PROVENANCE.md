@@ -152,7 +152,7 @@ third-party fork. This is the same gate as `docs/design/marketplace-template-str
 
 | # | Question | Recommendation |
 |---|---|---|
-| 1 | Recover + vendor **C** now (2 images, small source)? | **DONE 2026-10-13** — `vendor/rag-api/` (2.2 MB, 153 `.py`) and `vendor/rag-worker/` (468 KB, 27 `.py`) recovered from the images. NocoDB remains: the fork is public and reachable (`rbpollock/nocodb` @ `a9097a26`), its tree measures **157 MB without history** |
+| 1 | Recover + vendor **C** now (2 images, small source)? | **DONE 2026-10-13 — and rag-api is verified end-to-end.** `vendor/rag-api/` (2.2 MB, 153 `.py`) rebuilds to the identical **906 MB** and serves `/`, `/docs`, `/health`, `/openapi.json` all **200**, matching the deployed image run side by side. `vendor/rag-worker/` (468 KB, 27 `.py`) is recovered with a reconstructed recipe and a 211-package lock; its build is not yet exercised (18.5 GB image vs 23 GB free on `/`). **NocoDB remains:** the fork is public and reachable (`rbpollock/nocodb` @ `a9097a26`), its tree measures **157 MB without history** |
 | 2 | Vendor **B** (5 images) as well, or keep clone-at-pinned-SHA? | Vendor the **small** ones; for the large codebases weigh repo size against the upstream-disappearance risk |
 | 3 | Vendored subtree or git submodule? | **Subtree.** A submodule keeps the dependency on someone else's host, which is the externality being removed |
 | 4 | Where did `rag-api` / `rag-worker` come from? | Needs the owner's memory — the images carry no provenance. The source is extractable either way |

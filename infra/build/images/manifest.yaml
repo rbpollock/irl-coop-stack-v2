@@ -122,15 +122,25 @@ images:
 
   - tag: irlcoop/rag-api:0.1.0-1024
     app: rag-api
-    class: C → RECOVERED 2026-10-13
+    class: C → RECOVERED + VERIFIED 2026-10-13
     recipe: vendor/rag-api/ (ours — in-house, not a fork) + overlay infra/build/images/rag-embed/api-overlay/
-    note: source recovered from the deployed image; build recipe reconstructed from its layer history
+    lock: vendor/rag-api/requirements.lock.txt   # pinned from the deployed image's pip freeze
+    note: >
+      Recovered from the deployed image; Dockerfile.irlcoop reconstructed from its layer history.
+      VERIFIED: rebuilds to the identical 906 MB and runs under the spec's command with /, /docs,
+      /health, /openapi.json all 200 — matching the deployed control. The lock is load-bearing: an
+      unpinned rebuild installs SQLAlchemy 2.1, which flips the default postgresql:// driver to
+      psycopg v3 (not shipped here) and produces a buildable image that cannot start.
 
   - tag: irlcoop/rag-worker:0.1.0-1024
     app: rag-worker
-    class: C → RECOVERED 2026-10-13
+    class: C → RECOVERED 2026-10-13 (build not yet exercised)
     recipe: vendor/rag-worker/ (ours) + overlay infra/build/images/rag-embed/worker-overlay/
-    note: same recovery; the image's bulk is deps + model weights, deliberately not vendored
+    lock: vendor/rag-worker/requirements.lock.txt   # 211 packages, from the deployed image
+    note: >
+      Same recovery. The image's bulk is deps + model weights, deliberately not vendored. The build
+      has not been run: an 18.5 GB image against 23 GB free on / is not worth risking casually.
+      Unlike rag-api, the spec does NOT override this image's CMD — the image's CMD is the real path.
 
   - tag: irlcoop/roundcube-oidc:1.6
     app: roundcube

@@ -1,8 +1,12 @@
-# Reconstructed 2026-10-13 from the deployed image's own layer history
-# (`docker history --no-trunc irlcoop/rag-api:0.1.0`). This reproduces the layer
-# commands the shipping image was built from — it is not a guess about intent.
-# Verify against the tree: the image's CMD is `langgraph dev --config langgraph.json`, and langgraph.json is in this tree
-FROM python:3.12
+# Recovered 2026-10-13 from the deployed image's own layer history
+# (`docker history --no-trunc irlcoop/rag-api:0.1.0`) — this reproduces the layer
+# commands the shipping image was built from, not a guess about intent.
+#
+# The base is slim, identified by evidence: the deployed image has no gcc/git/make/curl
+# (the build deps are purged), which is what python:3.12-slim does and buildpack-deps
+# does not. Confirmed by size — full python:3.12 rebuilds to 2.34 GB; slim reproduces
+# the deployed 906 MB.
+FROM python:3.12-slim
 
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -14,16 +18,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libgomp1 \
  && rm -rf /var/lib/apt/lists/*
 
+# Dependencies — lock first, and the distinction matters.
+#   requirements.lock.txt  pinned from the known-good DEPLOYED image's pip freeze.
+#   pyproject.toml         what the original build did: derive UNPINNED requirements at
+#                          build time. Kept as a fallback, but it resolves current
+#                          releases, and that is not cosmetic: newer SQLAlchemy (2.1)
+#                          switches the default postgresql:// driver to psycopg v3, which
+#                          this image does not ship — so an unpinned rebuild builds fine
+#                          and then cannot start. Reproduce with the lock.
 COPY pyproject.toml /app/
-
-# Dependencies come from pyproject.toml at build time (base deps + whatever
-# optional groups INSTALL_OPTIONAL_GROUPS names). The original build did not pin
-# versions, so a rebuild today resolves current releases — see PROVENANCE.md.
+COPY requirements.lock.txt /app/
 ARG INSTALL_OPTIONAL_GROUPS=""
 RUN pip install --upgrade pip && \
-    INSTALL_OPTIONAL_GROUPS="$INSTALL_OPTIONAL_GROUPS" python -c "import os, tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.load(f); deps = list(data['project'].get('dependencies', [])); optional = data['project'].get('optional-dependencies', {}); groups = [item.strip() for item in os.environ.get('INSTALL_OPTIONAL_GROUPS', '').split(',') if item.strip()]; [deps.extend(optional.get(group, [])) for group in groups]; print('\n'.join(dict.fromkeys(deps)))" > requirements.txt && \
-    pip install -r requirements.txt
+    if [ -f requirements.lock.txt ]; then \
+        pip install -r requirements.lock.txt; \
+    else \
+        INSTALL_OPTIONAL_GROUPS="$INSTALL_OPTIONAL_GROUPS" python -c "import os, tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.load(f); deps = list(data['project'].get('dependencies', [])); optional = data['project'].get('optional-dependencies', {}); groups = [item.strip() for item in os.environ.get('INSTALL_OPTIONAL_GROUPS', '').split(',') if item.strip()]; [deps.extend(optional.get(group, [])) for group in groups]; print('\n'.join(dict.fromkeys(deps)))" > requirements.txt; \
+        pip install -r requirements.txt; \
+    fi
 
 COPY . /app
 EXPOSE 8000
+
+# NOTE: this CMD is NOT how the service runs in the stack. The deploy command comes from
+# infra/instances/dev/apps/rag-api.yaml, which overrides it:
+#     uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Running this image's own CMD (the langgraph dev server) fails, in BOTH the deployed and
+# the rebuilt image, because the custom HTTP app it tries to load needs env this image does
+# not carry. Do not treat a bare `docker run` of this image as a health check.
 CMD ["langgraph", "dev", "--config", "langgraph.json", "--host", "0.0.0.0", "--port", "8000", "--no-browser", "--no-reload"]
