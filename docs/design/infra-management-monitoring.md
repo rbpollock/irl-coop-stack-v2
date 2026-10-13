@@ -47,13 +47,27 @@ record.
 
 `infra/scripts/stack-up.sh` — idempotent `docker compose up -d` for every
 generated pillar (+ overrides), then `type: source` apps (Plane's own
-compose), then drifted bootstraps whose compose still exists. Exits nonzero
-if any project fails.
+compose), then drifted bootstraps whose compose still exists. It then hands off
+to `infra/scripts/stack-up-hosts.sh` for the **host-process apps** (`web`,
+`coop-api`, `peer_xyz_payments`, `treasury-relayer`, `hardhat`), which have no
+compose at all. Exits nonzero if any project fails.
 
 Systemd: `irl-coop-stack.service` (enabled, oneshot, RemainAfterExit,
 After=docker.service) runs it at boot. A failed bring-up lands the unit in a
 visible `failed` state — that is the boot-time error flag. Retry with
 `systemctl restart irl-coop-stack`.
+
+**Host apps need their own watchdog, because nothing supervises them.**
+`irl-coop-hosts-watchdog.timer` (every 2 min, `OnBootSec=3min`) re-runs the
+already-idempotent `stack-up-hosts.sh`; because that script health-checks each
+port and starts only what is not answering, re-running it *is* the self-heal.
+This exists because `ts-node-dev --respawn` recovers from a **crash** but not
+from a **TypeScript compile error** — it exits and never respawns, leaving a
+live process tree and a dead port. On 2026-09-29 a mid-edit save to
+`apps/coop-api/src/safe.ts` did exactly that and `https://api.irl.coop` returned
+502 until 2026-10-03. The watchdog bounds that to minutes. Note it also revives
+`hardhat` and the temporal worker — stopping any host app on purpose means
+stopping the timer too.
 
 Individual containers that predate the pipeline (stalwart16) were given
 `--restart unless-stopped` so they survive reboots; the long-term fix is a
@@ -68,7 +82,7 @@ Same data, three renderings:
    `summary {declared, up, down, healthy, orphans}` · `pillars[]` (id,
    pillar, kind tree|source, compose, declared, up, down, missing[],
    services[] each with container {name, state, health, status, image,
-   ports} or null) · `orphans[]`.
+   ports} or null) · `host_apps[]` · `orphans[]`.
 2. **Dashboard** — "Stack health" on the home page
    (`components/dashboards/stack-health.tsx`): 4 summary cards, one chip
    per pillar with a dot per service (green running / red down), missing
@@ -79,6 +93,31 @@ Same data, three renderings:
    declared services via `docker compose config --services`), for the host
    where the API/auth may be down. Also writes the boot JSON snapshot to
    `/var/lib/irl-coop/stack-status.json`.
+
+### The host-process leg (why "61/61" is not the whole story)
+
+The reconciler's view of the world is `docker ps`, so **an app with no
+container is invisible to it**. The host-process apps (above) therefore have
+their own leg, declared once in `infra/instances/dev/host-apps.yaml` and read
+by *both* implementations — `host_apps[]` plus
+`summary {host_apps, host_healthy, core_host_apps, core_host_healthy,
+core_host_problems}`. Each is probed on `127.0.0.1:<port>` (the address the
+edge itself targets); **any HTTP response counts as up** — a 401 is a live,
+auth-gated server — and only a refused/timed-out connection is a failure.
+`role: dev` (today: `hardhat`) is reported but not counted.
+
+This is not decoration. Until 2026-10-03 the report read **"✓ 61/61 core
+services healthy"** for four days while `https://api.irl.coop` returned 502 on
+every route — the compose count was perfectly accurate and completely useless.
+The headline now carries both buckets:
+
+```
+irl.coop stack — ✓ 61/61 core services healthy · ✓ 4/4 host apps healthy
+```
+
+and goes red on either. Liveness is probed on the **port**, never inferred from
+a process list — the wedged coop-api had a healthy-looking supervisor tree the
+whole time.
 
 ## Reading the flags (honest, not noise)
 

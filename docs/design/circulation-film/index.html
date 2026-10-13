@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #07090e; }
+      #root { width: 100%; height: 100%; position: relative; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #07090e; color-scheme: dark; }
+      .clip { position: absolute; inset: 0; }
+      .kicker { font-family:'Space Grotesk',sans-serif; position:absolute; font-size:24px; letter-spacing:0.34em; font-weight:600; color:#7fb7e8; text-transform:uppercase; left:50%; transform:translateX(-50%); text-align:center; text-shadow:0 2px 24px rgba(0,0,0,.7); }
+      .big { font-family:'Space Grotesk',sans-serif; position:absolute; left:60px; right:60px; text-align:center; color:#f6f9fd; font-weight:700; line-height:1.12; letter-spacing:-0.02em; text-shadow:0 4px 50px rgba(0,0,0,.85), 0 1px 4px rgba(0,0,0,.9); }
+      .big em { font-style:normal; color:#6fd0f5; }
+      .sub { position:absolute; left:80px; right:80px; font-size:27px; line-height:1.5; color:#c3d2e6; text-align:center; font-family:Inter,sans-serif; text-shadow:0 2px 30px rgba(0,0,0,.85), 0 1px 3px rgba(0,0,0,.9); }
+      .chip { position:absolute; font-family:'Space Grotesk',sans-serif; font-size:27px; font-weight:600; color:#e8f1fd; padding:20px 34px; border-radius:999px; border:1px solid #33507a; background:rgba(12,20,34,.92); text-align:center; box-shadow:0 10px 50px rgba(0,0,0,.5); }
+      .lane { position:absolute; left:70px; right:70px; border:1px solid #27415f; border-radius:40px; padding:42px 50px; box-shadow:0 18px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05); }
+      .w { display:inline-block; white-space:pre; will-change:transform,opacity; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main"
+         data-start="0" data-duration="66"
+         data-width="1080" data-height="1920">
+
+      <section class="clip" data-track-index="0" data-start="0" data-duration="66">
+        <svg id="lattice" style="position:absolute;top:0;left:0;" width="1080" height="1920" opacity="0">
+          <defs><pattern id="mesh" width="110" height="110" patternUnits="userSpaceOnUse"><path d="M110 0 L0 0 0 110" fill="none" stroke="#14233c" stroke-width="1.2"/></pattern></defs>
+          <rect x="0" y="0" width="1080" height="1920" fill="url(#mesh)"/>
+        </svg>
+        <svg id="clusterlinks" style="position:absolute;top:0;left:0;" width="1080" height="1920">
+          <g id="clinks"></g>
+        </svg>
+        <svg id="motes" style="position:absolute;top:0;left:0;" width="1080" height="1920">
+          <defs>
+            <radialGradient id="moteGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#9fe6ff" stop-opacity="0.95"/>
+              <stop offset="45%" stop-color="#4fc3f7" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#4fc3f7" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="moteFade" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#cfefff" stop-opacity="0.7"/>
+              <stop offset="60%" stop-color="#4fc3f7" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="#4fc3f7" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <g id="motscenes"></g>
+        </svg>
+        <svg id="nodes" style="position:absolute;top:0;left:0;" width="1080" height="1920">
+          <g id="rings" data-layout-allow-overflow></g>
+          <g id="body" data-layout-allow-overflow></g>
+          <g id="txholds" data-layout-allow-overflow></g>
+        </svg>
+        <div id="scrim" style="position:absolute;inset:0;background:radial-gradient(58% 52% at 50% 46%, rgba(7,9,14,.66), rgba(7,9,14,.28) 46%, rgba(7,9,14,0) 74%);"></div>
+        <div id="layerGlow" style="position:absolute;top:150px;left:80px;border-radius:120px;border:2px solid #1d3350;opacity:0;"></div>
+        <div id="layerTint" style="position:absolute;top:150px;left:80px;border-radius:120px;background:radial-gradient(60% 45% at 50% 40%, rgba(79,195,247,.12), transparent 70%);opacity:0;"></div>
+
+        <div class="kicker" id="k0" style="top:460px;">here's the dream</div>
+        <div class="big" id="v0" style="top:560px;font-size:66px;line-height:1.28;">a global network of <em>locally-governed</em>,<br/><em>regenerative</em>, skill-sharing<br/><em>communities</em></div>
+        <div class="sub" id="s0" style="top:1240px;">every group runs itself,<br/>and they're all within reach of each other</div>
+
+        <div class="kicker" id="k1" style="top:480px;">but here's what's actually stuck</div>
+        <div class="big" id="v1" style="top:640px;font-size:54px;line-height:1.3;">most good groups work alone,<br/>not because they want to,<br/>but because <em>there's been<br/>no way to link them</em></div>
+        <div class="sub" id="s1" style="top:1250px;">the pieces they need are all out there already,<br/>they just never got wired to each other</div>
+
+        <div class="kicker" id="k2" style="top:380px;">so the change is a shared layer</div>
+        <div class="big" id="v2" style="top:490px;font-size:58px;line-height:1.25;">one shared <em>interconnection</em><br/>layer for all of them<br/>to live and work together</div>
+        <div class="sub" id="s2" style="top:1040px;font-size:30px;line-height:1.6;">
+          the everyday software all in one shared layer —<br/>
+          who's in and how you talk, <b style="color:#9fdcff;">identity</b> &amp; <b style="color:#9fdcff;">communication</b>,<br/>
+          how the work gets done, <b style="color:#9fdcff;">collaboration</b> &amp; <b style="color:#9fdcff;">projects</b>,<br/>
+          what keeps it going, <b style="color:#9fdcff;">events</b> &amp; <b style="color:#9fdcff;">money</b>,<br/>
+          and the ground underneath — <b style="color:#cfefff;">maps</b>, <b style="color:#cfefff;">storage</b>, &amp; <b style="color:#cfefff;">calls</b></div>
+        <div class="sub" id="s2b" style="top:1560px;">we build it with the community, so the tools<br/>answer to the groups that use them — not a landlord</div>
+
+        <div class="kicker" id="k3" style="top:480px;">and that shows up in three ways</div>
+        <div class="chip" id="ch1" style="top:640px;left:110px;right:110px;">you pay for what you use, when you can — or get sponsored and wear the badge</div>
+        <div class="chip" id="ch2" style="top:760px;left:110px;right:110px;">groups finally find, reach, and use each other</div>
+        <div class="chip" id="ch3" style="top:880px;left:110px;right:110px;">the data stays under the group's own hand</div>
+
+        <div class="kicker" id="k4" style="top:520px;">but let's be straight about the field</div>
+        <div class="big" id="v4" style="top:660px;font-size:50px;line-height:1.3;">good tools exist,<br/>but they keep groups apart —<br/><em>none of them links it up</em></div>
+        <div class="sub" id="s4" style="top:1160px;">Symphony, Macro, and Kinetic-OS are each solid, but they run<br/>on their own setups, keep groups separate, and turning them<br/>into one working web is more trouble than it's worth</div>
+
+        <div class="kicker" id="k5" style="top:480px;">and that's where it tips</div>
+        <div class="big" id="v5" style="top:680px;font-size:48px;line-height:1.3;">and so the group that once worked alone<br/>can finally <em>reach the others</em> —<br/>the layer is what makes that real</div>
+        <div class="sub" id="s5" style="top:1220px;">put the layer out and they find each other,<br/>reach each other, and build together</div>
+      </section>
+
+      <section class="clip" data-track-index="2" data-start="40" data-duration="12">
+        <div class="kicker" id="k6" style="top:430px;">so, how do you jump in</div>
+        <div class="big" id="a0" style="top:540px;font-size:72px;line-height:1.25;">you can step in and<br/><em>help build this web</em><br/>with us</div>
+        <div class="lane" id="la1" style="top:900px;background:linear-gradient(160deg,#12203a,#0b1220);">
+          <div class="lh" style="font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:700;color:#fff;">steward it</div>
+          <div class="ls" style="font-family:Inter,sans-serif;font-size:26px;color:#c9d2e2;margin-top:12px;line-height:1.45;">join as a member and help decide how the verticals and the platform itself run</div>
+        </div>
+        <div class="lane" id="la2" style="top:1150px;background:linear-gradient(160deg,#14243e,#0b1220);">
+          <div class="lh" style="font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:700;color:#fff;">sponsor it</div>
+          <div class="ls" style="font-family:Inter,sans-serif;font-size:26px;color:#c9d2e2;margin-top:12px;line-height:1.45;">act as fiscal sponsor, take in tax-deductible gifts, and pass them to the groups doing the work</div>
+        </div>
+        <div class="lane" id="la3" style="top:1400px;background:linear-gradient(145deg,#142b1b,#0d1510);">
+          <div class="lh" style="font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:700;color:#fff;">bring people in</div>
+          <div class="ls" style="font-family:Inter,sans-serif;font-size:26px;color:#c9d2e2;margin-top:12px;line-height:1.45;">if you know a group that needs it, hand them a link and bring them in</div>
+        </div>
+        <div class="sub" id="a1" style="top:1860px;"><b style="color:#6fd0f5;font-family:'Space Grotesk',sans-serif;">steward · sponsor · bring people in</b> — pick the one that fits you</div>
+      </section>
+
+      <section class="clip" data-track-index="3" data-start="52" data-duration="14">
+        <svg id="mininet" style="position:absolute;top:300px;left:50%;transform:translateX(-50%);" width="780" height="780" opacity="0">
+          <circle cx="390" cy="390" r="360" fill="none" stroke="#223a5c" stroke-width="2" stroke-dasharray="3 10"/>
+          <circle cx="390" cy="390" r="240" fill="none" stroke="#2b4a72" stroke-width="2"/>
+          <g id="nowdots"></g>
+        </svg>
+        <div class="big" id="c0" style="top:1180px;font-size:56px;line-height:1.25;">because the network<br/><em>is the point</em> —<br/>not the platform</div>
+        <div class="sub" id="c1" style="top:1580px;">what matters is communities woven close enough<br/>to finally reach each other</div>
+        <div class="sub" id="c2" style="top:1800px;"><b style="color:#6fd0f5;font-family:'Space Grotesk',sans-serif;">irl.coop</b> — keeping the network linked and alive</div>
+      </section>
+    </div>
+
+    <script>
+      var NS='http://www.w3.org/2000/svg';
+      var CLUSTERS=[
+        { x:180, y:400,  g:[[0,0,20],[-150,-170,34],[165,-120,26],[-260,-40,30],[185,40,22],[-205,150,26],[250,180,20]] },
+        { x:850, y:330,  g:[[0,0,38],[-185,60,26],[170,150,24],[-140,180,22],[165,-150,22],[-90,-170,20]] },
+        { x:270, y:1560, g:[[0,0,44],[-190,-80,26],[190,-50,24],[150,130,22],[-160,150,22],[70,-150,20]] },
+        { x:850, y:1560, g:[[0,0,28],[-220,-70,24],[180,-100,24],[220,60,22],[-90,150,22],[150,180,20],[-250,120,22]] },
+        { x:560, y:1710, g:[[0,0,26],[-120,80,20],[100,110,22],[140,-70,20],[20,150,16]] }
+      ];
+      var CLINK=[[0,1],[1,3],[3,4],[4,2],[2,0],[0,3],[1,4]];
+      var TX=[[300,1800,16],[900,1680,18],[120,930,14],[560,1260,12],[760,930,16],[380,560,14]];
+      var MEMBERS=[];
+      function mk(p,t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e;}
+      function orbit(p,cx,cy,r,n,cls,fill,rr){
+        for(var i=0;i<n;i++){var a=(i/n)*Math.PI*2;
+          mk(p,'circle',{cx:(cx+r*Math.cos(a)).toFixed(1),cy:(cy+r*Math.sin(a)).toFixed(1),r:rr,'class':cls,fill:fill});
+        }
+      }
+      function t2(t,t0,dt){var x=Math.max(0,Math.min(1,(t-t0)/dt));return x*x*(3-2*x);}
+      function build(){
+        var body=document.getElementById('body'), gl=document.getElementById('clinks');
+        var rings=document.getElementById('rings'), holds=document.getElementById('txholds');
+        var nd=document.getElementById('nowdots'), mot=document.getElementById('motscenes');
+        for(var n=0;n<12;n++){var na=(n/12)*Math.PI*2;
+          mk(nd,'circle',{cx:(390+240*Math.cos(na)).toFixed(1),cy:(390+240*Math.sin(na)).toFixed(1),r:9,fill:'#6fd0f5'});
+        }
+        /* the two poetic motes (soft light-washes): C2→C3 and C1→C0 */
+        for(var mm=0;mm<2;mm++){
+          var A=CLUSTERS[mm*2], B=CLUSTERS[mm*2+1];
+          var mg=mk(mot,'g',{'class':'mote','id':'mote'+mm});
+          mk(mg,'circle',{cx:A.x,cy:A.y,r:56,fill:'url(#moteFade)',opacity:0});
+          mk(mg,'circle',{cx:A.x,cy:A.y,r:30,fill:'url(#moteGlow)',opacity:0});
+          mk(mot,'line',{x1:A.x,y1:A.y,x2:B.x,y2:B.y,'class':'moteLine','stroke':'#4fc3f7','stroke-width':1.5,opacity:0});
+        }
+        for(var ci=0;ci<CLUSTERS.length;ci++){
+          var C=CLUSTERS[ci],x=C.x,y=C.y;
+          var cg=mk(body,'g',{class:'comm comm'+ci});
+          var rg=mk(rings,'circle',{cx:x,cy:y,r:330});rg.setAttribute('class','cring');rg.setAttribute('fill','none');rg.setAttribute('stroke','#26486f');rg.setAttribute('stroke-width',2);rg.setAttribute('stroke-dasharray','6 14');
+          var soft=mk(rings,'circle',{cx:x,cy:y,r:330});soft.setAttribute('class','crowd');soft.setAttribute('fill','rgba(79,195,247,.04)');soft.setAttribute('stroke','none');
+          mk(body,'circle',{cx:x,cy:y,r:9,'class':'hub',fill:'#6fd0f5'});
+          for(var gi=0;gi<C.g.length;gi++){
+            var off=C.g[gi], gx=x+off[0], gy=y+off[1], rr=off[2];
+            var g=mk(cg,'g',{class:'grp'});
+            g.setAttribute('transform-origin',(x+'px '+(y)+'px'));
+            mk(g,'circle',{cx:gx,cy:gy,r:rr,class:'gshell',fill:'#0c1422',stroke:'#2b4a72','stroke-width':2});
+            orbit(g,gx,gy,rr*.45,4,'gdot','#6fa8dc',4.5);
+            orbit(g,gx,gy,rr*.75,9,'gdot','#57c8f2',3.5);
+            orbit(g,gx,gy,rr*1.05,14,'gdotlate','#9fdcff',2);
+            MEMBERS.push({el:g, gx:gx, gy:gy, dx:x, dy:y, cx:gx, cy:gy, cluster:ci});
+          }
+        }
+        for(var c=0;c<CLINK.length;c++){
+          var A=CLUSTERS[CLINK[c][0]],B2=CLUSTERS[CLINK[c][1]];
+          mk(gl,'line',{x1:A.x,y1:A.y,x2:B2.x,y2:B2.y,class:'clnk'});
+        }
+        for(var t=0;t<TX.length;t++){
+          mk(holds,'circle',{cx:TX[t][0],cy:TX[t][1],r:TX[t][2],class:'tx',fill:'none',stroke:'#2b3e5c','stroke-width':1.4});
+        }
+      }
+
+      /* ---- THE FIELD: an authored, emotional trajectory (no physics loop).
+         Base place keeps each member in its community. On the beats, the WHOLE
+         community re-centres (leans) toward a neighbouring community — the
+         "recentring" gesture. Plus a faint shared breath so nothing is dead, and
+         a small per-community "voice" so the five feel distinct. Precomputed. */
+      var FIELD=(function(){
+        var FILMT=36, STEP=0.25, NSAMP=Math.round(FILMT/STEP);
+        var out=[]; for(var i=0;i<MEMBERS.length;i++) out.push([]);
+        var LEAN=85;
+        var VOICE=[ {a:4,f:1.5},{a:2,f:.9},{a:3,f:1.1},{a:4,f:1.25},{a:1.5,f:.6} ];
+        for(var sm=0;sm<NSAMP;sm++){
+          var t=sm*STEP;
+          var alone  = t2(t,4.0,5.5) - t2(t,16.0,17.5);   // "each alone": lean apart
+          var connect= t2(t,15.5,18.0);                    // "interconnection layer": lean together
+          var reach  = t2(t,30.0,32.5);                      // "becomes reachable": lean-in more
+          var unison = t2(t,33.0,35.5);                      // the shared pulse ramp
+          for(var i=0;i<MEMBERS.length;i++){
+            var m=MEMBERS[i], ci=m.cluster;
+            var x=m.gx, y=m.gy;
+            /* faint world-breath: whole scene ever so gently inhales/exhales */
+            x+= 4*Math.sin(0.9*t+2.1); y+= 2.5*Math.sin(0.7*t+1.3);
+            /* the whole community leans toward a chosen neighbour */
+            var TARG=[1,0,3,2,0][ci];
+            var T=CLUSTERS[TARG];
+            var txc=(T.x-m.dx), tyc=(T.y-m.dy), L=Math.hypot(txc,tyc)+.001;
+            var dirX=txc/L, dirY=tyc/L;
+            var leanMag=LEAN*((connect+reach)-alone);
+            x+= dirX*leanMag; y+= dirY*leanMag;
+            /* per-community voice (distinct tempo): C0 quick, blood=f, C4 slowest */
+            var va=VOICE[ci].a, vf=VOICE[ci].f;
+            x+= va*Math.sin(vf*t+0.6*i + unison*0.0);
+            y+= va*Math.cos(vf*0.9*t+0.3*i);
+            /* unison: everything synchronises on the shared heartbeat at 33s+ */
+            x+= unison*10*Math.sin(2.1*t); y+= unison*7*Math.cos(2.1*t*0.8);
+            out[i].push({x:+x.toFixed(1), y:+y.toFixed(1)});
+          }
+        }
+        return out;
+      })();
+      build();
+      window.FIELD=FIELD;
+    </script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+      gsap.set(["#k0","#v0","#s0","#k1","#v1","#s1","#k2","#v2","#s2", "#s2b","#k3","#ch1","#ch2","#ch3",
+        "#k4","#v4","#s4","#k5","#v5","#s5",
+        "#lattice","#nodes","#links","#clinks","#layerTint","#motes",
+        "#k6","#a0","#la1","#la2","#la3","#a1",
+        "#mininet","#nowdots","#c0","#c1","#c2"],{opacity:0});
+      gsap.set(".grp",{opacity:0});
+      gsap.set(".gshell",{scale:0,transformOrigin:"50% 50%"});
+      gsap.set(".cring",{opacity:0,scale:.4,transformOrigin:"50% 50%"});
+      gsap.set(".crowd",{opacity:0,scale:.4,transformOrigin:"50% 50%"});
+      gsap.set(".hub",{opacity:0});
+      gsap.set(".clnk",{opacity:0});
+      gsap.set(".gdotlate",{opacity:0});
+
+      /* ---- word-by-word text: split each headline into .w spans (em/b words
+             become .hl), then reveal staggered with a light zoom/rise + glow ---- */
+      function splitWords(id){ if(id.charAt(0)==='#') id=id.slice(1); var el=document.getElementById(id); if(!el||el.getAttribute('data-w'))return; el.setAttribute('data-w','1');
+        (function walk(e,hl){
+          [].slice.call(e.childNodes).forEach(function(c){
+            if(c.nodeType===3){ var parts=c.nodeValue.split(/(\s+)/), fr=document.createDocumentFragment(), add=false;
+              for(var i=0;i<parts.length;i++){ var p=parts[i]; if(!p)continue;
+                if(/^\s+$/.test(p)){ fr.appendChild(document.createTextNode(p)); }
+                else { var s=document.createElement('span'); s.className='w'+(hl?' hl':''); s.textContent=p; fr.appendChild(s); add=true; } }
+              if(add) e.replaceChild(fr,c);
+            } else if(c.nodeType===1){
+              var t=c.tagName;
+              if(t==='EM'||t==='B'){ walk(c,true); }
+              else if(t!=='BR'){ walk(c,hl); }
+            }
+          });
+        })(el,false);
+      }
+      function wordWrap(id,t0,glow){
+        splitWords(id); if(id.charAt(0)==='#') id=id.slice(1); var el=document.getElementById(id); if(!el)return;
+        tl.set(el,{opacity:1},t0);
+        var words=el.querySelectorAll('.w'); if(!words.length)return;
+        tl.fromTo(words,{opacity:0,y:12,scale:1.06},{opacity:1,y:0,scale:1,duration:.5,stagger:.05,ease:'power2.out'},t0+0.02);
+        if(glow!==false){ var sold=el.querySelectorAll('.w.hl'); if(sold.length){
+          tl.fromTo(sold,{textShadow:'0 0 0 rgba(120,210,255,0)'},{textShadow:'0 0 26px rgba(120,210,255,.95)',duration:.55,stagger:.06,ease:'sine.out'},t0+0.18);
+          tl.to(sold,{textShadow:'0 0 14px rgba(120,210,255,.55)',duration:1.0,stagger:.06,ease:'power2.out'},t0+0.85);
+        } }
+      }
+
+      /* ---- FIELD adapter: drive every member through its authored path ---- */
+      var FT=window.FIELD||[];
+      for(var _fi=0;_fi<MEMBERS.length;_fi++){
+        var _m=MEMBERS[_fi], _path=FT[_fi];
+        if(!_path) continue;
+        var _T0=0.6, _span=36-0.6, _dt=_path.length>0?_span/_path.length:1;
+        for(var _kt=0;_kt<_path.length;_kt++){
+          var _pt=_path[_kt];
+          var dx=parseFloat(_pt.x)-_m.gx, dy=parseFloat(_pt.y)-_m.gy;
+          tl.to(_m.el,{x:dx,y:dy,ease:"none",duration:_dt},_T0+_kt*_dt);
+        }
+      }
+
+      /* ---- vision (0-6): the five communities BLOOM IN ---- */
+      tl.set("#lattice",{opacity:.6},0.2);
+      tl.set("#nodes",{opacity:1},0.5);
+      tl.to(".grp",{opacity:1,duration:.8,stagger:.07,ease:"power2.out"},0.4);
+      tl.to(".gshell",{scale:.9,duration:.7,stagger:.07,ease:"back.out(1.7)"},0.4);
+      tl.to(".gshell",{scale:1,duration:.6},1.4);
+      tl.to(".hub",{opacity:1,duration:.6,stagger:.5,ease:"power2.out"},1.8);
+      tl.to(".gdotlate",{opacity:1,duration:1.4,stagger:.12,ease:"power2.out"},4.0);
+
+      wordWrap("#k0",0.9);
+      wordWrap("#v0",1.1);
+      wordWrap("#s0",1.8);
+      tl.set("#k0, #v0, #s0",{opacity:0},5.4);
+
+      /* ---- "each alone" (5.8-9.4): isolation, lean apart ---- */
+      tl.fromTo(".tx",{opacity:0,scale:0},{opacity:.5,scale:1,duration:1.2,stagger:.3,ease:"sine.out"},1.2);
+      for(var _w=0;_w<3;_w++){
+        tl.to(".tx",{opacity:0,scale:1.2,duration:1.0,stagger:.28,ease:"sine.in"},3.0+_w*4.6);
+        tl.fromTo(".tx",{opacity:0,scale:0},{opacity:.5,scale:1,duration:1.2,stagger:.2,ease:"sine.out"},4.1+_w*4.6);
+      }
+      wordWrap("#k1",5.8);
+      wordWrap("#v1",6.0);
+      wordWrap("#s1",6.6);
+      tl.set("#k1, #v1, #s1",{opacity:0},9.4);
+
+      /* ---- interconnection layer (9.6-18): the REACH + first poetic mote ---- */
+      tl.set("#layerTint",{opacity:1},9.6);
+      tl.set("#clinks",{opacity:1},10.2);
+      tl.fromTo(".clnk",{strokeDasharray:"0.02 300",strokeDashoffset:300},{strokeDashoffset:0,duration:1.8,stagger:.2,ease:"power2.inOut"},10.6);
+      tl.to(".clnk",{opacity:.8,duration:.6},11.8);
+      /* mote 0: C2 -> C3, soft light crosses as the layer lands */
+      tl.to("#mote0 circle",{opacity:.7,duration:1.6,ease:"sine.inOut"},13.6);
+      tl.to("#mote0 circle:first-child",{r:110,duration:3.0,ease:"sine.inOut"},13.6);
+      tl.to("#mote0 circle:nth-child(2)",{r:60,duration:3.0,ease:"sine.inOut"},13.6);
+      wordWrap("#k2",12.4);
+      wordWrap("#v2",12.6);
+      wordWrap("#s2",13.4);
+      wordWrap("#s2b",14.6);
+      tl.set("#k2, #v2, #s2, #s2b",{opacity:0},18.0);
+
+      /* ---- three helps (17.8-22) ---- */
+      wordWrap("#k3",17.8,false);
+      wordWrap("#ch1",18.2);
+      wordWrap("#ch2",18.8);
+      wordWrap("#ch3",19.4);
+      tl.set("#k3, #ch1, #ch2, #ch3",{opacity:0},22.0);
+
+      /* ---- honest field (22-30) ---- */
+      wordWrap("#k4",22.4,false);
+      wordWrap("#v4",22.6);
+      wordWrap("#s4",23.4);
+      tl.set("#k4, #v4, #s4",{opacity:0},29.0);
+
+      /* ---- becomes reachable (30-38): the UNISON + second mote + glow ---- */
+      tl.set("#layerGlow",{opacity:1},30.2);
+      tl.to(".clnk",{stroke:"#4fc3f7",duration:1.0,stagger:.2},30.6);
+      tl.to(".crowd",{opacity:1,scale:1.02,duration:1.6,ease:"power2.out"},31.0);
+      tl.to(".cring",{opacity:1,scale:1.03,duration:1.6,ease:"power2.out"},31.2);
+      tl.to(".gshell",{scale:1.06,duration:2.0,ease:"power2.inOut"},31.4);
+      tl.to("#mot1 circle",{opacity:.8,duration:1.6},32.0);
+      tl.to("#mot1 circle:first-child",{r:150,duration:3.0,ease:"sine.inOut"},32.2);
+      tl.to("#mot1 circle:nth-child(2)",{r:84,duration:3.0,ease:"sine.inOut"},32.2);
+      wordWrap("#k5",30.4);
+      wordWrap("#v5",30.7);
+      wordWrap("#s5",31.6);
+      tl.set("#k5, #v5, #s5",{opacity:0},38.0);
+      tl.to(".tx",{opacity:0,duration:1.0,ease:"power2.in"},33.0);
+
+      /* ---- world dims out ahead of the ask ---- */
+      tl.to("#lattice,#layerTint,#layerGlow,#motes",{opacity:0,duration:.9,ease:"power2.in"},38.6);
+      tl.to("#clinks",{opacity:0,duration:.8},38.9);
+      tl.to("#nodes",{opacity:0,duration:.9},39.0);
+
+      /* ---- ask (40-52) ---- */
+      wordWrap("#k6",40.4,false);
+      wordWrap("#a0",40.6);
+      tl.set("#la1",{opacity:1,y:30},41.4); tl.to("#la1",{y:0,duration:.5,ease:"power2.out"},41.4);
+      tl.set("#la2",{opacity:1,y:30},42.4); tl.to("#la2",{y:0,duration:.5,ease:"power2.out"},42.4);
+      tl.set("#la3",{opacity:1,y:30},43.8); tl.to("#la3",{y:0,duration:.5,ease:"power2.out"},43.8);
+      wordWrap("#a1",45.9,false);
+
+      /* ---- close (52-66) ---- */
+      tl.set("#mininet",{opacity:1},52.5);
+      tl.fromTo("#mininet",{scale:.8,transformOrigin:"50%"},{scale:1,duration:1.2,ease:"power2.out"},52.5);
+      tl.set("#nowdots",{opacity:1},53.2);
+      tl.fromTo("#nowdots circle",{scale:0,transformOrigin:"50% 50%"},{scale:1,duration:.5,stagger:.06,ease:"back.out(1.4)"},53.2);
+      wordWrap("#c0",54.4);
+      wordWrap("#c1",55.4);
+      wordWrap("#c2",56.4);
+
+      tl.seek(0);
+    </script>
+  </body>
+</html>

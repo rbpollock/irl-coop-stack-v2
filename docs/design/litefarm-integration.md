@@ -3,6 +3,14 @@
 Status: design · Aug 2026. Fork: `github.com/rbpollock/LiteFarm` (tracks upstream
 `LiteFarmOrg/LiteFarm`; top commit `58d434d`).
 
+> **Direction changed 2026-10-04.** Robbie asked to **decouple farm things from the farm app and glue
+> them into a more central store**, with ERPNext (which ships an **Agriculture domain app** — Land Unit,
+> Crop, Crop Cycle) as the candidate. That supersedes this document's *authoritative* premise: see
+> **`central-resource-store.md`**. Everything below about the SSO gate, the group mapping and the event
+> leg stays valid **for as long as LiteFarm runs** — what changes is that LiteFarm is no longer proposed
+> as the **home of the farm's data**. It also re-opens **D-20** (tentative; its recorded revisit trigger
+> is exactly *"if the farm pilot uses different tooling"*).
+
 LiteFarm is an open-source **farm-management** platform (GPL-3): fields, crops,
 tasks, animals, expenses, sales, certifications, sensors. It becomes the coop's
 **agriculture/food-sovereignty vertical** — a first-class group app like Plane or

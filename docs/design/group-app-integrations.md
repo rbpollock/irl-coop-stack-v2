@@ -69,6 +69,12 @@ which apps a group gets provisioned is seed data, not hard-coded.
 - The interesting question is group-aware availability: a member's calendar
   scoped so a group can see *when* someone is free without seeing *what* they
   are doing (free/busy vs full-title — a privacy dial, not a binary).
+- **Specified 2026-10-04 → `scoped-availability.md`**: scoped time budgets, a
+  per-audience projection (a group sees its own slots; the world sees a count;
+  nobody sees the calendar), granularity as the dial, and the anchor substrate
+  that makes the public count *verifiable* later. A scheduler (cal.diy) is a
+  **consumer** of that record, never its owner — see
+  `caldiy-scheduling-and-paid-bookings.md`.
 
 ### 6. Marketplace / inventory / NocoDB embeds
 - NocoDB is **live** (custom Gate-SSO image, `nocodb-custom-build` skill):
@@ -96,4 +102,5 @@ which apps a group gets provisioned is seed data, not hard-coded.
   in `event-bus-and-group-shapes.md`, not built.
 - **The privacy dial** — several of these (calendar, phone log, treasury) want a
   per-field visibility control rather than app-level all-or-nothing. That dial
-  is a cross-cutting concern, not per-app.
+  is a cross-cutting concern, not per-app. **(Calendar leg specified
+  2026-10-04: `scoped-availability.md`.)**

@@ -1,6 +1,6 @@
 # STATUS.md — irl.coop v2 infrastructure status
 
-Last updated: 2026-08-13 — passkey auth live (KC 25.0.6 + browser-passkey flow + sign-in button), browser-runner image + files-flow E2E 8/8, browser-runners summary on the home page. Session handoff: `docs/design/handoff-2026-08-13.md` (state, blockers, pending decisions, next steps).
+Last updated: 2026-10-12 — **Communications & outreach section added** (cost model live; pitch/film/outreach assets built, mostly uncommitted). Previously 2026-08-13 — passkey auth live (KC 25.0.6 + browser-passkey flow + sign-in button), browser-runner image + files-flow E2E 8/8, browser-runners summary on the home page. Session handoff: `docs/design/handoff-2026-08-13.md` (state, blockers, pending decisions, next steps).
 
 ## Configuration flow — how to add an app (START HERE)
 
@@ -49,14 +49,19 @@ unit in a visible `failed` state).
   to `/var/lib/irl-coop/stack-status.json` during bring-up.
 
 `enabled: false` on an app spec = declared-but-not-wired: the generator skips
-its compose service, edge route, OIDC registry entry and inventory (cryptpad,
-formbricks, webstudio, postiz are parked this way — their images aren't
-deployable yet).
+its compose service, edge route, OIDC registry entry and inventory. Only
+**cryptpad** and **zk-proving** are parked this way today.
 
-Current declared apps (21): traefik, keycloak, citus, irl-redis, minio, nocodb,
-stalwart, roundcube, cryptpad, temporal, temporal-ui, formbricks, webstudio,
-postiz, plane, coop-api, matrix, element-web, element-call, coturn, onlyoffice.
-`enabled_pillars`: proxy, authentication, cache, storage, communication, workflow.
+Current declared apps (42 — was stated as 21 until 2026-10-12; the tree gained
+litefarm, maps, erpnext, wordpress, peer_xyz_payments, the Matrix stack, RAG,
+llm-inference, plane-mcp, hievents, fusionpbx/freeswitch, mediamtx, treasury-relayer
+and zk-proving without STATUS being updated): traefik, keycloak, citus, irl-redis,
+minio, nocodb, stalwart, roundcube, cryptpad, temporal, temporal-ui, formbricks,
+hievents, webstudio, postiz, plane, coop-api, matrix, element-web, element-call,
+cinny, livekit, lk-jwt, coturn, freeswitch, fusionpbx, mediamtx, onlyoffice, maps,
+litefarm, rag, rag-inference, rag-migrate, rag-api, rag-worker, llm-inference,
+plane-mcp, erpnext, wordpress, peer_xyz_payments, zk-proving, treasury-relayer.
+`enabled_pillars`: proxy, authentication, cache, storage, communication, workflow, maps.
 The edge runs the generated `out/` (dynamic.yml + instance-tree certs); drift
 reconciles by regenerating and re-applying the generated compose.
 
@@ -394,6 +399,64 @@ reconciles by regenerating and re-applying the generated compose.
   `v=DMARC1; p=none; rua=mailto:admin@irl.coop; adkim=r; aspf=r`; DKIM
   `dkim._domainkey v=DKIM1; k=rsa; p=…` — all propagated on public resolvers.
 
+## Communications & outreach — cost model LIVE · assets built · asks unsent
+
+Added to STATUS 2026-10-12 — this line of work had been tracked only in session
+history (git: the docs below, plus the `irl-coop-outreach-pitches` skill).
+
+- **Cost model — LIVE, generated, reproducible.** `docs/design/cost-model.data.json`
+  is the single source of truth (every price carries a source + a verification
+  date); `infra/scripts/cost-model.py` emits every figure the videos and any
+  pricing section show — print, `--inject docs/design/cost-model.md`, `--json`.
+  Re-verified 2026-10-12: the 40-member / 6-organizer / $4,000-mo scenario emits
+  its `standard` column at **$2,318.86/mo** (commercial list prices verified
+  2026-09-13). **Rule: never hand-type a dollar figure into a chart or a beat —
+  derive it from the model.** Two sums that disagree on one visual is the fastest
+  credibility kill with this audience.
+- **Video.** `docs/design/video/` holds the built chart MP4s (cost-model
+  three-ways / crossover / divergence / per-participant / wall / redundancy,
+  plus the fear-loop pair), rendered FROM the model by
+  `docs/design/cost-model-animation.py`. Strategy is `intro-video-series.md` (one
+  master film cut into four shorts, proof-first). The landing page carries only
+  the hero loop (`hero-bg.mp4`); the explainer section was removed 2026-09-18, so
+  **no explainer video is embedded on the landing page today**.
+- **Fiscal-sponsorship pitch — plan + assets, nothing sent.** Audience = 501(c)(3)
+  orgs in solidarity / cooperative / sustainable economics; the ask is fiscal
+  sponsorship as a **bridge** to the planned Wyoming nonprofit ("duna", bylaws
+  drafted — structured like the co-op, except the board only *ratifies* on-chain
+  member governance). Money visual = `fiscal-pitch-sankey-v5-animated.html`
+  (canonical: pivots rented↔shared in place; four derived slices 20/30/40/10 →
+  22/30/18/30 per $100, labelled derived, never measured). Film build =
+  `docs/design/circulation-film/` (HyperFrames, portrait 1080×1920; latest render
+  `circ-film-v25.mp4`); §9 of the pitch doc is the beat source.
+- **Outreach drafts — written, NOT sent.** Public reply
+  `response-connectioning-300-movements.md` + private email
+  `email-to-jessica-friday.md` (Jessica Friday / Connectioning, "300+ movements"),
+  with a rendered piece `response-gif/out/the-map-needs-a-road-under-it.mp4` (+ a
+  600px GIF). Both await Robbie's send/post decision.
+- **Public sites / marketing surface.** `wordpress-migration-to-wordpress-com.md`
+  — jonischwartz.irl.coop (our Docker stack) → jonischwartzchaney.com (WP.com
+  Atomic): **staging verified, cutover NOT started, nothing has touched live.**
+  `site-plugins-and-embeds.md` (design): WordPress full plugin / Wix Velo partial
+  / Squarespace widget-only; first-party `{slug}.irl.coop` before third-party; a
+  "join" button writes a **request, never a seat**.
+  `marketplace-template-strategy.md`: settled licensing gate — MIT / CC-BY /
+  original-own only, and the design must be original to the source.
+- **Honesty rules that are load-bearing here** (this audience is the one best able
+  to catch a manufactured pitch): only *live-state* claims must be literally true —
+  landing copy stays aspirational BY DESIGN and is never weakened for an audit;
+  design-only surfaces (campaign surface / campaign Safe, coverage endpoint, edge
+  registry) are never demoed as shipped; no "we keep 62¢"-style keep-% headline;
+  do not attack sector overhead (low overhead ≠ efficiency — the staff IS the
+  work); say "the coop stack", never "shared node". Banned phrases and the
+  approved gem lines live in the `irl-coop-outreach-pitches` skill.
+- **Repo state: most of this is UNCOMMITTED.** Tracked: `cost-model.md`,
+  `cost-model.data.json`, `cost-model-animation.py`, `intro-video-series.md`,
+  `marketplace-template-strategy.md`. Untracked: the pitch doc, all five sankey
+  HTMLs, `circulation-film/`, `circ-film-v25.mp4`, the outreach drafts,
+  `response-gif/`, `wordpress-migration-to-wordpress-com.md`,
+  `site-plugins-and-embeds.md`.
+
 ## Completed this arc (2026-08-08)
 
 1. Cert renewal: lego → acme.sh (lego's gandi provider hard-codes the old
@@ -515,6 +578,17 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
 
 ## Pending / open
 
+- **Direction accepted 2026-10-12 — `docs/design/group-operated-stack.md`:** successorship is a **group**, not a person; the stack is to be operated by the irl.coop group *from within the stack*. Four defaults are taken in its §8 (**vault fix first** · outside capabilities group-held with class-3 named · start at one member · the coop itself is the first proof) and each awaits Robbie's confirmation. Preconditions: the vault is still platform-custodial (verified), the coop group Safe does not exist, and the membership conflict (`irl-coop-group.md` §2 vs D-13) is unresolved.
+- **Communications work is largely UNCOMMITTED** (see the Communications section):
+  the fiscal-pitch doc + all five sankeys, the circulation film + its render, both
+  outreach drafts, the WordPress-migration doc and site-plugins doc are untracked.
+- **Outreach drafts await Robbie's word**: the Connectioning reply (public) and the
+  email to Jessica Friday are written and un-sent.
+- **Fiscal sponsorship**: no sponsor conversation is open, and "duna" (the Wyoming
+  nonprofit) is not formed — sponsorship is the bridge to it, not a substitute.
+- **jonischwartzchaney.com cutover**: staging verified, live untouched.
+- **No explainer video is embedded on the landing page** (removed 2026-09-18) —
+  decide whether to re-add one of the built cuts.
 - DMARC hardening: p=none → quarantine after real volume.
 - Federation + takedown-resilient DNS/edge design session — PARKED (do nothing
   until Robbie raises it). Fragility points to weigh then: single Gandi account,

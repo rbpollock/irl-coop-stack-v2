@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>irl.coop — where the money goes (Sankey prototype)</title>
+<style>
+  :root {
+    --fore: var(--foreground, #0f172a);
+    --muted: var(--muted-foreground, #64748b);
+    --accent: var(--accent, #14b8a6);
+    --border: var(--border, #e2e8f0);
+    --card: var(--card, #ffffff);
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; color: var(--fore); background: transparent; margin: 0; padding: 24px 30px; }
+  .wrap { max-width: 1120px; }
+  h1 { font-size: 1.45rem; font-weight: 750; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: .86rem; margin: 0 0 5px; }
+  .src { color: var(--muted); font-size: .72rem; margin: 0 0 20px; line-height: 1.5; }
+  code { background: color-mix(in srgb, var(--border) 60%, transparent); border-radius: 4px; padding: 1px 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+  .panel { position: relative; border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 15px 18px 10px; }
+  .banner { position: absolute; top: 13px; right: 15px; font-size: .68rem; font-weight: 650; letter-spacing: .05em; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; }
+  .banner.rent { background: #fee2e2; color: #b91c1c; }
+  .banner.coop { background: #d1fae5; color: #065f46; }
+  .panel h2 { font-size: 1rem; font-weight: 680; margin: 0 0 1px; padding-right: 90px; }
+  .panel h2 small { font-weight: 500; color: var(--muted); font-size: .78rem; }
+  .pct { font-size: .8rem; color: var(--muted); margin: 0 0 6px; }
+  .pct b { color: var(--fore); font-size: .98rem; }
+  svg { width: 100%; height: auto; display: block; }
+  text.node-label { font-size: .78rem; font-weight: 700; fill: #fff; }
+  text.node-sub { font-size: .62rem; fill: rgba(255,255,255,.85); }
+  text.annot { font-size: .66rem; }
+  .take { margin-top: 16px; padding: 13px 16px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); font-size: .86rem; line-height: 1.55; }
+  .foot { margin-top: 12px; font-size: .72rem; color: var(--muted); line-height: 1.55; }
+  .foot b { color: var(--fore); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Where the money goes</h1>
+  <p class="sub">A 40-member co-op raising $4,000&nbsp;/mo of its own money (tickets + member dues) — where it ends up, in each world.</p>
+  <p class="src">Sources: <code>docs/design/cost-model.data.json</code> (verified 2026-09-13). Rented stack: per-seat $2,318.86 &nbsp;+ mid-tier $340.79 &nbsp;+ event platform fee 15.6&nbsp;% (&asymp;$623 of the org's own revenue) &nbsp;=&nbsp;<b>$3,283&nbsp;/mo</b> shown. Node: <b>$77.50&nbsp;/mo</b> infra. The share-based $-illustrations are derived from the model's totals, not a model field.</p>
+
+  <div class="grid">
+    <div class="panel">
+      <span class="banner rent">rented stack</span>
+      <h2>The platform economy <small>· what it rents</small></h2>
+      <p class="pct">community keeps about <b>18&cent; / $1</b></p>
+      <svg viewBox="0 0 460 250" id="rentSVG" role="img" aria-label="Sankey: rented stack extracts most of the money"></svg>
+    </div>
+    <div class="panel">
+      <span class="banner coop">shared node</span>
+      <h2>The cooperative <small>infrastructure the group owns</small></h2>
+      <p class="pct">community keeps about <b>98&cent; / $1</b></p>
+      <svg viewBox="0 0 460 250" id="coopSVG" role="img" aria-label="Sankey: cooperative keeps most of the money in the community"></svg>
+    </div>
+  </div>
+
+  <div class="take"><strong>The pact in one chart:</strong> the same 40 members, the same $4,000. In the
+  rented stack <b>82&cent; of every dollar</b> exits to rent before the work happens. In the
+  cooperative ~<b>98&cent; stays in the loop</b>. The cost isn't what cooperation is — it's how much
+  of their own money the cooperative stack lets the community keep.</div>
+
+  <div class="foot"><b>Honesty — fix before final:</b> all dollar figures for irl.coop (<b>$77.50 / $437.50</b> node) are <b>illustrative placeholders</b>; irl.coop pricing is an open coop decision. Card processing (~2.9%&nbsp;+&nbsp;$0.30) is excluded on <b>both</b> sides. The "$3,182 / keeps 18%" is a sketch of the model's 8&times;&nbsp;headline, not a model field — re-derive both numbers from <code>cost-model.py --json</code> at record time; do not hand-type into the video.</div>
+</div>
+
+<script>
+(function(){
+  var NS = 'http://www.w3.org/2000/svg';
+  var SVG = 460, H = 250;
+
+  function svgEl(el, attrs){
+    var n = document.createElementNS(NS, el);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+
+  function node(parent, x, y, w, h, fill, label, subLabel){
+    var g = svgEl('g', {});
+    var r = svgEl('rect', { x:x, y:y, width:w, height:h, rx:5, fill:fill });
+    g.appendChild(r);
+    if (label){
+      var t = svgEl('text', { x:x+w/2, y:y+h/2-3, 'text-anchor':'middle', 'class':'node-label' });
+      t.textContent = label; g.appendChild(t);
+    }
+    if (subLabel){
+      var s = svgEl('text', { x:x+w/2, y:y+h/2+11, 'text-anchor':'middle', 'class':'node-sub' });
+      s.textContent = subLabel; g.appendChild(s);
+    }
+    parent.appendChild(g);
+    return { x:x, y:y, w:w, h:h };
+  }
+
+  function annot(parent, x, y, text, fill){
+    var t = svgEl('text', { x:x, y:y, 'class':'annot', fill:fill || 'inherit' });
+    t.textContent = text; parent.appendChild(t);
+  }
+
+  // Cubic bezier band between two vertical edges. x1..x2 with thickness w1 at source, w2 at sink.
+  function band(g, x1, y1a, y1b, x2, y2a, y2b, fill){
+    var mid = x2 + (x1 - x2) / 2;
+    var d = 'M ' + x1 + ',' + y1a +
+            ' C ' + mid + ',' + y1a + ', ' + mid + ',' + y2a + ', ' + x2 + ',' + y2a +
+            ' L ' + x2 + ',' + y2b +
+            ' C ' + mid + ',' + y2b + ', ' + mid + ',' + y1b + ', ' + x1 + ',' + y1b + ' Z';
+    var p = svgEl('path', { d:d, fill:fill, opacity:0.9 });
+    g.appendChild(p);
+  }
+
+  // ------------------- RENT panel -------------------
+  function rent(){
+    var g = document.getElementById('rentSVG');
+    // source: $4,000 you raised
+    var src = node(g, 8, 70, 66, 110, '#3b82f6', '$4,000', 'raised');
+    // flow: big band to exit/rent, small band to stays
+    band(g, src.x+src.w, src.y+6,  src.y+92, 178, 16, 46,  '#ef4444'); // to rent   (thick)
+    band(g, src.x+src.w, src.y+96, src.y+110, 178, 232, 246, '#10b981'); // stays (thin)
+    // rent destination
+    var rent = node(g, 178, 14, 268, 42, '#ef4444', '$3,283', 'exit / rent');
+    annot(g, 240, 72, '82¢ of every $1', '#b91c1c');
+    annot(g, 20, 62, 'the stack it rents', '#94a3b8');
+    // stays destination
+    var stay = node(g, 178, 226, 268, 20, '#10b981', '$717 stays', 'the org keeps');
+    annot(g, 20, 232, 'already its own', '#94a3b8');
+  }
+
+  // ------------------- COOP panel -------------------
+  function coop(){
+    var g = document.getElementById('coopSVG');
+    var src = node(g, 8, 70, 66, 110, '#3b82f6', '$4,000', 'raised');
+    // node running cost: tiny band
+    band(g, src.x+src.w, src.y+6,  src.y+28, 178, 40, 52, '#ef4444');
+    // community / loop: huge band
+    band(g, src.x+src.w, src.y+34, src.y+210, 178, 190, 238, '#10b981');
+    var node1 = node(g, 178, 34, 268, 18, '#ef4444', '$77.50', 'node / rent');
+    var loopd = node(g, 178, 182, 268, 54, '#10b981', '$3,922 stays', 'cooperative loop');
+    annot(g, 120, 44, 'the one drain: node infra', '#b91c1c');
+    annot(g, 120, 208, 'everything else — member-owned', '#047857');
+    annot(g, 148, 250, '98¢ of every $1 stays', '#065f46');
+  }
+
+  rent();
+  coop();
+})();
+</script>
+</body>
+</html>

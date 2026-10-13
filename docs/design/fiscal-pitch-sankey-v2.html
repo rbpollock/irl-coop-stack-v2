@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>irl.coop — where a community dollar goes (Sankey v2)</title>
+<style>
+  :root { --fore: var(--foreground,#0f172a); --muted: var(--muted-foreground,#64748b); --accent: var(--accent,#14b8a6); --border: var(--border,#e2e8f0); --card: var(--card,#ffffff); }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui,-apple-system,sans-serif; color: var(--fore); background: transparent; margin: 0; padding: 26px 32px; }
+  .wrap { max-width: 1220px; }
+  h1 { font-size: 1.5rem; font-weight: 750; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: .87rem; margin: 0 0 4px; }
+  .src { color: var(--muted); font-size: .72rem; margin: 0 0 18px; line-height: 1.5; }
+  .panel { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 16px 18px 12px; }
+  svg { width: 100%; height: auto; display: block; }
+  .colhead { fill: var(--muted); font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .nobox { fill: #fff; font-size: .72rem; font-weight: 700; }
+  .nobox-sub { fill: rgba(255,255,255,.85); font-size: .62rem; }
+  .hub-label { fill: #fff; font-size: .84rem; font-weight: 750; }
+  .legend { display: flex; gap: 22px; margin-top: 10px; font-size: .74rem; color: var(--muted); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  .take { margin-top: 16px; padding: 13px 16px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); font-size: .86rem; line-height: 1.55; }
+  .foot { margin-top: 12px; font-size: .72rem; color: var(--muted); line-height: 1.55; }
+  .foot b { color: var(--fore); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Where a community dollar goes</h1>
+  <p class="sub">Every $1 a member organization raises — where it comes from, what it must cover to run, and what finally reaches the community.</p>
+  <p class="src">Receipt for a donor / fiscal-sponsor audience. All amounts are <b>illustrative silhouettes</b> modeled on the categories in <code>docs/design/cost-model.data.json</code> (verified 2026-09-13); the mix is a draft for the coop to swap. <b>Community impact</b> = the $ that stays in the community: program, grants, cooperative value. The organization's own running cost is a visible share of the same dollar.</p>
+
+  <div class="panel">
+    <svg viewBox="0 0 1220 620" id="chart" role="img" aria-label="Sankey: funding sources through the organization, split into running costs and community impact"></svg>
+    <div class="legend">
+      <span><span class="sw" style="background:#3b82f6"></span> funding sources</span>
+      <span><span class="sw" style="background:#f59e0b"></span> the organization's own running cost</span>
+      <span><span class="sw" style="background:#10b981"></span> reaches the community</span>
+    </div>
+  </div>
+
+  <div class="take"><strong>The receipt:</strong> a donor can follow a whole dollar in — from the source, through
+  the organization that holds the legal and accounting work and runs the practical tools, and into the
+  community. The organization spends <strong>$38 of every $100 on its own running</strong>; <strong>$62 reaches the
+  community</strong>. The receipt's point: <i>everything shown, nothing hidden</i> — the overhead included.</div>
+
+  <div class="foot"><b>Honesty — fix before signing live:</b> every number here is an illustrative placeholder;
+  the split (38 running / 62 impact) is a draft target, not a committed number. Replace with the coop's own
+  budget-approved figures before any on-screen use. Card processing (which exists in both worlds) is excluded.
+  The <b>$38 self-run line</b> is the honest overhead the pitch must speak out loud, not hide.</div>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('chart');
+
+  function el(tag, attrs, text){
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    svg.appendChild(n);
+    return n;
+  }
+  function rect(x, y, w, h, fill){ return el('rect', {x:x, y:y, width:w, height:h, rx:5, fill:fill}); }
+
+  /* ---------- DATA (illustrative placeholders) ---------- */
+  var SRC = '#3b82f6', ORG = '#f59e0b', IMP = '#10b981';
+  var sources = [
+    { name:'Grants',                v:27 },
+    { name:'Individual donors',     v:26 },
+    { name:'Foundations',           v:15 },
+    { name:'Fundraising campaigns', v:14 },
+    { name:'Events',                v:12 },
+    { name:'Major gifts',           v:6  }
+  ];
+  var costs = [
+    { name:'Legal fees',                       v:6 },
+    { name:'Land / office',                   v:10 },
+    { name:'Bookkeeping',                     v:5 },
+    { name:'Email / workspace / storage',     v:5 },
+    { name:'Finance fees',                    v:3 },
+    { name:'Software for events',             v:3 },
+    { name:'Marketing tools',                 v:3 },
+    { name:'Booking / scheduling / planning / CRM', v:4 },
+    { name:'Telephony',                       v:2 },
+    { name:'Website',                         v:2 }
+  ];
+  var impact = { name:'Community impact program · grants · value', v:62 };
+
+  function sum(list){ var s=0; list.forEach(function(i){ s+=i.v; }); return s; }
+
+  /* ---------- layout numbers ---------- */
+  var unit = 2.7;          // px per $1
+  var gap = 8;
+  var padTop = 58;
+  var X1 = 20, W1 = 200;   // left: sources
+  var X2 = 470, W2 = 150;  // middle: org hub
+  var X3 = 890, W3 = 330;  // right: costs + impact
+
+  function stack(list, x, w){
+    var y = padTop, out = [];
+    list.forEach(function(it){
+      var h = Math.max(it.v * unit, 6);
+      out.push({ x:x, y:y, w:w, h:h, it:it });
+      y += h + 8;
+    });
+    return { boxes: out, bottom: y };
+  }
+  var c1 = stack(sources, X1, W1);
+  var c3 = stack(costs, X3, W3);
+
+  var impactTop = c3.bottom + 18;
+  var impactBox = { x:X3, y:impactTop, w:W3, h: impact.v * unit, it:impact };
+
+  var hubTop = padTop;
+  var hubBottom = impactTop + impactBox.h;
+  var hub = { x:X2, y:hubTop, w:W2, h: hubBottom - hubTop };
+
+  function band(x1, y1a, y1b, x2, y2a, y2b, color){
+    var mid = x1 + (x2-x1)/2;
+    el('path', { d:'M '+x1+','+y1a+' C '+mid+','+y1a+', '+mid+','+y2a+', '+x2+','+y2a
+      +' L '+x2+','+y2b+' C '+mid+','+y2b+', '+mid+','+y1b+', '+x1+','+y1b+' Z',
+      fill: color, opacity: 0.9 });
+  }
+  function label(x, y, str, cls, anchor){
+    el('text', { x:x, y:y, class: cls||'nobox', 'text-anchor':anchor||'start' }, str);
+  }
+
+  /* ---------- column headers ---------- */
+  label(X1, 34, 'Funding', 'colhead', 'start');
+  label(X3, 34, 'Where it goes', 'colhead', 'start');
+
+  /* ---------- bands: source -> hub ---------- */
+  var srcTotal = sum(sources);              // 100
+  var srcPortionH = hub.h / srcTotal;       // pixels-thickness per $1 of a source flow
+  var yA = hub.y;
+  c1.boxes.forEach(function (b) {
+    var h = b.it.v * srcPortionH;
+    band(X1+W1, b.y, b.y+b.h, hub.x, yA, yA+h, SRC);
+    yA += h;
+  });
+
+  /* ---------- bands: hub -> costs ---------- */
+  var outTotal = sum(costs) + impact.v;     // 100
+  var outPortionH = hub.h / outTotal;
+  var yB = hub.y;
+  c3.boxes.forEach(function (b) {
+    var h = b.it.v * outPortionH;
+    band(hub.x+W2, yB, yB+h, b.x, b.y, b.y+b.h, ORG);
+    yB += h;
+  });
+  /* band hub -> impact */
+  var impH = impact.v * outPortionH;
+  band(hub.x+W2, yB, yB+impH, impactBox.x, impactBox.y, impactBox.y+impactBox.h, IMP);
+
+  /* ---------- draw nodes ---------- */
+  // sources
+  c1.boxes.forEach(function (b) {
+    rect(b.x, b.y, b.w, b.h, SRC);
+    label(b.x+8, b.y+b.h/2+4, b.it.name + ' — $' + b.it.v, 'nobox', 'start');
+  });
+  // hub
+  rect(hub.x, hub.y, hub.w, hub.h, ORG);
+  label(hub.x+hub.w/2, hub.y+hub.h/2-6, 'The organization', 'hub-label', 'middle');
+  label(hub.x+hub.w/2, hub.y+hub.h/2+12, 'holds legal · books · tools', 'nobox-sub', 'middle');
+  // costs
+  c3.boxes.forEach(function (b) {
+    rect(b.x, b.y, b.w, b.h, ORG);
+    label(b.x+8, b.y+b.h/2+4, b.it.name + ' — $' + b.it.v, 'nobox', 'start');
+  });
+  // impact
+  rect(impactBox.x, impactBox.y, impactBox.w, impactBox.h, IMP);
+  label(impactBox.x, impactBox.y+impactBox.h/2+5, 'Community impact — $' + impact.v, 'nobox', 'middle');
+  label(impactBox.x+150, impactBox.y+impactBox.h/2-10, 'the point of the dollar', 'nobox-sub', 'middle');
+})();
+</script>
+</body>
+</html>

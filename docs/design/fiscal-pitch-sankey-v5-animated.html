@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>irl.coop — the same dollar, two stacks</title>
+<style>
+  :root { --fore: var(--foreground,#0f172a); --muted: var(--muted-foreground,#64748b); --accent: var(--accent,#14b8a6); --border: var(--border,#e2e8f0); --card: var(--card,#ffffff); }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui,-apple-system,sans-serif; color: var(--fore); background: #f8fafc; margin: 0; padding: 26px 34px; }
+  .wrap { max-width: 1180px; }
+  h1 { font-size: 1.5rem; font-weight: 750; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: .88rem; margin: 0 0 6px; }
+  .src { color: var(--muted); font-size: .72rem; margin: 0 0 14px; line-height: 1.55; }
+  .panel { border: 1px solid var(--border); border-radius: 16px; background: var(--card); padding: 14px 18px 12px; box-shadow: 0 12px 32px -16px color-mix(in srgb, var(--accent) 30%, transparent); }
+  svg { width: 100%; height: auto; display: block; }
+  .colhead { fill: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .gnode { fill: #fff; font-size: .7rem; font-weight: 700; }
+  .bbox-label { font-size: .68rem; font-weight: 700; fill: #fff; paint-order: stroke; stroke: rgba(0,0,0,.28); stroke-width: 2.5px; }
+  .hub-title { fill: #fff; font-size: .9rem; font-weight: 800; }
+  .hub-sub { fill: rgba(255,255,255,.86); font-size: .6rem; }
+  .legend { display: flex; gap: 20px; margin-top: 12px; font-size: .72rem; color: var(--muted); flex-wrap: wrap; align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .togglebar { display: flex; justify-content: center; gap: 8px; margin: 14px 0 2px; }
+  .btn { border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 999px; padding: 7px 17px; font-size: .84rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .18s; }
+  .btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:hover { filter: brightness(1.07); }
+  .statenote { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 7px; min-height: 1.2em; }
+  .take { margin-top: 16px; padding: 14px 17px; border-radius: 13px; background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent) 5%, transparent)); border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent); font-size: .86rem; line-height: 1.6; }
+  .foot { margin-top: 12px; font-size: .72rem; color: var(--muted); line-height: 1.55; }
+  .foot b { color: var(--fore); }
+  .band { transition: filter .12s; }
+  .grain { animation: flow 3.2s linear infinite; opacity: .5; }
+  @keyframes flow { from { stroke-dashoffset: 90; } to { stroke-dashoffset: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The same dollar, two stacks</h1>
+  <p class="sub">A small community organization that gathers donations — say, feeding people in urban centers — and how it spends a whole dollar. Flip the toggle; watch the middle move.</p>
+  <p class="src">One dollar, four honestly-split destinations for a small donation-funded org: <b>reaches a person · staff &amp; delivery · tools &amp; platforms · recirculates in the community</b>. Figures are <b>derived estimates</b> (bottom: the sector "~75-90% program" counts staff as program; the only hard sourced anchors are cash-aid ~87¢ and food-aid ~45¢ reaching the person, per GiveDirectly and the UN WFP). Rented stack sums to $100; shared node re-spends the same $100.</p>
+
+  <div class="panel">
+    <svg viewBox="0 0 1180 680" id="chart" role="img" aria-label="Sankey: a community dollar splits four ways, toggle rented versus shared"></svg>
+    <div class="togglebar">
+      <button class="btn on" id="btnA" type="button">rented stack</button>
+      <button class="btn" id="btnB" type="button">shared node</button>
+    </div>
+    <div class="statenote" id="statenote"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:#3b82f6"></span> funding in</span>
+      <span><span class="sw" style="background:#10b981"></span> reaches a person</span>
+      <span><span class="sw" style="background:#f59e0b"></span> staff &amp; delivery</span>
+      <span><span class="sw" style="background:#8b5cf6"></span> tools &amp; platforms (subscriptions · fees · processors)</span>
+      <span><span class="sw" style="background:#14b8a6"></span> recirculates in the community</span>
+    </div>
+  </div>
+
+  <div class="take"><strong>The honest dollar:</strong> a small community org feeds about <strong>20¢</strong>, pays people
+  <strong>30¢</strong> to do the work, and hands <strong>~40¢ to the tools &amp; platforms</strong> that
+  connect and record it — subscriptions, per-seat fees, processors, platform takes. The community itself
+  keeps roughly <strong>nothing</strong>. The only hard fact in that run: for a <em>staffed delivery
+  org</em>, the sector's "75–90% to program" is dominated by that very staff — the person eats a small
+  share of it. On a shared node the ~40 the tools and landlords took goes to ~18, and the released ~30
+  <strong>stays in the community</strong>. Fewer corporate fingers, <strong>more of the same dollar</strong>.</div>
+
+  <div class="foot"><b>Honesty — fix before ships:</b> figures are <b>derived, not measured</b>. The
+  person-reaches anchor is real-sourced only in the extreme (GiveDirectly ~87¢ cash; UN WFP ~45¢ food);
+  in a community delivery org the real number is lower-bounded by staff/tools share and estimated here as
+  <b>~20¢</b>. "Recirculates → 30" on the shared side is the platform take that stops leaving; it's a
+  designed property, not yet a banked figure. Replace all four with the coop's real scenario numbers before
+  this goes anywhere near a sponsor. The "recipient becomes a member" loop is designed, not building.</div>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('chart');
+  var defs = document.createElementNS(NS, 'defs');
+  svg.appendChild(defs);
+
+  /* ==================== data (illustrative) ==================== */
+  var SOURCES = [
+    { n: 'Community donations',  v: 40 },
+    { n: 'Foundation grants',    v: 30 },
+    { n: 'Events',               v: 20 },
+    { n: 'Program partnerships', v: 10 }
+  ];
+  var SOURCE_TOP = '#60a5fa', SOURCE_BOT = '#2563eb';
+  var HUB_TOP = '#f0abfc', HUB_BOT = '#7e22ce';
+  var SPLITS = [
+    { n: 'Reaches a person (meals · goods)',   c: '#10b981', a: 20, b: 22 },
+    { n: 'Staff & delivery (the people doing it)', c: '#f59e0b', a: 30, b: 30 },
+    { n: 'Tools & platforms (subscriptions · fees · processors)', c: '#8b5cf6', a: 40, b: 18 },
+    { n: 'Recirculates in the community', c: '#14b8a6', a: 10, b: 30 }
+  ];
+
+  /* ---------------- geometry ---------------- */
+  var unit = 5.5, gap = 20, padTop = 84;
+  var W = 1180, H = 680;
+  var X1 = 30, W1 = 235;
+  var X2 = 540, W2 = 150;
+  var X3 = 880, W3 = 290;
+  var HUB_H = 100 * unit;   // 550px tall hub (100 "dollars")
+
+  var srcBoxes = [], sy = padTop;
+  SOURCES.forEach(function (s) {
+    var h = s.v * unit;
+    srcBoxes.push({ x: X1, y: sy, h: h, w: W1, n: s.n, v: s.v });
+    sy += h + 12;
+  });
+
+  /* helpers */
+  function el(t, a, c) { var n = document.createElementNS(NS, t); for (var k in a) n.setAttribute(k, a[k]); if (c != null) n.textContent = c; svg.appendChild(n); return n; }
+  function grad(id, x1, y1, x2, y2, c1, c2) {
+    var g = document.getElementById(id);
+    if (!g) {
+      g = document.createElementNS(NS, 'linearGradient');
+      g.id = id; g.gradientUnits = 'userSpaceOnUse';
+      g.setAttribute('x1', x1); g.setAttribute('y1', y1); g.setAttribute('x2', x2); g.setAttribute('y2', y2);
+      var a = document.createElementNS(NS, 'stop'); a.setAttribute('offset', '0'); a.setAttribute('stop-color', c1); a.setAttribute('stop-opacity', 0.92);
+      var b = document.createElementNS(NS, 'stop'); b.setAttribute('offset', '1'); b.setAttribute('stop-color', c2); b.setAttribute('stop-opacity', 0.92);
+      g.appendChild(a); g.appendChild(b); defs.appendChild(g);
+    }
+  }
+
+  function band(x1, y1a, y1b, x2, y2a, y2b, c1, c2, id) {
+    id = 'g' + id.replace(/[^a-zA-Z0-9]/g, '');
+    grad(id, x1, (y1a + y1b) / 2, x2, (y2a + y2b) / 2, c1, c2);
+    var mid = x1 + (x2 - x1) / 2;
+    el('path', { class: 'band', fill: 'url(#' + id + ')',
+      d: 'M ' + x1 + ',' + y1a + ' C ' + mid + ',' + y1a + ', ' + mid + ',' + y2a + ', ' + x2 + ',' + y2a
+       + ' L ' + x2 + ',' + y2b + ' C ' + mid + ',' + y2b + ', ' + mid + ',' + y1b + ', ' + x1 + ',' + y1b + ' Z' });
+    el('path', { class: 'grain', fill: 'none', stroke: 'rgba(255,255,255,.5)', 'stroke-width': 1.4, 'stroke-dasharray': '4 7',
+      d: 'M ' + x1 + ',' + ((y1a + y1b) / 2) + ' C ' + mid + ',' + ((y1a + y1b) / 2) + ', ' + mid + ',' + ((y2a + y2b) / 2) + ', ' + x2 + ',' + ((y2a + y2b) / 2) });
+  }
+
+  function box(x, y, w, h, c1, c2, labelTxt) {
+    var id = 'b' + (y | 0) + '_' + (h | 0) + '_' + c1.slice(1);
+    grad(id, x, y, x, y + h, c1, c2);
+    el('rect', { x: x, y: y, width: w, height: h, rx: 5, fill: 'url(#' + id + ')' });
+    if (labelTxt) {
+      var fs = Math.max(9, Math.min(13, h * 0.42));
+      el('text', { x: x + 10, y: y + h / 2 + 4, class: 'bbox-label', 'font-size': fs }, labelTxt);
+    }
+  }
+  function label(x, y, s, cls, anchor) { el('text', { x: x, y: y, class: cls || 'gnode', 'text-anchor': anchor || 'start' }, s); }
+
+  /* ================= render ================= */
+  window.RENDER = function (t) {   // t: 0 = rented stack, 1 = shared node
+    /* clear all children EXCEPT defs, then re-attach + clear defs so gradients stay in the document */
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(defs);
+    defs.innerHTML = '';
+
+    label(X1, 34, 'IN', 'colhead');
+    label(X3, 34, 'WHERE THE DOLLAR GOES', 'colhead');
+
+    /* sources -> hub */
+    var unitH = HUB_H / 100;
+    var yA = padTop;
+    srcBoxes.forEach(function (b) {
+      var h = b.v * unitH;
+      band(X1 + W1, b.y, b.y + b.h, X2, yA, yA + h, SOURCE_TOP, HUB_TOP, 's' + b.y);
+      yA += h;
+    });
+    /* source boxes */
+    srcBoxes.forEach(function (b) {
+      box(b.x, b.y, b.w, b.h, SOURCE_TOP, SOURCE_BOT, b.n + '  ' + b.v);
+    });
+
+    /* hub */
+    var hg = 'hubg';
+    grad(hg, X2, padTop, X2, padTop + HUB_H, HUB_TOP, HUB_BOT);
+    el('rect', { x: X2, y: padTop, width: W2, height: HUB_H, rx: 8, fill: 'url(#' + hg + ')' });
+    label(X2 + W2 / 2, padTop + HUB_H / 2 - 12, 'The organization', 'hub-title', 'middle');
+    label(X2 + W2 / 2, padTop + HUB_H / 2 + 12, 'carries the cost so the community', 'hub-sub', 'middle');
+    label(X2 + W2 / 2, padTop + HUB_H / 2 + 28, 'is served, not billed', 'hub-sub', 'middle');
+
+    /* split boxes (right) at state t */
+    var y3 = padTop, boxes = [];
+    SPLITS.forEach(function (s) {
+      var v = s.a + (s.b - s.a) * t;
+      var h = Math.max(v * unit, 14);
+      boxes.push({ y: y3, h: h, s: s, val: Math.round(v) });
+      y3 += h + 16;
+    });
+
+    /* hub -> split bands */
+    var yB = padTop;
+    boxes.forEach(function (bb) {
+      var hh = bb.val * unitH;
+      band(X2 + W2, yB, yB + hh, X3, bb.y, bb.y + bb.h, HUB_BOT, bb.s.c, 'o' + bb.s.c);
+      yB += hh;
+    });
+
+    /* split boxes */
+    boxes.forEach(function (bb) {
+      box(X3, bb.y, W3, bb.h, lighten(bb.s.c), bb.s.c, bb.s.n + '   ' + bb.val);
+    });
+
+    /* statenote */
+    var note = document.getElementById('statenote');
+    if (note) {
+      note.textContent = t < 0.5
+        ? 'Rented stack — feeds ~20¢, staff ~30, tools & platforms ~40, and the community keeps almost nothing.'
+        : 'Shared node — tools thin to 18, and the ~30 the platforms took now stays in the community.';
+    }
+    btnA.classList.toggle('on', t < 0.5);
+    btnB.classList.toggle('on', t >= 0.5);
+  };
+
+  function lighten(hex) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    r = Math.min(255, r + 70); g = Math.min(255, g + 70); b = Math.min(255, b + 70);
+    return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+  }
+
+  /* toggle buttons with a smooth 900ms transition */
+  var btnA = document.getElementById('btnA');
+  var btnB = document.getElementById('btnB');
+  var target = 0, cur = 0, raf = null;
+
+  function animate() {
+    cur += (target - cur) * 0.12;
+    if (Math.abs(target - cur) < 0.004) cur = target;
+    window.RENDER(cur);
+    if (Math.abs(target - cur) > 0.004) raf = requestAnimationFrame(animate);
+    else raf = null;
+  }
+  function go(t) { target = t; if (!raf) raf = requestAnimationFrame(animate); }
+  btnA.addEventListener('click', function () { go(0); });
+  btnB.addEventListener('click', function () { go(1); });
+
+  /* first draw at rented stack */
+  window.RENDER(0);
+
+  /* after 2.6s, flip to shared once so people see the move without clicking */
+  setTimeout(function () { go(1); }, 2800);
+})();
+</script>
+</body>
+</html>

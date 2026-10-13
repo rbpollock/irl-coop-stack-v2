@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1080" />
+    <title>The map needs a road under it</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1080px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0e12;
+      }
+      #root {
+        position: relative;
+        width: 1080px;
+        height: 1080px;
+        overflow: hidden;
+        background: radial-gradient(115% 90% at 50% 46%, #0e151c 0%, #0a0e12 58%, #06080b 100%);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      #field {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .beat {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 96px;
+      }
+      .line {
+        text-align: center;
+        color: #e8eef2;
+        font-weight: 600;
+        letter-spacing: -0.022em;
+        line-height: 1.3;
+        text-shadow: 0 3px 30px rgba(6, 8, 11, 0.95);
+      }
+      .t-xl { font-size: 78px; }
+      .t-lg { font-size: 64px; }
+      .t-md { font-size: 52px; }
+      .w { display: inline-block; }
+      .hl {
+        color: #5eead4;
+        font-weight: 800;
+        font-style: normal;
+      }
+      #lockup {
+        position: absolute;
+        inset: auto 0 96px 0;
+        text-align: center;
+      }
+      .lockup-inner {
+        color: #5eead4;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: 0.34em;
+        text-transform: lowercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="31.5"
+      data-width="1080"
+      data-height="1080"
+      data-fps="30"
+    >
+      <svg id="field" class="clip" data-start="0" data-duration="31.5" viewBox="0 0 1080 1080">
+        <defs>
+          <radialGradient id="groundGrad" cx="50%" cy="100%" r="78%">
+            <stop offset="0%" stop-color="#1d6f63" stop-opacity="0.55" />
+            <stop offset="55%" stop-color="#14544c" stop-opacity="0.30" />
+            <stop offset="100%" stop-color="#0d3b37" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <g id="dots0"></g>
+        <g id="dots1"></g>
+        <g id="dots2"></g>
+        <g id="reaches"></g>
+        <rect id="ground" x="-120" y="892" width="1320" height="280" fill="url(#groundGrad)" opacity="0" data-layout-allow-overflow="true" />
+        <g id="ties"></g>
+        <line
+          id="road"
+          x1="130"
+          y1="906"
+          x2="950"
+          y2="906"
+          stroke="#5eead4"
+          stroke-width="5"
+          stroke-linecap="round"
+          opacity="0"
+        />
+      </svg>
+
+      <div id="copy" class="clip" data-start="0" data-duration="31.5">
+      <div class="beat" id="s1">
+        <div class="line t-lg">
+          Jessica is right. Seeing each other is not the same as being able to <em>act together</em>.
+        </div>
+      </div>
+
+      <div class="beat" id="s2">
+        <div class="line t-md">
+          Two movements can find each other, agree completely, and still not hold
+          <em>money jointly</em>, share a <em>member list</em>, or run a project on the same
+          <em>surface</em>.
+        </div>
+      </div>
+
+      <div class="beat" id="s3">
+        <div class="line t-lg">
+          Each group <em>rents its tools separately</em> and owns none of them.
+        </div>
+      </div>
+
+      <div class="beat" id="s4">
+        <div class="line t-md">
+          Cooperatives sit at the top of her list, and there is still nothing on it that lets two
+          groups <em>operate as one thing</em>.
+        </div>
+      </div>
+
+      <div class="beat" id="s5">
+        <div class="line t-md">
+          That missing layer is the one we're building at irl.coop. The group is the
+          <em>account</em>, a <em>Safe</em> with seats, roles and votes.
+        </div>
+      </div>
+
+      <div class="beat" id="s6">
+        <div class="line t-xl">
+          The list is the <em>map</em>. This is a <em>road</em> under it.
+        </div>
+      </div>
+      </div>
+
+      <div id="lockup" class="clip" data-start="29.6" data-duration="1.9">
+        <div class="lockup-inner">irl.coop</div>
+      </div>
+    </div>
+
+    <script>
+      /* ---------- deterministic helpers (no Date.now, no Math.random) ---------- */
+      var NS = "http://www.w3.org/2000/svg";
+
+      function rng(seed) {
+        var s = seed >>> 0;
+        return function () {
+          s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+          return s / 4294967296;
+        };
+      }
+
+      function svgEl(name, attrs) {
+        var e = document.createElementNS(NS, name);
+        for (var k in attrs) e.setAttribute(k, attrs[k]);
+        return e;
+      }
+
+      /* ---------- the field: the movements, scattered ---------- */
+      var rand = rng(20261003);
+      var layers = [
+        { id: "dots0", n: 74, r: 1.9, op: 0.34, amp: 9, per: 1.0, phase: 0.0, scaleAmp: 0.012 },
+        { id: "dots1", n: 54, r: 2.7, op: 0.5, amp: 15, per: 1.4, phase: 2.1, scaleAmp: 0.02 },
+        { id: "dots2", n: 30, r: 3.7, op: 0.72, amp: 23, per: 0.85, phase: 4.3, scaleAmp: 0.028 }
+      ];
+      var accents = [];
+
+      layers.forEach(function (L) {
+        var g = document.getElementById(L.id);
+        for (var i = 0; i < L.n; i++) {
+          var x = 40 + rand() * 1000;
+          var y = 40 + rand() * 900;
+          /* keep the middle band calm so the words stay readable */
+          if (x > 130 && x < 950 && y > 355 && y < 725 && rand() < 0.8) {
+            y = rand() < 0.5 ? 70 + rand() * 265 : 745 + rand() * 265;
+          }
+          var c = svgEl("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: L.r, fill: "#2f7480" });
+          c.setAttribute("opacity", L.op);
+          g.appendChild(c);
+        }
+      });
+
+      /* a handful of brighter nodes, each breathing on its own */
+      var accentSrc = document.getElementById("dots2");
+      for (var a = 0; a < 12; a++) {
+        var ax = 70 + rand() * 940;
+        var ay = 60 + rand() * 860;
+        var node = svgEl("circle", { cx: ax.toFixed(1), cy: ay.toFixed(1), r: 4.6, fill: "#63d8c9" });
+        node.setAttribute("opacity", "0.85");
+        accentSrc.appendChild(node);
+        accents.push(node);
+      }
+
+      /* ---------- contact that never holds ---------- */
+      var reachPairs = [
+        [236, 172, 402, 262], [780, 208, 622, 300], [300, 812, 470, 726],
+        [742, 786, 596, 700], [168, 470, 330, 402], [906, 452, 760, 388],
+        [420, 868, 512, 744], [660, 150, 566, 268], [140, 690, 286, 606],
+        [884, 664, 748, 596]
+      ];
+      var reachG = document.getElementById("reaches");
+      var lines = [];
+      reachPairs.forEach(function (p) {
+        var len = Math.sqrt(Math.pow(p[2] - p[0], 2) + Math.pow(p[3] - p[1], 2));
+        var ln = svgEl("line", {
+          x1: p[0], y1: p[1], x2: p[2], y2: p[3],
+          stroke: "#e0a44a", "stroke-width": 1.6, "stroke-linecap": "round",
+          "stroke-dasharray": "7 7"
+        });
+        ln.setAttribute("opacity", "0");
+        reachG.appendChild(ln);
+        lines.push({ el: ln, len: len });
+      });
+
+      /* ---------- contact that holds ---------- */
+      var tiePairs = [
+        [236, 172, 402, 262], [780, 208, 622, 300], [300, 812, 470, 726],
+        [742, 786, 596, 700], [168, 470, 330, 402], [906, 452, 760, 388]
+      ];
+      var tieG = document.getElementById("ties");
+      var ties = [];
+      tiePairs.forEach(function (p) {
+        var len = Math.sqrt(Math.pow(p[2] - p[0], 2) + Math.pow(p[3] - p[1], 2));
+        var ln = svgEl("line", {
+          x1: p[0], y1: p[1], x2: p[2], y2: p[3],
+          stroke: "#5eead4", "stroke-width": 2.2, "stroke-linecap": "round",
+          "stroke-dasharray": len, "stroke-dashoffset": len
+        });
+        ln.setAttribute("opacity", "0");
+        tieG.appendChild(ln);
+        ties.push({ el: ln, len: len });
+      });
+
+      /* ---------- split copy into word spans (hl preserved) ---------- */
+      function splitWords(host) {
+        if (host.getAttribute("data-wrapped")) return;
+        host.setAttribute("data-wrapped", "1");
+        var frag = document.createDocumentFragment();
+        [].slice.call(host.childNodes).forEach(function (node) {
+          var isHl = node.nodeType === 1;
+          var text = node.textContent || "";
+          text.split(/(\s+)/).forEach(function (piece) {
+            if (!piece) return;
+            if (/^\s+$/.test(piece)) {
+              frag.appendChild(document.createTextNode(" "));
+              return;
+            }
+            var sp = document.createElement("span");
+            sp.className = isHl ? "w hl" : "w";
+            sp.textContent = piece;
+            frag.appendChild(sp);
+          });
+        });
+        host.innerHTML = "";
+        host.appendChild(frag);
+      }
+      ["s1", "s2", "s3", "s4", "s5", "s6"].forEach(function (id) {
+        splitWords(document.querySelector("#" + id + " .line"));
+      });
+
+      /* ---------- the timeline ---------- */
+      var tl = gsap.timeline({ paused: true });
+
+      gsap.set(".beat", { opacity: 0 });
+      gsap.set("#ground", { opacity: 0, scaleY: 0.02, transformOrigin: "50% 100%" });
+      gsap.set("#road", { opacity: 0 });
+      gsap.set(lines.map(function (l) { return l.el; }), { opacity: 0 });
+      gsap.set(ties.map(function (t) { return t.el; }), { opacity: 0 });
+
+      var END = 31.5;
+
+      /* the field never stops: chained drift + breathing, whole lifespan */
+      layers.forEach(function (L) {
+        var g = document.getElementById(L.id);
+        var steps = 64;
+        for (var i = 1; i <= steps; i++) {
+          var f = i / steps;
+          var yv =
+            Math.sin(f * Math.PI * 2 * L.per + L.phase) * L.amp +
+            Math.sin(f * Math.PI * 2 * L.per * 2.3 + L.phase * 1.7) * L.amp * 0.38;
+          tl.to(g, { y: yv, duration: END / steps, ease: "none" }, (END * (i - 1)) / steps);
+        }
+        var ssteps = 40;
+        for (var j = 1; j <= ssteps; j++) {
+          var g2 = j / ssteps;
+          var sv = 1 + Math.sin(g2 * Math.PI * 2 * (L.per * 0.6) + L.phase) * L.scaleAmp;
+          tl.to(g, { scale: sv, svgOrigin: "540 540", duration: END / ssteps, ease: "none" },
+            (END * (j - 1)) / ssteps);
+        }
+      });
+
+      accents.forEach(function (node, i) {
+        var steps = 18;
+        for (var i2 = 1; i2 <= steps; i2++) {
+          var v = 0.45 + 0.42 * Math.sin((i2 / steps) * Math.PI * 2 * 1.7 + i * 0.9);
+          tl.to(node, { opacity: v, duration: END / steps, ease: "none" }, (END * (i2 - 1)) / steps);
+        }
+      });
+
+      /* the reach attempts, through the "rented tools" beats */
+      var reachTimes = [5.0, 6.2, 7.4, 8.6, 9.8, 11.0, 12.4, 13.6, 14.8, 15.4];
+      lines.forEach(function (l, i) {
+        var t = reachTimes[i];
+        tl.set(l.el, { opacity: 1 }, t);
+        tl.fromTo(l.el, { attr: { "stroke-dashoffset": l.len } },
+          { attr: { "stroke-dashoffset": 0 }, duration: 0.55, ease: "power1.inOut" }, t);
+        tl.to(l.el, { opacity: 0, duration: 0.55, ease: "power1.in" }, t + 0.95);
+      });
+
+      /* the shared ground rises under them */
+      tl.fromTo("#ground", { opacity: 0, scaleY: 0.02 },
+        { opacity: 1, scaleY: 1, duration: 1.7, ease: "power3.out" }, 20.7);
+
+      /* and the ties hold */
+      ties.forEach(function (t, i) {
+        var at = 22.4 + i * 0.28;
+        tl.set(t.el, { opacity: 0.55 }, at);
+        tl.fromTo(t.el, { attr: { "stroke-dashoffset": t.len } },
+          { attr: { "stroke-dashoffset": 0 }, duration: 0.7, ease: "power2.out" }, at);
+      });
+
+      /* the road draws across */
+      tl.set("#road", { opacity: 1, attr: { "stroke-dasharray": 820, "stroke-dashoffset": 820 } }, 27.9);
+      tl.to("#road", { attr: { "stroke-dashoffset": 0 }, duration: 1.1, ease: "power2.inOut" }, 27.9);
+      tl.to("#ground", { opacity: 1.35, duration: 1.0, ease: "power2.out" }, 28.0);
+
+      /* the words, beat by beat */
+      var beats = [
+        { id: "s1", t: 0.0, dur: 4.2 },
+        { id: "s2", t: 4.2, dur: 7.4 },
+        { id: "s3", t: 11.6, dur: 4.0 },
+        { id: "s4", t: 15.6, dur: 5.0 },
+        { id: "s5", t: 20.6, dur: 6.8 },
+        { id: "s6", t: 27.4, dur: 4.1 }
+      ];
+      beats.forEach(function (b, i) {
+        /* crossfade at the seam: the next sentence starts landing as the
+           previous one leaves, so the frame is never wordless */
+        var t0 = Math.max(0, b.t - 0.3);
+        tl.set("#" + b.id, { opacity: 1 }, t0);
+        if (i < beats.length - 1) {
+          tl.to("#" + b.id, { opacity: 0, duration: 0.14, ease: "power1.in" },
+            b.t + b.dur - 0.14);
+        }
+        tl.fromTo("#" + b.id + " .w", { opacity: 0, y: 16, scale: 1.05 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.42, stagger: 0.05, ease: "power2.out" }, t0 + 0.05);
+        var hlCount = document.querySelectorAll("#" + b.id + " .hl").length;
+        tl.fromTo("#" + b.id + " .hl", { textShadow: "0 0 0px rgba(94,234,212,0)" },
+          { textShadow: "0 0 26px rgba(94,234,212,0.9)", duration: 0.5, stagger: 0.06, ease: "power2.out" },
+          t0 + 0.05 + hlCount * 0.02);
+        tl.to("#" + b.id + " .hl",
+          { textShadow: "0 0 11px rgba(94,234,212,0.35)", duration: 0.9, stagger: 0.06, ease: "power2.inOut" },
+          t0 + 0.95);
+      });
+
+      tl.fromTo("#lockup .lockup-inner", { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, 30.4);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

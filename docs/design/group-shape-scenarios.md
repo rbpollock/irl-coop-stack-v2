@@ -249,7 +249,7 @@ really a *composition* of these, not ten bespoke builds.
 |---|---|---|
 | **Labor/contribution credit** (Tier-2 time-bank) | childcare, hobby, food skills, farmers, hand-me-down, growing team | 📐 designed (Tier-2, hash-chained) |
 | **Resource match** (offer ↔ need) | farmers, tool library, hand-me-down, hobby (trading) | 📐 designed (bus `match.*`) |
-| **Inventory + reservation** (checkout/booking) | tool library, childcare space, hobby materials | 🆕 not designed |
+| **Inventory + reservation** (checkout/booking) | tool library, childcare space, hobby materials | 🆕 not designed — **model now specified: `resource-model.md`**; the state machine itself is unbuilt |
 | **Funding pool** (pot of money) | hobby materials, tool maintenance, theater fundraising | 📐 designed — the group's Safe *is* the flat pool; sub-projects become **child groups** (own Safe + budget) via a rights-set "child" relationship |
 | **Fairness / reciprocity** (anti-freeloader) | food skills, hand-me-down, tool library, childcare | 📐 designed (regenerative score) |
 | **Calendar / rotation / coverage** | theater, childcare, farmers | 🆕 partial (Plane has none with coverage floors) |

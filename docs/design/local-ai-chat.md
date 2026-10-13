@@ -4,8 +4,9 @@ Status: design · Sep 2026 · Builds on knowledge-aggregation.md (the public/gro
 visibility tiers and the union query), the coop-api MCP gateway (`api.irl.coop/mcp` —
 `rag.retrieve_area_contexts` with the per-call `rerank` flag), and the dashboard chat
 widget (the floating-surface pattern). Part of a wider "apps behind one MCP hub"
-direction that also brings a CMS (Payload) and a CRM (Twenty) — see the integration
-note at the end.
+direction that also brings a CMS (Payload) and a CRM (Twenty) — see the integration note at the end.
+Provider choice (the on-device model, the coop-run CPU fallback, and members' own providers)
+and how group-scoped agents authenticate are in byo-inference-and-group-scoped-agents.md.
 
 ## 0. The model in one paragraph
 

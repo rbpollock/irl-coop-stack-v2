@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>irl.coop — where a community dollar goes (Sankey v4 · grouped)</title>
+<style>
+  :root { --fore: var(--foreground,#0f172a); --muted: var(--muted-foreground,#64748b); --accent: var(--accent,#14b8a6); --border: var(--border,#e2e8f0); --card: var(--card,#ffffff); }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui,-apple-system,sans-serif; color: var(--fore); background: transparent; margin: 0; padding: 26px 34px; }
+  .wrap { max-width: 1320px; }
+  h1 { font-size: 1.5rem; font-weight: 750; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: .87rem; margin: 0 0 4px; }
+  .src { color: var(--muted); font-size: .72rem; margin: 0 0 18px; line-height: 1.55; }
+  .panel { border: 1px solid var(--border); border-radius: 16px; background: var(--card); padding: 16px 18px 12px; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 12px 32px -16px color-mix(in srgb, var(--accent) 32%, transparent); }
+  svg { width: 100%; height: auto; display: block; }
+  .colhead { fill: var(--muted); font-size: .74rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .bar-label { fill: #fff; font-size: .7rem; font-weight: 700; }
+  .bar-sub { fill: rgba(255,255,255,.85); font-size: .6rem; }
+  .hub-label { fill: #fff; font-size: .9rem; font-weight: 800; }
+  .hub-sub { fill: rgba(255,255,255,.82); font-size: .6rem; }
+  .grp-label { fill: var(--muted); font-size: .64rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .gp { width: 44px; height: 12px; border-radius: 6px; display: inline-block; }
+  .legend { display: flex; gap: 20px; margin-top: 12px; font-size: .73rem; color: var(--muted); flex-wrap: wrap; align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .take { margin-top: 16px; padding: 14px 17px; border-radius: 13px; background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 6%, transparent)); border: 1px solid color-mix(in srgb, var(--accent) 36%, transparent); font-size: .86rem; line-height: 1.6; }
+  .foot { margin-top: 12px; font-size: .72rem; color: var(--muted); line-height: 1.55; }
+  .foot b { color: var(--fore); }
+  .bar { transition: filter .12s; cursor: help; }
+  .bar:hover { filter: brightness(1.18); }
+  .grain { animation: flow 3.4s linear infinite; opacity: .5; }
+  @keyframes flow { from { stroke-dashoffset: 104; } to { stroke-dashoffset: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Where a community dollar goes</h1>
+  <p class="sub">Every $1 a member-run organization raises — where it comes from, the functions it must carry to run, and what finally reaches the community.</p>
+  <p class="src">Organized by <b>function</b> — the nonprofit budget lens (a Form 990 classifies expense as management/general, program, and fundraising; we show the same four functions a member-run org actually carries). Amounts are illustrative placeholders modeled on the categories in <code>docs/design/cost-model.data.json</code> (verified 2026-09-13) — a draft for the coop to swap. <b>Community impact</b> = 100 − running costs, so the receipt balances. Hover a bar or flow to trace a dollar.</p>
+
+  <div class="panel">
+    <svg viewBox="0 0 1320 760" id="chart" role="img" aria-label="Sankey: funding sources, into the organization, into four functional cost groups plus community impact"></svg>
+    <div class="legend">
+      <span><span class="sw" style="background:linear-gradient(180deg,#7dd3fc,#0284c7)"></span> funding sources</span>
+      <span><span class="gp" style="background:linear-gradient(90deg,#f0abfc 0%,#c084fc 40%,#2dd4bf 100%)"></span> a dollar flowing to a function</span>
+      <span><span class="sw" style="background:linear-gradient(180deg,#c4b5fd,#6d28d9)"></span> people &amp; capacity</span>
+      <span><span class="sw" style="background:linear-gradient(180deg,#7dd3fc,#0284c7)"></span> tools &amp; subscriptions</span>
+      <span><span class="sw" style="background:linear-gradient(180deg,#5eead4,#0f766e)"></span> finance &amp; compliance</span>
+      <span><span class="sw" style="background:linear-gradient(180deg,#a5f3fc,#0e7490)"></span> place &amp; community</span>
+      <span><span class="sw" style="background:linear-gradient(180deg,#34d399,#047857)"></span> community impact</span>
+    </div>
+  </div>
+
+  <div class="take"><strong>Read by function, the way a real budget reads:</strong> the org's <strong>$38 of every
+  $100</strong> is what running costs — largest of these is always <strong>people &amp; capacity</strong>
+  (staff, HR, management), then <strong>tools &amp; subscriptions</strong>, <strong>finance &amp;
+  compliance</strong>, <strong>place &amp; community</strong>. The rest, <strong>$62 reaches the
+  community</strong>. We do not hide the overhead; we price it, because pretending to run on nothing is how
+  a receipt becomes an allegation.</div>
+
+  <div class="foot"><b>Honesty — fix before signing live:</b> every number is an illustrative placeholder; the
+  38/62 split is a draft target, not a realized record. Replace with the coop's own budget-approved figures
+  (and function shares) before any on-screen use. <b>People &amp; capacity</b> reflects the general largest
+  line of a real nonprofit; if irl.coop runs without paid staff, that is a deliberate, disclosed choice, not
+  a hidden figure. Card processing (in both worlds) is excluded.</div>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('chart');
+  var defs = document.createElementNS(NS, 'defs');
+
+  /* ---------- DATA (illustrative placeholders) ---------- */
+  var groups = [
+    { name: 'PEOPLE & CAPACITY', top: '#c4b5fd', bot: '#6d28d9', mid: '#8b5cf6',
+      items: [
+        { n: 'Salaries & wages',            v: 10 },
+        { n: 'HR & benefits',               v: 6  },
+        { n: 'Management & admin overhead', v: 4  }
+      ] },
+    { name: 'TOOLS & SUBSCRIPTIONS', top: '#7dd3fc', bot: '#0284c7', mid: '#0ea5e9',
+      items: [
+        { n: 'Software & subscriptions',    v: 4 },
+        { n: 'Email · storage · backup',     v: 2 },
+        { n: 'Telephone & internet',         v: 2 }
+      ] },
+    { name: 'FINANCE & COMPLIANCE', top: '#a7f3d0', bot: '#0f766e', mid: '#14b8a6',
+      items: [
+        { n: 'Accounting, bookkeeping & audit', v: 3 },
+        { n: 'Legal & tax',                     v: 2 },
+        { n: 'Finance & payment fees',          v: 1 }
+      ] },
+    { name: 'PLACE & COMMUNITY', top: '#a5f3fc', bot: '#0e7490', mid: '#06b6d4',
+      items: [
+        { n: 'Office & meeting (own)',     v: 2 },
+        { n: 'Travel & grassroots',        v: 1 },
+        { n: 'Printing / post / materials',v: 1 }
+      ] }
+  ];
+
+  var srcItems = [
+    { n: 'Grants',                v: 27 },
+    { n: 'Individual donors',     v: 26 },
+    { n: 'Foundations',           v: 15 },
+    { n: 'Fundraising campaigns', v: 14 },
+    { n: 'Events',                v: 12 }
+  ];
+
+  var HUB_TOP = '#f0abfc', HUB_BOT = '#7e22ce';
+  var IMP_TOP = '#34d399', IMP_BOT = '#047857';
+  var SRC_TOP = '#7dd3fc';
+
+  var total = function (l) { return l.reduce(function (a, b) { return a + b.v; }, 0); };
+  var costTotal = 0;
+  groups.forEach(function (g) { costTotal += total(g.items); });
+  var impactV = 100 - costTotal;   /* balances always */
+
+  /* ---------- layout ---------- */
+  var unit = 2.7, padTop = 78, gapStack = 7;
+  var X1 = 30, W1 = 210;
+  var X2 = 570, W2 = 160;
+  var X3 = 960, W3 = 340;
+
+  /* source boxes */
+  var srcBoxes = [], y = padTop;
+  srcItems.forEach(function (it) {
+    var h = Math.max(it.v * unit - 2, 10);
+    srcBoxes.push({ x: X1, y: y, w: W1, h: h, it: it });
+    y += h + gapStack;
+  });
+
+  /* right column: group regions + bars */
+  var y3 = padTop, groupRegions = [], rBars = [];
+  groups.forEach(function (g) {
+    var gTop = y3, acc = 0;
+    g.items.forEach(function (it) {
+      var h = Math.max(it.v * unit - 2, 12);
+      rBars.push({ x: X3, y: y3, w: W3, h: h, it: it, g: g });
+      y3 += h + gapStack; acc += h;
+    });
+    groupRegions.push({ g: g, top: gTop, bottom: y3 });
+    y3 += 26;   // separator for the next group
+  });
+
+  var impactH = Math.max(impactV * unit, 14);
+  var impactY = y3 + 10;
+  var impactBox = { x: X3, y: impactY, w: W3, h: impactH };
+  var hub = { x: X2, y: padTop, w: W2, h: impactY + impactH - padTop };
+
+  /* ---------- helpers ---------- */
+  function elp(t, a, c) { var n = document.createElementNS(NS, t); for (var k in a) n.setAttribute(k, a[k]); if (c != null) n.textContent = c; svg.appendChild(n); return n; }
+  function lab(x, y, s, cls, anc) { elp('text', { x: x, y: y, class: cls || 'bar-label', 'text-anchor': anc || 'start' }, s); }
+
+  var gcache = {};
+  function grad(id, x1, y1, x2, y2, cA, cB) {
+    if (!gcache[id]) {
+      var g = document.createElementNS(NS, 'linearGradient');
+      g.id = id; g.gradientUnits = 'userSpaceOnUse';
+      g.setAttribute('x1', x1); g.setAttribute('y1', y1); g.setAttribute('x2', x2); g.setAttribute('y2', y2);
+      var a = document.createElementNS(NS, 'stop'); a.setAttribute('offset', '0'); a.setAttribute('stop-color', cA); a.setAttribute('stop-opacity', 0.92);
+      var b = document.createElementNS(NS, 'stop'); b.setAttribute('offset', '1'); b.setAttribute('stop-color', cB); b.setAttribute('stop-opacity', 0.92);
+      g.appendChild(a); g.appendChild(b); defs.appendChild(g); gcache[id] = 1;
+    }
+  }
+
+  /* flowing band with a real gradient from source color to destination color */
+  function flow(x1, y1a, y1b, x2, y2a, y2b, cA, cB) {
+    var id = 'F' + x1 + '_' + (y1a | 0) + '_' + x2 + '_' + (y2a | 0) + '_' + cA.slice(1) + cB.slice(1);
+    grad(id, x1, (y1a + y1b) / 2, x2, (y2a + y2b) / 2, cA, cB);
+    var mid = x1 + (x2 - x1) / 2;
+    elp('path', {
+      d: 'M ' + x1 + ',' + y1a + ' C ' + mid + ',' + y1a + ', ' + mid + ',' + y2a + ', ' + x2 + ',' + y2a
+       + ' L ' + x2 + ',' + y2b + ' C ' + mid + ',' + y2b + ', ' + mid + ',' + y1b + ', ' + x1 + ',' + y1b + ' Z',
+      fill: 'url(#' + id + ')', class: 'band'
+    });
+    elp('path', {
+      d: 'M ' + x1 + ',' + ((y1a + y1b) / 2) + ' C ' + mid + ',' + ((y1a + y1b) / 2) + ', ' + mid + ',' + ((y2a + y2b) / 2) + ', ' + x2 + ',' + ((y2a + y2b) / 2),
+      fill: 'none', stroke: 'rgba(255,255,255,.5)', 'stroke-width': 1.4, 'stroke-dasharray': '4 7', class: 'grain'
+    });
+  }
+
+  function bar(x, y, w, h, cTop, cBot, labelTxt) {
+    var gid = 'B' + (y | 0) + '_' + (h | 0) + '_' + cTop.slice(1) + cBot.slice(1);
+    grad(gid, x, y, x, y + h, cTop, cBot);
+    elp('rect', { x: x, y: y, width: w, height: h, rx: Math.min(6, h / 2), fill: 'url(#' + gid + ')', class: 'bar' });
+    if (labelTxt) lab(x + 12, y + h / 2 + 4, labelTxt, 'bar-label', 'start');
+  }
+
+  /* ---------- headers ---------- */
+  lab(X1, 36, 'Funding', 'colhead');
+  lab(X3, 36, 'Where it goes — four functions', 'colhead');
+
+  /* ---------- flows source -> hub ---------- */
+  var pxPerV = hub.h / 100;
+  var yA = hub.y;
+  srcBoxes.forEach(function (b) {
+    var h = b.it.v * pxPerV;
+    flow(X1 + W1, b.y, b.y + b.h, hub.x, yA, yA + h, SRC_TOP, HUB_TOP);
+    yA += h;
+  });
+
+  /* ---------- flows hub -> right ---------- */
+  var yB = hub.y;
+  rBars.forEach(function (b) {
+    var h = b.it.v * pxPerV;
+    flow(hub.x + W2, yB, yB + h, b.x, b.y, b.y + b.h, HUB_TOP, b.g.mid);
+    yB += h;
+  });
+  var impH = impactV * pxPerV;
+  flow(hub.x + W2, yB, yB + impH, impactBox.x, impactBox.y, impactBox.y + impactBox.h, HUB_TOP, IMP_TOP);
+
+  /* ---------- source bars ---------- */
+  srcBoxes.forEach(function (b) { bar(b.x, b.y, b.w, b.h, SRC_TOP, '#0369a1', b.it.n + '    ' + b.it.v); });
+
+  /* ---------- hub ---------- */
+  var hubO = 'hub-' + (hub.h | 0);
+  grad(hubO, hub.x, hub.y, hub.x, hub.y + hub.h, HUB_TOP, HUB_BOT);
+  elp('rect', { x: hub.x, y: hub.y, width: hub.w, height: hub.h, rx: 9, fill: 'url(#' + hubO + ')', class: 'bar' });
+  lab(hub.x + hub.w / 2, hub.y + hub.h / 2 - 12, 'The organization', 'hub-label', 'middle');
+  lab(hub.x + hub.w / 2, hub.y + hub.h / 2 + 10, 'four functions · one budget', 'hub-sub', 'middle');
+  lab(hub.x + hub.w / 2, hub.y + hub.h / 2 + 24, 'carries the cost so the public reads it', 'hub-sub', 'middle');
+
+  /* ---------- right bars ---------- */
+  rBars.forEach(function (b) { bar(b.x, b.y, b.w, b.h, b.g.top, b.g.bot, b.it.n + '   ' + b.it.v); });
+
+  /* ---------- group regions ---------- */
+  groupRegions.forEach(function (g) {
+    elp('rect', { x: X3 - 14, y: g.top - 16, width: W3 + 28, height: (g.bottom - g.top) + 10, rx: 14, fill: 'rgba(203,213,225,.35)', class: 'band' });
+    lab(X3, g.top - 22, g.g.name, 'grp-label', 'start');
+  });
+
+  /* ---------- impact ---------- */
+  bar(impactBox.x, impactBox.y, impactBox.w, impactBox.h, IMP_TOP, IMP_BOT, 'Community impact — $' + impactV);
+  lab(impactBox.x + impactBox.w / 2, impactBox.y + impactBox.h + 22, 'reaches the community — the point of the dollar', 'bar-sub', 'middle');
+
+  svg.insertBefore(defs, svg.firstChild);
+})();
+</script>
+</body>
+</html>

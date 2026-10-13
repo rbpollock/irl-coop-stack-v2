@@ -25,12 +25,13 @@ appservice fanning metadata into that bus — is in
 - **Apps**: irl-dashboard (Next.js), coop-api (Fastify), Plane CE, NocoDB (custom
   Gate-SSO image), each an OIDC client of the realm.
 - **Data**: shared Citus Postgres `172.17.0.1:5432` (roles/dbs: `irlcoop`,
-  `nocodb`, `stalwart`), shared Redis `:6379` (prefix all keys; plane uses
-  `KEY_PREFIX=plane`; pub/sub `irl:notify:{sub}`), MinIO `:9000/:9001`
-  (buckets `docs`/`stalwart`/`matrix-media`/`plane` — service users
-  docs-s3/stalwart-s3/matrix-s3/plane-s3, all derived keys; plane-minio was
-  retired 2026-08-12, plane now uses the coop store), plane-db `:5434`,
-  keycloak-db `:5433`.
+  `nocodb`, `stalwart`, `plane`, `keycloak`, `erpnext`, `formbricks`, `hievents`,
+  `fusionpbx`, `litefarm` — every app DB now lives here; the old per-app
+  `plane-db :5434` / `keycloak-db :5433` containers are GONE, so don't look for
+  them or set a per-app DB host), shared Redis `:6379` (prefix all keys; plane uses
+  `KEY_PREFIX=plane`; pub/sub `irl:notify:{sub}`), MinIO `:9000/:9001` (buckets
+  `docs`/`stalwart`/`matrix-media`/`plane` — service users docs-s3/stalwart-s3/matrix-s3/plane-s3,
+  all derived keys; plane-minio was retired 2026-08-12, plane now uses the coop store).
 - **Mail**: Stalwart v0.16 (`:8083` webadmin, SMTP/IMAP 25/587/143/993),
   postgres store, internal directory, DKIM selector `dkim`, DNS
   MX/SPF/DMARC/DKIM live at Gandi.
@@ -177,6 +178,17 @@ Validate:  `docker compose -f infra/out/dev/compose/<pillar>/docker-compose.yml 
   edge, the browser, or inspect.
 - **Approvals**: terminal commands are approval-gated. A denied command is never
   retried or rephrased.
+- **Model store (inference)**: model weights are DATA, not code — they live once in
+  `infra/instances/dev/data/models/` (gitignored; that `data/` dir is root-owned
+  because containers create it) and are bind-mounted read-only at `/models` into the
+  inference containers. Populate with `infra/scripts/fetch-model.sh <hf-repo> <file>`
+  — it downloads inside a container that mounts the store, sidestepping host perms.
+  Inference images are therefore THIN: a rebuild never re-downloads weights, and one
+  store backs several containers (`rag-inference` still bakes its own — a migration
+  candidate). `llm-inference` is the coop-run CPU chat fallback (llama.cpp
+  `llama-server`, internal-only, host bridge `172.17.0.1:8002`, derived
+  `${SECRET:llm.inference}`, OpenAI-compatible `/v1/chat/completions`); provider choice
+  and BYO is designed in `docs/design/byo-inference-and-group-scoped-agents.md`.
 - **Secrets — TWO-TIER model (2026-08-11, derived keys + ansible vault)**:
   1. **Derived keys**: `infra/instances/dev/secrets/master.key` (32B random,
      gitignored, 0600) → HKDF-SHA256 derives every secret WE generate.

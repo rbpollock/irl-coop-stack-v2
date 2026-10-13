@@ -1,0 +1,11 @@
+{
+  "name": "response-gif",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.117 preview",
+    "check": "npx --yes hyperframes@0.8.117 check",
+    "render": "npx --yes hyperframes@0.8.117 render",
+    "publish": "npx --yes hyperframes@0.8.117 publish"
+  }
+}

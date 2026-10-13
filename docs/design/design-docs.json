@@ -288,6 +288,78 @@
     "file": "mautic-calcom-mcp-inference.md"
   },
   {
+    "slug": "caldiy-scheduling-and-paid-bookings",
+    "title": "cal.diy + paid bookings — how to add them",
+    "category": "Infrastructure",
+    "status": "design",
+    "description": "Plan: deploy cal.diy (the MIT Cal.com fork — no teams, no SSO; webhooks + API v2 retained), the three identity routes, and why paid bookings are the stack's shared \"an outsider pays a group\" seam rather than a cal.diy feature — blocked behind the payments preflight, never cal.diy's Stripe app.",
+    "file": "caldiy-scheduling-and-paid-bookings.md"
+  },
+  {
+    "slug": "scoped-availability",
+    "title": "Scoped availability — a member's time, disclosed by audience",
+    "category": "Groups & governance",
+    "status": "design",
+    "description": "A member's availability as scoped time budgets: a group sees its own slots, the world sees a count, nobody sees the calendar — granularity as the privacy dial, the anchor substrate that makes the count verifiable, and why a scheduler must never own this record.",
+    "file": "scoped-availability.md"
+  },
+  {
+    "slug": "resource-model",
+    "title": "The resource model — what a group holds, uses, or schedules",
+    "category": "Groups & governance",
+    "status": "design",
+    "description": "What a *resource* is when the stack has record families for events and no registry for things: axes rather than a type taxonomy (location kind, engagement mode, contention, custodian, obligations, provenance, disclosure), where tools, land, structures, maintenance and delivery routes each land, why people are never resources, and why a route or a range is the case that proves the model.",
+    "file": "resource-model.md"
+  },
+  {
+    "slug": "central-resource-store",
+    "title": "The central store for real-world resources — farm things out of the farm app",
+    "category": "Groups & governance",
+    "status": "design",
+    "description": "Decoupling farm data from the farm app: the three candidate centres (ERPNext, coop-api, or split-by-fact), what ERPNext's Agriculture domain app already models (Land Unit, Crop, Crop Cycle, non-overlapping block availability), what happens to LiteFarm, the cheap reversible test on the existing bench, and the one-home-per-fact rule that actually fixes RISKS R-10.",
+    "file": "central-resource-store.md"
+  },
+  {
+    "slug": "where-facts-live",
+    "title": "Where facts live — the fact-kind split",
+    "category": "Strategy & narrative",
+    "status": "design",
+    "description": "Why split-by-fact does not fragment across domains and sectors: seven fact kinds that already exist in the stack, exactly one of which is delegated to an app, the two five-second tests, the invariant that a new domain may add content but never a new kind of home, and sectors as profiles rather than architecture.",
+    "file": "where-facts-live.md"
+  },
+  {
+    "slug": "app-admission-audit",
+    "title": "App admission — audit against the bar",
+    "category": "Infrastructure",
+    "status": "note",
+    "description": "Dated snapshot: ten apps scored against the admission bar (mapping, gate, event leg, marker, reconciler). Method and confidence stated. The finding: no app clears all four, the gap concentrates in marker and reconciler, mail is the reference implementation, and the best-integrated apps are the ones already treated as projections.",
+    "file": "app-admission-audit.md"
+  },
+  {
+    "slug": "crm-under-fact-kinds",
+    "title": "The CRM question under the fact-kind split — ERPNext-native vs Twenty",
+    "category": "Apps & files",
+    "status": "design",
+    "description": "Revisits the parked Twenty CRM intent under the fact-kind rule: a CRM can only ever hold operational records, never identity or visibility — and REALITY's own CRM milestone is a disclosure property, so no CRM can meet it from inside. Recommends ERPNext-native (4/5 on the bar) with Twenty parked behind a stated trigger.",
+    "file": "crm-under-fact-kinds.md"
+  },
+  {
+    "slug": "site-plugins-and-embeds",
+    "title": "irl.coop on other people's platforms — plugins, widgets, and the connector",
+    "category": "Apps & files",
+    "status": "design",
+    "description": "Squarespace, Wix and WordPress plugins that surface coop features via coop-api: what each platform actually allows (WordPress full, Wix partial via Velo, Squarespace widget-only), why the surface is a projection that owns no facts, the bar applied to a site (with the event leg inverted and a DNS marker), and the third-party-cookie constraint that decides the auth design.",
+    "file": "site-plugins-and-embeds.md"
+  },
+  {
+    "slug": "payment-stub-and-handoff",
+    "title": "The payment seam — a stub rail, and the checkout handoff",
+    "category": "Economy & treasury",
+    "status": "design",
+    "description": "Stub or spike is a false choice: the rail seam already exists (RAIL_* plus the coop's own status vocabulary) and the acceptance test is already written (six preflight gates). How a stub rail unblocks all ecommerce product work while never being able to report ready, the checkout-handoff flow that lets a site do ecommerce without ever taking the card, the spike in three phases, and what only a real payment can prove.",
+    "file": "payment-stub-and-handoff.md"
+  },
+  {
     "slug": "handoff-2026-08-13",
     "title": "Session Handoff (2026-08-13)",
     "category": "Working notes",
@@ -606,5 +678,21 @@
     "status": "note",
     "description": "Pick-the-thread state: A1 (role-as-identity) is done and proven; A2+A3 collapse into cert + per-user connection (cert is just another user credential, vault/realtime); the incorrectly-scoped ident/peer correction; the 3 error classes; and the reset e2e-test password flag.",
     "file": "nocodb-rebuild-handoff.md"
+  },
+  {
+    "slug": "member-scoped-app-access",
+    "title": "Member-scoped app access — Plane, NocoDB, ERPNext, Temporal",
+    "category": "Infrastructure",
+    "status": "design",
+    "description": "The rule (a member's access = the app resources their groups own; no service identity ever), the two existing halves (the coop_my_seats resolver + the resource_scopes map), per-app enforcement seams and gaps, what group-scoped Temporal info requires, and the build order.",
+    "file": "member-scoped-app-access.md"
+  },
+  {
+    "slug": "group-operated-stack",
+    "title": "Operating the Stack From Within",
+    "category": "Infrastructure",
+    "status": "design",
+    "description": "Successorship is a group, not a person: the irl.coop group is created with the stack’s own tools and the whole stack is designed to be operated by it from inside. The capability inventory (inside, group-held, or concentrated with an aim), the vault as precondition, a group mechanism for root, service accounts as a member kind, the coop’s three governing bodies, and the re-scored backlog.",
+    "file": "group-operated-stack.md"
   }
 ]
