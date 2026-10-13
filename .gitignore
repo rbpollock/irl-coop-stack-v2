@@ -40,6 +40,9 @@ apps/coop-api/data/
 *.sqlite3
 
 # ── Logs ────────────────────────────────────────────────────────
+# Runtime output from stack-up-hosts.sh and the backup scripts (backup.log, restore-drill.log,
+# move-docker-dataroot.log, the ipfs add stderr, the lock file). Never repo content.
+.logs/
 *.log
 certs/renew.log
 
