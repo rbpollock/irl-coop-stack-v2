@@ -1,0 +1,169 @@
+# Image provenance manifest — every irlcoop/* image the stack deploys.
+#
+# Purpose: no deployed image may exist without a recorded recipe. `docs/IMAGE-PROVENANCE.md`
+# explains the classes and the reasoning; this file is the machine-readable register.
+#
+#   class: A  reproducible from this repo (build context + all source in the tree)
+#          B  patch in this repo, pinned upstream fetched at build time
+#          C  was NOT reproducible from this repo — now recovered (see note)
+#
+# A rebuild is: read the entry, run the recipe. If an entry is missing for a deployed tag,
+# that is a defect, not a detail.
+version: 1
+measured: 2026-10-13
+
+images:
+  - tag: irlcoop/cinny:v4.12.6
+    app: cinny
+    class: A
+    recipe: infra/build/images/cinny/
+    upstream: https://github.com/cinnyapp/cinny
+    pin: tag v4.12.6
+    patch: infra/build/images/cinny/apply-patch.mjs   # irl.coop auto-login → SSO
+
+  - tag: irlcoop/element-web:v1.12.18
+    app: element-web
+    class: A
+    recipe: infra/build/images/element-web/
+    upstream: https://github.com/element-hq/element-web
+    pin: release v1.12.18 tarball (ADD, not built)
+
+  - tag: irlcoop/embed-rerank:0.1.0
+    app: embed-rerank
+    class: A
+    recipe: infra/build/images/embed-rerank/
+    note: cross-encoder rerank sidecar; source (app.py, requirements.txt) is in the tree
+
+  - tag: irlcoop/formbricks-gate-sso:5.4.0-irl.7
+    app: formbricks
+    class: B
+    recipe: infra/build/images/formbricks/build.sh
+    upstream: https://github.com/formbricks/formbricks
+    pin: commit 286958e36464663489bfbc73d87abbd0f573825f   # the 5.4.0 tag
+    patches:
+      - infra/build/images/formbricks/irlcoop-fork.patch        # gate-SSO auto-login
+      - infra/build/images/formbricks/irlcoop-chrome.patch      # brand chrome
+      - infra/build/images/formbricks/irlcoop-templates.patch   # Cooperation Starter Pack
+
+  - tag: irlcoop/freeswitch:spike-opus
+    app: freeswitch
+    class: A
+    recipe: infra/build/images/freeswitch/
+    upstreams:
+      - https://github.com/signalwire/libks          # v2.0.9
+      - https://github.com/freeswitch/spandsp        # v3.1.1
+      - https://github.com/freeswitch/sofia-sip      # v1.13.18
+      - https://github.com/signalwire/freeswitch     # v1.10.12
+    note: four pinned clones, all tags recorded in the Dockerfile
+
+  - tag: irlcoop/fusionpbx:spike
+    app: fusionpbx
+    class: A
+    recipe: infra/build/images/fusionpbx/
+    upstream: https://github.com/fusionpbx/fusionpbx
+    pin: tag 5.5.7
+    patch: in-tree files (header_sso.php, logout.php, nginx conf)
+
+  - tag: irlcoop/hievents-gate-sso:1.11.1-beta.4
+    app: hievents
+    class: B
+    recipe: infra/build/images/hievents/build.sh
+    upstream: Hi.Events
+    patch: infra/instances/dev/assets/hievents/irlcoop-gate-sso.patch
+    note: ~20-40 min build; clones to /home/service/build/hievents-src
+
+  - tag: irlcoop/litefarm-api:2026.08.30
+    app: litefarm
+    class: B
+    recipe: infra/build/images/litefarm/build.sh   # builds both api and web
+    note: patch inline in build.sh — verify it carries the change explicitly
+
+  - tag: irlcoop/litefarm-web:2026.08.30
+    app: litefarm
+    class: B
+    recipe: infra/build/images/litefarm/build.sh
+
+  - tag: irlcoop/llm-inference:0.1.0
+    app: llm-inference
+    class: A
+    recipe: infra/build/images/llm-inference/
+    base: ghcr.io/ggml-org/llama.cpp:server
+    note: thin by design; weights live in the shared model store, mounted read-only
+
+  - tag: irlcoop/nocodb-gate-sso:2026.08.12
+    app: nocodb
+    class: C → vendoring in progress
+    recipe: fork github.com/rbpollock/nocodb branch irlcoop (a9097a26), Dockerfile.irlcoop at the fork root
+    note: >
+      The fork is OUTSIDE this monorepo. The image also carries two pre-built minified
+      nc-gui chunks that were copied rather than built (the base-list `loadProjects` chunk
+      and the chatwoot-removal chunk) because the fork's nc-gui source is an older version.
+      Those are binary artifacts — the fix is to vendor nc-gui source at the matching
+      version and re-express both changes as source patches.
+
+  - tag: irlcoop/plane-mcp:0.1.0
+    app: plane-mcp
+    class: A
+    recipe: infra/build/images/plane-mcp/
+    note: server.mjs is in the tree; no npm install, image stays tiny
+
+  - tag: irlcoop/postgres-citus:12.1-vector-postgis-pgroonga
+    app: postgres-citus
+    class: A
+    recipe: infra/build/images/postgres-citus/
+    base: citusdata/citus:12.1
+    note: adds PostGIS + pgvector + pgroonga and the Groonga apt repo
+
+  - tag: irlcoop/postiz:2026.08.3
+    app: postiz
+    class: B
+    recipe: infra/build/images/postiz/build.sh
+    patch: infra/build/images/postiz/irlcoop-fork.patch
+
+  - tag: irlcoop/rag-api:0.1.0-1024
+    app: rag-api
+    class: C → RECOVERED 2026-10-13
+    recipe: vendor/rag-api/ (ours — in-house, not a fork) + overlay infra/build/images/rag-embed/api-overlay/
+    note: source recovered from the deployed image; build recipe reconstructed from its layer history
+
+  - tag: irlcoop/rag-worker:0.1.0-1024
+    app: rag-worker
+    class: C → RECOVERED 2026-10-13
+    recipe: vendor/rag-worker/ (ours) + overlay infra/build/images/rag-embed/worker-overlay/
+    note: same recovery; the image's bulk is deps + model weights, deliberately not vendored
+
+  - tag: irlcoop/roundcube-oidc:1.6
+    app: roundcube
+    class: A
+    recipe: infra/compose/communication/roundcube/
+    base: roundcube/roundcubemail:latest   # ← unpinned base: a reproducibility risk
+    note: config.inc.php + the shadcn-mail skin + the coop_theme plugin are all in the tree
+
+  - tag: irlcoop/synapse-s3:v1.118.0
+    app: synapse
+    class: A
+    recipe: infra/build/images/synapse-s3/
+    base: matrixdotorg/synapse:v1.118.0
+    note: entrypoint.py in the tree
+
+  - tag: irlcoop/webstudio-builder-gate-sso:2026.08.26
+    app: webstudio
+    class: B
+    recipe: infra/instances/dev/assets/webstudio/README.md
+    upstream: https://github.com/webstudio-community/webstudio-fork
+    pin: branch develop @ da1f9bb98a002f7d13232fcc448cb6da70f6fc0d
+    patch: infra/instances/dev/assets/webstudio/gate-sso.patch
+    note: we have no push access to the upstream fork — the patch file is the durable copy
+
+  - tag: irlcoop/wordpress:7.1-php8.2-wpcli
+    app: wordpress
+    class: A
+    recipe: infra/build/images/wordpress/
+    base: wordpress:7.1-php8.2-apache
+    note: wp-cli 2.12.0 phar added (pinned release)
+
+# ── deliberately NOT backed up, and why (docs/BACKUP.md tier 3) ────────────────
+rebuildable_bulk:
+  - model weights (infra/scripts/fetch-model.sh) — re-downloadable
+  - the PMTiles basemap + Noto glyphs (23 GB, build scripts) — rebuildable
+  - container images themselves — rebuildable FROM this manifest, which is the point

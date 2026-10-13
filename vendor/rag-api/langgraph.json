@@ -1,0 +1,15 @@
+{
+  "dependencies": ["./"],
+  "graphs": {
+    "agent": "./agent.py:graph"
+  },
+  "env": ".env",
+  "auth": {
+    "path": "./langgraph_auth.py:auth"
+  },
+  "http": {
+    "app": "./langgraph_http_app.py:app",
+    "enable_custom_route_auth": true,
+    "middleware_order": "auth_first"
+  }
+}

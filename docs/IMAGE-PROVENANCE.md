@@ -60,7 +60,9 @@ upstream SHA and URL remain reachable**.
   monorepo**, and the image additionally carries **two pre-built minified nc-gui chunks** that
   were *not* built from the fork's source (the `CthfTbo6.js` base-list chunk and the
   chatwoot-removal chunk). Those are binaries with no source path today.
-- **`rag-api` / `rag-worker`** — **no build context exists anywhere in the tree.** No
+- **`rag-api` / `rag-worker`** — **RECOVERED 2026-10-13 → `vendor/rag-api/`, `vendor/rag-worker/`**
+  (source extracted from the deployed image; `Dockerfile.irlcoop` reconstructed from its layer
+  history). Originally: **no build context existed anywhere in the tree.** No
   Dockerfile, no patch, no build script. The `-1024` overlays
   (`infra/build/images/rag-embed/*/Dockerfile`) sit on an `0.1.0` base that this repo cannot
   produce. The images carry **no provenance labels**, so their origin is not recoverable from
@@ -150,7 +152,7 @@ third-party fork. This is the same gate as `docs/design/marketplace-template-str
 
 | # | Question | Recommendation |
 |---|---|---|
-| 1 | Recover + vendor **C** now (2 images, small source)? | **Yes** — the source is 2 MB and the alternative is hoping the image survives |
+| 1 | Recover + vendor **C** now (2 images, small source)? | **DONE 2026-10-13** — `vendor/rag-api/` (2.2 MB, 153 `.py`) and `vendor/rag-worker/` (468 KB, 27 `.py`) recovered from the images. NocoDB remains: the fork is public and reachable (`rbpollock/nocodb` @ `a9097a26`), its tree measures **157 MB without history** |
 | 2 | Vendor **B** (5 images) as well, or keep clone-at-pinned-SHA? | Vendor the **small** ones; for the large codebases weigh repo size against the upstream-disappearance risk |
 | 3 | Vendored subtree or git submodule? | **Subtree.** A submodule keeps the dependency on someone else's host, which is the externality being removed |
 | 4 | Where did `rag-api` / `rag-worker` come from? | Needs the owner's memory — the images carry no provenance. The source is extractable either way |

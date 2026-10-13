@@ -1,0 +1,28 @@
+# Reconstructed 2026-10-13 from the deployed image's own layer history
+# (`docker history --no-trunc irlcoop/rag-worker:0.1.0`). This reproduces the layer
+# commands the shipping image was built from — it is not a guess about intent.
+# Verify against the tree: the image's CMD is `celery -A worker.celery_app.celery_app worker`, and src/worker/celery_app.py is in this tree
+FROM python:3.12
+
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app/src
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      default-jre-headless libxcb1 libxext6 libxrender1 libsm6 libglib2.0-0 libgl1 \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml /app/
+
+# Dependencies come from pyproject.toml at build time (base deps + whatever
+# optional groups INSTALL_OPTIONAL_GROUPS names). The original build did not pin
+# versions, so a rebuild today resolves current releases — see PROVENANCE.md.
+ARG INSTALL_OPTIONAL_GROUPS=""
+RUN pip install --upgrade pip && \
+    INSTALL_OPTIONAL_GROUPS="$INSTALL_OPTIONAL_GROUPS" python -c "import os, tomllib; f = open('pyproject.toml', 'rb'); data = tomllib.load(f); deps = list(data['project'].get('dependencies', [])); optional = data['project'].get('optional-dependencies', {}); groups = [item.strip() for item in os.environ.get('INSTALL_OPTIONAL_GROUPS', '').split(',') if item.strip()]; [deps.extend(optional.get(group, [])) for group in groups]; print('\n'.join(dict.fromkeys(deps)))" > requirements.txt && \
+    pip install -r requirements.txt
+
+COPY . /app
+CMD ["celery", "-A", "worker.celery_app.celery_app", "worker", "--loglevel=INFO"]
