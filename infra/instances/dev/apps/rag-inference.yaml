@@ -11,8 +11,21 @@ ports:
   - "8001:8000"
 env:
   EMBED_MODEL: "BAAI/bge-large-en-v1.5"
+  # Reranker = bge-reranker-v2-m3, chosen by MEASUREMENT not by size. On a
+  # 21-item labelled query set (infra/scripts/rag-eval) it scored hit@1 71.4% /
+  # MRR 0.766; the smaller bge-reranker-base scored 42.9% / 0.584 — WORSE than
+  # turning reranking off entirely (47.6% / 0.630) while still costing 5x the
+  # latency. The cheap model is a false economy on this corpus: do NOT swap it
+  # back down for speed. Speed comes from the candidate pool instead (see
+  # RERANK_TOP_N in rag-api.yaml).
   RERANK_MODEL: "BAAI/bge-reranker-v2-m3"
+  RERANK_MAX_LENGTH: "256"
   INFERENCE_API_KEY: "${SECRET:rag.inference}"
+  # Use every core: this box is 8-core and the reload/thrash defaults leave
+  # most of it idle during a rerank batch.
+  OMP_NUM_THREADS: "8"
+  MKL_NUM_THREADS: "8"
+  TOKENIZERS_PARALLELISM: "false"
 volumes:
   - rag_hf_cache:/root/.cache/huggingface
 named_volumes:

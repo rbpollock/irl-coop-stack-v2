@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Provision the FULL per-member identity chain (A2/A3) for every real member:
-#   LOGIN role  +  GRANT coop_member  +  coop_member_role(role -> sub)  +  client cert.
+#   LOGIN role  +  GRANT coop_member  +  coop_member_role(role -> sub)  +  client cert
+#   +  GRANT role TO coop_app (so the app role can SET LOCAL ROLE into it).
 #
 # A member without this chain falls back to the `coop` role + app.sub GUC
 # injection, which has NO USAGE on the grp_* schemas -> "permission denied for
 # schema grp_<uuid>" when NocoDB opens any table in a group/personal base.
+#
+# A member without the coop_app grant is reachable by NocoDB (cert auth) but NOT
+# by coop-api's member-scoped path (see docs/design/member-scoped-app-access.md).
 #
 # Idempotent: existing role/mapping/cert are left alone.
 #
@@ -59,6 +63,10 @@ while IFS= read -r sub; do
   fi
   # 2. inherit coop_member (group-schema USAGE + view SELECT)
   psql_super "GRANT coop_member TO $role" >/dev/null
+  # 2b. make the role enterable by the app role (option 2: coop-api SET LOCAL
+  #     ROLEs into the member role per transaction instead of running as the
+  #     table owner). Without this the new member is unreachable to the app.
+  psql_super "GRANT $role TO coop_app" >/dev/null
   # 3. role -> sub mapping (RLS resolves session_user via coop_role_sub())
   psql_super "INSERT INTO coop_member_role (role_name, sub) VALUES ('$role', '$sub') ON CONFLICT (role_name) DO NOTHING" >/dev/null
   # 4. client cert (CN = role)

@@ -66,11 +66,15 @@ else
   done <<< "$subs"
 fi
 
-anon="$(psql_coop "SELECT set_config('app.sub','anonymous',false); SELECT count(*) FROM groups" | tail -1)"
-if [ "$anon" = "0" ]; then
-  echo "  PASS anonymous sees 0 groups [0]"
+# `privacy='open'` groups are deliberately discoverable (groups_select:
+# `privacy = 'open' OR coop_is_member(id) OR created_by = coop_current_sub()`),
+# so "anonymous sees 0 groups" was stale. The real invariant is that anonymous
+# sees NOTHING non-open — i.e. no private/closed group ever leaks.
+anon_open="$(psql_coop "SELECT set_config('app.sub','anonymous',false); SELECT count(*) FROM groups WHERE privacy <> 'open'" | tail -1)"
+if [ "$anon_open" = "0" ]; then
+  echo "  PASS anonymous sees no non-open groups [0 private/closed visible]"
 else
-  echo "  FAIL anonymous sees groups [$anon]"
+  echo "  FAIL anonymous sees non-open groups [$anon_open]"
   FAIL=1
 fi
 

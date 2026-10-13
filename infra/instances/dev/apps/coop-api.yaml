@@ -57,9 +57,15 @@ env:
   SAFE_BACKEND_SIGNER_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
   COOP_DB_HOST: 172.17.0.1
   COOP_DB_PORT: "5432"
+  # OWNER connection — DDL/ops ONLY. The member-facing pool connects as
+  # COOP_DB_MEMBER_USER (default `coop_app`: non-owner, NOBYPASSRLS, able to
+  # SET LOCAL ROLE into a member's own role) and gets its identity per request
+  # via withIdentity(). See docs/design/member-scoped-app-access.md §3.
   COOP_DB_USER: coop
   COOP_DB_PASSWORD: ${SECRET:postgres.coop}
   COOP_DB_NAME: irlcoop
+  COOP_DB_MEMBER_USER: coop_app
+  POSTGRES_COOP_APP: ${SECRET:postgres.coop-app}
   # coop_ops operator role (least-privilege; EXECUTE-only on the platform-admin
   # promotion functions) — password for the dedicated opsPool in db.ts.
   COOP_OPS: ${SECRET:coop.ops}
@@ -80,6 +86,14 @@ env:
   # calls GET /api/internal/groups?sub=<sub> (CoopGroupsMapper SPI JAR) to
   # resolve a user's groups live from coop-api. Server-to-server only.
   KEYCLOAK_GROUPS_TOKEN: ${SECRET:keycloak.groups-token}
+  # --- coop-run CPU chat fallback (llm-inference, docker bridge :8002) ---
+  # The provider key stays server-side: the dashboard assistant calls
+  # /api/v1/assistant/chat on coop-api and this process holds the key. Named
+  # neutrally (URL + model), like the rail — the vendor/model belongs behind the
+  # seam, not in the core. See docs/design/byo-inference-and-group-scoped-agents.md.
+  INFERENCE_URL: http://172.17.0.1:8002
+  INFERENCE_MODEL: irl-coop-fallback
+  INFERENCE_API_KEY: ${SECRET:llm.inference}
 
   # --- payment rails: coop-api holds the CONTRACT and the coop's POLICY, never a vendor SDK ---
   # The rail service (apps/peer_xyz_payments) owns the provider; this side owns the rules.

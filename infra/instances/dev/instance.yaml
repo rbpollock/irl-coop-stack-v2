@@ -47,6 +47,8 @@ apps:
   - rag-migrate
   - rag-api
   - rag-worker
+  - llm-inference
+  - plane-mcp
   - erpnext
   - wordpress
   - peer_xyz_payments

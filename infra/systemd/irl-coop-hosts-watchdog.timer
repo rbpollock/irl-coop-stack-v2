@@ -1,0 +1,17 @@
+[Unit]
+Description=irl.coop host-app watchdog timer (every 2 minutes)
+# The self-heal for the host-process apps — see the .service for why. Kept
+# deliberately cheap: stack-up-hosts.sh health-checks each port in ~5s and only
+# acts on an app that is not answering.
+Documentation=file:/home/service/development/irl-coop-stack-v2/docs/design/infra-management-monitoring.md
+
+[Timer]
+# First run 3 minutes after boot (give irl-coop-stack.service room to finish),
+# then every 2 minutes.
+OnBootSec=3min
+OnUnitActiveSec=2min
+# AccuracySec=1 (default is 1min and would stretch the 2-minute period).
+AccuracySec=1
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,26 @@
+[Unit]
+Description=irl.coop host-app watchdog (re-run the idempotent host bring-up)
+# WHY. The host-process apps (web :3000, coop-api :3001, peer_xyz_payments :3010,
+# treasury-relayer :3020, hardhat :8545) are launched by stack-up-hosts.sh and
+# have NO supervisor: nothing restarts them if they die. ts-node-dev --respawn
+# recovers from a CRASH but NOT from a TypeScript compile error — it exits and
+# never respawns, leaving the process tree alive and the port dead. On
+# 2026-09-29 a mid-edit save to apps/coop-api/src/safe.ts did exactly that, and
+# https://api.irl.coop returned 502 until it was noticed on 2026-10-03.
+#
+# stack-up-hosts.sh is already idempotent and health-checked (it starts only an
+# app that is not answering on its port), so re-running it IS the self-heal: the
+# worst case is a few minutes of the API being down instead of four days.
+After=irl-coop-stack.service
+Wants=irl-coop-stack.service
+
+[Service]
+Type=oneshot
+# Same user as irl-coop-stack.service: docker-group member, no root needed, and
+# it keeps .logs/ + the status snapshot owned by `service`.
+User=service
+Group=service
+ExecStart=/home/service/development/irl-coop-stack-v2/infra/scripts/stack-up-hosts.sh
+# A wedged host app can make an individual probe wait for its 5s timeout; the
+# whole run stays well inside this.
+TimeoutStartSec=180

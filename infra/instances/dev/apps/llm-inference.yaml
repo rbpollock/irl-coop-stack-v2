@@ -1,0 +1,40 @@
+# llm-inference — self-hosted CPU chat generation (llama.cpp `llama-server`), the
+# coop-run fallback tier for the dashboard chat / MCP harness. Internal-only (no
+# edge route): the harness reaches it over the host bridge (172.17.0.1:8002)
+# presenting the derived Bearer key. Speaks the OpenAI-compatible
+# /v1/chat/completions contract, so it is a provider-seam adapter like any other
+# (docs/design/byo-inference-and-group-scoped-agents.md) — generation is a
+# separate app from retrieval (rag-inference :8001) so it never sits on the
+# retrieval critical path.
+name: llm-inference
+pillar: workflow
+enabled: true
+type: image
+image: irlcoop/llm-inference:0.1.0
+ports:
+  - "8002:8080"
+env:
+  INFERENCE_API_KEY: "${SECRET:llm.inference}"
+  # Model served from the bind-mounted store. Default is the store's `model.gguf`
+  # symlink; pin an explicit file to run a specific model.
+  MODEL_PATH: "/models/model.gguf"
+  # Use every core (8-core box). Default model is Qwen2.5-3B-Instruct Q4_K_M.
+  LLAMA_THREADS: "8"
+  LLAMA_CTX: "8192"
+dev:
+  volumes:
+    # Models are DATA, not code: kept once in the instance model store and bound
+    # read-only into the container, so an image rebuild never re-downloads and
+    # the same store can back other inference containers (embed-rerank, a 7B
+    # upgrade) without duplication. Populate with infra/scripts/fetch-model.sh.
+    # (Under `dev:` — not `volumes:` — because the generator absolutizes `./`
+    # host paths in dev.volumes into the .override.yml; a bare `volumes:` entry
+    # would resolve relative to out/dev/compose/workflow/.)
+    - ./data/models:/models:ro
+restart: unless-stopped
+healthcheck:
+  test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 120s

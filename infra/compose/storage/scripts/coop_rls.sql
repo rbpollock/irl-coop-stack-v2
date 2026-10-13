@@ -1279,3 +1279,99 @@ GRANT SELECT ON
   payment_intent_view, telephony_resources_view
 TO coop_member;
 
+-- =====================================================================
+-- Member-scoped APP RESOURCE access (Plane first).
+-- Rule: a member's app access = the resources their GROUPS own. The envelope
+-- lives in `resource_scopes` (N groups per resource — sharing is allowed);
+-- every app path resolves through the ONE function below, so changing the rule
+-- is a one-function change. See docs/design/member-scoped-app-access.md.
+-- =====================================================================
+
+-- 1. THE RULE. Membership, not "can view": a member reads the resources of
+--    groups they hold a SEAT in (an open group's resources are not silently
+--    world-readable). SECURITY DEFINER so the answer is stable regardless of
+--    the caller's role — which is exactly why it must gate on coop_is_member
+--    itself rather than leaning on the caller's RLS.
+CREATE OR REPLACE FUNCTION coop_my_resources(p_app text DEFAULT NULL)
+RETURNS TABLE(app text, resource_key text, group_id uuid)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT rs.app, rs.resource_key, rs.group_id
+    FROM resource_scopes rs
+   WHERE coop_is_member(rs.group_id)
+     AND (p_app IS NULL OR rs.app = p_app)
+$$;
+
+-- 2. NO coop-side mirror of app metadata. A mirror would have to be populated by
+--    a privileged read of the app's own database — exactly the blanket credential
+--    this design forbids — and it goes stale behind the app's back. Instead the
+--    APP is modded to accept the member's identity (the NocoDB gate-SSO pattern),
+--    so Plane reads its OWN data and filters `projects.group_id` against the
+--    member's groups. See docs/design/member-scoped-app-access.md §3.
+
+-- RLS helpers are owned by `coop_rls` (BYPASSRLS), matching coop_my_seats /
+-- coop_is_member. Create-then-ALTER so this file stays re-runnable by whichever
+-- role applies it.
+ALTER FUNCTION coop_my_resources(text) OWNER TO coop_rls;
+
+-- 3. Runtime role (option 2): ONE app role that SET LOCAL ROLEs into a member's
+--    role per transaction, so table grants + grp_* schema USAGE bind by ROLE
+--    rather than by the app running as the table OWNER. coop-api connects as this
+--    role for member-facing work; the owner connection is DDL/ops only.
+--
+--    READ BEFORE "IMPROVING" THIS: the RLS helpers (coop_is_member, coop_my_seats,
+--    coop_can_view_group) are SECURITY DEFINER by design — they must read
+--    group_members without re-entering that table's own policy (infinite
+--    recursion). INSIDE them current_user aliases to the DEFINER (coop_rls), so a
+--    role entered via SET ROLE is INVISIBLE, and session_user is coop_app (not in
+--    coop_member_role). Identity therefore still comes from the `app.sub` GUC; the
+--    ROLE supplies the rights. Only per-member CERTS make session_user the member
+--    — and since a multi-tenant coop_api would then hold every member's cert, a
+--    compromised app could impersonate either way. What actually matters is not
+--    holding a credential BROADER than the union of members: coop_app
+--    (NOBYPASSRLS, non-owner, can only enter member roles) satisfies that; the
+--    table owner does not.
+DO $coopapp$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'coop_app') THEN
+    CREATE ROLE coop_app LOGIN;
+  END IF;
+END
+$coopapp$;
+ALTER ROLE coop_app NOBYPASSRLS;
+-- Password is set by provisioning (derived ${SECRET:postgres.coop-app}), never in
+-- this file. Existing member roles are made enterable here; NEW member roles must
+-- also be granted in infra/scripts/provision-member-certs.sh.
+DO $coopapp_grant$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT rolname FROM pg_roles WHERE rolname LIKE 'coop\_m\_%' LOOP
+    EXECUTE format('GRANT %I TO coop_app', r.rolname);
+  END LOOP;
+END
+$coopapp_grant$;
+
+-- 4. Grants the narrower app role needs (the app used to run as the OWNER, so
+--    every one of these was implicit). Split by RLS status — the safety argument
+--    is different for each:
+--      * FORCE RLS tables: broad grants are safe, the policies are the real gate.
+--      * tables WITHOUT RLS: a write grant to coop_member is a straight privilege
+--        escalation, because members hold DIRECT LOGIN roles (cert auth, used by
+--        NocoDB) — anything coop_member can write, a member's own connection can.
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  anchors, markers, tracks, waypoints, member_memory, dues_policy, dues_waiver,
+  payment_intent, tier2_entry, tier2_signature, group_telephony,
+  telephony_resources, phone_message, rail_event
+TO coop_member;
+
+-- Catalogues: READ-ONLY for members (they carry no RLS).
+GRANT SELECT ON
+  grants, roles, role_grants, coop_member_role, telephony_templates, spatial_ref_sys
+TO coop_member;
+
+-- proposals/votes carry NO RLS, so they go to the APP ROLE ONLY: granting them to
+-- coop_member would let any member's direct connection write another group's
+-- governance rows. TODO: give these two RLS like the rest.
+GRANT SELECT, INSERT, UPDATE, DELETE ON proposals, votes TO coop_app;
+

@@ -58,6 +58,13 @@ if [ -f "$ROOT/infra/build/images/cinny/build.sh" ]; then
   ok "cinny built"
 fi
 
+# 7b. wordpress (upstream Apache image + WP-CLI — drives the author site)
+if [ -d "$ROOT/infra/build/images/wordpress" ]; then
+  say "building wordpress (wp-cli)..."
+  docker build -t irlcoop/wordpress:7.1-php8.2-wpcli "$ROOT/infra/build/images/wordpress" >/dev/null
+  ok "wordpress built"
+fi
+
 # 8. formbricks (irl.coop fork — gate-SSO auto-login + SMTP relay + MinIO)
 if [ -f "$ROOT/infra/build/images/formbricks/build.sh" ]; then
   say "building formbricks (gate-SSO)..."

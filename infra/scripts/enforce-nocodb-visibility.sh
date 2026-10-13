@@ -51,3 +51,22 @@ WHERE wu.fk_user_id = u.id
 
 echo "=== AFTER ==="
 psql_noc "SELECT u.email, wu.roles FROM workspace_user wu JOIN nc_users_v2 u ON u.id=wu.fk_user_id ORDER BY u.email;"
+
+# 3. Verify — the leak condition is precisely "a non-super user holding a
+# workspace role", because any such role makes NocoDB's fallback include EVERY
+# base in the workspace. Assert it rather than assume it: a drift (a bootstrap
+# minting a role for a newly-created member) must fail loudly instead of
+# silently re-opening cross-tenant visibility.
+LEAKS="$(psql_noc "
+SELECT count(*)
+FROM workspace_user wu
+JOIN nc_users_v2 u ON u.id = wu.fk_user_id
+WHERE u.roles NOT LIKE '%super%'
+  AND wu.roles IS DISTINCT FROM 'workspace-level-no-access';
+")"
+if [ "$LEAKS" = "0" ]; then
+  echo "OK: no member holds a workspace role — the every-base fallback is closed"
+else
+  echo "FAIL: $LEAKS member(s) hold a workspace role — NocoDB's fallback exposes EVERY base to them"
+  exit 1
+fi

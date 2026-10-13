@@ -2,11 +2,14 @@
 # Public site: WordPress (Apache) + MySQL 8.4 sidecar. No OIDC gate — publicly
 # readable. MySQL (not MariaDB) to match the LocalWP export origin (MySQL 8.0,
 # utf8mb4_unicode_520_ci).
+# The image is our derived build (infra/build/images/wordpress) = upstream
+# wordpress:7.1-php8.2-apache + WP-CLI, so the site can be driven from the
+# shell: `docker exec -u www-data workflow-wordpress-1 wp <cmd> --path=/var/www/html`
 name: wordpress
 pillar: workflow
 type: image
 service_name: wordpress
-image: wordpress:7.1-php8.2-apache
+image: irlcoop/wordpress:7.1-php8.2-wpcli
 env:
   WORDPRESS_DB_HOST: wordpress-db:3306
   WORDPRESS_DB_USER: wordpress
@@ -16,6 +19,23 @@ ports:
   - "8098:80"
 volumes:
   - wordpress-html:/var/www/html
+dev:
+  volumes:
+    # The site's custom code (book CPT, book/event templates, homepage carousel)
+    # as a real plugin, mounted from the instance tree so it is version-controlled
+    # and survives a container recreate. Read-only: wp-admin must not be able to
+    # edit it, or the edit vanishes on the next recreate.
+    #
+    # This sits under `dev:` (not `volumes:`) deliberately — the generator
+    # absolutizes `./` host paths in dev.volumes into the .override.yml, while a
+    # bare `volumes:` entry is passed through verbatim and would resolve
+    # relative to out/dev/compose/<pillar>/ instead of the instance dir.
+    #
+    # It was an mu-plugin living only inside the wordpress-html volume; see
+    # assets/wordpress/README.md for why it had to become an ordinary plugin
+    # (mu-plugins cannot be installed without SFTP, and the live site's SFTP
+    # access is not assured).
+    - ./assets/wordpress/joni-books:/var/www/html/wp-content/plugins/joni-books:ro
 restart: always
 depends_on:
   - wordpress-db

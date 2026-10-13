@@ -15,10 +15,12 @@ import * as nocodbWrite from "./journeys/nocodb-write.mjs"
 import * as nocodbApp from "./journeys/nocodb-app.mjs"
 import * as roundcubeMail from "./journeys/roundcube-mail.mjs"
 import * as search from "./journeys/search.mjs"
+import * as stackStatus from "./journeys/stack-status.mjs"
+import * as planeScope from "./journeys/plane-scope.mjs"
 
 // Order matters: sign-in first (establishes identity), browser last.
-const apiJourneys = [signIn, groupsScope, membership, anonymous]
-const browserJourneys = [nocodbRead, nocodbWrite, nocodbApp, roundcubeMail, search]
+const apiJourneys = [signIn, groupsScope, membership, anonymous, stackStatus]
+const browserJourneys = [nocodbRead, nocodbWrite, nocodbApp, roundcubeMail, search, planeScope]
 
 const runs = [] // [{ journey, ctx }]
 let browser = null
@@ -26,7 +28,13 @@ let browser = null
 try {
   for (const journey of apiJourneys) {
     const ctx = makeCtx()
-    await journey.run(ctx)
+    // Isolate a journey failure: one broken journey must not skip the rest
+    // (it silently hid every later journey until this was added).
+    try {
+      await journey.run(ctx)
+    } catch (err) {
+      ctx.check(`${journey.name}: journey threw`, false, String(err?.message ?? err).slice(0, 160))
+    }
     runs.push({ journey, ctx })
   }
 
@@ -36,7 +44,11 @@ try {
     const ctx = makeCtx()
     ctx.nocodb = session
     ctx.browser = browser
-    await journey.run(ctx)
+    try {
+      await journey.run(ctx)
+    } catch (err) {
+      ctx.check(`${journey.name}: journey threw`, false, String(err?.message ?? err).slice(0, 160))
+    }
     runs.push({ journey, ctx })
   }
 } catch (err) {

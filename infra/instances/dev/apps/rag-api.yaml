@@ -27,7 +27,13 @@ env:
   KEYCLOAK_URL: "https://auth.irl.coop"
   KEYCLOAK_ISSUER: "https://auth.irl.coop/realms/irl-coop"
   KEYCLOAK_JWKS_URL: "https://auth.irl.coop/realms/irl-coop/protocol/openid-connect/certs"
-  KEYCLOAK_GROUPS_CLAIM: groups
+  # Must be the STRING-ARRAY seats claim. rag-api's verifier requires the groups
+  # claim to be a list of strings and silently fails everything else; the coop
+  # JWT's `groups` claim is a JSON string (kept so for oauth2-proxy's
+  # --oidc-groups-claim), so the token carries the same seats as
+  # `group_slugs: string[]` for this consumer. Values are coop group slugs, which
+  # is what an area's group_path must be set to for group-scoped retrieval.
+  KEYCLOAK_GROUPS_CLAIM: group_slugs
   COOP_JWT_ISSUER: "https://api.irl.coop"
   COOP_JWT_JWKS_URL: "https://api.irl.coop/jwks"
   EMBEDDING_PROVIDER: self-hosted
@@ -40,3 +46,17 @@ env:
   RERANK_MODEL: BAAI/bge-reranker-v2-m3
   SELF_HOSTED_RERANK_BASE_URL: "http://172.17.0.1:8001"
   SELF_HOSTED_RERANK_API_KEY: "${SECRET:rag.inference}"
+  # Rerank is ~90% of the search latency, so it is tuned by MEASUREMENT, not by
+  # feel. Labelled eval, 21 items, doc-level (infra/scripts/rag-eval):
+  #   rerank off ....... hit@1 47.6%  MRR 0.630   0.44s
+  #   base, 16 cands ... hit@1 42.9%  MRR 0.584   2.5s   <- WORSE than no rerank
+  #   v2-m3, 16 cands .. hit@1 71.4%  MRR 0.766   7.6s
+  #   v2-m3, 8 cands ... hit@1 66.7%  MRR 0.746   3.7s   <- shipped
+  # 8 candidates halves the latency of 16 with no measurable loss (one query
+  # apart, and 8 is ahead on hit@3); breadth is untouched — the assembler still
+  # returns 9-12 passages either way. Re-run before changing any of this.
+  RETRIEVAL_VECTOR_TOP_K: "30"
+  RETRIEVAL_FTS_TOP_K: "30"
+  RETRIEVAL_MAX_CANDIDATES: "30"
+  RERANK_TOP_N: "8"
+  RERANK_MAX_CHARS_PER_DOC: "700"

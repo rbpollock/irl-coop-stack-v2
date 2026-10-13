@@ -57,6 +57,18 @@ for pillar_dir in "$OUT"/compose/*/; do
   fi
 done
 
+# 1.5. NocoDB visibility: a member must hold NO workspace role, or NocoDB's
+# workspace fallback exposes EVERY base in the workspace to them (cross-tenant
+# leak). Idempotent; the script FAILS when the condition drifts (e.g. a bootstrap
+# minting a role for a newly-created member), so a leak surfaces at bring-up
+# instead of quietly reappearing in a member's base list.
+say "nocodb visibility"
+if bash "$ROOT/infra/scripts/enforce-nocodb-visibility.sh" >/dev/null 2>&1; then
+  ok "member workspace roles normalized (no every-base fallback)"
+else
+  fail "nocodb visibility leak — a member holds a workspace role; run infra/scripts/enforce-nocodb-visibility.sh"
+fi
+
 # 2. Source apps (spec type: source → their own compose)
 say "source apps"
 for spec in "$ROOT"/infra/instances/dev/apps/*.yaml; do

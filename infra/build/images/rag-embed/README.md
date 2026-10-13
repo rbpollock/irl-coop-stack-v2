@@ -15,6 +15,35 @@ and the local `bge-large-en-v1.5` embedder all agree.
 
 `rag-migrate` uses the api image.
 
+## What the overlay patches (keep both reasons in mind)
+
+1. **Embedding dimension 1536 → 1024** — `app/core/settings.py`, `app/db/sql_types.py`
+   (worker: `db/worker/db_types.py`).
+2. **Retrieval relevance is surfaced, not discarded** (server-side, added for the
+   search UI's per-result relevance badge) — `app/routes/mcp.py`,
+   `app/services/retrieval_assembler.py`:
+   - `AssembledContext` gains `score` / `score_kind` / `score_rank`.
+   - `_resolve_context_score()` in the assembler fills them from the best-ranked
+     child kept in the context: the rerank score when the cross-encoder actually
+     ran, else the RRF score. **The two scales are not comparable and are never
+     mixed** — `score_kind` says which one it is; do not average or compare them
+     across kinds.
+   - `_serialize_retrieval()` in `mcp.py` emits the three fields (via `getattr`,
+     so it stays safe against an unpatched assembler).
+
+   The runtime always computed these and dropped them at the MCP boundary; the
+   overlay only carries them through. The dashboard reads `score_kind` to label a
+   reranker percentage vs a plain "related" (RRF-only) result.
+
+**Revert the score patch in one command** (the tag is made before every rebuild):
+```sh
+docker tag irlcoop/rag-api:0.1.0-1024-prescores irlcoop/rag-api:0.1.0-1024
+docker compose -f infra/out/dev/compose/workflow/docker-compose.yml \
+  -f infra/out/dev/compose/workflow/docker-compose.override.yml up -d rag-api
+```
+Tag the current image aside BEFORE rebuilding, i.e.
+`docker tag irlcoop/rag-api:0.1.0-1024 irlcoop/rag-api:0.1.0-1024-prescores`.
+
 ## How to build (host images are LOCAL; no registry)
 The overlay **does NOT pull a base from a registry** — it `FROM`s the existing
 local `irlcoop/rag-*:0.1.0` image, so that base must be present on the daemon

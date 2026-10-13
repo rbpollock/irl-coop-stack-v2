@@ -4,12 +4,23 @@
 -- subject (users.sub). No mirror, no copy — the view is a WHERE clause on the
 -- data itself.
 --
--- Usage: substitute %SUB% with the Keycloak realm subject, then run against
--- plane-db. Sub names contain hyphens, so the view name is sanitized
--- (non-alphanumerics -> '_'). The view is granted to the consumer role.
+-- Usage: substitute %SUB% with the Keycloak realm subject and %GROUP_IDS% with
+-- the member's coop group ids, then run against the plane DB (the old separate
+-- plane-db container is retired — Plane lives on the shared Citus). Sub names
+-- contain hyphens, so the view name is sanitized (non-alphanumerics -> '_'). The
+-- view is granted to the consumer role.
 --
 -- Semantics: projects the user can actually see — public projects in any
--- workspace they belong to, plus private projects they are a member of.
+-- workspace they belong to, private projects they are a direct member of, and
+-- **projects owned by a coop group they hold a seat in** (the group scoping).
+-- `projects.group_id` is the group link; the member's group list is resolved
+-- from the coop DB at view-creation time by
+-- infra/scripts/provision-plane-views.sh, so this stays a WHERE clause on
+-- Plane's own data rather than a copy of it. A membership change just re-runs
+-- the provisioner.
+--
+-- %GROUP_IDS% is a uuid array literal, e.g. ARRAY['5e69dbfd-…'::uuid]. An empty
+-- list means the member owns no Plane resources through any group.
 
 CREATE OR REPLACE VIEW plane_projects__%SUB_SANITIZED% AS
 SELECT DISTINCT
@@ -29,6 +40,10 @@ LEFT JOIN workspace_members wm
 LEFT JOIN project_members pm
        ON pm.project_id = p.id AND pm.member_id = u.id AND pm.is_active
 WHERE p.deleted_at IS NULL
-  AND (p.network = 2 OR pm.id IS NOT NULL);
+  AND (
+        p.network = 2                    -- public in a workspace they belong to
+     OR pm.id IS NOT NULL                -- direct project member
+     OR p.group_id = ANY(%GROUP_IDS%)    -- owned by one of their groups
+      );
 
 -- Example: GRANT SELECT ON plane_projects__<sub> TO nocodb;

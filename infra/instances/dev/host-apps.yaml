@@ -1,0 +1,49 @@
+# Host-process apps — the apps that run as HOST processes (no docker-compose),
+# launched by infra/scripts/stack-up-hosts.sh and routed by the traefik file
+# provider to 172.17.0.1:<port>.
+#
+# WHY THIS FILE EXISTS. The reconciler's view of the stack is `docker ps`: it can
+# only see compose services. These apps have no container, so they were invisible
+# to every status surface — and on 2026-10-03 the report read
+# "✓ 61/61 core services healthy" while https://api.irl.coop had been returning
+# 502 for FOUR DAYS (a mid-edit compile error killed the coop-api dev server on
+# 2026-09-29 and ts-node-dev never respawned). A health headline that cannot see
+# a dead canonical API is worse than no headline.
+#
+# Both implementations read THIS file, so the fleet is declared once:
+#   infra/scripts/stack-report.py   (stdlib, no yaml dep; motd + boot snapshot)
+#   apps/coop-api/src/status.ts     (GET /api/v1/stack/status; the dashboard)
+#
+# Fields:
+#   name   — the app name, matching stack-up-hosts.sh's `start <name>`
+#   port   — the host port it must be answering on (127.0.0.1)
+#   health — the HTTP path that proves liveness (default `/`)
+#   probe  — `http` (default) or `jsonrpc` (no HTTP route; POST eth_blockNumber)
+#   role   — `core` (counted in the headline) | `dev` (reported, not counted).
+#            Unknown is core — never silently ignorable.
+hosts:
+  - name: web
+    port: 3000
+    health: /
+    role: core
+    description: irl-dashboard Next.js dev server — the apex https://irl.coop
+  - name: coop-api
+    port: 3001
+    health: /api/auth/config
+    role: core
+    description: the auth bridge + fleet API — https://api.irl.coop
+  - name: peer_xyz_payments
+    port: 3010
+    health: /health
+    role: core
+    description: the payment rail (internal only; no edge route)
+  - name: treasury-relayer
+    port: 3020
+    health: /health
+    role: core
+    description: the shielded-pool Groth16 proof gate (internal only)
+  - name: hardhat
+    port: 8545
+    probe: jsonrpc
+    role: dev
+    description: the local chain (dev only) — liveness via eth_blockNumber

@@ -42,10 +42,16 @@ import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "infra", "out", "dev")
 APPS = os.path.join(ROOT, "infra", "instances", "dev", "apps")
+# Host-process apps (no compose, no container) — declared once in the tree and
+# read by BOTH this script and apps/coop-api/src/status.ts. See the "BLIND SPOT"
+# note below.
+HOST_APPS = os.path.join(ROOT, "infra", "instances", "dev", "host-apps.yaml")
 
 ONESHOT_RESTART = "no"          # the declarative marker: "do not expect me running"
 DEFAULT_ROLE = "core"           # unknown is core — never silently ignore a service
@@ -176,6 +182,81 @@ def zk_probe():
         "have_setup": have,
         "status": status,
     }
+
+
+def host_app_specs():
+    """The host-process fleet from `infra/instances/dev/host-apps.yaml`.
+
+    BLIND SPOT this closes: these apps have no docker-compose, so the
+    reconciler — whose view of the world is `docker ps` — could not see them at
+    all. On 2026-10-03 the report read "61/61 core services healthy" while
+    https://api.irl.coop had been 502 for four days (a mid-edit compile error
+    killed the coop-api dev server; ts-node-dev never respawned). A health
+    headline that cannot see a dead canonical API is worse than no headline.
+
+    Shallow 2-space parse (list of `- name:` items with scalar fields), stdlib
+    only, mirroring spec_of().
+    """
+    out, cur = [], None
+    try:
+        with open(HOST_APPS) as fh:
+            for line in fh:
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                indent = len(line) - len(line.lstrip(" "))
+                body = line.strip()
+                if indent == 0:
+                    cur = None                      # the `hosts:` key itself
+                    continue
+                if body.startswith("- "):
+                    cur = {}
+                    out.append(cur)
+                    body = body[2:]
+                if cur is None or ":" not in body:
+                    continue
+                k, v = body.split(":", 1)
+                cur[k.strip()] = v.strip().strip('"').strip("'")
+    except OSError:
+        return []
+    specs = []
+    for h in out:
+        try:
+            h["port"] = int(h.get("port") or 0)
+        except ValueError:
+            continue
+        if h.get("name") and h["port"]:
+            specs.append(h)
+    return specs
+
+
+def host_probe(port, path="/", probe="http", timeout=3):
+    """Liveness of ONE host process. Returns (healthy, human detail).
+
+    Probes 127.0.0.1:<port> — the same address the edge targets through the
+    docker gateway, and the only thing that actually proves the process is
+    serving (its supervisor pid can look perfectly healthy while nothing is
+    bound; see the 2026-10-03 outage).
+    """
+    if probe == "jsonrpc":
+        payload = b'{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+        try:
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/", data=payload,
+                headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return (r.status == 200), ("answering" if r.status == 200 else f"HTTP {r.status}")
+        except Exception as exc:
+            return False, "not answering"
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}{path or '/'}", timeout=timeout) as r:
+            ok = 200 <= r.status < 400
+            return ok, ("answering" if ok else f"HTTP {r.status}")
+    except urllib.error.HTTPError as exc:
+        # A live server that answers 401/403 IS up — only a refused/timed-out
+        # connection means the process is gone.
+        return True, f"answering (HTTP {exc.code})"
+    except Exception:
+        return False, "not answering"
 
 
 def declared_composes():
@@ -351,6 +432,21 @@ def reconcile():
     for r in allrows:
         state_counts[r["health"]] = state_counts.get(r["health"], 0) + 1
 
+    # Host processes: no container, so `docker ps` cannot see them. Probed on
+    # their own port and surfaced in the headline (see host_app_specs()).
+    host_apps = []
+    for h in host_app_specs():
+        healthy, detail = host_probe(h["port"], h.get("health") or "/", h.get("probe") or "http")
+        host_apps.append({
+            "name": h["name"],
+            "port": h["port"],
+            "role": (h.get("role") or DEFAULT_ROLE).lower(),
+            "description": h.get("description") or "",
+            "probe": h.get("probe") or "http",
+            "healthy": healthy,
+            "status": detail,
+        })
+
     return {
         "generated_at": __import__("datetime").datetime.now().isoformat(),
         "stack_root": ROOT,
@@ -375,9 +471,19 @@ def reconcile():
             # --- kept for old consumers: "down" now means CORE SERVICES ACTUALLY DOWN
             "down": sum(1 for r in core_svc if not r["healthy"]),
             "not_attributed": sum(1 for r in allrows if not r["app"]),
+            # --- host processes: no container, so `docker ps` never sees them.
+            # Counted separately (they are not compose services) but ALWAYS
+            # shown in the headline — this is the leg that was missing when
+            # api.irl.coop sat 502 behind a green report for four days.
+            "host_apps": len(host_apps),
+            "host_healthy": sum(1 for h in host_apps if h["healthy"]),
+            "core_host_apps": sum(1 for h in host_apps if h["role"] == "core"),
+            "core_host_healthy": sum(1 for h in host_apps if h["role"] == "core" and h["healthy"]),
+            "core_host_problems": sum(1 for h in host_apps if h["role"] == "core" and not h["healthy"]),
         },
         "roles": {name: role for name, role, _ in roles},
         "pillars": pillars,
+        "host_apps": host_apps,
         "orphans": orphans,
         "zk": zk_probe(),
     }
@@ -387,11 +493,20 @@ def fmt(data):
     if "error" in data:
         return f"irl.coop stack: {data['error']}"
     s = data["summary"]
-    ok = s["core_problems"] == 0
-    head = (f"\033[32m✓ {s['core_healthy']}/{s['core_services']} core services healthy\033[0m"
-            if ok else
-            f"\033[31m✗ {s['core_problems']} of {s['core_services']} core services need attention\033[0m")
-    lines = [f"irl.coop stack — {head}"]
+    parts = []
+    if s["core_problems"]:
+        parts.append(f"\033[31m✗ {s['core_problems']} of {s['core_services']} core services need attention\033[0m")
+    else:
+        parts.append(f"\033[32m✓ {s['core_healthy']}/{s['core_services']} core services healthy\033[0m")
+    # Host processes get their own bucket in the headline: they have no
+    # container, so a dead one (api.irl.coop, 2026-09-29 → 10-03) used to leave
+    # the line above reading all-green.
+    if s.get("core_host_apps"):
+        if s.get("core_host_problems"):
+            parts.append(f"\033[31m✗ {s['core_host_problems']} of {s['core_host_apps']} host app(s) DOWN\033[0m")
+        else:
+            parts.append(f"\033[32m✓ {s['core_host_healthy']}/{s['core_host_apps']} host apps healthy\033[0m")
+    lines = [f"irl.coop stack — {' · '.join(parts)}"]
     bits = []
     if s["jobs"]:
         bits.append(f"{s['jobs_completed']}/{s['jobs']} one-shot jobs completed"
@@ -407,6 +522,18 @@ def fmt(data):
         _mark = "\033[33mFLAG\033[0m" if not zk.get("have_setup") and zk.get("enabled") else (
             "\033[2m—\033[0m" if not zk.get("enabled") else "\033[32mOK\033[0m")
         lines.append(f"  {_mark} zk-proving  [{zk['status']}]")
+    if s.get("host_apps"):
+        bad = [h for h in data["host_apps"] if not h["healthy"]]
+        dev = sum(1 for h in data["host_apps"] if h["role"] != "core")
+        mark = "\033[32mOK\033[0m" if not bad else f"\033[31m{len(bad)} ISSUE(S)\033[0m"
+        lines.append(f"  {mark} {'host apps':<18} {s['core_host_healthy']}/{s['core_host_apps']} core"
+                     + (f", {dev} dev" if dev else "")
+                     + "  (no container — probed on its port)")
+        for h in data["host_apps"]:
+            if h["healthy"]:
+                continue
+            colour = "\033[31m" if h["role"] == "core" else "\033[33m"
+            lines.append(f"        {colour}✗ {h['name']} (:{h['port']})\033[0m [{h['status']}]")
     for p in data["pillars"]:
         mark = "\033[32mOK\033[0m" if p["problems"] == 0 else f"\033[31m{p['problems']} ISSUE(S)\033[0m"
         label = p["pillar"] if p["kind"] == "tree" else f"{p['id'].split(':', 1)[1]} (source)"

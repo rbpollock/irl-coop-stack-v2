@@ -1,0 +1,125 @@
+{
+  "_comment": [
+    "Retrieval eval set for the coop-knowledge (design docs) RAG area.",
+    "Each item: a question a member could plausibly type, plus the section in the",
+    "corpus that actually answers it — so ground truth is objective, not a taste",
+    "judgement. Questions are PARAPHRASED on purpose: they must not reuse the",
+    "section's own distinctive wording, or the eval only measures keyword match.",
+    "doc = ground-truth document (file_name). section_key = a phrase that must",
+    "appear in a returned context's heading for a section-level hit (null for",
+    "generated HTML docs whose heading paths repeat)."
+  ],
+  "area_id": "e418da84-6d62-4b31-aeff-fb2a5cff63d2",
+  "items": [
+    {
+      "q": "what kind of account does an individual person get on the platform",
+      "doc": "account-and-key-model.md",
+      "section_key": null
+    },
+    {
+      "q": "can a member's phone act as a node in the network",
+      "doc": "android-mini-services-client.md",
+      "section_key": "Android Mini-Services Client"
+    },
+    {
+      "q": "how do automated browser tasks run and where does their evidence go",
+      "doc": "browser-management.md",
+      "section_key": "Browser management pillar"
+    },
+    {
+      "q": "how can an agent or background service act for a member without holding their keys",
+      "doc": "delegation-and-session-keys.md",
+      "section_key": "Delegation, Session Keys"
+    },
+    {
+      "q": "how do one group's actions reach the groups connected to it",
+      "doc": "event-bus-and-group-shapes.md",
+      "section_key": "Event Bus & Group Shapes"
+    },
+    {
+      "q": "what can a member see and do with the files shared inside their group",
+      "doc": "files-panel.md",
+      "section_key": "Files Panel"
+    },
+    {
+      "q": "how do survey forms map onto the platform's group and role model",
+      "doc": "formbricks-group-mapping.md",
+      "section_key": "Formbricks"
+    },
+    {
+      "q": "what apps could a group's website embed and how would they authenticate",
+      "doc": "group-app-integrations.md",
+      "section_key": "Group app integrations"
+    },
+    {
+      "q": "how is one group's data kept from another group's members",
+      "doc": "group-scoping.md",
+      "section_key": "Group Scoping"
+    },
+    {
+      "q": "how do several people hold a secret that none of them can open alone",
+      "doc": "group-secret-vault.md",
+      "section_key": "Group Secret Vault"
+    },
+    {
+      "q": "what was the state of the build at the last handoff note",
+      "doc": "handoff-2026-08-13.md",
+      "section_key": "Session handoff"
+    },
+    {
+      "q": "how do you tell whether a declared service is actually running",
+      "doc": "infra-management-monitoring.md",
+      "section_key": "Infrastructure Management"
+    },
+    {
+      "q": "what separates a brochure site from one members can work inside",
+      "doc": "integration-first-templates.md",
+      "section_key": "Integration-first templates"
+    },
+    {
+      "q": "what happens when someone signs in for the first time and is invited into a group",
+      "doc": "irl-coop-group.md",
+      "section_key": "irl.coop Group"
+    },
+    {
+      "q": "which farm management software is being integrated and under what licence",
+      "doc": "litefarm-integration.md",
+      "section_key": "LiteFarm"
+    },
+    {
+      "q": "what licences are acceptable for the templates being brought into the marketplace",
+      "doc": "marketplace-template-strategy.md",
+      "section_key": "Marketplace template strategy"
+    },
+    {
+      "q": "does the platform rely on a secure enclave or a third-party key service",
+      "doc": "irl-coop-architecture.html",
+      "section_key": null
+    },
+    {
+      "q": "how is a nonprofit structured differently from a co-op in this model",
+      "doc": "irl-coop-group-relationships.html",
+      "section_key": null
+    },
+    {
+      "q": "which service handles sign-in for every application in the stack",
+      "doc": "irl-coop-services-and-storage.html",
+      "section_key": null
+    },
+    {
+      "q": "what is the core building block the whole system is organised around",
+      "doc": "group-model-technical-overview.html",
+      "section_key": null
+    },
+    {
+      "q": "where does the money sit at each step of the money map",
+      "doc": "money-in-and-out.md",
+      "section_key": "Money In and Money Out"
+    },
+    {
+      "q": "what proof does a member show to prove they belong without naming their group",
+      "doc": "zk-membership-graph-proofs.md",
+      "section_key": "ZK"
+    }
+  ]
+}

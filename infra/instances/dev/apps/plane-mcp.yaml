@@ -1,0 +1,29 @@
+# plane-mcp — Plane's app API exposed as MCP tools (list_projects, list_work_items),
+# acting AS THE CALLING MEMBER. Internal-only (no edge route): coop-api's MCP
+# gateway reaches it over the host bridge and forwards the member's own
+# Authorization header, which this server passes through to Plane. Plane's
+# CoopJWTAuthentication verifies the coop JWT against coop-api's JWKS and applies
+# coop_group_scope — so no service credential and no per-member session live here.
+# Registered as a NON-public upstream in MCP_UPSTREAMS (apps/coop-api/.env), so the
+# gateway's default-deny makes it member-only.
+name: plane-mcp
+pillar: workflow
+enabled: true
+type: image
+image: irlcoop/plane-mcp:0.1.0
+# Host bridge only — reached by coop-api (a host process) at localhost:8003.
+ports:
+  - "8003:8080"
+env:
+  PLANE_URL: "https://plane.${DOMAIN}"
+  PLANE_WORKSPACE: "coop-test"
+# support: it deepens the assistant/MCP surface but the stack is healthy without
+# it, so it must not colour the declared-vs-running "core services" headline.
+role: support
+restart: unless-stopped
+healthcheck:
+  test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 10s
