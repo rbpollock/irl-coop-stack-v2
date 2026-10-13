@@ -71,6 +71,12 @@ test-results/
 *.la
 *.lai
 
+# ── HyperFrames render output (docs/design/response-gif/out/) ──────
+# Same rule as session-story/render/ below: the composition SOURCE stays
+# tracked (index.html, hyperframes.json, meta.json, package.json); the
+# rendered GIF/MP4 are regenerable output and stay out of git.
+docs/design/response-gif/out/
+
 # ── Oversized rendered video masters ───────────────────────────────
 # GitHub rejects any blob >100MB, so these full-res renders stay OUT of git
 # (kept on disk; the assemble scripts and the smaller cuts remain tracked).
