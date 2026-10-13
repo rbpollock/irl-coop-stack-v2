@@ -47,8 +47,20 @@ AVail="$(df -Pk /mnt/storage | tail -1 | awk '{print $4}')"
 log "secondary disk free: $(( AVail / 1048576 )) GiB"
 
 for src in "${MOVES[@]}"; do
-  [ -d "$src" ] || { log "skip (absent): $src"; continue; }
   if [ -L "$src" ]; then log "skip (already a symlink): $src"; continue; fi
+  if [ ! -e "$src" ]; then
+    # Absent → nothing to copy. Create the target and point the path at it, so FUTURE writes
+    # land on the secondary disk. This is the durable fix for caches that regrow: pruning is
+    # only ever temporary, and this is why the pattern matters more than the reclaim.
+    dst="$DEST_ROOT$src"
+    if [ -n "$DRY" ]; then
+      log "    would link (absent): $src → $dst"
+    else
+      mkdir -p "$dst" && ln -s "$dst" "$src" && log "    linked (absent): $src → $dst"
+    fi
+    continue
+  fi
+  [ -d "$src" ] || { log "skip (not a directory): $src"; continue; }
 
   size_kb="$(du -sk "$src" | awk '{print $1}')"
   log "--- $src ($(( size_kb / 1048576 )) GiB)"
@@ -63,7 +75,10 @@ for src in "${MOVES[@]}"; do
     n=$( { timeout 40 lsof +D "$src" 2>/dev/null || true; } | tail -n +2 | wc -l )
     if [ "$n" -gt 0 ]; then
       log "    IN USE — $n open file(s) beneath it. Skipping; stop the process first."
-      timeout 20 lsof +D "$src" 2>/dev/null | tail -n +2 | head -3 | awk '{printf "      %s pid %s\n", $1, $2}'
+      # `|| true`: `head -3` closes the pipe early, so lsof takes SIGPIPE and pipefail +
+      # set -e turn that into a silent exit — which skipped the REMAINING directories.
+      timeout 20 lsof +D "$src" 2>/dev/null | tail -n +2 | head -3 \
+        | awk '{printf "      %s pid %s\n", $1, $2}' || true
       continue
     fi
   fi
