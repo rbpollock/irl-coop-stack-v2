@@ -50,7 +50,9 @@ for src in "${MOVES[@]}"; do
   # directory under / it reports every process on the machine and skips everything always.
   # `lsof +D` is the correct question — is any file BENEATH this path open?
   if command -v lsof >/dev/null 2>&1; then
-    n=$(timeout 40 lsof +D "$src" 2>/dev/null | tail -n +2 | wc -l)
+    # `lsof` EXITS 1 when it finds nothing, and under `set -e` + `pipefail` that kills the
+    # script at exactly the moment the coast is clear. `|| true` is load-bearing here.
+    n=$( { timeout 40 lsof +D "$src" 2>/dev/null || true; } | tail -n +2 | wc -l )
     if [ "$n" -gt 0 ]; then
       log "    IN USE — $n open file(s) beneath it. Skipping; stop the process first."
       timeout 20 lsof +D "$src" 2>/dev/null | tail -n +2 | head -3 | awk '{printf "      %s pid %s\n", $1, $2}'

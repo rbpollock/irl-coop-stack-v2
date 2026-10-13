@@ -18,8 +18,11 @@
 #                          current repository, not a growing pile of historical roots.
 #
 # Safety rails, deliberately:
-#   - NEVER runs `ipfs repo gc` on that node. A garbage collect there could remove data
-#     pinned by other things we know nothing about. Unpinning ours is the only thing we do.
+#   - does not run `ipfs repo gc` on that node. gc only removes UNPINNED blocks (pinned
+#     content is safe), but it is the node owner's deliberate maintenance step, not ours
+#     to trigger — it could also drop someone's unpinned work. Note the consequence: each
+#     restic prune leaves our superseded packs stored-but-unreachable, so that node needs a
+#     periodic `ipfs repo gc` or it slowly fills with our dead weight.
 #   - pins the new root BEFORE unpinning the old, so there is never a window with neither.
 #   - warns when the node's repo passes 80% of its StorageMax (it sits at ~65% already).
 #
@@ -91,19 +94,26 @@ rsync -a --delete-after --partial --no-perms --no-owner --no-group \
 # concurrent workers — a pack file can come last, and a file CID resolves perfectly well
 # as an object while being completely wrong. So: test the candidates and take the one
 # that actually looks like a restic repository.
-log "ipfs add -r (storing objects; the root is identified below, not taken from the output)"
-ADD_OUT="$("${SSH[@]}" "ipfs --api $IPFS_API add -r -q --pin=false '$IPFS_DIR' 2>/dev/null" || true)"
+# Identify the repository root BY NAME, from the unflagged `ipfs add` output.
+#
+# Do NOT use `-q`: it prints one bare CID per file with no name, so the root is
+# indistinguishable from any pack file, and any attempt to guess from ordering is
+# unreliable for directories on kubo 0.12 with concurrent workers. Without `-q`, each
+# line reads `added <cid> <path>`, and the directory's own line names the directory —
+# so the root is the line whose final field IS the directory's basename.
+log "ipfs add -r (root identified by name, never by output order)"
+BASE_NAME="$(basename "$IPFS_DIR")"
+ADD_OUT="$("${SSH[@]}" "ipfs --api $IPFS_API add -r --pin=false '$IPFS_DIR' 2>/dev/null" || true)"
 [ -n "$ADD_OUT" ] || die "ipfs add produced no output"
+NEW_CID="$(printf '%s\n' "$ADD_OUT" | awk -v b="$BASE_NAME" '$1=="added" && $NF==b {print $2}' | tail -1)"
 
-NEW_CID=""
-for cand in $(printf '%s\n' "$ADD_OUT" | awk '{print $1}' | tac); do
-  L="$("${SSH[@]}" "ipfs --api $IPFS_API ls '$cand' 2>/dev/null" || true)"
-  if printf '%s' "$L" | grep -q ' config' && printf '%s' "$L" | grep -q ' snapshots' \
-     && printf '%s' "$L" | grep -q ' data'; then
-    NEW_CID="$cand"; break
-  fi
+# Still verify it before pinning: a name match on a file called `restic` would be wrong.
+L="$("${SSH[@]}" "ipfs --api $IPFS_API ls '$NEW_CID'" 2>/dev/null || true)"
+for want in config data index keys snapshots; do
+  printf '%s' "$L" | grep -q " $want" \
+    || die "root candidate $NEW_CID lacks '$want' — refusing to pin it"
 done
-[ -n "$NEW_CID" ] || die "no added object looks like a restic repository root — refusing to record one"
+[ -n "$NEW_CID" ] || die "could not identify the repository root — refusing to record one"
 log "root CID identified by its links: $NEW_CID"
 
 "${SSH[@]}" "ipfs --api $IPFS_API pin add '$NEW_CID'" >/dev/null 2>&1 || die "pin add failed for $NEW_CID"

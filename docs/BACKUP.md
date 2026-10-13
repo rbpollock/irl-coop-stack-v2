@@ -128,7 +128,7 @@ served by the public gateway, and **the restore drill passed against the fetched
 
 | | |
 |---|---|
-| **Never run `ipfs repo gc` there.** | The node holds **~2,550 recursive pins** — other people's content, including a book collection. A garbage collect could delete data belonging to things we know nothing about. Unpinning our own CIDs is the only modification we make |
+| **`ipfs repo gc` is not forbidden — it is the node owner's maintenance step, and it is needed.** | `gc` deletes only **unpinned** blocks, so pinned content (the ~2,550 recursive pins, including the book collection) is untouched. But every restic prune leaves our superseded packs unreachable-and-stored, and only `gc` reclaims them: without a periodic collect on that node, our mirror slowly fills it with dead weight. So the rule is **we do not run it silently** (it may also drop someone's unpinned work) — the owner runs it deliberately, and it is safe for everything pinned. An earlier note in this file said "never run gc"; that was too broad and would have let the node fill up |
 | **Capacity is real** | `StorageMax` is 10 GB and the repo sits at **~69%** (6.6 GB). Ours is ~400 MB and the pin-new-then-unpin-old rule keeps it flat. The script warns past 80% |
 | **The account is `irlbackup`** | Key-only (`passwd -l`), and the key is restricted with `from="64.135.141.73,192.168.18.20,100.122.136.95"` so a copy is useless off this host. It needs **no sudo** — it never touches the IPFS repo directory, only the daemon's local API |
 | **It drives the daemon with `--api`, not `IPFS_API`** | `IPFS_API` does not work on kubo 0.12 — the CLI still looks for a repo in `$HOME/.ipfs`. `ipfs --api /ip4/127.0.0.1/tcp/5001 …` does |
