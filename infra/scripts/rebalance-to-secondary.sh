@@ -24,12 +24,20 @@
 set -euo pipefail
 
 DEST_ROOT="${DEST_ROOT:-/mnt/storage/home}"
-DRY=""; [ "${1:-}" = "--dry-run" ] && DRY=1
+DRY=""
 MOVES=(
   "/home/service/comfy"
   "/home/service/models"
   "/home/service/Downloads"
 )
+# extra paths may be passed on the command line — same copy → verify → symlink pattern,
+# so anything moved this way gets identical treatment instead of a hand-rolled one-off
+for a in "$@"; do
+  case "$a" in
+    --dry-run) DRY=1;;
+    *) MOVES+=("$a");;
+  esac
+done
 
 log() { printf '%s  %s\n' "$(date -Is)" "$*"; }
 die() { log "FATAL: $*"; exit 1; }
