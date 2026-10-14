@@ -201,7 +201,7 @@ Rule: **money stays auditable — Tier 1 is never public, but it is always prova
 | Bounded distance "dist(X,G) ≥ K", small K | conjunction of non-membership over G's ≤(K−1)-hop neighborhood | Feasible, medium effort |
 | Exact distance "dist(X,G) = K", arbitrary K | ZKGraph-style SSSP verification (relaxation + lookup constraints over the edge table) — O(m) circuit | Research-grade |
 
-**Membership & role.** Each group maintains a **member commitment tree** — a Merkle tree whose leaves are `commit(sub, role)` (Keycloak `sub` + seat role(s), blinded by a per-seat nonce). Root is public (or in the on-chain registry). Membership = standard Merkle-authentication-path proof in ZK so neither `sub` nor role is revealed beyond what the statement asserts. "X holds role Y" = role exposed as public input, `sub` hidden. Same primitive `ConfidentialVoting.sol` (Semaphore) uses for private tallying.
+**Membership & role.** Each group maintains a **member commitment tree** — a Merkle tree whose leaves are `commit(sub, role)` (Keycloak `sub` + seat role(s), blinded by a per-seat nonce). Root is public (or in the on-chain registry). Membership = standard Merkle-authentication-path proof in ZK so neither `sub` nor role is revealed beyond what the statement asserts. "X holds role Y" = role exposed as public input, `sub` hidden. Same Semaphore-based private-tallying primitive, `ConfidentialVoting.sol` — a design intent that does NOT yet exist in code (see REALITY.md §Contradictions).
 
 **Relationship edges** (edges, not columns): each declared edge `(G₁, R, G₂, terms)` is a commitment; proving "this edge exists" is a membership proof over the group's **edge-commitment tree** (or a global edge registry tree). Can reveal R and one endpoint while hiding the other.
 

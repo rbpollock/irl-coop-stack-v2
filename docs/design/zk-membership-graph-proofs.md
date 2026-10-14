@@ -54,8 +54,8 @@ ZK so neither the `sub` nor the role is revealed beyond what the statement asser
 - "X is a member" → prove a leaf whose `sub = X` is in the tree.
 - "X holds role Y" → same, with `role = Y` exposed as a public input, `sub` hidden.
 - This is exactly the zk-badge already referenced for hidden groups
-  (group-scoping §3), and the same primitive `ConfidentialVoting.sol` (Semaphore)
-  uses for private tallying.
+  (group-scoping §3), and the same Semaphore-based private-tallying primitive, `ConfidentialVoting.sol` —
+  a design intent that does NOT yet exist in code (see REALITY.md §Contradictions).
 
 ### 3.2 Relationship edges (off-the-shelf)
 

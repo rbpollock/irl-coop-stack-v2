@@ -210,7 +210,12 @@ open and are taken here as defaults** (§8) — each is reversible.
    Nothing exists today; the single artifact is on the only disk.
 0. **0.3 Get the 51 first-party images retrievable off-host.** (B-03 / R-16.) New
    members cannot rebuild what exists only here.
-0. **0.4 Finish the documentation corrections** (B-10) — partly done 2026-10-12.
+0. **0.4 Finish the documentation corrections** (B-10) — done 2026-10-13: STATUS.md
+   app-count/header corrected and the Comms & outreach section added; AGENTS.md's stale
+   tailnet value was replaced with the live one; the `ConfidentialVoting.sol` phantom citations
+   were marked as an as-yet-unbuilt design intent rather than a claimed existing primitive. One
+   manual step remains: escrow `infra/instances/dev/secrets/backup-restic-pass` to the owner's
+   password manager.
 
 ### Phase 1 — The group exists
 

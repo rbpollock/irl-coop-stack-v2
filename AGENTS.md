@@ -56,7 +56,7 @@ appservice fanning metadata into that bus — is in
 | MinIO | :9000/:9001 | containers | buckets docs/stalwart/matrix-media/plane; users docs-s3/stalwart-s3/matrix-s3/plane-s3 |
 
 LAN: surfy `.11` = retired v1 edge (`ssh service@surfy`); THIS host `.20` = v4 node.
-Tailnet `100.122.136.95`.
+Tailnet `100.123.127.108` (this host, live).
 
 ## Configuration flow — START HERE before touching any running service
 
