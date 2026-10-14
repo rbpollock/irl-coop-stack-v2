@@ -62,14 +62,25 @@ system path.
 | `group_id` | the group being joined |
 | `email` | canonical identity to be offered (lowercased) — REQUIRED in v0 |
 | `roles` | roles offered (the seat's `roles`, e.g. `member`, `admin`) |
-| `alias`, `visibility` | hornet seat prefill |
+| `alias`, `visibility` | invitee seat prefill |
 | `status` | `open · accepted · declined · revoked · expired` |
 | `expires_at` | default 14 days; forever requires an explicit choice |
 | `created_by` / `created_at` | audit |
 | `redeemed_sub` / `redeemed_at` | who accepted, when (immutable once set) |
 | `nonce` | random; the primary key of redemption (below) |
+| `action_kind` | what the invitee is asked to DO on redemption: `form · doc · schedule · donate · call/broadcast` — optional, defaults to a plain land |
+| `action_target` | JSON: `{ type, id_or_slug, uri? }` pointing at the specific action (a form, a shared doc, a booking type, a donation object, a call room) |
 
 Unique on `(group_id, email, status='open')` — you cannot double-issue the same standing offer.
+
+**Who can invite — a granted capability, not just an owner.** Creating an invitation (and
+seating via it) requires `isOwner(group)` *or* the invitee-side `invite` capability in that
+group's role model (`coop_has_grant(group, role, 'member_invite')`, the same
+`grants`/`role_grants` machine `members` already use). This is why an invite is a single row
+in the existing grants model: **the power to invite is itself a grant** a group can bestow on
+a role and revoke, exactly like any other capability — it is not silently attached to
+"owner" only. The `roles` offered on an invite are **⊆ the role the inviter themself holds**
+on that group — you cannot hand out a role you couldn't hold.
 
 ### `join_requests` — the unbidden offer of a person
 
@@ -128,6 +139,40 @@ Design rules:
 Adds to the routes list below:
 
     GET   /api/v1/invitations/:id/qr   (owner)    QR SVG/PNG of the short link
+
+## 5c. The verb — an invite can be an action
+
+The minimal invite is "come sit in the room." The powerful one is **"come and do a thing."**
+*An invitation that works names the thing:* fill this form, claim a slot, donate to this
+project, come meet us on a call. An invite optionally carries an `action`; when it does,
+redemption lands the invitee AT the action, and the seat in the group is offered as the
+second step, alongside.
+
+| kind | what they are asked to do | `action_target` points at |
+|---|---|---|
+| `form` | fill it | a form (e.g. an intake/feedback form) |
+| `doc` | open / read / contribute | a shared document (OnlyOffice / files share) |
+| `schedule` | claim a booking or appointment | a booking/availability base |
+| `donate` | support a treasury project | a donation object / project scope |
+| `attend` | join a live call | a LiveKit room / Element-call link |
+| `broadcast` | attend a webinar | one-to-many session — flagged apart, see note |
+
+Two halves of one admit: doing the action can require **no membership** (a form is not
+member-only by nature), while *taking the seat* remains a separate deliberate step — the
+same redeemed token opens both. The invite becomes a directed on-ramp: *do this thing, and
+here is the room you are joining.*
+
+**Webinar (`broadcast`) is a flagged open, not a v0 verb.** Real-time one-to-one/many call
+already exists (LiveKit + element-call) so `attend` is easy. *broadcast one-presenter-to-many*
+with a public watch link, slides, recording, and chat is a different integration that does
+not exist. It is booked into §10 (an open, not a default) so the model is not capped on an
+unbuilt type; `form / doc / schedule / donate / attend` are the v0 verbs.
+
+Note on `invite` as a role: the ability to invite is **itself grantable** (a role on the
+group holds it, wired through the existing grants/role_grants + `coop_has_grant` machine) —
+so an invite can only be issued by an owner or a member whose roles include the
+`invite`/`member_invite` capability, and only ever *to* roles the inviter holds. This is the
+mechanism that keeps a growing group self-limiting, not dependent on owners.
 
 ## 6. Routes
 
