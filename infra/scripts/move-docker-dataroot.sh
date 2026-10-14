@@ -5,8 +5,17 @@
 # of the copy — ~149 GB onto a rotational disk — so this is written to be boring.
 # Pre-flight, copy, VERIFY, switch, come back, and only then tell you what to clean up.
 #
-# Why: /var/lib/docker is the single largest consumer on the NVMe (images 144.5 GB,
-# containers 3.2 GB, volumes 0.9 GB). The accepted price: /mnt/storage is a SPINNING disk
+# ⚠ 2026-10-13: this host uses the CONTAINERD SNAPSHOTTER (`docker info --format '{{.Driver}}'`
+# prints `overlayfs`, not `overlay2`). The images are NOT in /var/lib/docker — they live in
+# /var/lib/containerd (measured 134.7 GB vs 2.3 GB in /var/lib/docker, which has no `image/`
+# or `overlay2/` subdir at all). Run unchanged, this script MOVES ~2.3 GB and takes the whole
+# stack down for it. Check the driver first: if `overlayfs`, the real target is
+# /var/lib/containerd and the move is `/etc/containerd/config.toml` `root =`, not daemon.json.
+# The containing of the "image" check below is what caught this — this layout WILL fail it.
+#
+# Original rationale, now corrected: /var/lib/docker LOOKED like the largest consumer because
+# `docker system df` reports 144 GB while the snapshotter stores it in containerd. The accepted
+# price is unchanged: /mnt/storage is a SPINNING disk (sda, ROTA=1), so container I/O slows.
 # (sda, ROTA=1), so container I/O gets slower. That trade was made deliberately.
 #
 # What it deliberately does NOT do: delete the old data-root. It parks it and prints the

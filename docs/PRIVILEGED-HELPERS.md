@@ -41,7 +41,12 @@ The repo copies stay user-owned and freely editable; they are the source of trut
 
 Exactly one program:
 
-- `move-docker-dataroot.sh` — moves `/var/lib/docker` to the secondary disk.
+- `move-docker-dataroot.sh` — moves Docker's data-root to the secondary disk. ⚠ This host
+  uses the containerd snapshotter (driver `overlayfs`): the images live in `/var/lib/containerd`
+  (~134.7 GB), not `/var/lib/docker` (~2.3 GB, a metadata stub). The script's header and its
+  `image` directory check both warn on this now; it would otherwise take the whole stack down to
+  move 2.3 GB. The load-bearing get south: the disk problem on this box was fixed by the image
+  prune (70 GB → / to 47%), not by moving anything.
 
 That list is deliberately short, and adding to it needs the password. **Anything that does not
 genuinely need root stays out**: `rebalance-to-secondary.sh`, `backup.sh`, `backup-ipfs.sh`,
