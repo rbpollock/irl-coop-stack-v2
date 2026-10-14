@@ -61,7 +61,7 @@ system path.
 | `id` | uuid |
 | `group_id` | the group being joined |
 | `email` | canonical identity to be offered (lowercased) — REQUIRED in v0 |
-| `roles` | roles offered (the seat's `roles`, e.g. `member`, `admin`) |
+| `roles` | always the base `member` seat at redemption; roles above are awarded by group consent, never by the invite |
 | `alias`, `visibility` | invitee seat prefill |
 | `status` | `open · accepted · declined · revoked · expired` |
 | `expires_at` | default 14 days; forever requires an explicit choice |
@@ -79,8 +79,15 @@ group's role model (`coop_has_grant(group, role, 'member_invite')`, the same
 `grants`/`role_grants` machine `members` already use). This is why an invite is a single row
 in the existing grants model: **the power to invite is itself a grant** a group can bestow on
 a role and revoke, exactly like any other capability — it is not silently attached to
-"owner" only. The `roles` offered on an invite are **⊆ the role the inviter themself holds**
-on that group — you cannot hand out a role you couldn't hold.
+"owner" only.
+
+An invite **never grants a role** — not even one the inviter holds. If the invite is
+accepted it seats the person at the **base `member` level** only; every role above that
+(`treasurer`, `admin`, a working-group lead…) is **awarded by the group through its own
+consented, thresholded decisions** (the existing proposals/votes + `coop_has_grant`
+surface), never by an invitation. This removes the feel-need for a "roles ⊆ inviter"
+subset rule — invitation can't escalate a role, so a cap is unnecessary — and it keeps the
+no-bypass instinct intact: nobody confers authority by opening a door, only by consent.
 
 ### `join_requests` — the unbidden offer of a person
 
