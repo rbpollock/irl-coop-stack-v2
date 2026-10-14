@@ -96,7 +96,41 @@ email delivery: an invite is materialized as a row in the existing `events` outb
 bus → notify lane), so delivery intentionally uses the same lane as everything else — no new
 mail path in v0; an email to the invitee is just another notification template.
 
+## 5b. Channels — one token, any door
+
+The invite is **one signed token**; the channel is how that token gets to a person, not a
+different kind of invite. You can send the same token over several doors at once, and no
+door carries a stronger or weaker permission than the token itself. Revocation, expiry and
+single-use apply to the token, not to any one door.
+
+| Door | The token as… | When it's the right one |
+|---|---|---|
+| **HTTP link** | the base URL every other door is built on | general; the body of email/SMS; anywhere |
+| **QR code** | the link rendered to a scannable image | a real room — a meeting, a door, a workshop poster; someone scans it from their phone |
+| **Email** | the linked URL in an outbox notification | async, remote — the default on-ramp |
+| **SMS** | the same URL via the outbound SMS lane | a person who's phone-first; an invite handed at a bar |
+| (later) | Matrix room invite · a print form | reuse existing room/seat mechanics |
+
+Design rules:
+
+- **The QR is a short URL, not a long token.** QR encoding decays with length; a scannable-at-arm's-length code needs a short `/invite/<slug>` redirect whose real check happens on
+  redemption against the signed token — the signing secret is the persistent side, and the
+  scanned code is just a pointer to it. An ultra-long token is exactly what breaks a QR at arm's length — so the short URL is the point.
+- **SMS is outbound-only in v0.** An invite SMS is a *notify*: it rides the same events→bus→notify
+  lane as the email outbox, with a `channel: sms` variant, and has **no** relationship to the
+  inbound SMS spine (`phone_message`, system-write, deliberately not bus-published). Nobody can
+  mint an invite over SMS — only an owner places one — and there is no inbound invite path
+  from arbitrary numbers. (A QR-anchored reply is a later, explicit slice.)
+- **Fire-and-mark delivery.** The outbox records which door(s) were raised for what; only the
+  token state + expiry govern redemption. Sending on a second door never resets the token clock,
+  and a failed delivery is a log line, not a weaker token to fall back on.
+
+Adds to the routes list below:
+
+    GET   /api/v1/invitations/:id/qr   (owner)    QR SVG/PNG of the short link
+
 ## 6. Routes
+
 
 ```
 POST   /api/v1/groups/:id/invitations          (owner)        create offer → returns token/link
@@ -108,6 +142,7 @@ POST   /api/v1/groups/:id/join-requests       (auth)         ask to join (a pers
 GET    /api/v1/groups/:id/join-requests       (owner)        inbox
 POST   /api/v1/join-requests/:id/accept       (owner)        seat the person with chosen roles
 POST   /api/v1/join-requests/:id/decline      (owner)
+GET    /api/v1/invitations/:id/qr             (owner)        QR render (SVG/PNG) of the short link
 ```
 
 Mutations go through a system-write function (the existing SECURITY DEFINER pattern, as the
@@ -118,9 +153,10 @@ check uses the existing `isOwner`.
 
 1. **Invite-only for the coop group** to start; the join-request door is OPENED LATER once
    onboarding has a staffed look. (Keeps §4.3 honest and the recursion soft.)
-2. **Email is THE key** — v0 only `email` keyed human invites; group-to-group and
-   Safe-holder seat-transfer are a later slice and share the same holder mechanics as
-   `POST /members`.
+2. **Email is the IDENTITY key**; the door is presentation. Only `email`-keyed human invites
+   for v0 (group-to-group and Safe-holder seat-transfer are later, sharing `POST /members`
+   holder mechanics) — but that same invite ships by link, QR, email, or SMS. The channel is
+   a render, never an identity surface; redemption always re-checks the canonical email.
 3. **Expiry 14 days** default; a revoked invite cannot be re-lived except by a fresh one.
 4. **Invite doesn't seat anyone automatically** — redemption is the accept; D-13 intact.
 5. After redemption the invitee's **first screen is their world with the group seated**, and
@@ -132,7 +168,8 @@ check uses the existing `isOwner`.
 1. **Schema + RLS + system function + token signing** — the tables, the FORCE-RLS wiring, the
    `INVITE_SIGNING_SECRET` derivation, token issue/verify. Nothing user-visible yet.
 2. **Owner flow**: create/revoke, list, GET /me — API-level, curl-testable.
-3. **Redemption**: accept/decline → seat insert; email via the events outbox.
+3. **Redemption**: accept/decline → seat insert; delivery across the doors — email link now,
+   SMS + QR-render next, all via the events outbox/notify lane.
 4. **Join-request flow** (reuse Slice 1–3 mechanics).
 5. **Dashboard**: "Invite people" button → link; the landing of a redeemed invite; and the
    group-health "1 member → needs-improvement" hint.
