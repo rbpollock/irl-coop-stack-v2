@@ -61,7 +61,7 @@ system path.
 | `id` | uuid |
 | `group_id` | the group being joined |
 | `email` | canonical identity to be offered (lowercased) — REQUIRED in v0 |
-| `roles` | always the base `member` seat at redemption; roles above are awarded by group consent, never by the invite |
+| `roles` | assignable on redemption, but only from the set granted to the inviter role in group/role config (a plain `member-invite` → `member`; an admin-capable role → admin too) |
 | `alias`, `visibility` | invitee seat prefill |
 | `status` | `open · accepted · declined · revoked · expired` |
 | `expires_at` | default 14 days; forever requires an explicit choice |
@@ -81,13 +81,15 @@ in the existing grants model: **the power to invite is itself a grant** a group 
 a role and revoke, exactly like any other capability — it is not silently attached to
 "owner" only.
 
-An invite **never grants a role** — not even one the inviter holds. If the invite is
-accepted it seats the person at the **base `member` level** only; every role above that
-(`treasurer`, `admin`, a working-group lead…) is **awarded by the group through its own
-consented, thresholded decisions** (the existing proposals/votes + `coop_has_grant`
-surface), never by an invitation. This removes the feel-need for a "roles ⊆ inviter"
-subset rule — invitation can't escalate a role, so a cap is unnecessary — and it keeps the
-no-bypass instinct intact: nobody confers authority by opening a door, only by consent.
+**An invite can assign a role — but WHICH roles an inviter may assign is declared on the
+inviter's OWN role, not derived from what the inviter personally holds.** The capability
+is a "may assign: {...}" set in the group's role config. A plain `member-invite` grant
+assigns `member`; a role carrying `admin`/`treasurer` assignment may invite-and-assign
+those too. Escalation control therefore sits on the group's role graph / consent surface —
+the place the group actually decides — a deliberate agreement, not a per-person cap. The
+same grant machine (`grants`/`role_grants` + `coop_has_grant`) backs it. Safe-owner / 2-of-3
+custody is a SEPARATE plane ruled by the Safe's own threshold: an invitation never grants
+Safe custody, no matter what role it assigns.
 
 ### `join_requests` — the unbidden offer of a person
 
