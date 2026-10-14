@@ -20,7 +20,7 @@
     "title": "Money In and Money Out",
     "category": "Working notes",
     "status": "note",
-    "description": "The money map: every in-flow and out-flow with who holds it at each step and what blocks it. Complete design, zero implementation — and the first blocker is a decision (the chain choice). Includes the BYO-rails v0 shortcut and the not-a-money-transmitter invariant.",
+    "description": "The money map: every in-flow and out-flow with who holds it at each step and what blocks it. Complete design, zero implementation \u2014 and the first blocker is a decision (the chain choice). Includes the BYO-rails v0 shortcut and the not-a-money-transmitter invariant.",
     "file": "money-in-and-out.md"
   },
   {
@@ -44,7 +44,7 @@
     "title": "Coop Launch & Roadmap Handoff (parked)",
     "category": "Working notes",
     "status": "note",
-    "description": "PARKED wish list: start the coop itself, hand it infrastructure control, and map roadmap development to a Plane project owned by an irl.coop group. The only item that answers the universal 'platform steward' adversary — and it depends on the non-custodial vault fix.",
+    "description": "PARKED wish list: start the coop itself, hand it infrastructure control, and map roadmap development to a Plane project owned by an irl.coop group. The only item that answers the universal 'platform steward' adversary \u2014 and it depends on the non-custodial vault fix.",
     "file": "coop-launch-and-roadmap-handoff.md"
   },
   {
@@ -52,7 +52,7 @@
     "title": "Landing Page Claims Audit",
     "category": "Strategy & narrative",
     "status": "design",
-    "description": "All 35 user-visible claims on the landing page classified against the code — what is shipped, overstated, designed, or false — with the order to fix them. Machine-readable registry in claims.data.json.",
+    "description": "All 35 user-visible claims on the landing page classified against the code \u2014 what is shipped, overstated, designed, or false \u2014 with the order to fix them. Machine-readable registry in claims.data.json.",
     "file": "landing-page-claims-audit.md"
   },
   {
@@ -60,7 +60,7 @@
     "title": "The Chilling Effect & How to Tell the Story",
     "category": "Strategy & narrative",
     "status": "design",
-    "description": "The thesis (the fear is information, not a confession), the self-censorship loop, the fear→mitigation→limit table, and the honest comparison against WhatsApp/Discord/Signal/SMS.",
+    "description": "The thesis (the fear is information, not a confession), the self-censorship loop, the fear\u2192mitigation\u2192limit table, and the honest comparison against WhatsApp/Discord/Signal/SMS.",
     "file": "chilling-effect-and-the-story.md"
   },
   {
@@ -76,7 +76,7 @@
     "title": "The Intro Video Series",
     "category": "Strategy & narrative",
     "status": "design",
-    "description": "One master film + cuts, produced in reverse order of ambition: proof first, money second, education last — with beat sheets for V0–V11.",
+    "description": "One master film + cuts, produced in reverse order of ambition: proof first, money second, education last \u2014 with beat sheets for V0\u2013V11.",
     "file": "intro-video-series.md"
   },
   {
@@ -84,7 +84,7 @@
     "title": "Adversary Models & Sector Fit",
     "category": "Privacy & adversaries",
     "status": "design",
-    "description": "Who the adversaries are — internal and external — the two universal classes, group modes and footprint legibility, and what each sector can and cannot be protected from.",
+    "description": "Who the adversaries are \u2014 internal and external \u2014 the two universal classes, group modes and footprint legibility, and what each sector can and cannot be protected from.",
     "file": "adversary-models-and-sector-fit.md"
   },
   {
@@ -100,7 +100,7 @@
     "title": "Custody Chain & the Contest Kit",
     "category": "Privacy & adversaries",
     "status": "design",
-    "description": "Counter-signed, hash-chained records of custody for physical goods — publicly verifiable and privately readable, so a group can prove its own account when accused.",
+    "description": "Counter-signed, hash-chained records of custody for physical goods \u2014 publicly verifiable and privately readable, so a group can prove its own account when accused.",
     "file": "custody-chain-and-contest-kit.md"
   },
   {
@@ -108,7 +108,7 @@
     "title": "What This Costs, Side by Side",
     "category": "Cost & economics",
     "status": "live",
-    "description": "Generated from docs/design/cost-model.data.json: the per-seat, mid-tier and at-scale comparisons, the federation, and the storage measurement — every price sourced and dated.",
+    "description": "Generated from docs/design/cost-model.data.json: the per-seat, mid-tier and at-scale comparisons, the federation, and the storage measurement \u2014 every price sourced and dated.",
     "file": "cost-model.md"
   },
   {
@@ -140,7 +140,7 @@
     "title": "Knowledge Aggregation",
     "category": "Groups & governance",
     "status": "design",
-    "description": "The world-doc of knowledge: public + connected-group + direct-grant knowledge areas behind one aggregated query — three visibility tiers (public/group/private), and the RAG-side + provisioning pieces.",
+    "description": "The world-doc of knowledge: public + connected-group + direct-grant knowledge areas behind one aggregated query \u2014 three visibility tiers (public/group/private), and the RAG-side + provisioning pieces.",
     "file": "knowledge-aggregation.md"
   },
   {
@@ -148,7 +148,7 @@
     "title": "Matrix Chat & Notifications",
     "category": "Groups & governance",
     "status": "live",
-    "description": "Per-room Element embeds and the Matrix appservice feeding the event bus — no native client, no key escrow, no homeserver changes.",
+    "description": "Per-room Element embeds and the Matrix appservice feeding the event bus \u2014 no native client, no key escrow, no homeserver changes.",
     "file": "matrix-chat-and-notifications.md"
   },
   {
@@ -164,7 +164,7 @@
     "title": "Delegation, Session Keys & Temporal",
     "category": "Identity & accounts",
     "status": "design",
-    "description": "ERC-4337/7715 delegation: scoped revocable session keys for Temporal automation and agents — no bypass, user secrets only.",
+    "description": "ERC-4337/7715 delegation: scoped revocable session keys for Temporal automation and agents \u2014 no bypass, user secrets only.",
     "file": "delegation-and-session-keys.md"
   },
   {
@@ -172,7 +172,7 @@
     "title": "Group Secret Vault",
     "category": "Identity & accounts",
     "status": "design",
-    "description": "The threshold-encrypted, Safe-anchored store for per-group env secrets and salt backups — quorum-gated, member-held shares.",
+    "description": "The threshold-encrypted, Safe-anchored store for per-group env secrets and salt backups \u2014 quorum-gated, member-held shares.",
     "file": "group-secret-vault.md"
   },
   {
@@ -180,7 +180,7 @@
     "title": "Onboarding Flow",
     "category": "Identity & accounts",
     "status": "design",
-    "description": "First-run onboarding: what a member needs to know and set up — the flow, voice, and visual system.",
+    "description": "First-run onboarding: what a member needs to know and set up \u2014 the flow, voice, and visual system.",
     "file": "onboarding-flow.md"
   },
   {
@@ -204,7 +204,7 @@
     "title": "Regenerative Score (Vision)",
     "category": "Economy & treasury",
     "status": "vision",
-    "description": "The regenerative score as a zero-knowledge metric — the founding vision.",
+    "description": "The regenerative score as a zero-knowledge metric \u2014 the founding vision.",
     "file": "regenerative-vision-note.md"
   },
   {
@@ -212,15 +212,15 @@
     "title": "Needs & Offers Matching",
     "category": "Economy & treasury",
     "status": "design",
-    "description": "Multi-party trade chains: post needs/offers, discover A→B→C→…→A cycles, and track each leg through a declared/actual/drift reconciler to settlement and arbitration.",
+    "description": "Multi-party trade chains: post needs/offers, discover A\u2192B\u2192C\u2192\u2026\u2192A cycles, and track each leg through a declared/actual/drift reconciler to settlement and arbitration.",
     "file": "needs-offers-matching.md"
   },
   {
     "slug": "match-proposing",
-    "title": "Match Proposing — anyone can weave",
+    "title": "Match Proposing \u2014 anyone can weave",
     "category": "Economy & treasury",
     "status": "design",
-    "description": "Proposing a match is an action, not a role: any member may propose a matched-by edge, gated by a per-proposal bond and a decaying match-quality zk-badge — the trust floor and arbitration path for weaving.",
+    "description": "Proposing a match is an action, not a role: any member may propose a matched-by edge, gated by a per-proposal bond and a decaying match-quality zk-badge \u2014 the trust floor and arbitration path for weaving.",
     "file": "match-proposing.md"
   },
   {
@@ -252,7 +252,7 @@
     "title": "Local AI Chat",
     "category": "Apps & files",
     "status": "design",
-    "description": "The coop's memory-stateful assistant: a harness of memory → retrieval → generation → memory, with an explicit per-member private memory, Chrome's on-device Prompt API for generation, and grounded cited answers.",
+    "description": "The coop's memory-stateful assistant: a harness of memory \u2192 retrieval \u2192 generation \u2192 memory, with an explicit per-member private memory, Chrome's on-device Prompt API for generation, and grounded cited answers.",
     "file": "local-ai-chat.md"
   },
   {
@@ -268,7 +268,7 @@
     "title": "Browser Management",
     "category": "Infrastructure",
     "status": "live",
-    "description": "Fleet browser automation on Temporal — the Playwright runner fleet.",
+    "description": "Fleet browser automation on Temporal \u2014 the Playwright runner fleet.",
     "file": "browser-management.md"
   },
   {
@@ -276,36 +276,36 @@
     "title": "Android Mini-Services Client",
     "category": "Infrastructure",
     "status": "design",
-    "description": "The phone as a group node: SMS relay, offline files, a data shard, and offline maps over a Tailscale mesh — infrastructure held by members, not VPSes.",
+    "description": "The phone as a group node: SMS relay, offline files, a data shard, and offline maps over a Tailscale mesh \u2014 infrastructure held by members, not VPSes.",
     "file": "android-mini-services-client.md"
   },
   {
     "slug": "mautic-calcom-mcp-inference",
-    "title": "Stack Additions — Mautic, Cal.com, MCP, Edge Inference",
+    "title": "Stack Additions \u2014 Mautic, Cal.com, MCP, Edge Inference",
     "category": "Infrastructure",
     "status": "design",
-    "description": "Intent: Mautic (marketing automation) + Cal.com (scheduling/booking) apps, an MCP server + knowledgebase as the scoped AI gateway, and client-side inference calling the MCP tools — inference at the edge, acting through the coop.",
+    "description": "Intent: Mautic (marketing automation) + Cal.com (scheduling/booking) apps, an MCP server + knowledgebase as the scoped AI gateway, and client-side inference calling the MCP tools \u2014 inference at the edge, acting through the coop.",
     "file": "mautic-calcom-mcp-inference.md"
   },
   {
     "slug": "caldiy-scheduling-and-paid-bookings",
-    "title": "cal.diy + paid bookings — how to add them",
+    "title": "cal.diy + paid bookings \u2014 how to add them",
     "category": "Infrastructure",
     "status": "design",
-    "description": "Plan: deploy cal.diy (the MIT Cal.com fork — no teams, no SSO; webhooks + API v2 retained), the three identity routes, and why paid bookings are the stack's shared \"an outsider pays a group\" seam rather than a cal.diy feature — blocked behind the payments preflight, never cal.diy's Stripe app.",
+    "description": "Plan: deploy cal.diy (the MIT Cal.com fork \u2014 no teams, no SSO; webhooks + API v2 retained), the three identity routes, and why paid bookings are the stack's shared \"an outsider pays a group\" seam rather than a cal.diy feature \u2014 blocked behind the payments preflight, never cal.diy's Stripe app.",
     "file": "caldiy-scheduling-and-paid-bookings.md"
   },
   {
     "slug": "scoped-availability",
-    "title": "Scoped availability — a member's time, disclosed by audience",
+    "title": "Scoped availability \u2014 a member's time, disclosed by audience",
     "category": "Groups & governance",
     "status": "design",
-    "description": "A member's availability as scoped time budgets: a group sees its own slots, the world sees a count, nobody sees the calendar — granularity as the privacy dial, the anchor substrate that makes the count verifiable, and why a scheduler must never own this record.",
+    "description": "A member's availability as scoped time budgets: a group sees its own slots, the world sees a count, nobody sees the calendar \u2014 granularity as the privacy dial, the anchor substrate that makes the count verifiable, and why a scheduler must never own this record.",
     "file": "scoped-availability.md"
   },
   {
     "slug": "resource-model",
-    "title": "The resource model — what a group holds, uses, or schedules",
+    "title": "The resource model \u2014 what a group holds, uses, or schedules",
     "category": "Groups & governance",
     "status": "design",
     "description": "What a *resource* is when the stack has record families for events and no registry for things: axes rather than a type taxonomy (location kind, engagement mode, contention, custodian, obligations, provenance, disclosure), where tools, land, structures, maintenance and delivery routes each land, why people are never resources, and why a route or a range is the case that proves the model.",
@@ -313,7 +313,7 @@
   },
   {
     "slug": "central-resource-store",
-    "title": "The central store for real-world resources — farm things out of the farm app",
+    "title": "The central store for real-world resources \u2014 farm things out of the farm app",
     "category": "Groups & governance",
     "status": "design",
     "description": "Decoupling farm data from the farm app: the three candidate centres (ERPNext, coop-api, or split-by-fact), what ERPNext's Agriculture domain app already models (Land Unit, Crop, Crop Cycle, non-overlapping block availability), what happens to LiteFarm, the cheap reversible test on the existing bench, and the one-home-per-fact rule that actually fixes RISKS R-10.",
@@ -321,7 +321,7 @@
   },
   {
     "slug": "where-facts-live",
-    "title": "Where facts live — the fact-kind split",
+    "title": "Where facts live \u2014 the fact-kind split",
     "category": "Strategy & narrative",
     "status": "design",
     "description": "Why split-by-fact does not fragment across domains and sectors: seven fact kinds that already exist in the stack, exactly one of which is delegated to an app, the two five-second tests, the invariant that a new domain may add content but never a new kind of home, and sectors as profiles rather than architecture.",
@@ -329,7 +329,7 @@
   },
   {
     "slug": "app-admission-audit",
-    "title": "App admission — audit against the bar",
+    "title": "App admission \u2014 audit against the bar",
     "category": "Infrastructure",
     "status": "note",
     "description": "Dated snapshot: ten apps scored against the admission bar (mapping, gate, event leg, marker, reconciler). Method and confidence stated. The finding: no app clears all four, the gap concentrates in marker and reconciler, mail is the reference implementation, and the best-integrated apps are the ones already treated as projections.",
@@ -337,15 +337,15 @@
   },
   {
     "slug": "crm-under-fact-kinds",
-    "title": "The CRM question under the fact-kind split — ERPNext-native vs Twenty",
+    "title": "The CRM question under the fact-kind split \u2014 ERPNext-native vs Twenty",
     "category": "Apps & files",
     "status": "design",
-    "description": "Revisits the parked Twenty CRM intent under the fact-kind rule: a CRM can only ever hold operational records, never identity or visibility — and REALITY's own CRM milestone is a disclosure property, so no CRM can meet it from inside. Recommends ERPNext-native (4/5 on the bar) with Twenty parked behind a stated trigger.",
+    "description": "Revisits the parked Twenty CRM intent under the fact-kind rule: a CRM can only ever hold operational records, never identity or visibility \u2014 and REALITY's own CRM milestone is a disclosure property, so no CRM can meet it from inside. Recommends ERPNext-native (4/5 on the bar) with Twenty parked behind a stated trigger.",
     "file": "crm-under-fact-kinds.md"
   },
   {
     "slug": "site-plugins-and-embeds",
-    "title": "irl.coop on other people's platforms — plugins, widgets, and the connector",
+    "title": "irl.coop on other people's platforms \u2014 plugins, widgets, and the connector",
     "category": "Apps & files",
     "status": "design",
     "description": "Squarespace, Wix and WordPress plugins that surface coop features via coop-api: what each platform actually allows (WordPress full, Wix partial via Velo, Squarespace widget-only), why the surface is a projection that owns no facts, the bar applied to a site (with the event leg inverted and a DNS marker), and the third-party-cookie constraint that decides the auth design.",
@@ -353,7 +353,7 @@
   },
   {
     "slug": "payment-stub-and-handoff",
-    "title": "The payment seam — a stub rail, and the checkout handoff",
+    "title": "The payment seam \u2014 a stub rail, and the checkout handoff",
     "category": "Economy & treasury",
     "status": "design",
     "description": "Stub or spike is a false choice: the rail seam already exists (RAIL_* plus the coop's own status vocabulary) and the acceptance test is already written (six preflight gates). How a stub rail unblocks all ecommerce product work while never being able to report ready, the checkout-handoff flow that lets a site do ecommerce without ever taking the card, the spike in three phases, and what only a real payment can prove.",
@@ -369,10 +369,10 @@
   },
   {
     "slug": "coop-work-signup-checkoff",
-    "title": "Cooperative work — signup, printable task sheet, check-off",
+    "title": "Cooperative work \u2014 signup, printable task sheet, check-off",
     "category": "Groups & governance",
     "status": "design",
-    "description": "Sign up for concrete work items, print a one-page sheet for the clipboard, and check items off — each check-off emits the contribution event the Tier-2 ledger consumes.",
+    "description": "Sign up for concrete work items, print a one-page sheet for the clipboard, and check items off \u2014 each check-off emits the contribution event the Tier-2 ledger consumes.",
     "file": "coop-work-signup-checkoff.md"
   },
   {
@@ -401,7 +401,7 @@
   },
   {
     "slug": "group-ui-todo",
-    "title": "Group UI — Build Checklist",
+    "title": "Group UI \u2014 Build Checklist",
     "category": "Groups & governance",
     "status": "note",
     "description": "Living build checklist for the group-home surface: phases, open questions, and what already exists.",
@@ -409,7 +409,7 @@
   },
   {
     "slug": "group-shapes-event-bus-proofs-economy",
-    "title": "Digest — Group Shapes, Event Bus, Proofs & Economy",
+    "title": "Digest \u2014 Group Shapes, Event Bus, Proofs & Economy",
     "category": "Groups & governance",
     "status": "note",
     "description": "A consolidated digest of the group model: shapes, the event/notification bus, proofs, and the commons economy.",
@@ -436,7 +436,7 @@
     "title": "Marketplace template strategy",
     "category": "Groups & governance",
     "status": "design",
-    "description": "Where templates come from, under what licensing, and how they reach a group — the settled licensing gate.",
+    "description": "Where templates come from, under what licensing, and how they reach a group \u2014 the settled licensing gate.",
     "file": "marketplace-template-strategy.md"
   },
   {
@@ -449,7 +449,7 @@
   },
   {
     "slug": "weavers",
-    "title": "Weavers — matching needs to offers across parties",
+    "title": "Weavers \u2014 matching needs to offers across parties",
     "category": "Groups & governance",
     "status": "note",
     "description": "Matching needs to offers across parties. Superseded and kept for reference.",
@@ -457,7 +457,7 @@
   },
   {
     "slug": "cooperation-survey-templates",
-    "title": "Cooperation Starter Pack — survey templates",
+    "title": "Cooperation Starter Pack \u2014 survey templates",
     "category": "Strategy & narrative",
     "status": "design",
     "description": "Survey templates a group can run to find out where its own cooperation is thin.",
@@ -465,7 +465,7 @@
   },
   {
     "slug": "survey-0-is-cooperation-for-you",
-    "title": "Survey 0 — \"Is cooperation for you?\"",
+    "title": "Survey 0 \u2014 \"Is cooperation for you?\"",
     "category": "Strategy & narrative",
     "status": "design",
     "description": "The instrument specification for the first cooperation survey: the intake that measures where a group actually stands.",
@@ -473,7 +473,7 @@
   },
   {
     "slug": "formbricks-group-mapping",
-    "title": "Formbricks ↔ irl.coop group mapping",
+    "title": "Formbricks \u2194 irl.coop group mapping",
     "category": "Apps & files",
     "status": "design",
     "description": "How a Formbricks workspace maps to an irl.coop group, and what that means for who sees a response.",
@@ -484,7 +484,7 @@
     "title": "Formbricks customization scope",
     "category": "Apps & files",
     "status": "design",
-    "description": "How deep an irl.coop fork of Formbricks should go — a scope decision, not a build log.",
+    "description": "How deep an irl.coop fork of Formbricks should go \u2014 a scope decision, not a build log.",
     "file": "formbricks-customization-scope.md"
   },
   {
@@ -500,7 +500,7 @@
     "title": "LiteFarm integration (irl.coop)",
     "category": "Apps & files",
     "status": "design",
-    "description": "The farm leg: LiteFarm tasks, fields and crops as the source for field work — the domain data already exists there.",
+    "description": "The farm leg: LiteFarm tasks, fields and crops as the source for field work \u2014 the domain data already exists there.",
     "file": "litefarm-integration.md"
   },
   {
@@ -516,7 +516,7 @@
     "title": "Sovereign maps & tracks (OpenMapServer)",
     "category": "Apps & files",
     "status": "design",
-    "description": "Tracks, markers and waypoints on the coop's own basemap — with the precise/coarse split that keeps a map queryable without publishing exactly where someone was.",
+    "description": "Tracks, markers and waypoints on the coop's own basemap \u2014 with the precise/coarse split that keeps a map queryable without publishing exactly where someone was.",
     "file": "sovereign-maps-tracks.md"
   },
   {
@@ -545,7 +545,7 @@
   },
   {
     "slug": "telephony-privacy",
-    "title": "Telephony privacy — split identity",
+    "title": "Telephony privacy \u2014 split identity",
     "category": "Privacy & adversaries",
     "status": "design",
     "description": "Splitting identity at the switch, and demoting the softswitch so it is not the trust anchor for a call.",
@@ -553,7 +553,7 @@
   },
   {
     "slug": "did-inventory-forecasting",
-    "title": "DID inventory — forecast-driven number provisioning",
+    "title": "DID inventory \u2014 forecast-driven number provisioning",
     "category": "Infrastructure",
     "status": "design",
     "description": "A model for how many numbers to hold and when to provision them, rather than buying one per group on demand.",
@@ -569,7 +569,7 @@
   },
   {
     "slug": "frappe-insights-integration",
-    "title": "Frappe Insights — opening the stack and/or ERPNext",
+    "title": "Frappe Insights \u2014 opening the stack and/or ERPNext",
     "category": "Apps & files",
     "status": "design",
     "description": "Intent (not built): run Frappe Insights on the existing ERPNext bench, report over the coop ledger, and the RLS hazard that decides how it may connect.",
@@ -588,7 +588,7 @@
     "title": "DID + SMS providers, compared for cost and \"unlimited\"",
     "category": "Infrastructure",
     "status": "design",
-    "description": "List rates for Telnyx / Twilio / VoIP.ms / Callcentric / prepaid SIM, sourced and dated — and the finding that decides the choice: a wholesale DID cannot verify an Instagram or YouTube account, because the platform runs a line-type lookup before it sends anything.",
+    "description": "List rates for Telnyx / Twilio / VoIP.ms / Callcentric / prepaid SIM, sourced and dated \u2014 and the finding that decides the choice: a wholesale DID cannot verify an Instagram or YouTube account, because the platform runs a line-type lookup before it sends anything.",
     "file": "did-provider-comparison.md"
   },
   {
@@ -596,20 +596,20 @@
     "title": "eSIM and remote SIM: can numbers live on virtual devices?",
     "category": "Infrastructure",
     "status": "design",
-    "description": "The numbers can be virtual and the radio cannot. lpac manages eUICC profiles from Linux over a modem's AT interface; osmo-remsim separates a SIM from its modem — which is also the exact signature carriers detect, so the legitimate route is a REGISTERED gateway on an M2M plan.",
+    "description": "The numbers can be virtual and the radio cannot. lpac manages eUICC profiles from Linux over a modem's AT interface; osmo-remsim separates a SIM from its modem \u2014 which is also the exact signature carriers detect, so the legitimate route is a REGISTERED gateway on an M2M plan.",
     "file": "esim-and-remote-sim.md"
   },
   {
     "slug": "telnyx-sim-to-pbx",
-    "title": "Telnyx Wireless SIM → the coop's PBX",
+    "title": "Telnyx Wireless SIM \u2192 the coop's PBX",
     "category": "Infrastructure",
     "status": "design",
-    "description": "The SIM and the SIP trunk are the same vendor, so the SIM's number can terminate in FreeSWITCH like any DID — but the SMS half and the line type of the SIM's number are the open questions, and Telnyx's own Number Lookup calls its numbers VoIP.",
+    "description": "The SIM and the SIP trunk are the same vendor, so the SIM's number can terminate in FreeSWITCH like any DID \u2014 but the SMS half and the line type of the SIM's number are the open questions, and Telnyx's own Number Lookup calls its numbers VoIP.",
     "file": "telnyx-sim-to-pbx.md"
   },
   {
     "slug": "group-account-resource",
-    "title": "The account resource — group-held credentials, and the will that outlives a person",
+    "title": "The account resource \u2014 group-held credentials, and the will that outlives a person",
     "category": "Identity & accounts",
     "status": "design",
     "description": "One primitive for group-held accounts and personal succession: the durable identity is not 'a group' but 'a thing that outlives any single person', and a personal group is already modeled. Anchor status, platform role-mapping, and the honest split between what the coop enforces (intent) and what the platform enforces (transfer).",
@@ -617,7 +617,7 @@
   },
   {
     "slug": "group-who-picker",
-    "title": "The group-aware 'who' picker — one shared primitive across every app",
+    "title": "The group-aware 'who' picker \u2014 one shared primitive across every app",
     "category": "Groups & governance",
     "status": "design",
     "description": "One shared picker, embedded at every 'who' affordance (doc collaborators, project members, @-mentions, share dialogs): group-native selection, person-materialized enforcement, authority in coop-api. The fix for person-scoped apps that can't show cooperative structure. Expected to be tweaked on first real use.",
@@ -625,7 +625,7 @@
   },
   {
     "slug": "group-home",
-    "title": "The Group Home — one graph, three axes",
+    "title": "The Group Home \u2014 one graph, three axes",
     "category": "Groups & governance",
     "status": "design",
     "description": "The agreed model for the group's home surface: one node-graph with three axes (zoom, lens, tense), four geography shapes (point/route/territory/field), two verb temperatures (pathways as edges, operations behind a door), and the attestation ladder. The interface model that unpauses the group-page redesign.",
@@ -633,7 +633,7 @@
   },
   {
     "slug": "platform-views",
-    "title": "Platform Views — keep the types, extend the union",
+    "title": "Platform Views \u2014 keep the types, extend the union",
     "category": "Groups & governance",
     "status": "design",
     "description": "The view system underneath the group home: adopt NocoDB's public interface type model, discard the EE handlers/builder, extend the layout union with platform views (weave/geography/treasury/governance/rota/survey/feed), and split render/read/act across Webstudio, RLS-scoped data, and Temporal.",
@@ -641,23 +641,23 @@
   },
   {
     "slug": "nocodb-integration",
-    "title": "NocoDB integration — goals, and per-user identity at the connection layer",
+    "title": "NocoDB integration \u2014 goals, and per-user identity at the connection layer",
     "category": "Apps & files",
     "status": "design",
-    "description": "NocoDB is blank because the projection chain was never verified end-to-end — not because of one failure. Records the spike (a plain view defeats RLS; a narrowed view is safe), the settled principle (OAuth at the edge, ident/cert at the DB, role-as-identity, no passwords), and the license line (stub probes, port against the public contract, never clone the EE code).",
+    "description": "NocoDB is blank because the projection chain was never verified end-to-end \u2014 not because of one failure. Records the spike (a plain view defeats RLS; a narrowed view is safe), the settled principle (OAuth at the edge, ident/cert at the DB, role-as-identity, no passwords), and the license line (stub probes, port against the public contract, never clone the EE code).",
     "file": "nocodb-integration.md"
   },
   {
     "slug": "sharing-nocodb-interfaces",
-    "title": "Sharing NocoDB interfaces — ship the shape, re-bind the data",
+    "title": "Sharing NocoDB interfaces \u2014 ship the shape, re-bind the data",
     "category": "Apps & files",
     "status": "design",
-    "description": "Disambiguates the three meanings of 'share' (data / co-view / remix) and pins the safety rule: ship the shape, re-bind the data — an interface never carries one group's rows to another. Composes the who-picker (share affordance) + blueprint library (where shapes live) + role-as-identity RLS (how the copy re-binds).",
+    "description": "Disambiguates the three meanings of 'share' (data / co-view / remix) and pins the safety rule: ship the shape, re-bind the data \u2014 an interface never carries one group's rows to another. Composes the who-picker (share affordance) + blueprint library (where shapes live) + role-as-identity RLS (how the copy re-binds).",
     "file": "sharing-nocodb-interfaces.md"
   },
   {
     "slug": "nocodb-rebuild-plan",
-    "title": "NocoDB rebuild — execution plan (A → B → C, each gated by a test)",
+    "title": "NocoDB rebuild \u2014 execution plan (A \u2192 B \u2192 C, each gated by a test)",
     "category": "Apps & files",
     "status": "design",
     "description": "The three discussed changes (user-based connection, joined user-specific base, UI-building + invitations) form a strict dependency chain; this is the tracked plan with a test gate per step and a rollback posture.",
@@ -665,7 +665,7 @@
   },
   {
     "slug": "nocodb-one-base-per-group",
-    "title": "NocoDB — one base per group; a person IS a group",
+    "title": "NocoDB \u2014 one base per group; a person IS a group",
     "category": "Apps & files",
     "status": "design",
     "description": "The settled north star: a base is a group's data surface, and every group (personal + collective) has exactly one base. A person's lens is their personal group's base, federating across member-group bases; scope, sharing, and shape-migration all fall out of that. No 'coop' category is ever asked.",
@@ -673,7 +673,7 @@
   },
   {
     "slug": "nocodb-rebuild-handoff",
-    "title": "NocoDB rebuild — handoff state",
+    "title": "NocoDB rebuild \u2014 handoff state",
     "category": "Apps & files",
     "status": "note",
     "description": "Pick-the-thread state: A1 (role-as-identity) is done and proven; A2+A3 collapse into cert + per-user connection (cert is just another user credential, vault/realtime); the incorrectly-scoped ident/peer correction; the 3 error classes; and the reset e2e-test password flag.",
@@ -681,7 +681,7 @@
   },
   {
     "slug": "member-scoped-app-access",
-    "title": "Member-scoped app access — Plane, NocoDB, ERPNext, Temporal",
+    "title": "Member-scoped app access \u2014 Plane, NocoDB, ERPNext, Temporal",
     "category": "Infrastructure",
     "status": "design",
     "description": "The rule (a member's access = the app resources their groups own; no service identity ever), the two existing halves (the coop_my_seats resolver + the resource_scopes map), per-app enforcement seams and gaps, what group-scoped Temporal info requires, and the build order.",
@@ -692,7 +692,14 @@
     "title": "Operating the Stack From Within",
     "category": "Infrastructure",
     "status": "design",
-    "description": "Successorship is a group, not a person: the irl.coop group is created with the stack’s own tools and the whole stack is designed to be operated by it from inside. The capability inventory (inside, group-held, or concentrated with an aim), the vault as precondition, a group mechanism for root, service accounts as a member kind, the coop’s three governing bodies, and the re-scored backlog.",
+    "description": "Successorship is a group, not a person: the irl.coop group is created with the stack\u2019s own tools and the whole stack is designed to be operated by it from inside. The capability inventory (inside, group-held, or concentrated with an aim), the vault as precondition, a group mechanism for root, service accounts as a member kind, the coop\u2019s three governing bodies, and the re-scored backlog.",
     "file": "group-operated-stack.md"
+  },
+  {
+    "slug": "invitation-and-join-mechanism",
+    "title": "Invitation & Join Mechanism",
+    "category": "Identity & Access",
+    "status": "design",
+    "description": "The on-ramp that Phase 1.1 recruitment depends on and every group afterwards: an owner's invite (offer, signed single-use token, revoked/expiry, email keyed) and a person's join-request, both ending in the same seat row under \u00a74.3/D-13 consent. Today the identity is phone-add-only; nothing exists for a person who isn't yet in the federation (code-verified)."
   }
 ]
