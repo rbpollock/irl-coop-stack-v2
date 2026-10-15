@@ -42,21 +42,25 @@ Build it once, instance #1 is the coop (§0 of `group-operated-stack.md`).
 membership; a role is a quality of the member. The group's Safe (owner set + threshold) is the
 register of who the group is.
 
-Two deliberate tiers fall out:
+There are exactly two member states, and deliberately no third class: **member** (on the
+Safe) and **not‑yet‑member**. A person who is not on the Safe is not a class of member at any
+point, for any duration.
 
-- **member** — on the group's Safe; membership *is* ownership of the key they sign. Everything
-  above it (treasury, custody, constitutional change) hangs off that. It cannot be earned by a
-  checkbox.
-- **participant / contributor** — explicitly *not* a member: scoped access to the group's
-  sub-spaces (a form, a doc, a working group, an action) with zero Safe input. This is the open,
-  low-friction door, and where the group's weak ties live — ownership-tied membership would
-  filter those bridges out before they connect.
+A non‑member holds **scoped, temporary, revocable access** — a grant for one specific verb
+(fill this form, open this doc, claim a slot, join a call). That is a *permission*, not a
+status: zero Safe input, exists for the moment it is used, and rides on an invite token or an
+open permit. This is where the group's weak ties connect (a bridge is a scoped exchange, not a
+crowd), and it is the open door — without installing a ladder or a second rank.
 
-A participant becomes a member only through a deliberate admission event (an invite that grants
-ownership, or a Safe admit) — the commitment anchor that makes co-op real rather than nominal.
+Becoming a **member** is only a deliberate admission event (an invite that grants Safe
+ownership, or a Safe admit) — the commitment anchor that makes a co‑op real rather than nominal.
+
+Groups may add their *own* recognition of a recurring non‑member (a "contributor" label with
+their own norms) if they wish — welcomed, never mandated by the platform. The platform ships.
+**member-or-not plus scoped non‑member access**; it will not force a class grid.
 
 Composability: a working group is a Safe, so its members are its key-holders; the co-op is the
-parent Safe. **"Authority" is which Safe(s) you hold and what their thresholds say** — D-16 (a
+parent Safe. **"Authority" is by which Safe(s) you hold and what their thresholds say** — D-16 (a
 seat's holder is a Safe) applied to membership.
 
 ## 3. What exists today (verified in code, 2026-10-13)
@@ -229,19 +233,21 @@ check uses the existing `isOwner`.
 ## 6a. Open permits — the pre‑signed, bounded open door
 
 A group can offer weak‑tie intake without metering each arrival through a threshold vote. A
-**permit** = `{ cap, role (participant‑tier only), subgroup, expires_at }`. The Safe mints it
-(one threshold act), and anyone holding a valid permit token can claim one of `cap` participant
-seats in that subgroup, no further consensus, until it expires or is revoked.
+**permit** = `{ cap, scope (a set of scoped non‑member access grants), subgroup, expires_at }`.
+The group can receives it in one threshold act; anyone holding a valid token claims one of `cap`
+scoped‑access slots in that subgroup, no further consensus, until it expires or is revoked.
+There is no "participant class" — a permit grants access, not a status.
 
 Rules that keep it safe:
 
-- a permit seats only the roles it names — **participant‑tier by default**; a permit can never
-  open a Safe‑owner slot (member‑admission stays a named, consented event).
-- redemption is idempotent and bounded: a server‑side counter checks `remaining ≥ 1`, single‑use
-  per claimant, safe against races and against a link circulating.
-- revocation is immediate: the moment the group kills the permit, an outstanding claim fails.
-- an open permit is cheap precisely because it grants nothing about custody — it is the group
-  saying "there are up to N open participant seats in this subgroup."
+- a permit grants only the scopes it names; it is **never** a Safe-owner door, and its
+  holders never become members just by holding it — admission to a Safe (ownership) stays a
+  named, consented, deliberate event.
+- redemption is idempotent and bounded: a server-side counter checks `remaining >= 1`,
+  single-use per claimant, safe against races and against a circulating link.
+- revocation is immediate: the moment the group revokes the permit, an outstanding claim fails.
+- an open permit is cheap precisely because it grants nothing about membership or custody — the
+  group is saying "there are up to N people with scoped, revocable access in this subgroup."
 
 This is Granovetter's weak tie made mechanical: the capacity is bounded, so the bridge can grow
 a network without the co‑op ever diluting its ownership construct.
