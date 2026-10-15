@@ -219,12 +219,23 @@ open and are taken here as defaults** (§8) — each is reversible.
 
 ### Phase 1 — The group exists
 
-1. **1.1 Create the coop group Safe** at 1-of-1, then recruit and promote to 2-of-3.
-2. **1.2 Resolve §4.3** (membership is a request, not a signin).
-3. **1.3 Group-health v0** (§5) — including the needs-improvement flag for a
-   one-member group. Small: the state already exists.
-4. **1.4 The roadmap as the group's first Plane project** — the parked item 1, which
-   runs at 1-of-1 with zero audience and generates the daily-use bug list.
+Membership is now the branching idea in §2.1 of `invitation-and-join-mechanism.md`:
+**membership = your Safe key**; a participant tier is the open door; permits and the payment
+covenant are the group's own dials. Phase 1 runs the door:
+
+1. **1.0 The on-ramp core** (builds the door) — schema/RLS + signed token; one token, any
+   door (link/QR/email/SMS); the **grantable "invite" capability** with a per-inviter
+   _may-assign_ set; a **participant** tier; **open permits** (capped, participant-only,
+   self-revocable); a per-group **payment covenant** (nominal + waivable by default; a group
+   may set its bar — the platform never does).
+2. **1.1 The coop Safe exists** — the `@irl.coop` group + Safe at 1-of-1.
+3. **1.2 Walk a real person through the door** — participant → member (Safe-owner admit),
+   then promote to **2-of-3**. First real use, and proof the door works.
+4. **1.3 Group-health v0** (§5) — the "1 member → needs-improvement" flag pays in live.
+5. **1.4 Make the join deliberate, then open** — join-request & the open `participant`
+   permit stay a coop dial: invite-only at first, weak-tie intake opened later with a cap.
+6. **1.5 The roadmap as the group's first Plane project** — owned by the Safe, runs at
+   1-of-1, and generates the daily-use bug list.
 
 ### Phase 2 — The keys come home (the precondition)
 

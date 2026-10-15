@@ -36,6 +36,29 @@ Build it once, instance #1 is the coop (§0 of `group-operated-stack.md`).
 
   Symmetric, deliberate, and both are revocable up to the moment of acceptance.
 
+### 2.1 Ownership IS membership — the covenant
+
+"Member" is a loaded word. Membership means **you are on the Safe.** A role is not on top of
+membership; a role is a quality of the member. The group's Safe (owner set + threshold) is the
+register of who the group is.
+
+Two deliberate tiers fall out:
+
+- **member** — on the group's Safe; membership *is* ownership of the key they sign. Everything
+  above it (treasury, custody, constitutional change) hangs off that. It cannot be earned by a
+  checkbox.
+- **participant / contributor** — explicitly *not* a member: scoped access to the group's
+  sub-spaces (a form, a doc, a working group, an action) with zero Safe input. This is the open,
+  low-friction door, and where the group's weak ties live — ownership-tied membership would
+  filter those bridges out before they connect.
+
+A participant becomes a member only through a deliberate admission event (an invite that grants
+ownership, or a Safe admit) — the commitment anchor that makes co-op real rather than nominal.
+
+Composability: a working group is a Safe, so its members are its key-holders; the co-op is the
+parent Safe. **"Authority" is which Safe(s) you hold and what their thresholds say** — D-16 (a
+seat's holder is a Safe) applied to membership.
+
 ## 3. What exists today (verified in code, 2026-10-13)
 
 - `onboarding.ts` — captures `displayName`/`avatar`/`offerings` into the profile. **Creates
@@ -202,6 +225,51 @@ GET    /api/v1/invitations/:id/qr             (owner)        QR render (SVG/PNG)
 Mutations go through a system-write function (the existing SECURITY DEFINER pattern, as the
 SMS `phone_message` row uses) so FORCE RLS is never bypassed by app-side logic; the owner
 check uses the existing `isOwner`.
+
+## 6a. Open permits — the pre‑signed, bounded open door
+
+A group can offer weak‑tie intake without metering each arrival through a threshold vote. A
+**permit** = `{ cap, role (participant‑tier only), subgroup, expires_at }`. The Safe mints it
+(one threshold act), and anyone holding a valid permit token can claim one of `cap` participant
+seats in that subgroup, no further consensus, until it expires or is revoked.
+
+Rules that keep it safe:
+
+- a permit seats only the roles it names — **participant‑tier by default**; a permit can never
+  open a Safe‑owner slot (member‑admission stays a named, consented event).
+- redemption is idempotent and bounded: a server‑side counter checks `remaining ≥ 1`, single‑use
+  per claimant, safe against races and against a link circulating.
+- revocation is immediate: the moment the group kills the permit, an outstanding claim fails.
+- an open permit is cheap precisely because it grants nothing about custody — it is the group
+  saying "there are up to N open participant seats in this subgroup."
+
+This is Granovetter's weak tie made mechanical: the capacity is bounded, so the bridge can grow
+a network without the co‑op ever diluting its ownership construct.
+
+
+## 6b. Payment & the membership covenant (per‑group, never platform‑decided)
+
+What it costs to join (or to be waived) is **the group's own policy**, not the platform's. The
+platform provides the rail — a payment that lands in the group's treasury Safe — and honest
+defaults. Every group sets its own: amount (zero, nominal, or a deliberate $5k/$100k buy‑in),
+form (one‑time buy‑in / recurring membership share), waiver and in‑kind paths, and what happens
+to a share on exit. The platform never put in the ceiling.
+
+Two distinguishable notions:
+
+- **entry / buy‑in** — the one‑time seat. In the cooperative shape this is the member share:
+  fixed, and usually refundable‑on‑exit (money tied to the member, held by the treasury).
+- **dues / recurring** — the steady income that keeps the group running.
+
+The default coop shape is nominal and waivable — *more the lights, present citizenship not
+**means* — while a very selective group may place a real buy‑in. Both are the same rail.
+
+The platform's position on "understandability": it is **routing, never custodian, never moving
+on the member's behalf**. Joining a Safe with one's own coins is **private-assets-into-private-
+vehicle, non-custodial, no intermediary — it is not an AML event**. The only compliance surface
+in this stack is the fiat on‑ramp (a card processor's own KYC/AML book, and account‑holder of
+that is the group's treasury), never a platform-written file gate for joining a Safe.
+
 
 ## 7. Defaults taken (each reversible; flag, don't wall)
 
