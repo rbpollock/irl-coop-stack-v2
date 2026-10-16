@@ -55,8 +55,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 #sheet .alt{margin-top:16px;color:var(--muted);font-size:13.5px}
 #sheet .alt b{color:var(--ink)}
 @media(min-width:1110px){#board{padding:90px 48px 40px}#dock{display:flex}}
-@media(min-width:701px) and (max-width:1109px){#board{padding:86px 20px 26px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}}
-@media(max-width:700px){#board{padding:76px 15px 24px;display:grid;gap:12px;align-content:start}}
+@media(min-width:701px) and (max-width:1109px){
+  #board{padding:86px 20px 26px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start;
+    pointer-events:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+}
+@media(max-width:700px){
+  #board{padding:76px 15px 24px;display:grid;gap:12px;align-content:start;
+    pointer-events:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+}
 body.dense #world{opacity:.05}
 body.dense #board{overflow:auto}
 body.dense .pane{position:relative !important;left:auto !important;top:auto !important;width:auto !important}
