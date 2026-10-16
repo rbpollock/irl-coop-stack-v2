@@ -78,10 +78,10 @@ body.dense .pane{position:relative !important;left:auto !important;top:auto !imp
   </div>
   <div id="world"><div class="rim"></div><div class="hint">drag to look around · the world is a skin, the data is the same</div></div>
   <div id="board">
-    <section class="pane" id="p-door"><h2>Handed to you</h2><div id="doorList"></div></section>
-    <section class="pane" id="p-weave"><h2>The weave</h2><div id="weaveList"></div></section>
-    <section class="pane" id="p-sign"><h2>Needs your hand</h2><div id="signList"></div></section>
-    <section class="pane" id="p-room"><h2>The table</h2><div id="roomList"></div></section>
+    <section class="pane" id="p-door"><h2>Incoming</h2><div id="doorList"></div></section>
+    <section class="pane" id="p-weave"><h2>Offer board</h2><div id="weaveList"></div></section>
+    <section class="pane" id="p-sign"><h2>Decisions</h2><div id="signList"></div></section>
+    <section class="pane" id="p-room"><h2>Ecosystem</h2><div id="roomList"></div></section>
   </div>
   <div id="dock"></div>
   <div id="sheet"><div class="card"></div></div>
@@ -170,7 +170,7 @@ body.dense .pane{position:relative !important;left:auto !important;top:auto !imp
 
   /* dock */
   var dock=document.getElementById("dock");
-  [["p-door","Handed"],["p-weave","The weave"],["p-sign","Needs your hand"],["p-room","The table"]].forEach(function(k){
+  [["p-door","Incoming"],["p-weave","Offer board"],["p-sign","Decisions"],["p-room","Ecosystem"]].forEach(function(k){
     var dot=document.createElement("button");dot.className="dot";dot.innerHTML="<b>"+k[1]+"</b>";
     dot.addEventListener("click",function(){var p=document.getElementById(k[0]);
       if(document.body.classList.contains("dense")){p.scrollIntoView({behavior:"smooth"});}else{p.style.outline="2px solid var(--primary)";setTimeout(function(){p.style.outline="none";},900);}});

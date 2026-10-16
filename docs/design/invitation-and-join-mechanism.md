@@ -7,18 +7,24 @@ documents the mechanism that 1.1's recruitment depends on, and every group after
 
 ---
 
-## 0. Terminology (the craft-felt register)
+## 0. Terminology (settled, the graph's own verbs — no decorative metaphor)
 
-Converged in review: the product is a **table**, not real estate. Code may keep internal
-column/file names but must never expose these as a user surface word:
+Words named by the coop network itself; the surface vocabulary (group·incoming·offer board·
+decisions·ecosystem·key) is what ships, and §doc 1's text uses only these:
 
-- **A (thing passed) — invitation** — what you *pass* to a person. Verbs: pass, reach, offer.
-- **The table** — a group's home surface ("room" is a Matrix collision and sounds gated).
-- **Handed to you** — the pane of invites & shares open on you (was "Doors").
-- **A key** — membership; "a key is offered — it means the Safe." The only ownership symbol.
-- **Guest at the table** — non-member with scoped, temporary, revocable access (never a rank).
-- **Open invitation** — a bounded, self-service intake (was "open permit").
-- Internal pipeline label: **invite → action → key** (never a surface phrase).
+- **group** — a node of people tied together (the "cluster" in graph terms; never "room").
+- **a tie / connection** — the relationship edge between two (person↔group, group↔group).
+- **a key** — membership = custody: holding this group's Safe key is what being a member means.
+  Literal, the only ownership word.
+- **incoming** — the pane of invites/shares arriving for you (the edges offered to you).
+- **connections** — alternative for the above if a group prefers warmer wording for the pane.
+- **offer board** — the needs/offers pane (reciprocal provisioning: where ties may form).
+- **decisions** — the pane where a threshold of consent is gathered (your yes to an act).
+- **ecosystem** — the pane of who's in this group and how they're tied (their roles/keys).
+- **guest** — not yet tied to the group; has *temporary, scoped* access to a specific thing.
+- **open invitation** — a bounded many-way tie the group leaves for strangers to attach to.
+- **the Safe** — the pool the members jointly hold; custody = a key.
+- Interior code label only: invoke → key (the pipeline that builds "incoming" items).
 
 ## 1. Why this is load-bearing, not cosmetic
 
