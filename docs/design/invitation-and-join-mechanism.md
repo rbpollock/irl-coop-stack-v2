@@ -7,6 +7,19 @@ documents the mechanism that 1.1's recruitment depends on, and every group after
 
 ---
 
+## 0. Terminology (the craft-felt register)
+
+Converged in review: the product is a **table**, not real estate. Code may keep internal
+column/file names but must never expose these as a user surface word:
+
+- **A (thing passed) — invitation** — what you *pass* to a person. Verbs: pass, reach, offer.
+- **The table** — a group's home surface ("room" is a Matrix collision and sounds gated).
+- **Handed to you** — the pane of invites & shares open on you (was "Doors").
+- **A key** — membership; "a key is offered — it means the Safe." The only ownership symbol.
+- **Guest at the table** — non-member with scoped, temporary, revocable access (never a rank).
+- **Open invitation** — a bounded, self-service intake (was "open permit").
+- Internal pipeline label: **invite → action → key** (never a surface phrase).
+
 ## 1. Why this is load-bearing, not cosmetic
 
 Phase 1.1 cannot recruit without it. `POST /api/v1/groups/:id/members` (groups.ts:253) seats a
