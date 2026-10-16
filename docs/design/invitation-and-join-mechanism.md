@@ -324,3 +324,36 @@ that is the group's treasury), never a platform-written file gate for joining a 
 Anti-goals: no re-architecting of `group_members`; no new identity system; no redesign of the
 whole `onboarding-flow.md` experience; no gate that blocks a stranger without an invite from
 *seeing* the platform (they just can't join silently).
+
+---
+
+## 8. Surface additions (captured; none block the invite core)
+
+Reversible per group/user; all ride the projection + per-session core.
+
+### 8.1 Decisions — swipe → snooze / abstain, and abstention is logged
+- A decision row can be **snoozed** (your private deferral: the events bus re-delivers it
+  later; never a change to the group's thing) or **abstained**.
+- Abstain is a vote state: `yes | no | abstain`. The **count** is group-visible
+  ("7 decided, 2 abstained, 1 no word") but the **individual abstainer is private by
+  default, exactly like a vote** — anti-ghosting at the count, privacy at the name.
+- Extend `votes` with `abstain`/`abstained_at`; add a participation line per decision.
+- Gesture: swipe **left = snooze**, **right = abstain** (tap-buttons always present).
+
+### 8.2 Smart filters (per-person, never for someone else)
+- A per-user `view_filters` store: region, categories/tags, include/drop subjects.
+- Applies to **Incoming** and the **Offer board**; can hide a *feed* item, never an *owner
+  obligation* (what's due you stays visible even when filtered).
+
+### 8.3 Ownership is offered as a covenant of contribution (icons)
+- **Become an owner** shows four contribution kinds as icons: **money · labour · time ·
+  trade** (`contribution_kind` enum). The group picks which it accepts; the platform only
+  provides the kinds.
+- The kind is shown, the amount is private (citizenship, not means). Same enum feeds the
+  Offer board (offer labour / time / goods / coin).
+
+### 8.4 Vocabulary (settled): owner / the Safe / the share
+- membership = **owner of the group's Safe**; a member is an owner. A **guest** owns nothing.
+  The word "key" is gone from the surface ("don't key a member"). "member share" reserved for
+  finance/legal precision only.
+

@@ -143,7 +143,7 @@ body.dense .pane{position:relative !important;left:auto !important;top:auto !imp
     var verbC=d.green?"verb green":"verb";
     return buttonRow('<div class="txt"><div class="who">'+d.who+'</div><div class="what">'+d.why+'</div></div>'+
       '<span class="'+verbC+'">'+d.verb+'</span>',function(){
-        var alt=d.seat?'A key is offered too — <b>membership means the Safe</b>. Separate and deliberate.'
+        var alt=d.seat?'Ownership is offered too — <b>it means the Safe</b>. Separate and deliberate.'
                       :'No membership is asked — just the thing.';
         openSheet(d.who,d.why.replace(/<[^>]+>/g,""),d.verb,alt);
       });
@@ -165,7 +165,7 @@ body.dense .pane{position:relative !important;left:auto !important;top:auto !imp
   var roomList=document.getElementById("roomList");
   room.forEach(function(p){var d=document.createElement("div");d.className="person";
     d.innerHTML='<div class="av" style="background:'+p[1]+'">'+p[0].charAt(0)+'</div>'+p[0]+
-      (p[2]?'<span class="key">key</span>':'');
+      (p[2]?'<span class="key">owner</span>':'');
     roomList.appendChild(d);});
 
   /* dock */
