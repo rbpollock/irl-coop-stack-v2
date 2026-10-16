@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>irl.coop — the hall</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#2a1a4d;--muted:#6b5b8a;--line:#e6ddf5;--dim:#ece2ff;--primary:#7c3aed;--green:#16a34a;
+  --glass:rgba(255,255,255,.6);--shadow:0 18px 44px -20px rgba(60,20,120,.32);--r:20px;
+  --serif:"Cormorant Garamond",serif;--sans:"Inter",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:var(--dim);overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+#stage{position:fixed;inset:0;display:flex;flex-direction:column}
+.bar{position:relative;z-index:40;display:flex;align-items:center;gap:10px;padding:11px 18px;background:rgba(250,246,255,.86);border-bottom:1px solid var(--line)}
+.bar h1{font-family:var(--serif);font-size:23px}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:13px}
+.pill:hover{border-color:var(--primary);color:var(--primary)}
+.pill.on{background:var(--primary);color:#fff}
+#world{position:absolute;inset:0;z-index:0;overflow:hidden}
+#world .rim{position:absolute;left:-25%;top:-25%;width:150%;height:150%;background-size:cover;background-repeat:repeat-x;transition:transform .14s ease-out}
+#world::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 32%,rgba(250,246,255,.82) 72%,var(--dim) 96%)}
+.hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;color:var(--muted);font-size:11px;letter-spacing:.3px;white-space:nowrap}
+#board{position:fixed;inset:0;z-index:20;pointer-events:none}
+.pane{pointer-events:auto;display:flex;flex-direction:column;gap:9px;padding:16px;background:var(--glass);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);animation:rise .45s both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.pane h2{font-family:var(--serif);font-size:19px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:12px;background:#fff;border:1px solid var(--line);cursor:pointer;text-align:left;width:100%}
+.row:hover{border-color:var(--primary);transform:translateY(-1px)}
+.row .txt{flex:1;min-width:0}
+.row .who{font-weight:600;font-size:13px}
+.row .what{color:var(--muted);font-size:12px;line-height:1.3}
+.row .what b{color:var(--ink)}
+.row .verb{flex:none;font-size:11px;font-weight:600;padding:5px 11px;border-radius:999px;background:var(--primary);color:#fff}
+.row .verb.green{background:var(--green)}
+.person{display:flex;align-items:center;gap:9px;padding:7px;font-size:13.5px}
+.person .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;flex:none}
+.person .key{margin-left:auto;color:var(--primary)}
+.empty{color:var(--muted);font-size:13px}
+#dock{position:fixed;left:14px;top:50%;transform:translateY(-50%);z-index:50;display:none;flex-direction:column;gap:10px}
+#dock .dot{width:11px;height:11px;border-radius:50%;background:#cbbaf0;cursor:pointer;position:relative}
+#dock .dot.on{background:var(--primary)}
+#dock .dot b{position:absolute;left:24px;top:50%;transform:translateY(-50%);white-space:nowrap;font-size:12px;font-weight:600;background:#fff;padding:4px 9px;border-radius:8px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.15s}
+#dock .dot:hover b{opacity:1}
+#sheet{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(40,20,80,.4);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:.2s}
+#sheet.open{opacity:1;pointer-events:auto}
+#sheet .card{position:relative;width:min(560px,92vw);max-height:82vh;overflow:auto;border-radius:var(--r);background:#fff;padding:28px;box-shadow:var(--shadow)}
+#sheet .x{position:absolute;top:12px;right:16px;font-size:24px;color:var(--muted)}
+#sheet h2{font-family:var(--serif);font-size:30px;margin-bottom:8px;padding-right:34px}
+#sheet .sub{color:var(--muted);margin-bottom:20px}
+#sheet .cta{display:inline-block;padding:12px 22px;border-radius:999px;background:var(--primary);color:#fff;font-weight:600;font-size:15px}
+#sheet .alt{margin-top:16px;color:var(--muted);font-size:13.5px}
+#sheet .alt b{color:var(--ink)}
+@media(min-width:1110px){#board{padding:90px 48px 40px}#dock{display:flex}}
+@media(min-width:701px) and (max-width:1109px){#board{padding:86px 20px 26px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}}
+@media(max-width:700px){#board{padding:76px 15px 24px;display:grid;gap:12px;align-content:start}}
+body.dense #world{opacity:.05}
+body.dense #board{overflow:auto}
+body.dense .pane{position:relative !important;left:auto !important;top:auto !important;width:auto !important}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bar">
+    <h1>irl.coop · the hall</h1>
+    <div class="spacer"></div>
+    <button class="pill" id="worldBtn">world</button>
+    <button class="pill" id="listBtn">list</button>
+  </div>
+  <div id="world"><div class="rim"></div><div class="hint">drag to look around · the world is a skin, the data is the same</div></div>
+  <div id="board">
+    <section class="pane" id="p-door"><h2>Doors</h2><div id="doorList"></div></section>
+    <section class="pane" id="p-weave"><h2>The weave</h2><div id="weaveList"></div></section>
+    <section class="pane" id="p-sign"><h2>Needs your hand</h2><div id="signList"></div></section>
+    <section class="pane" id="p-room"><h2>The room</h2><div id="roomList"></div></section>
+  </div>
+  <div id="dock"></div>
+  <div id="sheet"><div class="card"></div></div>
+</div>
+<script>
+(function(){
+  "use strict";
+  var worlds=[
+    ["The Grove","radial-gradient(120% 95% at 30% 22%,#f1ffe6,#a8e2c0 45%,#84b895 75%,#5d9378)"],
+    ["The Coast","radial-gradient(120% 95% at 34% 24%,#fff8e2,#aee0e6 48%,#79aec8 80%,#4c7186)"],
+    ["The Plains","radial-gradient(120% 95% at 30% 26%,#fdf1cf,#e7d6a3 45%,#c9a65b 78%,#8f6f32)"],
+    ["The Neon","radial-gradient(120% 95% at 38% 16%,#2c0f33,#3c1455 48%,#7c3aed 82%,#0e2135)"],
+    ["The Empty","radial-gradient(120% 95% at 30% 30%,#ffffff,#eef0e6 46%,#dcd3c2 80%,#b7ae9c)"]
+  ];
+  var doors=[
+    {why:"shared <b>field-notes</b>",who:"Athena",verb:"Open document",green:false,seat:true},
+    {why:"need an editor for the <b>guild zine</b>",who:"Mara",verb:"Reach",green:true,seat:false},
+    {why:"a 12-min <b>call</b> to meet you",who:"Rune",verb:"Join call",green:false,seat:true},
+    {why:"the <b>dues</b> line this quarter",who:"the treasury",verb:"Give",green:false,seat:false}
+  ];
+  var weave=[
+    {t:"offers the <b>facilitation circle</b>",who:"a near fellow"},
+    {t:"needs a <b>pantry keeper</b> this week",who:"your group"},
+    {t:"wants the <b>print file</b>",who:"June"}
+  ];
+  var signs=[
+    {t:"a <b>dues waiver</b> for Kiran",by:"today"},
+    {t:"the <b>quarterly priority</b>",by:"tomorrow"}
+  ];
+  var room=[["Athena","#7c3aed",1],["Mara","#16a34a",1],["Rune","#d97706",1],
+            ["Oto","#8b5cf6",0],["June","#0ea5e9",0],["Ilias","#64748b",0]];
+
+  /* world */
+  var wi=0,rim=document.querySelector("#world .rim"),pan=0,sx=0,drag=false,startPan=0;
+  function paint(){rim.style.backgroundImage=worlds[wi][1];}
+  paint();
+  rim.addEventListener("pointerdown",function(e){drag=true;sx=e.clientX;startPan=pan;rim.setPointerCapture(e.pointerId);});
+  window.addEventListener("pointermove",function(e){if(!drag)return;pan=startPan+(sx-e.clientX);pan=((pan%1400)+1400)%1400;rim.style.transform="translateX("+(-pan)+"px)";});
+  window.addEventListener("pointerup",function(){drag=false;});
+  document.getElementById("worldBtn").addEventListener("click",function(){wi=(wi+1)%worlds.length;paint();this.textContent="world · "+worlds[wi][0];});
+
+  /* sheet */
+  var sheet=document.getElementById("sheet"),card=sheet.querySelector(".card"),active=false;
+  function closeSheet(){sheet.classList.remove("open");active=false;}
+  function openSheet(title,sub,cta,alt){
+    card.innerHTML='<button class="x" aria-label="close">×</button><h2>'+title+'</h2>'+
+      '<div class="sub">'+sub+'</div><button class="cta">'+cta+'</button>'+
+      (alt?'<div class="alt">'+alt+'</div>':'');
+    card.querySelector(".x").addEventListener("click",closeSheet);
+    sheet.classList.add("open");active=true;
+  }
+  sheet.addEventListener("click",function(e){if(e.target===sheet)closeSheet();});
+  window.addEventListener("keydown",function(e){if(e.key==="Escape")closeSheet();});
+
+  /* builders */
+  function buttonRow(inner,onclick){var b=document.createElement("button");b.className="row";b.innerHTML=inner;
+    if(onclick)b.addEventListener("click",onclick);return b;}
+  function doorRow(d){
+    var verbC=d.green?"verb green":"verb";
+    return buttonRow('<div class="txt"><div class="who">'+d.who+'</div><div class="what">'+d.why+'</div></div>'+
+      '<span class="'+verbC+'">'+d.verb+'</span>',function(){
+        var alt=d.seat?'A seat is offered too — <b>it means holding a key</b>. Separate and deliberate.'
+                      :'No seat is asked — just the thing.';
+        openSheet(d.who,d.why.replace(/<[^>]+>/g,""),d.verb,alt);
+      });
+  }
+  var doorList=document.getElementById("doorList");doors.forEach(function(d){doorList.appendChild(doorRow(d));});
+
+  var weaveList=document.getElementById("weaveList");
+  weave.forEach(function(w){weaveList.appendChild(buttonRow(
+    '<div class="txt"><div class="what">'+w.t+'</div><div class="who">'+w.who+'</div></div><span class="verb green">Reach</span>',
+    function(){openSheet(w.who,w.t.replace(/<[^>]+>/g,""),"Reach","");}
+  ));});
+
+  var signList=document.getElementById("signList");
+  signs.forEach(function(s){signList.appendChild(buttonRow(
+    '<div class="txt"><div class="what">'+s.t+'</div><div class="who">'+s.by+'</div></div><span class="verb">Do</span>',
+    function(){openSheet("Your signature","A piece needs you before others can act.","Sign / decide","");}
+  ));});
+
+  var roomList=document.getElementById("roomList");
+  room.forEach(function(p){var d=document.createElement("div");d.className="person";
+    d.innerHTML='<div class="av" style="background:'+p[1]+'">'+p[0].charAt(0)+'</div>'+p[0]+
+      (p[2]?'<span class="key">key</span>':'');
+    roomList.appendChild(d);});
+
+  /* dock */
+  var dock=document.getElementById("dock");
+  [["p-door","Doors"],["p-weave","The weave"],["p-sign","Needs your hand"],["p-room","The room"]].forEach(function(k){
+    var dot=document.createElement("button");dot.className="dot";dot.innerHTML="<b>"+k[1]+"</b>";
+    dot.addEventListener("click",function(){var p=document.getElementById(k[0]);
+      if(document.body.classList.contains("dense")){p.scrollIntoView({behavior:"smooth"});}else{p.style.outline="2px solid var(--primary)";setTimeout(function(){p.style.outline="none";},900);}});
+    dock.appendChild(dot);});
+
+  /* list toggle */
+  var listBtn=document.getElementById("listBtn");
+  listBtn.addEventListener("click",function(){document.body.classList.toggle("dense");listBtn.classList.toggle("on");});
+})();
+</script>
+</body>
+</html>
