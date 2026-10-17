@@ -78,12 +78,13 @@ reputation to Gmail. Three options:
 Start a **VPS (A)** in parallel so the first invitations land inbox before a pilot. Use the
 ESP (B) only if pilot invites must be in the mailbox before the VPS IP warms.
 
-## What I did vs. what's yours
+**Applied (live since 2026-10-17):** DKIM keypair generated (private stored + ignored); all
+three DNS records **published through the in-repo Gandi LiveDNS v5 key** and verified live
+(apex SPF `mx -all`, `_dmarc` `p=quarantine`, `_s1._domainkey` DKIM) on Gandi + public
+resolvers. So Step 1 is done — no DNS operator action remains.
 
-Done: DKIM keypair generated (private stored + ignored; public record file committed);
-this analysis; no code changes to the mailer (it's fine as the sender; the path behind it
-was the problem).
-
-Yours: publish the three DNS records; flip Stalwart's DKIM on; set the record
-selector's PTR by choosing the egress route; pick A or B in the doc. Until the DNS + PK
-are live, mail stays where it is — the doc holds the exact strings to paste.
+**Remaining for the owner / admin:** (2) flip Stalwart's DKIM signing on (private `s1` key,
+admin API) and (3) choose the egress route (A self-hosted outbound VPS recommended, B
+ESP-bridge). And a hygiene item: the Gandi v5 API key is **committed** in
+`infra/scripts/renew-cert.sh` — rotate it in the Gandi console and move it to the gitignored
+`secrets/` tree.
