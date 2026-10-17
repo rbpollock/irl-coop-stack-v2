@@ -391,3 +391,29 @@ Guardrails (non-negotiable):
 **First slice:** the invitation-boundary confirmation — detect the mismatch at redemption,
 offer the three doors, owned-email verify, collapse on success. The invite is both the
 commonest trigger and the safest place to prove.
+
+
+---
+
+## 9b. The one — one sub, many names; email is a method, not the identity
+
+The only identity is the Keycloak **sub**. Everything else is a name or a method ON that sub.
+
+- **Core persona:** the irl.coop identity — a display name + a stable, unique, pick-once
+  **handle** (`@name`) for addressing; avatar. Lives on `profiles`, keyed by sub.
+- **Per-group aliases:** each seat can present by **alias** with a visibility (canonical /
+  role-only / alias) on `group_members` — "the Editor" at the zine is one sub wearing an alias,
+  never a second account.
+- **Chat / Matrix:** a separate handle namespace (`@handle:sub`) via the AppService mapper —
+  not the persona name, associated with the sub.
+- **Email(s):** CONTACT + a linked sign-in method (Google/broker, magic-link, passkey). NEVER
+  the identity key. (The invite's `to_email` is a *delivery* target that resolves to the sub;
+  redemption binds by sub.)
+
+Migration of existing users is **additive and low-risk** — nothing re-keys, because everything
+already keys on `sub`:
+1. Backfill a `handle` onto existing `profiles` (nullable; derive-or-set-once, unique).
+2. Keep the existing provider email as the account's contact + method (no delete, no re-key).
+3. Audit that no code/UI treats `email` as the identity key (it must stay a contact/delivery).
+4. Nothing else to move: profiles, roles, group_members aliases, Matrix handle, invites all
+   persist against the same sub.
