@@ -357,3 +357,37 @@ Reversible per group/user; all ride the projection + per-session core.
   The word "key" is gone from the surface ("don't key a member"). "member share" reserved for
   finance/legal precision only.
 
+
+
+---
+
+## 9. Identity unification / cross-provision
+
+Double-provisioning is likely: a user receives an invite to an email other than the one they
+signed up with, on a new device, and a second Keycloak sub is born. Doctrine: **one identity =
+one Keycloak sub; every sign-in method (Google, passkey, magic-link) is a LINK to that sub,
+never a fork.**
+
+Two detection tiers:
+- **Same device — stale-session prompt.** If a prior session subA exists (or existed) on this
+  device and a new subB appears, the UI prompts "you were here as X — use that?" and collapses
+  in one step. Local, cheap, real.
+- **Cross device — proof, not cookies.** No cookie on a new device → the only field-true signal
+  is **owned-email proof** of the *other* mailbox + explicit confirmation. Devices cannot prove
+  identity; owned email can.
+
+**The golden seam = the invitation.** When a tie is addressed to emailB but the running subject
+is subA(emailA), redemption interposes three hinges: sign in as B / attach B to A / link A. We
+already carry B scans at the same boundary. Attach = verify B, link the new mechanism to the
+existing subA, collapse the temporary identity — no migration, no permanent dup.
+
+Guardrails (non-negotiable):
+1. A shared device is NOT proof of the same human — always explicit confirmation.
+2. Cross-device attach always requires owned-email proof of the other mailbox.
+3. A provisional identity is collapsed into the primary the moment it links (never a residual
+   duplicate to sweep later).
+4. The one that can't self-prove is the governed "harmonise" migration, not self-service.
+
+**First slice:** the invitation-boundary confirmation — detect the mismatch at redemption,
+offer the three doors, owned-email verify, collapse on success. The invite is both the
+commonest trigger and the safest place to prove.
