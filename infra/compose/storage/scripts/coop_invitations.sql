@@ -45,13 +45,13 @@ ALTER TABLE invitations FORCE ROW LEVEL SECURITY;
 
 -- owner/inviter can see and manage the invites they hold
 CREATE POLICY invites_owner_all ON invitations
-  FOR ALL TO coop
+  FOR ALL TO PUBLIC
   USING (created_by = coop_current_sub() OR coop_is_owner(group_id))
   WITH CHECK (created_by = coop_current_sub() OR coop_is_owner(group_id));
 
 -- a bound identity can see the tie offered to them (after redemption it is theirs)
 CREATE POLICY invites_subject_sel ON invitations
-  FOR SELECT TO coop
+  FOR SELECT TO PUBLIC
   USING (redeemed_by = coop_current_sub());
 
 -- ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ ALTER TABLE open_invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE open_invitations FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY open_invitations_owner ON open_invitations
-  FOR ALL TO coop
+  FOR ALL TO PUBLIC
   USING (coop_is_owner(group_id))
   WITH CHECK (coop_is_owner(group_id));
 
@@ -94,11 +94,11 @@ ALTER TABLE join_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE join_requests FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY join_req_owners ON join_requests
-  FOR ALL TO coop
+  FOR ALL TO PUBLIC
   USING (coop_is_owner(group_id))
   WITH CHECK (coop_is_owner(group_id));
 CREATE POLICY join_req_self_sel ON join_requests
-  FOR SELECT TO coop
+  FOR SELECT TO PUBLIC
   USING (sub = coop_current_sub());
 
 -- ---------------------------------------------------------------------------
@@ -146,7 +146,10 @@ END
 $$ LANGUAGE plpgsql;
 ALTER FUNCTION coop_invite_redeem(uuid, text) OWNER TO coop_rls;
 
-GRANT SELECT, INSERT, UPDATE ON invitations, open_invitations, join_requests TO coop_rls;
+GRANT SELECT, INSERT, UPDATE, DELETE ON invitations, open_invitations, join_requests TO coop_rls;
+GRANT SELECT, INSERT, UPDATE, DELETE ON invitations, open_invitations, join_requests TO coop;
+GRANT SELECT, INSERT, UPDATE ON invitations, open_invitations, join_requests TO coop_app;
+GRANT SELECT, INSERT, UPDATE ON invitations, open_invitations, join_requests TO coop_member;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO coop_rls;
 
 COMMIT;

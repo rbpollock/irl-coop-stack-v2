@@ -101,7 +101,7 @@ export default async function invitationRoutes(fastify: FastifyInstance): Promis
       return reply.code(403).send({ error: "token does not name you" });
     }
     const result = await withIdentity(claims.sub, (client) =>
-      client.query("SELECT coop_invite_redeem($1::uuid, $2) AS r", [id, claims.sub]),
+      client.query("SELECT coop_invite_redeem($1::uuid, $2) AS out", [id, claims.sub]),
     );
     const out = result.rows[0]?.out ?? "error";
     if (out === "missing" || out === "not-pending") return reply.code(409).send({ error: out });
