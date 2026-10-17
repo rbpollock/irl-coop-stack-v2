@@ -69,6 +69,8 @@ env:
   # coop_ops operator role (least-privilege; EXECUTE-only on the platform-admin
   # promotion functions) — password for the dedicated opsPool in db.ts.
   COOP_OPS: ${SECRET:coop.ops}
+  # Invitation/tie signing key — HMAC for the one-time invite token (min 24 chars).
+  INVITE_SIGNING_SECRET: ${SECRET:invite.signing}
   # Postiz DB (the group→org projection target) — derived postiz role/password.
   POSTIZ_DB_HOST: 172.17.0.1
   POSTIZ_DB_PORT: "5432"

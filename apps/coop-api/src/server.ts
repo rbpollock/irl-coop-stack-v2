@@ -186,7 +186,9 @@ fastify.register(notificationRoutes)
 fastify.register(mailWebhookRoutes)
 fastify.register(telephonyRoutes)
 import livestreamStateRoutes from "./livestream-state";
+import invitationRoutes from "./invitations";
 fastify.register(livestreamStateRoutes);
+fastify.register(invitationRoutes);
 fastify.register(avatarRoutes)
 fastify.register(internalRoutes)
 fastify.register(hiEventsRoutes)
