@@ -83,8 +83,7 @@ three DNS records **published through the in-repo Gandi LiveDNS v5 key** and ver
 (apex SPF `mx -all`, `_dmarc` `p=quarantine`, `_s1._domainkey` DKIM) on Gandi + public
 resolvers. So Step 1 is done — no DNS operator action remains.
 
-**Remaining for the owner / admin:** (2) flip Stalwart's DKIM signing on (private `s1` key,
-admin API) and (3) choose the egress route (A self-hosted outbound VPS recommended, B
-ESP-bridge). And a hygiene item: the Gandi v5 API key is **committed** in
-`infra/scripts/renew-cert.sh` — rotate it in the Gandi console and move it to the gitignored
-`secrets/` tree.
+**Remaining:**
+- **(2) Flip Stalwart's DKIM signing on** (the private `s1` key, admin API) — still open.
+- **(3) Egress route — DECIDED, deferred.** The outward‑egress path is a **Brevo free‑tier SMTP relay**, but per **DECISIONS D-46** all external service accounts are **group‑scoped**: the account is opened *by the irl.coop group* (never an individual's personal email), the credential is a group‑held secret, and the provider's SPF/DKIM selector is added to the zone **when the group exists**. Until then, no relay account is created — this is gated on the group, not on email. Fallbacks if the group gate is far off: a free‑tier self‑hosted outbound MTA (warm‑up required), or the co‑op reciprocal‑egress design.
+- **Gandi v5 API key:** RESOLVED 2026-10-17 — moved out of the repo into the instance ansible vault (`secrets/gandi.vault.yml`), renewed to a fresh active key; `renew-cert.sh` decrypts at runtime.
