@@ -27,10 +27,23 @@ boot, and `whoami --network base` reports `NO SIGNER` (no deployer key on the bo
 
 ## The one real precondition: a funded Base mainnet deployer
 
-The only human/real-money step and the **single gate**. Create an EOA, fund it with ETH on
-Base (just enough for the deploy txns), and store ONLY the 0x-key in a 0600 file, e.g.
-`~/.secrets/base-mainnet.key` (or set `DEPLOY_KEY_FILE`). The balance check refuses a zero
-balance. The deployer only pays gas — it is never a minting/treasury address.
+**Bootstrap deployer (current, for this phase only):**
+- **Address:** `0x1F2C85589fD8E4435BE23CE65fd9E173b280804C`
+  (public; **this is the EOA to fund with ETH on Base** for gas).
+- **Key:** encrypted at `infra/instances/dev/secrets/deployer.vault.yml` (ansible vault,
+  gitignored). Decrypt to grant `whoami`/deploy access; never commit it.
+- Verified 2026-10-17: the encrypted key derives to the address above.
+
+**Cost estimate (2026-10-17, gas ~0.006 gwei on Base, ETH≈$2,367):**
+deployment of the five shipped contracts above ≈ **0.00001 ETH (~$0.03)** measured from
+their real bytecode (CoopUsdcRouter 1,465B, CoopRegistry 984B, CoopBatchRouter 733B,
+ShieldedPool 3,173B, SessionKeyModule 3,227B ≈ shared creation gas 53,000 + 200/byte).
+Base gas is volatile — at even a 100× spike (0.6 gwei) this stays roughly ~$3, so fund the
+deployer with a few dollars of Eth on Base as a safe buffer, not a standing balance.
+
+To deploy, decrypt the vault key to a private 0600 file and export `DEPLOY_KEY_FILE`
+(the script refuses a key file that is world-readable, and `whoami` refuses a zero balance).
+The deployer only pays gas — never a minting/treasury address.
 
 ## Deploy inventory — "all the contracts"
 
