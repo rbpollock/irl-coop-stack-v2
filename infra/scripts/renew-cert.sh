@@ -19,13 +19,28 @@ LEGO_STATE="$INSTANCE/certs/lego"
 DAY=86400
 CHANGED=0
 
-# Gandi LiveDNS v5 API key (secrets: kept in this script, like the other dev creds).
+# the decrypted key comes from the vault below; make sure ansible-vault resolves
+# even under the limited cron PATH.
+export PATH="$HOME/.local/bin:$PATH"
+
+# Gandi LiveDNS v5 API key — NOT in the repo. It lives encrypted in the instance vault
+# (instances/dev/secrets/gandi.vault.yml), decrypted at runtime with the instance
+# vault-pass — the same pattern infra/build/secrets.py and postiz-keys-status.py use.
 # NOTE: Gandi now issues 40-char keys; lego's gandi provider still enforces the
 # old 24-char format, so we use acme.sh instead. The current provider id is
 # dns_gandi_livedns (the old `dns_gandi` id no longer ships in the image).
-export GANDI_API_KEY="742b0202c573115a1bf7e992baff6406400a11ab"
-# the dns_gandi_livedns hook reads GANDI_LIVEDNS_KEY (not GANDI_API_KEY)
-export GANDI_LIVEDNS_KEY="$GANDI_API_KEY"
+if ! GANDI_LIVEDNS_KEY="$(ansible-vault view \
+      --vault-password-file "$INSTANCE/secrets/vault-pass" \
+      "$INSTANCE/secrets/gandi.vault.yml" \
+    | sed -nE 's/^gandi_livedns_key:[[:space:]]*"?([^"]+)"?$/\1/p')" \
+   || [ -z "$GANDI_LIVEDNS_KEY" ]; then
+  echo "$(date -Is) FATAL: could not decrypt Gandi LiveDNS key from the vault" >&2
+  exit 1
+fi
+export GANDI_LIVEDNS_KEY
+# the dns_gandi_livedns hook deploys with GANDI_LIVEDNS_KEY set; keep the old
+# GANDI_API_KEY alias for any image that still expects the historical name.
+export GANDI_API_KEY="$GANDI_LIVEDNS_KEY"
 
 mkdir -p "$LEGO_STATE"
 
