@@ -28,7 +28,7 @@ boot, and `whoami --network base` reports `NO SIGNER` (no deployer key on the bo
 ## The one real precondition: a funded Base mainnet deployer
 
 **Bootstrap deployer (current, for this phase only):**
-- **Address:** `0x1F2C85589fD8E4435BE23CE65fd9E173b280804C`
+- **Address:** `0x1B2C85589fD8E4435BE23CE65fd9E173b280804C`
   (public; **this is the EOA to fund with ETH on Base** for gas).
 - **Key:** encrypted at `infra/instances/dev/secrets/deployer.vault.yml` (ansible vault,
   gitignored). Decrypt to grant `whoami`/deploy access; never commit it.
