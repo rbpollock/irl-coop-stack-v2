@@ -701,5 +701,13 @@
     "category": "Identity & Access",
     "status": "design",
     "description": "The on-ramp that Phase 1.1 recruitment depends on and every group afterwards: an owner's invite (offer, signed single-use token, revoked/expiry, email keyed) and a person's join-request, both ending in the same seat row under \u00a74.3/D-13 consent. Today the identity is phone-add-only; nothing exists for a person who isn't yet in the federation (code-verified)."
+  },
+  {
+    "slug": "custody-and-agent-keys",
+    "title": "Custody and Agent Keys: A Holistic Fix",
+    "category": "Infrastructure",
+    "status": "design",
+    "description": "The five custody/agent-key defects and one plan that closes them: agent session keys bounded by expiry, budget, and a default-closed allow-list; a passkey owner type so a Safe is member-owned from creation with no platform-owned window; the hollow SovereignEvolutionModule deleted; signer keys out of plain env; and how groups become sovereign (N-of-M passkey Safes plus external accounts as group service accounts).",
+    "file": "custody-and-agent-keys.md"
   }
 ]
