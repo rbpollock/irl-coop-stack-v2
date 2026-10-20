@@ -200,3 +200,59 @@ materialization"). A skip anywhere still lands the user in a working world.
 3. **Skip-to-world escape hatch** on every step (JIT-first principle).
 4. **Where the prototype ships** — as a real route in irl-dashboard, or as a
    standalone flow under `/welcome`.
+
+---
+
+## 9. Reality check and solidification plan (2026-10-19)
+
+**Dated correction to §4 Step 1.** The table above says Step 1 deploys "own Safe (CREATE2
+from passkey material)". That is **not what the code does.** Today the personal Safe's salt is
+`keccak256("personal:" + sub)` (`provisioning.ts`) and it is deployed **owned 1-of-1 by the
+platform's backend signer** (`safe.ts`, `groups.ts:124` — "1-of-1 backend-signer-owned for
+now"). No passkey material is involved in the address or the ownership.
+
+**What actually exists today (code-verified):**
+- `onboarding.ts` is only profile capture: `GET /api/auth/onboarding/status` and
+  `POST /api/auth/onboarding` (displayName + avatar + offerings → `profiles`). Nothing else.
+- The real first-run side effects are invisible, in `provisionOnSignIn` (Keycloak callback /
+  password login): `ensurePersonalSafe`, `provisionMatrix`, `ensurePersonalTelephony`,
+  `ensureErpPersonalTenancy`.
+- The passkey is a **Keycloak login credential only** (`auth.ts` `kc_idp_hint=passkey` +
+  `/api/v1/auth/passkey/link` adds the Keycloak `webauthn-register-passwordless` action). It is
+  not a Safe owner.
+- A frontend flow exists (`apps/web/irl-dashboard/src/app/[lang]/onboarding` +
+  `components/auth/onboarding-guard.tsx`); the backend behind it is thin.
+
+**Promised in the design, absent in the code:** passkey‑owned Safe; **consent/terms recorded**
+(no route, no table — `grep` proves zero); succession / recovery contact (zero code); the
+group‑creation step's full fan‑out (subdomain + mail domain + Matrix space) beyond what
+`groups.ts` does.
+
+**Security findings that are born at onboarding** (see `security-review-open-questions.md`):
+F7 (platform owns every personal Safe at creation), F1 (the handover route is unbound and
+non‑functional), F14/F11 (username claim needs no mailbox proof; `@localpart` can seize a
+Matrix identity), F3 (member‑writable `groups.safe_address`).
+
+### Solidification plan (ordered; each reversible)
+
+- **O0 — Write the first‑run contract.** One ordered list: sign‑in → verify human → own a
+  passkey‑owned Safe → profile → consent recorded → recovery named → first group or join.
+  Each step names what it creates, what it verifies, and what happens if skipped. (This doc's
+  §4 becomes the contract; the code is brought to it, not the reverse.)
+- **O1 — Passkey is the member key AND the Safe owner at creation. ← the gate.** Create the
+  personal Safe owned by the member's `PasskeyOwner` from block zero; the platform only pays
+  gas. This makes §4 Step 1 true, kills F7 and F1 at the source, and is the same gate as
+  `custody-and-agent-keys.md` P1. Onboarding and custody converge here.
+- **O2 — Consent capture + record.** The terms hash the design promises (§4 Step 6, §4.3 of
+  `invitation-and-join-mechanism.md`). Unbuilt; a small additive table + route.
+- **O3 — Recovery/succession at formation.** Name a recovery contact (the "will"). Unbuilt.
+- **O4 — Order and harden the username claim.** It must happen before an invite addressed to a
+  name is redeemable; and the `@localpart` → Matrix‑identity path (`matrix.ts`) must not let a
+  claim seize another member's account.
+- **O5 — An onboarding journey.** `journeys.sh`: sign in → provision → claim → passkey → create
+  a group → own the Safe → consent recorded. Today's `sign-in.mjs` covers only OIDC + login.
+
+**The one gate is O1.** If the Safe a member gets at the end of onboarding is owned by the
+platform, then every later promise on this page (sovereignty, "never see a key", recovery) rests
+on a surface that isn't true yet. Fix that first and the rest of the flow has something real to
+stand on.
