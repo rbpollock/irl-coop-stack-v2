@@ -1,77 +1,95 @@
 # Security review — verdicts and open questions
 
-Companion to `whole-system-adversarial-review.md` and `security-review.md`. The reviews are
-model-generated breadth; this file records what is **verified against the code**, and every
-question still needing information, with where to look and what it decides.
+Companion to `whole-system-adversarial-review.md` and `security-review.md`. Records what is
+**verified against the code**, and what still needs a live system. Updated after reading the
+repo-local files (server.ts, coop_invitations.sql, provision-member-certs.sh, coop_group_base.sql,
+username.ts, chat.ts, and the coop-api env names).
 
 ## Verified against the code (by reading, not by model claim)
 
 | Finding | Verdict | Evidence |
 |---|---|---|
-| F1 — `/api/safe/sovereign` not bound to the caller | **Confirmed** | `safe.ts`: only `verifyBearer` + `predicted==safeAddress` + `owners==[backend]`; `claims.sub` never compared to `saltNonce`; `personalSalt(sub)=keccak256("personal:"+sub)` is public (provisioning.ts) |
-| F2 — `/api/safe/session/execute` auth-without-authz; `amountIn` + delegatecall bypasses | **Confirmed** | route reads `target/data/operation/token/amountIn` from the body with no seat/grant check; `SessionKeyModule.executeSpend`: `cost = token==0 ? value : amountIn`, forwards `operation`, `_allowed` returns true when `listEnabled` is false |
-| F3 — `groups.safe_address` writable → D-16 seat impersonation | **Confirmed (mechanism)** | see below |
-| F4 — hardcoded HS256 fallback secret, no alg pin | **Confirmed** | `verify-jwt.ts`: `JWT_SECRET ?? "local-development-secret-irl-coop-v4"`, `jwt.verify(token, jwtSecret)` when the RS256 key is absent |
-| F5 — no `audience` check on any verify path | **Confirmed** | `verify-jwt.ts` + `auth.ts verifyCoopJwt`: `{algorithms,issuer}` only; the same key signs access tokens, the 30d session cookie, and per-client id_tokens |
-| F6 — 30-day session cookie is a live Bearer; logout/deletion don't revoke | **Confirmed** | `COOP_SESSION_TTL ?? "30d"`, `maxAge 30d`, `verifyBearer` makes no Keycloak call; logout only clears the cookie |
-| F7 — every personal Safe backend-owned 1-of-1 | **Confirmed** | `provisioning.ts` + `safe.ts`: `deploySafe(signer, …, [signer.address], 1)` |
-| F10 — `coop_m_<sub8>` role truncation | **Confirmed (mechanism)** | `db.ts`: `sub.match(/[A-Za-z0-9]/g).join("").slice(0,8)`; `withIdentity` never binds role→sub |
-| F11 — Matrix localpart collision | **Confirmed** | `provisioning.ts`: `localpartFromEmail` + `M_USER_IN_USE` accepted, then invite/join as that userId |
+| F1 — `/api/safe/sovereign` not bound to the caller | **Confirmed, LIVE** | `safe.ts`: auth only; `claims.sub` never compared to `saltNonce`; salt `keccak256("personal:"+sub)` is public (provisioning.ts). Safe env IS wired, so reachable. |
+| F2 — `/api/safe/session/execute` auth-without-authz; `amountIn` + delegatecall bypasses | **Confirmed, LIVE** | route reads `target/data/operation/token/amountIn` from the body, no seat/grant check; module: `cost = token==0 ? value : amountIn`, forwards `operation`, `_allowed` true when `listEnabled` false |
+| F3 — `groups.safe_address` writable → D-16 seat impersonation | **Confirmed mechanism + reachable** | see below; member cert DB path IS provisioned |
+| F4 — hardcoded HS256 fallback secret, no alg pin | **Confirmed but LATENT** | `COOP_JWT_PRIVATE_KEY_B64` IS set in the live env → fallback not triggered today; still fails open if ever unset |
+| F5 — no `audience` check on any verify path | **Confirmed** | `verify-jwt.ts` + `auth.ts verifyCoopJwt`: `{algorithms,issuer}` only; one key signs access tokens, the 30d cookie, and per-client id_tokens |
+| F6 — 30-day session cookie is a live Bearer; logout/deletion don't revoke | **Confirmed** | `COOP_SESSION_TTL`/`maxAge 30d`; `verifyBearer` makes no Keycloak call; logout only clears the cookie |
+| F7 — every personal Safe backend-owned 1-of-1 | **Confirmed, LIVE** | `deploySafe(signer, …, [signer.address], 1)`; `SAFE_BACKEND_SIGNER_KEY` is set |
+| F10 — `coop_m_<sub8>` role truncation | **Confirmed** | `db.ts` and `provision-member-certs.sh` both take the first 8 alnum chars (the script calls it "stable, unique-enough") |
+| F11 — Matrix localpart collision / username-claim hijack | **Confirmed** | `provisioning.ts` localpart + `M_USER_IN_USE` accepted; `matrix.ts` resolves `@localpart` → `<localpart>@irl.coop` → `getUserByEmail`; `username.ts` lets a member claim any unclaimed name |
 
-### F3 — confirmed mechanism
+### F3 — confirmed mechanism, reachable
 
 - `groups_insert … WITH CHECK (created_by = coop_current_sub())` (coop_rls.sql:329) — no
-  constraint on `safe_address` or `kind`.
-- `groups_update … USING (coop_is_owner(id))` (line 331), no `WITH CHECK` — an owner can rewrite
-  their personal group's `safe_address` to any value.
-- `coop_own_safe()` reads that column (162–168); `coop_current_safes()` seeds from it (185);
-  `coop_is_member`/`coop_is_owner`/`coop_my_seats` match seats by `holder_safe = ANY(current_safes)`
-  (227, 241, 266). The backfill keys person seats to the personal Safe (151–156).
-- **No `UNIQUE(safe_address)`**; nothing verifies the on-chain owner of the address.
-- **Reachability:** a direct member DB connection (cert role `coop_m_*`; `groups` is granted
-  INSERT/UPDATE to `coop_member`, line 105 — the designed NocoDB path) or any future route that
-  lets a caller set `safe_address`. Not reachable through today's create-group route (the app
-  sets it). Blast radius depends on whether member cert DB access is live.
+  constraint on `safe_address`/`kind`; `groups_update … USING (coop_is_owner(id))` (331), no
+  `WITH CHECK`. `coop_own_safe()` reads the column (162–168); `coop_current_safes()` seeds from it
+  (185); membership/owner/seat helpers match by `holder_safe = ANY(current_safes)`. No
+  `UNIQUE(safe_address)`; nothing attests the address's on-chain owner.
+- **Reachability confirmed:** `provision-member-certs.sh` gives each member a LOGIN role + client
+  cert (CN = role) + `coop_member` (which holds `INSERT/UPDATE` on `groups`) + a `coop_app` grant,
+  and `pg_hba` matches `+coop_member`. Members therefore have direct DB connections that can do it.
 
 ### New (not in the reviews)
 
 - **`proposals` / `votes` have NO RLS** and are granted to `coop_app` (coop_rls.sql:1373–1376,
-  self-labelled "TODO: give these two RLS like the rest"). Any holder of the `coop_app` role can
-  read/write any group's governance rows.
+  self-labelled "TODO: give these two RLS like the rest").
 
-## Open questions — everything still needing information
+## Answers found in the repo (questions that were open)
 
-**A. Environment / secrets (decides F4, F5, F7, F12, F2 impact)**
-1. Is `COOP_JWT_PRIVATE_KEY_B64` set in the live env? — `apps/coop-api/.env`, `secrets.env`, the
-   app spec. Decides whether the hardcoded-secret fallback is exploitable. (`JWT_SECRET` too.)
-2. Does every `${VAR}` in `OIDC_CLIENTS` resolve? — same files. Decides F12.
-3. Are `SAFE_PROXY_FACTORY_ADDRESS` / `SAFE_SINGLETON_ADDRESS` / `SAFE_BACKEND_SIGNER_KEY` /
-   `SESSION_KEY` set, and pointing at which chain (local vs Base)? — app spec. Decides whether the
-   safe routes are live at all, and on which chain.
-4. Is `INVITE_SIGNING_SECRET` set (are invitations live)? `COOP_OPS`/`POSTGRES_*` set; is the
-   `coop_ops` password non-default?
-5. What is `COOP_SESSION_TTL` actually?
+**Env / secrets (live `.env` key list + `server.ts`):**
+- `COOP_JWT_PRIVATE_KEY_B64` — **set** → F4 latent, not live. (`JWT_SECRET` also set.)
+- `SAFE_SINGLETON_ADDRESS`, `SAFE_PROXY_FACTORY_ADDRESS`, `SAFE_BACKEND_SIGNER_KEY`, `RPC_URL` —
+  **all set** → the safe routes are **live**; F1/F2/F7 are reachable today. `server.ts` logs the
+  factory/singleton/RPC at boot, so the chain is confirmable live.
+- `INVITE_SIGNING_SECRET` — set → invitations live. `OIDC_CLIENTS`, `COOP_SESSION_TTL`,
+  `COOP_COOKIE_DOMAIN` — set. `COOP_OPS` is generator-derived into `secrets.env` (spec
+  `${SECRET:coop.ops}`).
 
-**B. Keycloak realm (decides F8, F9, F11, F14)**
-6. Does the coop-api client actually hold `realm-management/manage-users`? — realm config scripts.
-7. Brute-force protection, WebAuthn policy, broker email-verified setting, token lifespans.
+**`server.ts`:**
+- `trustProxy: true`; **CORS reflects any `*.irl.coop` origin with `credentials: true`** → any
+  compromised subdomain (or XSS there) can read `api.irl.coop` responses as the user — a fleet-wide
+  amplifier for the cookie findings (F5/F6, chains C4/C5).
+- **No rate limiting** (`@fastify/rate-limit` not registered) → F15(a) confirmed for
+  `/api/auth/login`. No `helmet`. Swagger UI at `/api/docs` is public (route inventory disclosure).
+- `setSessionCookie` trusts the raw `Host` header for its `secure`/`domain` decision.
 
-**C. Repo files not yet read (the reviews' blind spots; mostly settleable locally)**
-8. `apps/coop-api/src/server.ts` — CORS / helmet / rate limit / `trust proxy` (decides F15 and
-   whether the `Host`-header trust in `setSessionCookie` is exploitable).
-9. `/api/v1/me/username` route and `setUserCanonicalEmail` callers — **load-bearing** for F9/F11/F14.
-10. `infra/compose/storage/scripts/coop_invitations.sql` — `invitations` DDL/RLS and
-    `coop_invite_redeem` single-use enforcement (F14). (It is NOT in `coop_rls.sql`.)
-11. `infra/scripts/provision-member-certs.sh` — per-role grants and whether member cert DB access
-    is live (decides F3 reachability and F10 impact).
-12. `infra/compose/storage/scripts/coop_group_base.sql` — not yet read.
-13. `telephony.ts`, `erpnext-provision.ts`, `profile-store.ts`, `chat*.ts`, `internal.ts` — trust of
-    system callers, esp. the `issueCodeForUser` caller.
-14. Edge: Traefik dynamic config — TLS / WAF / rate limiting in front of coop-api.
-15. On-chain state: is `SessionKeyModule` enabled on any Safe (and with what limit / is the list
-    armed)? Has any handover completed? Does `PasskeyOwner` exist and behave? (decides F2/F7/F10.)
-16. NextAuth runtime: `NEXTAUTH_SECRET`/JWE and Prisma account-linking behavior under race.
+**`coop_invitations.sql`:**
+- `coop_invite_redeem` genuinely single-use: `SELECT … FOR UPDATE` + `status<>'pending'` + expiry
+  (120–129). Good primitive.
+- Members hold direct `INSERT`/`UPDATE` on `invitations`/`open_invitations`/`join_requests`
+  (grants 149–152) — bounded by RLS to their own rows / owned groups; no clear escalation, but a
+  wider direct-DB write surface than the API exposes.
+
+**`username.ts` (the F9/F14 linchpin):**
+- A member can claim **any unclaimed `<name>@irl.coop`** with **no proof of mailbox ownership**;
+  the only gate is Keycloak uniqueness ("taken"), plus a tiny `RESERVED` list. So F14 holds: an
+  invite addressed to `<name>@irl.coop` is redeemable by whoever claims that name first. Combined
+  with `matrix.ts` (which resolves `@name` via `<name>@irl.coop`), claiming a name can also seize
+  the matching Matrix identity — sharpening F11.
+
+**`chat.ts`:** `issueCodeForUser` is called only by coop-api's own chat route with the member's
+claims (an internal, trusted caller) — that "unverifiable caller" concern is largely closed.
+
+**`coop_group_base.sql`:** per-group schemas (`grp_<uuidhex>`) of `security_invoker` views narrowed
+to the group, member **read-only** (`GRANT SELECT ON ALL TABLES`); personal base = a federated lens
+over the global views (RLS-scoped). Sound as written.
+
+## Still open — needs a live system (cannot be settled from the repo)
+
+1. **Keycloak realm config** — does the coop-api client actually carry
+   `realm-management/manage-users` (F8)? Brute-force protection, WebAuthn policy, broker
+   email-verified setting, token lifespans.
+2. **On-chain state** — is `SessionKeyModule` enabled on any Safe, with what limit, allow-list
+   armed? Has any handover completed? Does `PasskeyOwner` exist and behave? (Decides F2/F7 real
+   impact.)
+3. **Edge layer** — Traefik TLS / WAF / rate limiting in front of coop-api (may mitigate F15).
+4. **NextAuth runtime** — `NEXTAUTH_SECRET`/JWE and Prisma linking behavior under race.
+5. **`OIDC_CLIENTS` values** — are all `${VAR}` references resolved live (F12)?
+6. **`pg_hba`** — is the member-cert DB path network-reachable in the live deployment (decides F3's
+   practical exposure; the design says yes).
 
 ## Verdict so far
-F1, F2, F4, F5, F6, F7, F10, F11 are code-confirmed. F3's mechanism is confirmed. F8, F9, F12, F14
-are conditional on items A/B/C above.
+F1, F2, F5, F6, F7, F10, F11 are code-confirmed; F4 is latent (key is set); F3's mechanism and
+reachability are confirmed. F8/F12/F14 are conditional on items 1/5/6. The most urgent live item is
+**F1** — any member can seize another's Safe, with neither misconfiguration nor DB access.
