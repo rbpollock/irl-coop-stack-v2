@@ -180,6 +180,8 @@ ABI (`security-review.md`); *whole-system F10* = role truncation (`whole-system-
   `member_passkey` table are live (`POST/GET /api/v1/me/passkey`, RLS user-scoped). Remaining:
   the coop-api **create path** (deploy a `PasskeyOwner` from the stored credential, create the
   Safe owned by it) and retiring `/api/safe/sovereign`.
+
+### B-12 — Authorize `/api/safe/session/execute` and harden the session module
 - **Labels:** `security`, `financial-high-risk`, `agent-high-risk`
 - **Why:** the route has authentication but **zero authorization** (no seat/grant check), and the
   module lets `F2` be exploited two ways: a declared `amountIn` makes the budget a no-op
