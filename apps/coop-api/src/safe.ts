@@ -1,11 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { ethers } from "ethers";
 import { verifyBearer } from "./verify-jwt";
+import { withIdentity } from "./db";
 import { PASSKEY_OWNER_ABI, PASSKEY_OWNER_BYTECODE } from "./passkey-artifact";
 
 const SESSION_MODULE_IFACE = new ethers.Interface([
-  // SessionKeyModule (contracts/contracts/modules/SessionKeyModule.sol)
-  "function executeSpend(address target, uint256 value, bytes data, uint8 operation, address token, uint256 amountIn) returns (bool)",
+  // SessionKeyModule (contracts/contracts/modules/SessionKeyModule.sol), post-B-12.
+  // The spend is DERIVED from the calldata on-chain; the caller declares no amount.
+  "function executeSpend(address target, uint256 value, bytes data, uint8 operation) returns (bool)",
+  "function SAFE() view returns (address)",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -311,8 +314,6 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
     try {
       const body = request.body as any;
       const target = body?.target;
-      const token: string = body?.token ?? ethers.ZeroAddress;
-      const amountIn: bigint = ethers.parseUnits(String(body?.amountIn ?? "0"), 6); // default USDC 6dp
       if (typeof target !== "string" || !ethers.isAddress(target)) {
         return reply.code(400).send({ error: "target required" });
       }
@@ -321,21 +322,43 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
       const value: bigint = ethers.parseEther(String(body?.value ?? "0"));
 
       const provider = new ethers.JsonRpcProvider(env.rpcUrl);
+      const read = new ethers.Contract(env.sessionModule, SESSION_MODULE_IFACE, provider);
+
+      // AUTHORIZATION (B-12). The module drives ONE group's Safe; the caller must be an
+      // OWNER of that group. Without this, any authenticated member could drive the group
+      // Safe — the route had authentication but no authorization.
+      const moduleSafe: string = await read.SAFE();
+      const authorized = await withIdentity(claims.sub, async (client) => {
+        const g = await client.query(`SELECT id FROM groups WHERE safe_address = $1 LIMIT 1`, [
+          moduleSafe,
+        ]);
+        if (!g.rowCount) return false;
+        const r = await client.query(`SELECT coop_is_owner($1) AS ok`, [g.rows[0].id]);
+        return r.rows[0]?.ok === true;
+      });
+      if (!authorized) {
+        return reply.code(403).send({
+          error: "not_authorized",
+          detail: "you are not an owner of the group this module drives",
+        });
+      }
+
       const bot = new ethers.Wallet(env.sessionKey, provider);
       const module = new ethers.Contract(env.sessionModule, SESSION_MODULE_IFACE, bot);
 
-      const ok = await module.executeSpend.staticCall(target, value, data, operation, token, amountIn);
+      // The spend amount is derived on-chain from `data` (no caller-declared amount) and
+      // operation is forced to Call there — a delegatecall payload is refused.
+      const ok = await module.executeSpend.staticCall(target, value, data, operation);
       if (!ok) return reply.code(400).send({ error: "module dry-run rejected the spend (budget or allowlist)" });
 
-      const tx = await module.executeSpend(target, value, data, operation, token, amountIn);
+      const tx = await module.executeSpend(target, value, data, operation);
       const receipt = await tx.wait();
       request.log.info({ chainId: (await provider.getNetwork()).chainId }, "session spend executed");
       return reply.send({
         txHash: receipt?.hash,
         target,
         value: value.toString(),
-        token,
-        amountIn: amountIn.toString(),
+        moduleSafe,
         message: "session-key Safe spend executed via the group Safe",
       });
     } catch (err: any) {
