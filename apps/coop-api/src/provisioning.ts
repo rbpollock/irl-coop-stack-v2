@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { withIdentity } from "./db";
-import { deploySafe } from "./safe";
+import { deploySafe, deployPasskeyOwner } from "./safe";
 import { ensurePersonalTelephony } from "./telephony";
 import { ensureErpPersonalTenancy } from "./erpnext-provision";
 
@@ -9,9 +9,10 @@ import { ensureErpPersonalTenancy } from "./erpnext-provision";
 // Every sign-in converges the same way, so this runs idempotently on each
 // fresh Keycloak authentication (the OAuth callback + the password login):
 //
-//   1. ensurePersonalSafe(sub) — deploy the personal account Safe with a
-//      deterministic sub-derived salt (predictable address, no storage of the
-//      sub->address mapping) and stamp safe_address on the personal group.
+//   1. ensurePersonalSafe(sub) — when the member has a registered passkey, deploy
+//      their PasskeyOwner and create the personal Safe OWNED BY IT from block zero
+//      (the platform only pays gas), then stamp safe_address on the personal group.
+//      No passkey yet → no Safe yet; it is created when the passkey is registered.
 //   2. provisionMatrix(sub, email) — register the member's Matrix account via
 //      the appservice AS API (Bearer as_token + ?user_id=) and auto-join the
 //      coop's default rooms, creating them if missing (deterministic aliases).
@@ -53,34 +54,70 @@ export async function ensurePersonalSafe(sub: string): Promise<string | null> {
   if (!env) return null;
 
   try {
-    // Read the personal group's current Safe address (inside the RLS identity
-    // so coop_ensure_personal_group provisions it for the right sub).
+    // Read the personal group + the member's registered passkey (inside the RLS
+    // identity so coop_ensure_personal_group provisions it for the right sub).
     const current = await withIdentity(sub, async (client) => {
       await client.query("SELECT coop_ensure_personal_group()");
-      const r = await client.query(
+      const g = await client.query(
         `SELECT id, safe_address FROM groups WHERE kind = 'personal' AND created_by = $1 LIMIT 1`,
         [sub],
       );
-      return r.rows[0] as { id: string; safe_address: string | null } | undefined;
+      const p = await client.query(
+        `SELECT credential_id, pub_x, pub_y, owner_address
+           FROM member_passkey
+          WHERE sub = $1 AND revoked_at IS NULL
+          ORDER BY created_at DESC LIMIT 1`,
+        [sub],
+      );
+      return {
+        group: g.rows[0] as { id: string; safe_address: string | null } | undefined,
+        passkey: p.rows[0] as
+          | { credential_id: string; pub_x: string; pub_y: string; owner_address: string | null }
+          | undefined,
+      };
     });
-    if (!current) return null;
-    if (current.safe_address) return current.safe_address;
+    if (!current?.group) return null;
+    if (current.group.safe_address) return current.group.safe_address;
 
-    // Deploy on-chain (outside the transaction — no open tx across RPC).
+    // B-11: no registered passkey => no Safe yet. We will not create a Safe the
+    // platform could own. It is created, passkey-owned, when the member registers.
+    if (!current.passkey) return null;
+
+    // Deploy on-chain (outside the transaction — no open tx across RPC). NonceManager
+    // because one provisioning run sends TWO txs (owner, then Safe) and a fast RPC can
+    // hand back a cached nonce for the second, colliding with the first.
     const provider = new ethers.JsonRpcProvider(process.env.RPC_URL ?? "http://127.0.0.1:8545");
-    const signer = new ethers.Wallet(env.backendKey, provider);
+    const signer = new ethers.NonceManager(new ethers.Wallet(env.backendKey, provider));
+
+    // 1. The member's owner contract — deployed once, reused on later runs.
+    let ownerAddr = current.passkey.owner_address;
+    if (!ownerAddr) {
+      ownerAddr = await deployPasskeyOwner(
+        signer,
+        BigInt(current.passkey.pub_x),
+        BigInt(current.passkey.pub_y),
+      );
+    }
+
+    // 2. The Safe, owned by the PASSKEY from block zero. The deployer pays the gas
+    // and holds no authority over the account.
     const { safeAddress } = await deploySafe(
       signer,
       { factory: env.factory, singleton: env.singleton, saltNonce: personalSalt(sub) },
-      [signer.address],
+      [ownerAddr],
       1,
     );
 
-    // Stamp the address (owner seat makes coop_is_owner pass under RLS).
+    // Stamp the address + remember the deployed owner contract (owner seat makes
+    // coop_is_owner pass under RLS).
     await withIdentity(sub, async (client) => {
       await client.query(
         `UPDATE groups SET safe_address = $1 WHERE id = $2 AND kind = 'personal' AND safe_address IS NULL`,
-        [safeAddress, current.id],
+        [safeAddress, current.group!.id],
+      );
+      await client.query(
+        `UPDATE member_passkey SET owner_address = $1 WHERE credential_id = $2 AND sub = $3`,
+        [ownerAddr, current.passkey!.credential_id, sub],
       );
     });
     return safeAddress;

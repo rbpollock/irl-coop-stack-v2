@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { ethers } from "ethers";
 import { verifyBearer } from "./verify-jwt";
+import { PASSKEY_OWNER_ABI, PASSKEY_OWNER_BYTECODE } from "./passkey-artifact";
 
 const SESSION_MODULE_IFACE = new ethers.Interface([
   // SessionKeyModule (contracts/contracts/modules/SessionKeyModule.sol)
@@ -95,6 +96,26 @@ export async function deploySafe(
   const code = await signer.provider!.getCode(predicted);
   if (code === "0x") throw new Error("predicted address has no code after deploy");
   return { safeAddress: predicted, txHash: receipt.hash };
+}
+
+// B-11 — deploy a member's PasskeyOwner: an EIP-1271 Safe owner bound to the member's
+// registered WebAuthn P-256 key. The caller (the platform's sponsor EOA) only PAYS for
+// this; it is never an owner of the Safe the owner contract is installed on.
+export async function deployPasskeyOwner(
+  signer: ethers.Signer,
+  x: bigint,
+  y: bigint,
+): Promise<string> {
+  const factory = new ethers.ContractFactory(
+    PASSKEY_OWNER_ABI as unknown as ethers.InterfaceAbi,
+    PASSKEY_OWNER_BYTECODE,
+    signer,
+  );
+  // verifier = ZeroAddress -> the contract's constructor defaults to the EIP-7212
+  // precompile (0x…0100), which Base has; a test chain can point it elsewhere.
+  const owner = await factory.deploy(x, y, ethers.ZeroAddress);
+  await owner.waitForDeployment();
+  return await owner.getAddress();
 }
 
 function parseSaltNonce(raw: unknown): bigint {
@@ -193,6 +214,16 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
   fastify.post("/api/safe/sovereign", async (request, reply) => {
     const claims = verifyBearer(request, reply);
     if (!claims) return;
+    // B-11: RETIRED. A Safe is now created passkey-owned from block zero
+    // (provisioning.ensurePersonalSafe), so there is no backend-owned Safe to hand
+    // over. This route can no longer touch ownership — keeping it live would be the
+    // very hole it used to be (F1). Legacy backend-owned Safes need an explicit,
+    // separate migration; until then this returns 410. The body below is dead code,
+    // kept only as the reference for that migration.
+    return reply.code(410).send({
+      error: "gone",
+      detail: "Safe ownership is passkey-native at creation; handover no longer exists",
+    });
     if (!env.factory || !env.singleton || !env.backendKey) {
       return reply.code(503).send({ error: "safe contracts not configured" });
     }

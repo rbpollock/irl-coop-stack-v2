@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { verifyBearer } from "./verify-jwt";
 import { withIdentity } from "./db";
+import { ensurePersonalSafe } from "./provisioning";
 
 // ---------------------------------------------------------------------------
 // B-11 — the member's passkey, registered as the key that will OWN their Safe.
@@ -24,13 +25,15 @@ export default async function passkeyRoutes(fastify: FastifyInstance): Promise<v
 
     const body = (request.body ?? {}) as Record<string, unknown>;
     const credentialId = typeof body.credential_id === "string" ? body.credential_id.trim() : "";
-    const x = typeof body.x === "string" ? body.x.trim() : "";
-    const y = typeof body.y === "string" ? body.y.trim() : "";
-    if (!credentialId || !HEX.test(x) || !HEX.test(y)) {
+    const xRaw = typeof body.x === "string" ? body.x.trim() : "";
+    const yRaw = typeof body.y === "string" ? body.y.trim() : "";
+    if (!credentialId || !HEX.test(xRaw) || !HEX.test(yRaw)) {
       return reply
         .code(400)
         .send({ error: "credential_id, x, y required (P-256 public key coords as hex)" });
     }
+    const x = xRaw.startsWith("0x") ? xRaw : "0x" + xRaw;
+    const y = yRaw.startsWith("0x") ? yRaw : "0x" + yRaw;
 
     await withIdentity(claims.sub, (client) =>
       client.query(
@@ -42,7 +45,15 @@ export default async function passkeyRoutes(fastify: FastifyInstance): Promise<v
         [credentialId, claims.sub, x, y],
       ),
     );
-    return reply.code(201).send({ registered: true, credential_id: credentialId });
+
+    // B-11: the Safe is created passkey-owned the moment a key exists to own it.
+    // Best-effort — registering the credential must succeed even if the chain is down.
+    const safeAddress = await ensurePersonalSafe(claims.sub).catch(() => null);
+    return reply.code(201).send({
+      registered: true,
+      credential_id: credentialId,
+      safe_address: safeAddress,
+    });
   });
 
   // The caller's registered passkeys (never another member's — RLS + explicit sub).
