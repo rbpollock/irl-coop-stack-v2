@@ -149,59 +149,20 @@ export default async function safeRoutes(fastify: FastifyInstance): Promise<void
   const defaultInitializer = (): string =>
     encodeSafeSetup([new ethers.Wallet(env.backendKey).address], 1);
 
-  // Pure prediction: no chain call, nothing stored. Clients may compute this
-  // locally too — the endpoint is a convenience oracle.
-  fastify.post("/api/safe/predict", async (request, reply) => {
-    const claims = verifyBearer(request, reply);
-    if (!claims) return;
-    if (!env.factory || !env.singleton || !env.backendKey) {
-      return reply.code(503).send({ error: "safe contracts not configured" });
-    }
-    try {
-      const saltNonce = parseSaltNonce((request.body as any)?.saltNonce);
-      const safeAddress = predictSafeAddress({
-        factory: env.factory,
-        singleton: env.singleton,
-        initializer: defaultInitializer(),
-        saltNonce,
-      });
-      const provider = new ethers.JsonRpcProvider(env.rpcUrl);
-      let deployed = false;
-      try {
-        const code = await provider.getCode(safeAddress);
-        deployed = code !== "0x";
-      } catch {
-        /* fallback to false on provider/connection error */
-      }
-      return reply.send({ safeAddress, deployed });
-    } catch (err: any) {
-      return reply.code(400).send({ error: err.message });
-    }
-  });
-
-  // Real deployment via the backend signer (gas sponsorship). The address is
-  // derived from the caller's saltNonce and is NOT persisted — no mapping
-  // between this JWT's identity and the onchain account ever exists server-side.
-  const deploy = async (request: any, reply: any) => {
-    const claims = verifyBearer(request, reply);
-    if (!claims) return;
-    if (!env.factory || !env.singleton || !env.backendKey) {
-      return reply.code(503).send({ error: "safe contracts not configured" });
-    }
-    try {
-      const saltNonce = parseSaltNonce((request.body as any)?.saltNonce);
-      const provider = new ethers.JsonRpcProvider(env.rpcUrl);
-      const signer = new ethers.Wallet(env.backendKey, provider);
-      const result = await deploySafe(signer, { factory: env.factory, singleton: env.singleton, saltNonce }, [signer.address], 1);
-      request.log.info({ chainId: (await provider.getNetwork()).chainId }, "safe deployed");
-      return reply.send({ ...result, message: "Safe deployed and initialized successfully" });
-    } catch (err: any) {
-      request.log.error({ err: err.message }, "safe deploy failed");
-      return reply.code(500).send({ error: err.message });
-    }
-  };
-  fastify.post("/api/safe/deploy", deploy);
-  fastify.post("/api/onboard", deploy); // legacy alias
+  // Legacy backend-owned Safe creation is RETIRED (B-11). A personal Safe is now created
+  // PASSKEY-OWNED by provisioning.ensurePersonalSafe (triggered from
+  // POST /api/v1/me/passkey); a group Safe is created with the group's own owners. These
+  // routes used to deploy a Safe 1-of-1 owned by the PLATFORM signer — the exact hole B-11
+  // closed (F7) — so they now refuse. /api/safe/predict is retired with them: it predicted
+  // that same backend-owned address, which no longer gets created.
+  const retiredSafePath = (name: string) => async (_request: unknown, reply: any) =>
+    reply.code(410).send({
+      error: "gone",
+      detail: `${name} is retired. Safes are created passkey-owned — register a passkey via POST /api/v1/me/passkey.`,
+    });
+  fastify.post("/api/safe/predict", retiredSafePath("/api/safe/predict"));
+  fastify.post("/api/safe/deploy", retiredSafePath("/api/safe/deploy"));
+  fastify.post("/api/onboard", retiredSafePath("/api/onboard"));
 
   // Sovereign handover: the backend signer, which currently owns the Safe
   // 1-of-1, renounces itself and installs a user-representing owner (e.g. a
