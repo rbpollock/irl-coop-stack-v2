@@ -37,12 +37,13 @@ distilled from the design docs, and the flow that delivers both.
 2. **Simplicity first — sovereignty invisible.** Members never see keys,
    thresholds, or "Safe." Passkey-first; recovery feels like a normal web reset;
    group membership is invisible ownership math. (account-and-key-model.md §1.4)
-3. **Seed, not cage.** A shape is a starting point, not a destiny. Copy-then-modify.
+3. **Begin from a blueprint.** A shape is a starting point; you'll make it yours.
+   Copy, then modify.
    (event-bus-and-group-shapes.md §3.1)
-4. **Lend, don't give.** Every grant of power is scoped and revocable. This is the
-   trust model in one line. (delegation-and-session-keys.md)
+4. **You keep the recall.** Every permission you hand out is scoped and revocable.
+   That's the trust model in one line. (delegation-and-session-keys.md)
 5. **Privacy by default, provable when it matters.** We show proofs, never raw
-   internals. "Coverage, not clout." (event-bus-and-group-shapes.md §6–7)
+   internals. "Coverage you can prove." (event-bus-and-group-shapes.md §6–7)
 6. **Eager to build.** Every screen ends with a next step that moves toward other
    people — invite, pick a shape, fund something. Onboarding never dead-ends in a
    profile.
@@ -111,7 +112,7 @@ materialization"). A skip anywhere still lands the user in a working world.
   think about keys or wallets."
 
 ### Step 2 — The one idea
-- Headline: **"Your world is a graph, not a feed."**
+- Headline: **"Your world is a graph."**
 - Body: "You're a point. Every group is a line between points. And a group can live
   inside another group — a working group inside a co-op, a co-op inside a bigger
   network. That's what *composable* means: what you build can join what others build,
@@ -133,7 +134,7 @@ materialization"). A skip anywhere still lands the user in a working world.
   practice, not reading — that's what these are for."
 
 ### Step 4 — Your first shape
-- Headline: **"Start from a seed, not a cage."**
+- Headline: **"Start from something close, then make it yours."**
 - Body: "Pick something close to what you have in mind. It's just a starting place —
   you'll change it as you go, and nothing is locked in."
 - Picker: Circle · Co-op · Working group · Mutual-aid fund · Empty (start from scratch).
@@ -158,9 +159,9 @@ materialization"). A skip anywhere still lands the user in a working world.
 
 ### Step 7 — Your world
 - Headline: **"This is your world."**
-- Body: "Not a feed, not a profile — a living picture of the people and groups around
-  you, and what needs your attention."
-- Show: the group (with its rooms), the treasury view (proofs, not balances),
+- Body: "A living picture of the people and groups around you, and what needs your
+  attention."
+- Show: the group (with its rooms), the treasury view (the proofs you've earned),
   the "needs your signature" inbox (empty), and:
 - CTA: **"Invite your people"** (primary) · "Browse the blueprint library" (secondary).
 
@@ -175,7 +176,11 @@ materialization"). A skip anywhere still lands the user in a working world.
 - **Hopeful, not utopian.** Acknowledge the problem (atomization) honestly, then
   answer it. Never overpromise — "built in" only when it is.
 - **Plain where possible, poetic once per screen.** One memorable line per step
-  ("you are a group of one", "seed, not cage", "lend, don't give").
+  ("you are a group of one", "you keep the recall", "begin from a blueprint").
+- **No contrastive pairs.** Avoid the "X, not Y" construction ("seed, not cage",
+  "lend, don't give", "a graph, not a feed"). It reads as a generated tic. Say the
+  positive thing and stop. (One deliberate exception: "you are a group of one" is a
+  definition, not a contrast — it stands.)
 - **Human-first.** The verticals are about *people* — facilitation, repair, design,
   reading a room — before they're about software.
 - **No shame, ever.** The commons economy is a carrot, not a stick (event-bus §7).
