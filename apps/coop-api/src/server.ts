@@ -26,7 +26,8 @@ import socialRoutes from './social'
 import profileRoutes from './profile'
 import { initDb } from './db'
 import { migrateProfilesFromJson } from './profile-store'
-import usernameRoutes from './username'
+import usernameRoutes from "./username"
+import passkeyRoutes from "./passkey"
 import docsRoutes from './docs'
 import filesRoutes from './files'
 import statusRoutes from './status'
@@ -175,6 +176,7 @@ fastify.register(paymentRoutes)
 fastify.register(socialRoutes)
 fastify.register(profileRoutes)
 fastify.register(usernameRoutes)
+fastify.register(passkeyRoutes)
 fastify.register(docsRoutes)
 fastify.register(filesRoutes)
 fastify.register(statusRoutes)

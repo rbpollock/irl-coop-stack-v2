@@ -210,6 +210,31 @@ CREATE TABLE IF NOT EXISTS member_memory (
 );
 CREATE INDEX IF NOT EXISTS member_memory_sub_idx ON member_memory (sub, created_at DESC);
 
+-- The member's WebAuthn passkey — the P-256 credential that will OWN their Safe
+-- (B-11). Registered from the browser's ceremony (POST /api/v1/me/passkey); the
+-- Safe-creation path deploys a PasskeyOwner bound to it. User-scoped like
+-- profiles/member_memory: a member reads/writes only their own rows.
+-- owner_address is the deployed PasskeyOwner contract (nullable until deployed).
+CREATE TABLE IF NOT EXISTS member_passkey (
+  credential_id text PRIMARY KEY,
+  sub           text NOT NULL,
+  pub_x         text NOT NULL,
+  pub_y         text NOT NULL,
+  owner_address text,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  revoked_at    timestamptz
+);
+CREATE INDEX IF NOT EXISTS member_passkey_sub_idx ON member_passkey (sub) WHERE revoked_at IS NULL;
+ALTER TABLE member_passkey ENABLE ROW LEVEL SECURITY;
+ALTER TABLE member_passkey FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS member_passkey_all ON member_passkey;
+CREATE POLICY member_passkey_all ON member_passkey
+  USING (sub = coop_current_sub())
+  WITH CHECK (sub = coop_current_sub());
+GRANT SELECT, INSERT, UPDATE, DELETE ON member_passkey TO coop_rls;
+GRANT SELECT, INSERT, UPDATE ON member_passkey TO coop_member;
+GRANT SELECT, INSERT, UPDATE ON member_passkey TO coop_app;
+
 -- Roles as bundles of grants (the delegation model made concrete). A role is a
 -- named set of grants (capabilities); group_members.roles holds role NAMES that
 -- resolve through roles/role_grants. Builtin roles (owner/member) are seeded in

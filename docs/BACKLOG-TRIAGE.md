@@ -174,8 +174,12 @@ ABI (`security-review.md`); *whole-system F10* = role truncation (`whole-system-
   retired (or fixed to bind `saltNonce` to `claims.sub`); the journey asserts the owner set is
   the passkey and **not** the backend, and that a second member's attempt to claim it fails.
 - **Work type:** implementation + verification.
-
-### B-12 — Authorize `/api/safe/session/execute` and harden the session module
+- **Progress (2026-10-19):** contract side proven — `contracts/test/SafeCreatedPasskeyOwned.ts`
+  (3 passing: the Safe is born passkey-owned, a non-owner sponsor executes a passkey-signed
+  spend, and a sponsor without the passkey is refused). The passkey registration route +
+  `member_passkey` table are live (`POST/GET /api/v1/me/passkey`, RLS user-scoped). Remaining:
+  the coop-api **create path** (deploy a `PasskeyOwner` from the stored credential, create the
+  Safe owned by it) and retiring `/api/safe/sovereign`.
 - **Labels:** `security`, `financial-high-risk`, `agent-high-risk`
 - **Why:** the route has authentication but **zero authorization** (no seat/grant check), and the
   module lets `F2` be exploited two ways: a declared `amountIn` makes the budget a no-op
