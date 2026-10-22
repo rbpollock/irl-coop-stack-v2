@@ -14,7 +14,11 @@
     "explorer": "https://sepolia.basescan.org",
     "usdc_verified_on": "2026-09-13",
     "usdc_verified_how": "chainId 0x14a34; symbol() -> 0x55534443 ('USDC'); decimals() -> 6; bytecode contains 5c60da1b (implementation()) i.e. Circle's proxy",
-    "note": "Testnet. Proves the CHAIN side (deploy, gas, Safe, router, verification). It CANNOT prove the payment rail: the provider delivers USDC on Base mainnet only."
+    "note": "Testnet. Proves the CHAIN side (deploy, gas, Safe, router, verification). It CANNOT prove the payment rail: the provider delivers USDC on Base mainnet only.",
+    "sessionKeyModule": "0x3e6F19ffBdFE2dbB4620451bA6C5c79e6B45120B",
+    "sessionKeyModule_deployed": "2026-10-21",
+    "sessionKeyModule_version": "B-12-hardened",
+    "sessionKeyModule_safe": "0xb8360999bF11317aA826de551f387B3Ee7f72A6E"
   },
   "base": {
     "chainId": 8453,
