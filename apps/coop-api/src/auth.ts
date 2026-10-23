@@ -34,12 +34,13 @@ const env = {
 };
 
 // RS256 signing keypair for the coop JWT (the fleet validates via /jwks).
-const keyB64 = process.env.COOP_JWT_PRIVATE_KEY_B64 ?? "";
-const privateKeyPem = keyB64
-  ? crypto.createPrivateKey(Buffer.from(keyB64, "base64")).export({ format: "pem", type: "pkcs8" }).toString()
-  : crypto.generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey
-      .export({ format: "pem", type: "pkcs8" })
-      .toString();
+// Fail-closed: refuse to start without a signing key.
+const keyB64 = process.env.COOP_JWT_PRIVATE_KEY_B64;
+if (!keyB64) {
+  throw new Error("COOP_JWT_PRIVATE_KEY_B64 is required — the coop JWT issuer must not start without a key");
+}
+const privateKeyPem = crypto.createPrivateKey(Buffer.from(keyB64, "base64"))
+  .export({ format: "pem", type: "pkcs8" }).toString();
 const publicKeyPem = crypto.createPublicKey(privateKeyPem).export({ format: "pem", type: "spki" }).toString();
 const publicJwk = crypto.createPublicKey(publicKeyPem).export({ format: "jwk" }) as {
   kty: string;
@@ -244,7 +245,11 @@ export async function mintCoopJwt(
 }
 
 function verifyCoopJwt(token: string): any {
-  return jwt.verify(token, publicKeyPem, { algorithms: ["RS256"], issuer: env.oidcIssuer });
+  return jwt.verify(token, publicKeyPem, {
+    algorithms: ["RS256"],
+    issuer: env.oidcIssuer,
+    audience: "irl-coop",
+  });
 }
 
 // Server-side OIDC code issuance (no browser). The chat gateway drives the
