@@ -25,6 +25,18 @@ git clone --depth 1 "$REPO" "$SRC"
 git -C "$SRC" fetch --depth 1 origin "$PIN"
 git -C "$SRC" checkout "$PIN"
 
+echo "== litefarm: patching Dockerfile base images to latest Node 22 ..."
+sed -i 's|FROM node:22.21|FROM node:22|' "$SRC/packages/api/prod.Dockerfile"
+sed -i 's|FROM node:22.21|FROM node:22|' "$SRC/packages/webapp/prod.irlcoop.Dockerfile"
+
+# Upstream pins engines.node = 22.21; the latest 22.x (22.23.4) is patch-released
+# and safe, so bypass the exact-match engine check during the install step.
+echo "== litefarm: patching webapp .npmrc to ignore exact engine pin ..."
+sed -i 's|^engine-strict=true|engine-strict=false|' "$SRC/packages/webapp/.npmrc"
+# The upstream Dockerfile also carries 'pnpm install --ignore-engines' which is not
+# a valid pnpm flag; strip it so the install succeeds.
+sed -i 's|pnpm install --ignore-engines|pnpm install|' "$SRC/packages/webapp/prod.irlcoop.Dockerfile"
+
 echo "== litefarm: building API image (irlcoop/litefarm-api:$TAG) ..."
 docker build -f "$SRC/packages/api/prod.Dockerfile" \
   -t "irlcoop/litefarm-api:$TAG" "$SRC/packages/"

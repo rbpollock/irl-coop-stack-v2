@@ -31,6 +31,9 @@ git -C "$SRC" checkout "$PIN"
 echo "== postiz: applying irl.coop fork patch ..."
 git -C "$SRC" apply "$PATCH"
 
+echo "== postiz: patching Dockerfile base image to latest Node 22 ..."
+sed -i 's|FROM node:22.20-bookworm-slim|FROM node:22-bookworm-slim|' "$SRC/Dockerfile.dev"
+
 echo "== postiz: building $IMAGE ..."
 docker build -f "$SRC/Dockerfile.dev" -t "$IMAGE" \
   --build-arg NEXT_PUBLIC_VERSION="$VERSION" "$SRC"

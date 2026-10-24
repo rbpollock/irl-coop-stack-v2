@@ -5,7 +5,7 @@
 # member's coop JWT is forwarded to Plane, which verifies it against coop-api's
 # JWKS and applies coop_group_scope — so no service credential and no per-member
 # session live here.
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 COPY server.mjs ./
