@@ -142,7 +142,7 @@ sidecars:
         psql "postgresql://postgres:${SECRET:postgres.irlcoop}@172.17.0.1:5432/formbricks" -c "CREATE EXTENSION IF NOT EXISTS vector" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto"
         echo 'formbricks DB ready.'
   formbricks-migrate:
-    image: ghcr.io/formbricks/formbricks:latest
+    image: irlcoop/formbricks-gate-sso:5.4.0-irl.7
     restart: "no"
     entrypoint: ["sh", "-c"]
     command:
