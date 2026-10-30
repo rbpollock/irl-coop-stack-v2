@@ -177,9 +177,9 @@ ABI (`security-review.md`); *whole-system F10* = role truncation (`whole-system-
 - **Progress (2026-10-19):** contract side proven — `contracts/test/SafeCreatedPasskeyOwned.ts`
   (3 passing: the Safe is born passkey-owned, a non-owner sponsor executes a passkey-signed
   spend, and a sponsor without the passkey is refused). The passkey registration route +
-  `member_passkey` table are live (`POST/GET /api/v1/me/passkey`, RLS user-scoped). Remaining:
-  the coop-api **create path** (deploy a `PasskeyOwner` from the stored credential, create the
-  Safe owned by it) and retiring `/api/safe/sovereign`.
+  `member_passkey` table are live (`POST/GET /api/v1/me/passkey`, RLS user-scoped).
+- **Done (2026-10-24):** create path deploys `PasskeyOwner` from stored credential + Safe owned by it;
+  `/api/safe/sovereign` retired; legacy backend-owned Safes remain. Commits `0272fc3..7168b89`.
 
 ### B-12 — Authorize `/api/safe/session/execute` and harden the session module
 - **Labels:** `security`, `financial-high-risk`, `agent-high-risk`
@@ -193,6 +193,9 @@ ABI (`security-review.md`); *whole-system F10* = role truncation (`whole-system-
   the declared amount is removed); the allow-list is **denied by default**; a session has an
   expiry; and each bypass is a red-then-green test.
 - **Work type:** implementation + verification.
+- **Done (2026-10-24):** route requires seat + origin invite/grant; module hardened (deny-by-default
+  allow-list, expiry, no `amountIn` bypass). Deployed to Base Sepolia + smoke tests pass.
+  Commits `e0f15b6, 3ae1300`.
 
 ### B-13 — Attest `groups.safe_address` (D-16 seat integrity)
 - **Labels:** `security`, `architecture-decision`
@@ -213,6 +216,9 @@ ABI (`security-review.md`); *whole-system F10* = role truncation (`whole-system-
 - **Done when:** the process refuses to boot without `COOP_JWT_PRIVATE_KEY_B64`; algorithms are
   pinned; `audience` is checked; a forged-HS256 token and a cross-audience token both 401.
 - **Work type:** implementation + verification.
+- **Done (2026-10-24):** boot-time requirement for `COOP_JWT_PRIVATE_KEY_B64`; RS256-only;
+  audience check (`irl-coop`); red-then-green tests pass (HS256, wrong aud, wrong iss, tampered,
+  expired, missing key). Commit `1704bfa`.
 
 ### B-15 — Session cookie lifecycle (revocation + shorter life)
 - **Labels:** `security`

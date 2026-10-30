@@ -9,13 +9,13 @@ username.ts, chat.ts, and the coop-api env names).
 
 | Finding | Verdict | Evidence |
 |---|---|---|
-| F1 — `/api/safe/sovereign` not bound to the caller | **Confirmed, LIVE** | `safe.ts`: auth only; `claims.sub` never compared to `saltNonce`; salt `keccak256("personal:"+sub)` is public (provisioning.ts). Safe env IS wired, so reachable. |
-| F2 — `/api/safe/session/execute` auth-without-authz; `amountIn` + delegatecall bypasses | **Confirmed, LIVE** | route reads `target/data/operation/token/amountIn` from the body, no seat/grant check; module: `cost = token==0 ? value : amountIn`, forwards `operation`, `_allowed` true when `listEnabled` false |
+| F1 — `/api/safe/sovereign` not bound to the caller | **Fixed 2026-10-24** — route retired; new Safes are passkey-owned at creation | sovereign route removed; create path deploys passkey-owned Safe |
+| F2 — `/api/safe/session/execute` auth-without-authz; `amountIn` + delegatecall bypasses | **Fixed 2026-10-24** — route now requires seat + origin invite/grant; module hardened (deny-by-default allow-list, expiry, no `amountIn` bypass, `operation` restricted) | `session-execute` route + `SessionKeyModule` deployed to Base Sepolia + smoke tests |
 | F3 — `groups.safe_address` writable → D-16 seat impersonation | **Confirmed mechanism + reachable** | see below; member cert DB path IS provisioned |
-| F4 — hardcoded HS256 fallback secret, no alg pin | **Confirmed but LATENT** | `COOP_JWT_PRIVATE_KEY_B64` IS set in the live env → fallback not triggered today; still fails open if ever unset |
-| F5 — no `audience` check on any verify path | **Confirmed** | `verify-jwt.ts` + `auth.ts verifyCoopJwt`: `{algorithms,issuer}` only; one key signs access tokens, the 30d cookie, and per-client id_tokens |
+| F4 — hardcoded HS256 fallback secret, no alg pin | **Fixed 2026-10-24** — fallback removed; boot fails if `COOP_JWT_PRIVATE_KEY_B64` missing; RS256-only | `verify-jwt.ts` throws on missing key; `auth.ts` pins RS256 |
+| F5 — no `audience` check on any verify path | **Fixed 2026-10-24** — audience `irl-coop` enforced; cross-audience tokens 401 | `verify-jwt.ts` + `auth.ts` both check `audience`; live smoke confirmed |
 | F6 — 30-day session cookie is a live Bearer; logout/deletion don't revoke | **Confirmed** | `COOP_SESSION_TTL`/`maxAge 30d`; `verifyBearer` makes no Keycloak call; logout only clears the cookie |
-| F7 — every personal Safe backend-owned 1-of-1 | **Confirmed, LIVE** | `deploySafe(signer, …, [signer.address], 1)`; `SAFE_BACKEND_SIGNER_KEY` is set |
+| F7 — every personal Safe backend-owned 1-of-1 | **Fixed 2026-10-24 for new Safes** — new Safes are passkey-owned at creation; legacy backend-owned Safes remain | `safe.ts` create path deploys `PasskeyOwner` owner; `/api/safe/sovereign` retired |
 | F10 — `coop_m_<sub8>` role truncation | **Confirmed** | `db.ts` and `provision-member-certs.sh` both take the first 8 alnum chars (the script calls it "stable, unique-enough") |
 | F11 — Matrix localpart collision / username-claim hijack | **Confirmed** | `provisioning.ts` localpart + `M_USER_IN_USE` accepted; `matrix.ts` resolves `@localpart` → `<localpart>@irl.coop` → `getUserByEmail`; `username.ts` lets a member claim any unclaimed name |
 
@@ -90,6 +90,5 @@ over the global views (RLS-scoped). Sound as written.
    practical exposure; the design says yes).
 
 ## Verdict so far
-F1, F2, F5, F6, F7, F10, F11 are code-confirmed; F4 is latent (key is set); F3's mechanism and
-reachability are confirmed. F8/F12/F14 are conditional on items 1/5/6. The most urgent live item is
-**F1** — any member can seize another's Safe, with neither misconfiguration nor DB access.
+
+F1, F2, F4, F5 are fixed 2026-10-24; F7 is fixed for new Safes (legacy remain). F3, F6, F10, F11 are code-confirmed. F8/F12/F14 are conditional on items 1/5/6. The most urgent remaining item is **F3** (`groups.safe_address` writable) or **F6** (session cookie lifecycle).

@@ -234,9 +234,9 @@ group‑creation step's full fan‑out (subdomain + mail domain + Matrix space) 
 `groups.ts` does.
 
 **Security findings that are born at onboarding** (see `security-review-open-questions.md`):
-F7 (platform owns every personal Safe at creation), F1 (the handover route is unbound and
-non‑functional), F14/F11 (username claim needs no mailbox proof; `@localpart` can seize a
-Matrix identity), F3 (member‑writable `groups.safe_address`).
+F7/F1 **fixed 2026-10-24** (new Safes are passkey-owned; sovereign route retired); F14/F11
+(username claim needs no mailbox proof; `@localpart` can seize a Matrix identity); F3
+(member‑writable `groups.safe_address`).
 
 ### Solidification plan (ordered; each reversible)
 

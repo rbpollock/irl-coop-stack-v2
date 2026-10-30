@@ -212,7 +212,7 @@ promises is design. Full evidence, domain by domain, in [`docs/REALITY.md`](docs
 | Groups, seats, roles, and group-scoped grants | Proposals and votes (**zero proposals**) | The shielded pool |
 | Row-level security across the coop schema | The on-chain anchoring path (nothing has anchored) | The declared-binding registry |
 | Mail — all four ports answering externally | The payment rail — **four attempts, all failed** | Chain indexing, and the card rail |
-| Files, docs, maps basemap, Matrix chat | | Per-member Safe ownership — every Safe is currently owned 1-of-1 by a *published* test key |
+| Files, docs, maps basemap, Matrix chat | New Safes are passkey-owned at creation (B-11); session module hardened (B-12); JWT fail-closed (B-14) | Legacy Safes remain backend-owned; distributions do not exist |
 
 Three findings that a newcomer should know immediately, because they are load-bearing:
 

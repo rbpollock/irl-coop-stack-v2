@@ -1,6 +1,6 @@
 # STATUS.md — irl.coop v2 infrastructure status
 
-Last updated: 2026-10-12 — **Communications & outreach section added** (cost model live; pitch/film/outreach assets built, mostly uncommitted). Previously 2026-08-13 — passkey auth live (KC 25.0.6 + browser-passkey flow + sign-in button), browser-runner image + files-flow E2E 8/8, browser-runners summary on the home page. Session handoff: `docs/design/handoff-2026-08-13.md` (state, blockers, pending decisions, next steps).
+Last updated: 2026-10-24 — security/custody/onboarding B-11, B-12, B-14 completed. Previously 2026-10-12 — Communications & outreach section added (cost model live; pitch/film/outreach assets built, mostly uncommitted). Previously 2026-08-13 — passkey auth live (KC 25.0.6 + browser-passkey flow + sign-in button), browser-runner image + files-flow E2E 8/8, browser-runners summary on the home page. Session handoff: `docs/design/handoff-2026-08-13.md` (state, blockers, pending decisions, next steps).
 
 ## Configuration flow — how to add an app (START HERE)
 
@@ -575,6 +575,21 @@ after the dashboard login. The gateway (slice 1) is live and **curl-proven**:
   each app instant) once the user's browser picks up a fresh gateway session;
   the automation browser completes the full flow but through the Keycloak
   bounce (no stored cookie).
+
+## Completed this arc (security/custody/onboarding — 2026-10-24)
+
+1. **B-11 — Passkey-owned Safe at creation (commits `0272fc3..7168b89`).**
+   - `PasskeyOwner` (EIP-1271) contract embedded; registration route + `member_passkey` table live.
+   - Create path deploys a passkey-owned Safe for new members; `/api/safe/sovereign` retired.
+   - Contract tests pass (3/3); backend no longer owns new Safes.
+2. **B-12 — Harden `SessionKeyModule` + authorize `/api/safe/session/execute` (commits `e0f15b6, 3ae1300`).**
+   - Route now requires the caller hold a seat + origin invite/grant in the module's group.
+   - Module: deny-by-default allow-list, session expiry, `amountIn` bypass removed, `operation` restricted.
+   - Deployed to Base Sepolia (`0x3F6F…1B0B`) + smoke tests confirm module behaves after rebind.
+3. **B-14 — JWT fail-closed + audience check (commit `1704bfa`).**
+   - Boot-time requirement: process throws if `COOP_JWT_PRIVATE_KEY_B64` is missing.
+   - RS256-only; `audience: "irl-coop"` enforced; HS256 and cross-audience tokens 401 live.
+   - Unit tests (8 assertions) + live smoke tests (valid/HS256/wrong-aud/no-token) all pass.
 
 ## Pending / open
 
