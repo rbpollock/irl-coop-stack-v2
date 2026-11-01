@@ -709,5 +709,21 @@
     "status": "design",
     "description": "The five custody/agent-key defects and one plan that closes them: agent session keys bounded by expiry, budget, and a default-closed allow-list; a passkey owner type so a Safe is member-owned from creation with no platform-owned window; the hollow SovereignEvolutionModule deleted; signer keys out of plain env; and how groups become sovereign (N-of-M passkey Safes plus external accounts as group service accounts).",
     "file": "custody-and-agent-keys.md"
+  },
+  {
+    "slug": "sealed-accord-weaving",
+    "title": "Sealed Accord Adaptation \u2014 sealed negotiation for weaving",
+    "category": "Economy & treasury",
+    "status": "design",
+    "description": "Working plan to adapt five concepts from djat/sealed-accord-demo (confidential multi-party negotiation protocol) into the irl.coop weaving layer: four-class term constraints, sealed feasibility rounds via threshold/ZK, equal-concession split rule, protocol adoption by hash, and hash-chained run records. Replaces the original TEE dependency with existing threshold-crypto and ZK primitives.",
+    "file": "sealed-accord-weaving.md"
+  },
+  {
+    "slug": "pathways-integration",
+    "title": "Pathways \u00d7 irl.coop \u2014 run objects, handoff envelopes, risk-priced escrows",
+    "category": "Economy & treasury",
+    "status": "design",
+    "description": "Adopts the HandoffEnvelope + gate-profile discipline from djat's Pathways RIS v1.1.0 as the contract for multi-step cooperation on the bus (a weave is a PathwayRun, Temporal is the executor, the bus is the HandoffBus), and puts a versioned risk engine beside it so a signed trade chain carries a priced escrow/insurance profile per leg \u2014 with a learning loop fed by settlements and arbitrations.",
+    "file": "pathways-integration.md"
   }
 ]

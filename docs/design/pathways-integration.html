@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pathways × irl.coop — seam map</title>
+<style>
+  body { width: 800px; font: 14px/1.45 system-ui, sans-serif; color: var(--foreground); }
+  h3 { margin: 18px 0 6px; font-size: 15px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .box { border: 1px solid var(--border); background: var(--card); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+  .box b { display: block; font-size: 13px; }
+  .box span { font-size: 12px; color: var(--muted-foreground); }
+  .box.sel { border-color: var(--accent); }
+  .band { display: inline-block; border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 3px 12px; margin: 2px 2px; font-size: 12px; cursor: pointer; }
+  .band.sel { border-color: var(--accent); }
+  #detail { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-top: 10px; background: var(--card); min-height: 96px; font-size: 13px; }
+  #detail h4 { margin: 0 0 6px; font-size: 13px; }
+  #detail p { margin: 4px 0; }
+  .arrow { text-align: center; color: var(--muted-foreground); font-size: 18px; line-height: 1; padding: 2px 0; }
+  .legend { font-size: 11px; color: var(--muted-foreground); margin-top: 2px; }
+  b.ac { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h3>The three choke points → our three seams</h3>
+<div class="grid">
+  <div class="box" data-k="launch"><b>LAUNCH</b><span>badge floor + bond + practice profile</span></div>
+  <div class="box" data-k="prestep"><b>PRE-STEP</b><span>capability ∩ budget ∩ halt</span></div>
+  <div class="box" data-k="seam"><b>SEAM</b><span>HandoffEnvelope + audit</span></div>
+</div>
+<div class="legend">Click a seam — every run passes all three.</div>
+
+<div class="arrow">↓</div>
+
+<h3>One run, end to end</h3>
+<div class="grid" style="grid-template-columns: repeat(6, 1fr);">
+  <div class="box" data-k="adopt"><b>Adopt</b><span>Safe vote on MinIO hash</span></div>
+  <div class="box" data-k="propose"><b>Propose</b><span>run + band declared</span></div>
+  <div class="box" data-k="assess"><b>Assess</b><span>risk profile per leg</span></div>
+  <div class="box" data-k="execute"><b>Execute</b><span>Temporal + steps</span></div>
+  <div class="box" data-k="settle"><b>Settle</b><span>escrow releases</span></div>
+  <div class="box" data-k="learn"><b>Learn</b><span>outcome → model v+1</span></div>
+</div>
+
+<div class="arrow">↓</div>
+
+<h3>Autonomy bands = the escalation ladder, formalized</h3>
+<div>
+  <div class="band" data-k="a0">A0 · assisted</div>
+  <div class="band" data-k="a1">A1 · supervised</div>
+  <div class="band" data-k="a2">A2 · headless</div>
+  <div class="band" data-k="a3">A3 · cross-boundary</div>
+</div>
+<div class="legend">A run's band is set at proposal — lowered, never raised.</div>
+
+<div id="detail"><p>Click any node above for what it is and what changes.</p></div>
+
+<script>
+const D = {
+  launch: ["LAUNCH gate",
+    "<p>The stack's badge floor + per-proposal bond (match-proposing §4) already gates who may start a weave. Pathways adds the <b class='ac'>R1 cold-start rule</b>: the run resolves its gate_profile against the practice profile the group adopted by Safe vote (MinIO hash). No adopted profile → <code>BLOCKED_CONFIGURATION</code>, and the run never starts.</p>"],
+  prestep: ["PRE-STEP / PRE-TOOL gate",
+    "<p>Today: Safe allow-list + session-key caps + tier2 budgets. Added: a <b class='ac'>ToolGateway shim</b> in coop-api that resolves the deny-wins intersection of phase profile ∩ step capability profile before each tool call, decrements budget per call (R4), and reads a <code>run/{id}/halt</code> flag for liveness (R5).</p>"],
+  seam: ["SEAM gate (HandoffBus)",
+    "<p>Every sub-run launch, external action, or peer fetch becomes a typed <b class='ac'>HandoffEnvelope</b>: closed intent enum, typed target, JSONSchema-validated params, upstream text wrapped as DATA, EIP-712 signature, append-only audit row. Rejected envelopes never invoke the downstream. The bus lanes don't change — the payload discipline tightens.</p>"],
+  adopt: ["1 · Adopt the template",
+    "<p>The protocol template (the weave recipe) lives in the group's MinIO bucket. The group adopts it by Safe vote on the content hash (sealed-accord §2.4 convention). Deviation produces a detectably different hash — the bus rejects steps citing any other hash.</p>"],
+  propose: ["2 · Propose the run",
+    "<p>A run = a trade-chain instance with a <b class='ac'>run object</b> (the missing G1 gap): template hash, autonomy band, resolved gate_profile, status. Declared state as resource_scopes row; actuals as trade.* events.</p>"],
+  assess: ["3 · Assess the risk",
+    "<p><b class='ac'>chain.risk_assessed</b>: deterministic v0 model over counterparty completion history, category priors from story logs, graph depth, exposure concentration, gate strictness. Output: per-leg p_failure + recommended escrow + pool contribution.</p>"],
+  execute: ["4 · Execute (Temporal)",
+    "<p>One <code>pathwayRun</code> workflow for all templates. Steps persist append-only rows; progress rides the existing lanes; human-gated steps use the tier2-attestation wait-timer pattern (waitForSignal + TTL). Halt switch checked per step.</p>"],
+  settle: ["5 · Settle with escrow",
+    "<p>Treasury-guard escrow sized by the risk profile: low → none; mid → partial staged per settlement point, released on <code>trade.leg_received</code>; high → full escrow or an insurance group underwriting the leg (weavers.md: insurance is itself a group offer).</p>"],
+  learn: ["6 · Learn",
+    "<p>Every settled/disputed leg against a prior assessment is predicted-vs-actual training data. Model versions are MinIO artifacts adopted by vote — improving the model is an auditable governance act. <b class='ac'>Risk prices legs, never people.</b></p>"],
+  a0: ["A0 · Assisted",
+    "<p>A licensed human reads every output before any external effect. = current human-only UI actions. Launch requirement: R1 (adopted practice profile).</p>"],
+  a1: ["A1 · Supervised async",
+    "<p>Human approves before each commit/external action. = match proposals. Adds R6 human_gate on commit steps — the bond acceptance IS the human gate.</p>"],
+  a2: ["A2 · Headless",
+    "<p>No human in the loop during execution; results reviewed after. = tier2Sweep, digestSweep today. Adds R2 capability profiles + R3 HandoffBus + R4 budget + R5 halt switch.</p>"],
+  a3: ["A3 · Cross-boundary",
+    "<p>A2 plus handoffs across trust boundaries. = a weaver agent spanning peered groups (needs G3: peering edges). Adds phase-scoped capability narrowing per phase.</p>"]
+};
+const detail = document.getElementById('detail');
+document.querySelectorAll('[data-k]').forEach(el => el.addEventListener('click', () => {
+  document.querySelectorAll('.sel').forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  const [h, b] = D[el.dataset.k];
+  detail.innerHTML = `<h4>${h}</h4>${b}`;
+}));
+</script>
+</body>
+</html>
