@@ -63,7 +63,10 @@ export function getDesignDoc(slug: string): DesignDoc | undefined {
 export function readDesignDoc(slug: string): string | null {
   const doc = getDesignDoc(slug)
   const dir = resolveDesignDir()
-  if (!doc || !dir) return null
+  // Guard against a malformed registry entry lacking a `file` field (or a doc
+  // whose file is gone) — an undefined `file` would otherwise crash static
+  // generation with `path.join(dir, undefined)`.
+  if (!doc?.file || !dir) return null
   const file = path.join(dir, doc.file)
   if (!fs.existsSync(file)) return null
   return fs.readFileSync(file, "utf8")

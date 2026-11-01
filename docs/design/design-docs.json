@@ -700,7 +700,8 @@
     "title": "Invitation & Join Mechanism",
     "category": "Identity & Access",
     "status": "design",
-    "description": "The on-ramp that Phase 1.1 recruitment depends on and every group afterwards: an owner's invite (offer, signed single-use token, revoked/expiry, email keyed) and a person's join-request, both ending in the same seat row under \u00a74.3/D-13 consent. Today the identity is phone-add-only; nothing exists for a person who isn't yet in the federation (code-verified)."
+    "description": "The on-ramp that Phase 1.1 recruitment depends on and every group afterwards: an owner's invite (offer, signed single-use token, revoked/expiry, email keyed) and a person's join-request, both ending in the same seat row under \u00a74.3/D-13 consent. Today the identity is phone-add-only; nothing exists for a person who isn't yet in the federation (code-verified).",
+    "file": "invitation-and-join-mechanism.md"
   },
   {
     "slug": "custody-and-agent-keys",
