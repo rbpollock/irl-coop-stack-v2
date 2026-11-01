@@ -10,6 +10,7 @@ import {
   getDesignDoc,
   getDesignDocs,
   readDesignDoc,
+  readRawMarkdown,
 } from "@/lib/design-docs"
 import { cn } from "@/lib/utils"
 
@@ -38,8 +39,12 @@ export default async function DesignDocPage({
 }) {
   const { slug } = await params
   const doc = getDesignDoc(slug)
-  const content = readDesignDoc(slug)
-  if (!doc || content == null) notFound()
+  // Registered docs (design-docs.json) render normally; the search widget also
+  // links unregistered .md results straight to /design/<slug> (keeping the
+  // section anchor a direct client-side fragment), so fall back to reading the
+  // raw markdown file when the slug isn't in the registry.
+  const content = readDesignDoc(slug) ?? readRawMarkdown(slug)
+  if (content == null) notFound()
 
   const categories = getCategories()
 

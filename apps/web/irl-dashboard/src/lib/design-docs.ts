@@ -68,3 +68,19 @@ export function readDesignDoc(slug: string): string | null {
   if (!fs.existsSync(file)) return null
   return fs.readFileSync(file, "utf8")
 }
+
+/**
+ * Read an UNREGISTERED markdown file from docs/design by slug (the search
+ * widget links unregistered .md results straight at /design/<slug>, and this is
+ * what renders them). Only the basename is used, so the slug can never escape
+ * the design directory. Returns null when no such file exists.
+ */
+export function readRawMarkdown(slug: string): string | null {
+  const dir = resolveDesignDir()
+  if (!dir) return null
+  const base = path.basename(slug).replace(/\.md$/i, "")
+  if (!base || base === "." || base === "..") return null
+  const file = path.join(dir, `${base}.md`)
+  if (!fs.existsSync(file)) return null
+  return fs.readFileSync(file, "utf8")
+}

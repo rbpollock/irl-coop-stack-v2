@@ -43,33 +43,38 @@ function resolveLink(c: Context): { href: string; label: string } | null {
     const slug = documentName.replace(/^group-/, "").replace(/\.md$/, "")
     return { href: `/groups/${slug}`, label: "View group" }
   }
-  // The /design/<slug> page only serves markdown docs listed in
-  // design-docs.json — an .html, .pdf, or unregistered .md result would 404
-  // there. Route every *docs* result through /design/file/<name>, which
-  // redirects registered markdown onto the pretty renderer (preserving the
-  // section anchor) and serves everything else as its raw file with the right
-  // content type. HTML artifacts emit their own heading ids (not GitHub
-  // Slugger), so only markdown results carry a section fragment.
+  // Markdown docs link DIRECTLY to /design/<slug> — registered ones render as
+  // pages, unregistered ones render via the page's raw-markdown fallback. A
+  // direct client-side link keeps the #section-anchor intact (no 307 redirect
+  // to drop it or surface an intermediate host). Non-markdown artifacts (.html,
+  // .pdf, …) have no markdown page, so they go to /design/file/<name>, which
+  // serves the actual file (and redirects registered .md onto its page).
+  const slug = documentName.replace(/\.md$/i, "")
   const isMarkdown = /\.md$/i.test(documentName)
+  if (!isMarkdown) {
+    return {
+      href: `/design/file/${documentName}`,
+      label: "View doc",
+    }
+  }
   // Anchor to the exact section shown. The corpus heading is a PATH
   // ("Doc Title / 2. Settled principles"), but the page emits ids for the
   // section heading alone ("2-settled-principles-..."), so anchor on the last
   // segment. A fresh slugger per heading: a shared one accumulates, so the
   // SECOND document with a heading like "1. Principles" would anchor to
   // "1-principles-1".
-  const section = isMarkdown
-    ? (c.heading
-        ? c.heading
-            .split("/")
-            .map((part) => part.trim())
-            .filter(Boolean)
-            .pop() ?? c.heading
-        : null)
-    : null
+  const section =
+    c.heading
+      ? c.heading
+          .split("/")
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .pop() ?? c.heading
+      : null
   const anchor = section ? new GitHubSlugger().slug(section) : null
   return {
-    href: `/design/file/${documentName}${anchor ? `#${anchor}` : ""}`,
-    label: anchor ? "Jump to section" : "View doc",
+    href: `/design/${slug}${anchor ? `#${anchor}` : ""}`,
+    label: anchor ? "Jump to section" : "Read more",
   }
 }
 
