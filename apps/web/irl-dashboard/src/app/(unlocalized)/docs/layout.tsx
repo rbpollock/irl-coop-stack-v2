@@ -25,7 +25,7 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
             <DocsBreadcrumb />
             <div
               id="mdx-content"
-              className="min-h-[calc(100svh-16rem)] max-w-prose w-[calc(100vw-3.2rem)] prose prose-headings:mt-8 prose-headings:font-semibold prose-headings:text-foreground prose-h1:text-5xl prose-h2:text-4xl prose-h3:text-3xl prose-h4:text-2xl prose-h5:text-xl prose-h6:text-lg prose-strong:text-foreground prose-code:text-foreground prose-a:text-foreground prose-pre:bg-muted text-foreground"
+              className="min-h-[calc(100svh-16rem)] max-w-prose w-[calc(100vw-3.2rem)] prose prose-headings:mt-8 prose-headings:font-semibold prose-headings:text-foreground prose-h1:text-5xl prose-h2:text-4xl prose-h3:text-3xl prose-h4:text-2xl prose-h5:text-xl prose-h6:text-lg prose-strong:text-foreground prose-code:text-foreground prose-a:text-foreground prose-pre:bg-muted prose-blockquote:text-foreground prose-em:text-foreground text-foreground"
             >
               {children}
             </div>

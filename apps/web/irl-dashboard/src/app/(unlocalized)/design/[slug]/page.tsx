@@ -87,7 +87,7 @@ export default async function DesignDocPage({
           <ArrowLeft className="size-4" />
           All design docs
         </Link>
-        <article className="prose max-w-3xl prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-a:text-primary prose-pre:bg-muted text-foreground">
+        <article className="prose max-w-3xl prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-a:text-primary prose-pre:bg-muted prose-blockquote:text-foreground prose-em:text-foreground text-foreground">
           <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>
             {content}
           </Markdown>
