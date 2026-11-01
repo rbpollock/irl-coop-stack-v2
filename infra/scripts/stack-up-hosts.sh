@@ -12,6 +12,11 @@
 # CREATE2 addresses) — skipped if the singleton already has code.
 set -u
 
+LOCKFILE="/tmp/stack-up-hosts.lock"
+exec 200>"$LOCKFILE"
+flock -n 200 || { printf 'stack-up-hosts.sh already running\n' >&2; exit 1; }
+echo $$ >&200
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOGDIR="$ROOT/.logs"
 mkdir -p "$LOGDIR"
@@ -51,20 +56,21 @@ say "host source apps"
 
 # web — webpack dev server (NOT --turbopack: the 15.2.8 turbopack dev server is
 # flaky under hot-reload and wedges on :3000 — bound but never answering).
+pkill -f 'next.*dev' 2>/dev/null || true
 start web 3000 / apps/web/irl-dashboard npx next dev
 
 # coop-api — ts-node-dev Fastify (dotenv: .env then infra/out/dev/secrets.env).
-start coop-api 3001 /api/auth/config apps/coop-api npm run dev
+# Use ts-node (NOT ts-node-dev --respawn) to avoid orphan wrapper processes on restart.
+pkill -f 'ts-node.*server\.ts' 2>/dev/null || true
+start coop-api 3001 /api/auth/config apps/coop-api npx ts-node --transpile-only src/server.ts
 
 # peer_xyz_payments — the payment rail service (internal only; no proxy route).
-# Separate process so a provider's SDK / a provider's takedown cannot reach the
-# member-facing API. Health path is its own /health.
-start peer_xyz_payments 3010 /health apps/peer_xyz_payments npm run dev
+pkill -f 'ts-node.*peer_xyz_payments' 2>/dev/null || true
+start peer_xyz_payments 3010 /health apps/peer_xyz_payments npx ts-node --transpile-only src/server.ts
 
-# treasury-relayer — the off-chain proof gate for the shielded pool. Internal
-# only (no proxy route). Verifies Groth16 spends against the ceremony key;
-# /health confirms it loaded spend_vk.json (fail-loud if the ceremony is missing).
-start treasury-relayer 3020 /health apps/treasury-relayer npm run dev
+# treasury-relayer — the off-chain proof gate for the shielded pool.
+pkill -f 'ts-node.*treasury-relayer' 2>/dev/null || true
+start treasury-relayer 3020 /health apps/treasury-relayer npx ts-node --transpile-only src/server.ts
 
 # hardhat — local chain + Safe contract deploy on a fresh node.
 if start hardhat 8545 / contracts npx hardhat node; then

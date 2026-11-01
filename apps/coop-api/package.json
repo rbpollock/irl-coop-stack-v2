@@ -4,7 +4,7 @@
   "main": "src/server.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "worker": "ts-node src/temporal/worker.ts"
+    "worker": "ts-node --transpile-only src/temporal/worker.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
