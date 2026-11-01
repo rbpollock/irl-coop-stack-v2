@@ -43,24 +43,34 @@ function resolveLink(c: Context): { href: string; label: string } | null {
     const slug = documentName.replace(/^group-/, "").replace(/\.md$/, "")
     return { href: `/groups/${slug}`, label: "View group" }
   }
-  const slug = documentName.replace(/\.md$/, "")
+  // The /design/<slug> page only serves markdown docs listed in
+  // design-docs.json — an .html, .pdf, or unregistered .md result would 404
+  // there. Route every *docs* result through /design/file/<name>, which
+  // redirects registered markdown onto the pretty renderer (preserving the
+  // section anchor) and serves everything else as its raw file with the right
+  // content type. HTML artifacts emit their own heading ids (not GitHub
+  // Slugger), so only markdown results carry a section fragment.
+  const isMarkdown = /\.md$/i.test(documentName)
   // Anchor to the exact section shown. The corpus heading is a PATH
   // ("Doc Title / 2. Settled principles"), but the page emits ids for the
   // section heading alone ("2-settled-principles-..."), so anchor on the last
   // segment. A fresh slugger per heading: a shared one accumulates, so the
   // SECOND document with a heading like "1. Principles" would anchor to
   // "1-principles-1".
-  const section = c.heading
-    ? c.heading
-        .split("/")
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .pop() ?? c.heading
+  const section = isMarkdown
+    ? (c.heading
+        ? c.heading
+            .split("/")
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .pop() ?? c.heading
+        : null)
     : null
-  const href = section
-    ? `/design/${slug}#${new GitHubSlugger().slug(section)}`
-    : `/design/${slug}`
-  return { href, label: section ? "Jump to section" : "Read more" }
+  const anchor = section ? new GitHubSlugger().slug(section) : null
+  return {
+    href: `/design/file/${documentName}${anchor ? `#${anchor}` : ""}`,
+    label: anchor ? "Jump to section" : "View doc",
+  }
 }
 
 /** Stable identity for a passage, so the same section never fills two slots. */
