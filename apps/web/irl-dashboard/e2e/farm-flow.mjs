@@ -44,7 +44,10 @@ await cdp.send("WebAuthn.addVirtualAuthenticator", {
 
 try {
   // --- 1. passkey login (dashboard session) ---
-  await page.goto(`${BASE}/en/sign-in`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/sign-in`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.click("text=Sign in with a passkey")
   await page.waitForSelector("#username", { timeout: 30000 })
   await page.fill("#username", USER)
@@ -57,7 +60,10 @@ try {
     /* already enrolled */
   }
   await page.waitForURL(`${BASE}/**`, { timeout: 30000 })
-  check("passkey login lands on the dashboard", page.url().startsWith(BASE) && !page.url().includes("sign-in"))
+  check(
+    "passkey login lands on the dashboard",
+    page.url().startsWith(BASE) && !page.url().includes("sign-in")
+  )
 
   // --- 2. farm.irl.coop through the fleet gate → Gate-SSO auto-login ---
   await page.goto(`${FARM}/`, { waitUntil: "domcontentloaded", timeout: 45000 })
@@ -70,24 +76,42 @@ try {
   console.log(`  (body head: ${JSON.stringify(body)})`)
   const token = await page.evaluate(() => localStorage.getItem("id_token"))
   check("gate SSO auto-login minted a token", !!token)
-  check("landed on the app (not the sign-in page)", url.startsWith(FARM) && !url.includes("/oauth2/") && !url.includes("sign-in"))
-  await page.screenshot({ path: "/tmp/farm-e2e-landing.png", fullPage: false }).catch(() => {})
+  check(
+    "landed on the app (not the sign-in page)",
+    url.startsWith(FARM) &&
+      !url.includes("/oauth2/") &&
+      !url.includes("sign-in")
+  )
+  await page
+    .screenshot({ path: "/tmp/farm-e2e-landing.png", fullPage: false })
+    .catch(() => {})
   console.log("  (screenshot: /tmp/farm-e2e-landing.png)")
 
   // --- 3. dashboard iframe (/apps/farm) ---
-  await page.goto(`${BASE}/en/apps/farm`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/apps/farm`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.waitForTimeout(8000)
   const frameUrl = await page.evaluate(() => {
     const f = document.querySelector("iframe")
     return f ? f.src : null
   })
-  check("dashboard /apps/farm iframes the farm", frameUrl?.startsWith(FARM) ?? false, String(frameUrl))
-  await page.screenshot({ path: "/tmp/farm-e2e-iframe.png", fullPage: false }).catch(() => {})
+  check(
+    "dashboard /apps/farm iframes the farm",
+    frameUrl?.startsWith(FARM) ?? false,
+    String(frameUrl)
+  )
+  await page
+    .screenshot({ path: "/tmp/farm-e2e-iframe.png", fullPage: false })
+    .catch(() => {})
   console.log("  (screenshot: /tmp/farm-e2e-iframe.png)")
 } catch (err) {
   failed++
   console.log(`  FAIL  harness error: ${err.message}`)
-  await page.screenshot({ path: "/tmp/farm-e2e-fail.png", fullPage: true }).catch(() => {})
+  await page
+    .screenshot({ path: "/tmp/farm-e2e-fail.png", fullPage: true })
+    .catch(() => {})
   console.log("  (screenshot: /tmp/farm-e2e-fail.png)")
 } finally {
   await browser.close()

@@ -28,7 +28,10 @@ await cdp.send("WebAuthn.addVirtualAuthenticator", {
 
 try {
   // 1. dashboard passkey login
-  await page.goto(`${BASE}/en/sign-in`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/sign-in`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.click("text=Sign in with a passkey")
   await page.waitForSelector("#username", { timeout: 30000 })
   await page.fill("#username", USER)
@@ -41,20 +44,31 @@ try {
   await page.waitForURL(`${BASE}/**`, { timeout: 30000 })
 
   // 2. Cinny → SSO → consent (first time) → room list
-  await page.goto(`${CINNY}/`, { waitUntil: "domcontentloaded", timeout: 45000 })
+  await page.goto(`${CINNY}/`, {
+    waitUntil: "domcontentloaded",
+    timeout: 45000,
+  })
   await page.waitForTimeout(12000)
 
   // consent screen ("Continue to your account") — one-time, dismiss it
   const actionables = await page.evaluate(() =>
     Array.from(document.querySelectorAll("button, input[type=submit], a"))
-      .filter((e) => /continue/i.test((e.textContent || e.value || "").slice(0, 40)))
-      .map((e) => ({ tag: e.tagName, type: e.getAttribute("type"), text: (e.textContent || e.value || "").trim().slice(0, 30) }))
+      .filter((e) =>
+        /continue/i.test((e.textContent || e.value || "").slice(0, 40))
+      )
+      .map((e) => ({
+        tag: e.tagName,
+        type: e.getAttribute("type"),
+        text: (e.textContent || e.value || "").trim().slice(0, 30),
+      }))
   )
   console.log("CONSENT ACTIONABLES:", JSON.stringify(actionables))
   if (actionables.length > 0) {
     const form = await page.evaluate(() => {
       const f = document.querySelector("form")
-      const link = Array.from(document.querySelectorAll("a")).find((a) => /continue/i.test(a.textContent || ""))
+      const link = Array.from(document.querySelectorAll("a")).find((a) =>
+        /continue/i.test(a.textContent || "")
+      )
       return {
         formAction: f?.getAttribute("action"),
         formMethod: f?.getAttribute("method"),
@@ -64,7 +78,10 @@ try {
     })
     console.log("CONSENT FORM:", JSON.stringify(form))
     if (form.linkHref && form.linkHref !== "#") {
-      await page.goto(form.linkHref, { waitUntil: "domcontentloaded", timeout: 30000 })
+      await page.goto(form.linkHref, {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      })
       console.log("(navigated to consent link href)")
     }
     await page.waitForTimeout(10000)
@@ -76,12 +93,14 @@ try {
 
   // 3. enter a room — click "General" (a known room in the list)
   const room = page.locator("text=General").first()
-  if (await room.count() > 0) {
+  if ((await room.count()) > 0) {
     await room.click()
     await page.waitForTimeout(4000)
     console.log("in-room URL:", page.url().slice(0, 100))
     const diag = await page.evaluate(async () => {
-      const wk = await fetch("https://matrix.irl.coop/.well-known/matrix/client")
+      const wk = await fetch(
+        "https://matrix.irl.coop/.well-known/matrix/client"
+      )
         .then((r) => r.json())
         .catch(() => null)
       const msc4143 = wk?.["org.matrix.msc4143.rtc_foci"]
@@ -93,11 +112,19 @@ try {
     })
     console.log("DISCOVERY DIAG:", JSON.stringify(diag))
     const header = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("button[aria-label], button[title], [role='button'][aria-label]"))
-        .map((b) => ({ label: b.getAttribute("aria-label") || b.getAttribute("title") || "", text: (b.textContent || "").trim().slice(0, 30) }))
+      Array.from(
+        document.querySelectorAll(
+          "button[aria-label], button[title], [role='button'][aria-label]"
+        )
+      ).map((b) => ({
+        label: b.getAttribute("aria-label") || b.getAttribute("title") || "",
+        text: (b.textContent || "").trim().slice(0, 30),
+      }))
     )
     console.log("HEADER BUTTONS:", JSON.stringify(header.slice(0, 40)))
-    const hasCall = header.some((b) => /call|video|voice/i.test(b.label + b.text))
+    const hasCall = header.some((b) =>
+      /call|video|voice/i.test(b.label + b.text)
+    )
     console.log("CALL BUTTON PRESENT:", hasCall ? "YES" : "NO")
     await page.screenshot({ path: "/tmp/cinny-call-room.png", fullPage: false })
     console.log("(room screenshot: /tmp/cinny-call-room.png)")
@@ -108,7 +135,9 @@ try {
   }
 } catch (err) {
   console.log("ERROR:", err.message)
-  await page.screenshot({ path: "/tmp/cinny-call-fail.png", fullPage: true }).catch(() => {})
+  await page
+    .screenshot({ path: "/tmp/cinny-call-fail.png", fullPage: true })
+    .catch(() => {})
   console.log("(fail screenshot: /tmp/cinny-call-fail.png)")
 } finally {
   await browser.close()

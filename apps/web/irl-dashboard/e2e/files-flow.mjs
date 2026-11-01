@@ -50,7 +50,10 @@ try {
   // --- 1. passkey login: the irl-dashboard sign-in → the passkey provider ---
   // (the NextAuth's OWN authorize carries the state + csrf; a direct
   // gateway authorize bypasses them and the OAuth callback fails)
-  await page.goto(`${BASE}/en/sign-in`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/sign-in`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.click("text=Sign in with a passkey")
 
   // the Keycloak login page (the browser-passkey copy): username + password.
@@ -74,9 +77,17 @@ try {
   // the ceremony completes → the gateway callback → the dashboard session
   await page.waitForURL(`${BASE}/**`, { timeout: 30000 })
   const cookies = await context.cookies(`${BASE}/`)
-  console.log(`  (cookies: ${cookies.map((c) => c.name).join(",") || "none"} | url: ${page.url()})`)
-  check("passkey login lands on the dashboard", page.url().startsWith(BASE) && !page.url().includes("sign-in"))
-  check("session cookie set", cookies.some((c) => c.name.includes("session-token")))
+  console.log(
+    `  (cookies: ${cookies.map((c) => c.name).join(",") || "none"} | url: ${page.url()})`
+  )
+  check(
+    "passkey login lands on the dashboard",
+    page.url().startsWith(BASE) && !page.url().includes("sign-in")
+  )
+  check(
+    "session cookie set",
+    cookies.some((c) => c.name.includes("session-token"))
+  )
   await page.waitForSelector("text=Browser runners", { timeout: 20000 })
   check("browser runners panel on the home page", true)
 
@@ -96,7 +107,8 @@ try {
   // dropdown selection AFTER (Promise.all would block on the response and
   // the selection never runs)
   const respPromise = page.waitForResponse(
-    (r) => r.url().includes("/api/v1/docs/new") && r.request().method() === "POST",
+    (r) =>
+      r.url().includes("/api/v1/docs/new") && r.request().method() === "POST"
   )
   await page.click("button:has-text('New')")
   // the menu is a custom div of plain buttons (not Radix — no keyboard
@@ -121,11 +133,17 @@ try {
   const { folders } = await filesRes.json()
   const folder = folders.find((f) => f.name === "E2E Passkey Folder")
   check("folder found via the API", !!folder)
-  const moveRes = await fetch(`${COOP_API}/api/v1/files/folders/${folder.id}/members`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ source: "docs", key: docName }),
-  })
+  const moveRes = await fetch(
+    `${COOP_API}/api/v1/files/folders/${folder.id}/members`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ source: "docs", key: docName }),
+    }
+  )
   check("doc moved into the folder", moveRes.ok, moveRes.status)
 
   // remove the doc from the folder, then delete the folder itself — full
@@ -133,18 +151,23 @@ try {
   // "E2E Passkey Folder" entries in the store.
   const removeRes = await fetch(
     `${COOP_API}/api/v1/files/folders/${folder.id}/members?source=docs&key=${encodeURIComponent(docName)}`,
-    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
   )
   check("doc removed from folder", removeRes.ok, removeRes.status)
-  const delFolderRes = await fetch(`${COOP_API}/api/v1/files/folders/${folder.id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const delFolderRes = await fetch(
+    `${COOP_API}/api/v1/files/folders/${folder.id}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  )
   check("folder cleaned up", delFolderRes.ok, delFolderRes.status)
 } catch (err) {
   failed++
   console.log(`  FAIL  harness error: ${err.message}`)
-  await page.screenshot({ path: "/tmp/hermes-e2e-fail.png", fullPage: true }).catch(() => {})
+  await page
+    .screenshot({ path: "/tmp/hermes-e2e-fail.png", fullPage: true })
+    .catch(() => {})
   console.log("  (screenshot: /tmp/hermes-e2e-fail.png)")
 } finally {
   await browser.close()

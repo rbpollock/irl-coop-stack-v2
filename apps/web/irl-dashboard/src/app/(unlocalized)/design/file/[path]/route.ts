@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
+import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { getDesignDoc } from "@/lib/design-docs"
@@ -78,7 +78,10 @@ export async function GET(
   if (mdSlug !== base) {
     const doc = getDesignDoc(mdSlug)
     if (doc) {
-      return Response.redirect(new URL(`/design/${doc.slug}`, _request.url), 307)
+      return Response.redirect(
+        new URL(`/design/${doc.slug}`, _request.url),
+        307
+      )
     }
   }
 

@@ -38,7 +38,6 @@ export default async function DesignDocPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const doc = getDesignDoc(slug)
   // Registered docs (design-docs.json) render normally; the search widget also
   // links unregistered .md results straight to /design/<slug> (keeping the
   // section anchor a direct client-side fragment), so fall back to reading the

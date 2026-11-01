@@ -4,6 +4,8 @@ import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { CheckCircle, KeyRound, RefreshCw } from "lucide-react"
 
+import { registerPasskey } from "@/lib/passkey"
+
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -12,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { registerPasskey } from "@/lib/passkey"
 
 const COOP_API_URL =
   process.env.NEXT_PUBLIC_COOP_API_URL ?? "https://api.irl.coop"
@@ -36,7 +37,7 @@ export function Passkeys() {
       const res = await registerPasskey(
         token,
         session?.user?.name ?? "member",
-        session?.user?.email ?? "member@irl.coop",
+        session?.user?.email ?? "member@irl.coop"
       )
       setSafeAddress(res.safe_address)
     } catch (err) {

@@ -40,20 +40,20 @@ declare module "@cubone/react-file-manager" {
     onDownload?: (files: FileManagerFile[]) => void
     onError?: (
       error: { type: string; message: string },
-      file: FileManagerFile,
+      file: FileManagerFile
     ) => void
     onFileOpen?: (file: FileManagerFile) => void
     onFileUploaded?: (response: Record<string, unknown>) => void
     onFileUploading?: (
       file: FileManagerFile,
-      parentFolder: FileManagerFile,
+      parentFolder: FileManagerFile
     ) => Record<string, unknown>
     onFolderChange?: (path: string) => void
     onLayoutChange?: (layout: "list" | "grid") => void
     onPaste?: (
       files: FileManagerFile[],
       destinationFolder: FileManagerFile,
-      operationType: "copy" | "move",
+      operationType: "copy" | "move"
     ) => void
     onRefresh?: () => void
     onRename?: (file: FileManagerFile, newName: string) => void

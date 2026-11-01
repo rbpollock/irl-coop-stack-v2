@@ -186,7 +186,8 @@ async function generateServer(
       ],
     }),
   })
-  if (!res.ok || !res.body) throw new Error(`shared model failed (${res.status})`)
+  if (!res.ok || !res.body)
+    throw new Error(`shared model failed (${res.status})`)
 
   // Read the SSE stream ({delta} … {done}) and expose the growing text.
   const reader = res.body.getReader()

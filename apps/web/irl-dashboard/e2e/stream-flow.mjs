@@ -26,9 +26,12 @@ await cdp.send("WebAuthn.addVirtualAuthenticator", {
 
 try {
   // 1. dashboard passkey login / session establishment
-  await page.goto(`${BASE}/en/sign-in`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/sign-in`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.waitForTimeout(3000)
-  
+
   // Set session cookie / mock session directly if unauthenticated in headless test
   await context.addCookies([
     {
@@ -41,7 +44,10 @@ try {
 
   // 2. Navigate to Sovereign Stream App (/apps/stream)
   console.log("Opening Sovereign Stream page (/apps/stream)...")
-  await page.goto(`${BASE}/en/apps/stream`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/apps/stream`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.waitForTimeout(3000)
   console.log("Current URL after navigating to stream:", page.url())
 
@@ -51,23 +57,34 @@ try {
     await page.click("text=Streamer Privacy", { timeout: 5000 })
   } catch {
     // If text differs slightly, try alternative selector
-    await page.click("button:has-text('Streamer')", { timeout: 5000 }).catch(() => {})
+    await page
+      .click("button:has-text('Streamer')", { timeout: 5000 })
+      .catch(() => {})
   }
-  const streamerActive = await page.locator("text=Streamer Mode Active").isVisible()
+  const streamerActive = await page
+    .locator("text=Streamer Mode Active")
+    .isVisible()
   console.log("Streamer Mode Active:", streamerActive)
 
   // 4. Test API Vault Secret Persistence via fetch
   console.log("Testing Group Secret Vault API...")
   const vaultTestResult = await page.evaluate(async () => {
-    return { status: "simulated-vault-verified", ok: true };
+    return { status: "simulated-vault-verified", ok: true }
   })
-  console.log("Vault API Test Result:", JSON.stringify(vaultTestResult, null, 2))
+  console.log(
+    "Vault API Test Result:",
+    JSON.stringify(vaultTestResult, null, 2)
+  )
 
   await page.screenshot({ path: "/tmp/stream-e2e-success.png", fullPage: true })
-  console.log("E2E test passed successfully. Screenshot saved to /tmp/stream-e2e-success.png")
+  console.log(
+    "E2E test passed successfully. Screenshot saved to /tmp/stream-e2e-success.png"
+  )
 } catch (err) {
   console.error("E2E Test Failed:", err)
-  await page.screenshot({ path: "/tmp/stream-e2e-fail.png", fullPage: true }).catch(() => {})
+  await page
+    .screenshot({ path: "/tmp/stream-e2e-fail.png", fullPage: true })
+    .catch(() => {})
   process.exit(1)
 } finally {
   await browser.close()

@@ -50,7 +50,9 @@ try {
     }
   })
   page.on("requestfailed", (r) => {
-    console.log(`  (request failed) ${r.url().slice(0, 110)}: ${r.failure()?.errorText ?? ""}`)
+    console.log(
+      `  (request failed) ${r.url().slice(0, 110)}: ${r.failure()?.errorText ?? ""}`
+    )
   })
   page.on("response", (res) => {
     if (res.status() >= 400) {
@@ -59,7 +61,10 @@ try {
   })
 
   // 1. Log in via standard Passkey flow (re-using credentials if enrolled, otherwise registering)
-  await page.goto(`${BASE}/en/sign-in`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/sign-in`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.click("text=Sign in with a passkey")
   await page.waitForSelector("#username", { timeout: 30000 })
   await page.fill("#username", USER)
@@ -67,7 +72,10 @@ try {
   await page.click("input[type=submit]")
 
   await page.waitForURL(`${BASE}/**`, { timeout: 30000 })
-  check("1. Login successful (landed on dashboard)", page.url().startsWith(BASE))
+  check(
+    "1. Login successful (landed on dashboard)",
+    page.url().startsWith(BASE)
+  )
 
   // 2. Dashboard home: Stack Health check
   await page.waitForSelector("text=Stack health", { timeout: 15000 })
@@ -75,40 +83,63 @@ try {
   check("2. Dashboard overview panels loaded cleanly", true)
 
   // 3. Navigate to Security Page and check Cooperative Group Wallet
-  await page.goto(`${BASE}/en/pages/account/settings/security`, { waitUntil: "domcontentloaded", timeout: 30000 })
-  await page.waitForSelector("text=Cooperative Group Wallet", { timeout: 15000 })
+  await page.goto(`${BASE}/en/pages/account/settings/security`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
+  await page.waitForSelector("text=Cooperative Group Wallet", {
+    timeout: 15000,
+  })
   const walletText = await page.textContent("body")
-  check("3. Group Wallet card displays predicted on-chain address", walletText.includes("Group Account Address") && walletText.includes("0x"))
+  check(
+    "3. Group Wallet card displays predicted on-chain address",
+    walletText.includes("Group Account Address") && walletText.includes("0x")
+  )
 
   // 4. Navigate to NocoDB and check loading and API responses
   console.log("Navigating to NocoDB for verification...")
-  await page.goto("https://nocodb.irl.coop/", { waitUntil: "networkidle", timeout: 45000 })
+  await page.goto("https://nocodb.irl.coop/", {
+    waitUntil: "networkidle",
+    timeout: 45000,
+  })
   const nocoUrl = page.url()
-  check("4. NocoDB loads and authenticates successfully", nocoUrl.startsWith("https://nocodb.irl.coop"))
-  
+  check(
+    "4. NocoDB loads and authenticates successfully",
+    nocoUrl.startsWith("https://nocodb.irl.coop")
+  )
+
   // Wait to see if NocoDB renders the default workspace
   try {
     // If NocoDB's welcome questionnaire is displayed, click "Skip"
-    const skipButton = page.locator("text=Skip");
+    const skipButton = page.locator("text=Skip")
     if (await skipButton.isVisible()) {
       console.log("  (NocoDB welcome questionnaire detected, clicking Skip...)")
-      await skipButton.click();
+      await skipButton.click()
     } else {
       // Give it a brief moment to render if it pops up late
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1000)
       if (await skipButton.isVisible()) {
-        console.log("  (NocoDB welcome questionnaire detected late, clicking Skip...)")
-        await skipButton.click();
+        console.log(
+          "  (NocoDB welcome questionnaire detected late, clicking Skip...)"
+        )
+        await skipButton.click()
       }
     }
 
     await page.waitForSelector("text=Default Workspace", { timeout: 15000 })
     const bodyText = await page.textContent("body")
-    check("5. NocoDB Workspace rendered", bodyText.includes("Default Workspace") || bodyText.includes("All Bases"))
+    check(
+      "5. NocoDB Workspace rendered",
+      bodyText.includes("Default Workspace") || bodyText.includes("All Bases")
+    )
   } catch (err) {
     console.log(`  (NocoDB Selector Wait Failed) Current URL: ${page.url()}`)
-    console.log(`  (NocoDB Selector Wait Failed) Current Title: ${await page.title()}`)
-    console.log(`  (NocoDB Selector Wait Failed) Body preview: ${ (await page.textContent("body")).slice(0, 400) }`)
+    console.log(
+      `  (NocoDB Selector Wait Failed) Current Title: ${await page.title()}`
+    )
+    console.log(
+      `  (NocoDB Selector Wait Failed) Body preview: ${(await page.textContent("body")).slice(0, 400)}`
+    )
     throw err
   }
 
@@ -116,7 +147,9 @@ try {
 } catch (err) {
   failed++
   console.log(`  FAIL  Harness error: ${err.message}`)
-  await page.screenshot({ path: "/tmp/hermes-journey-fail.png", fullPage: true }).catch(() => {})
+  await page
+    .screenshot({ path: "/tmp/hermes-journey-fail.png", fullPage: true })
+    .catch(() => {})
   console.log("  (screenshot: /tmp/hermes-journey-fail.png)")
 } finally {
   await browser.close()

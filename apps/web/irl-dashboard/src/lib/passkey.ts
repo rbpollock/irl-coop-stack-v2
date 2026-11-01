@@ -3,7 +3,6 @@
 // Register the member's WebAuthn passkey and hand its P-256 public key to coop-api, so
 // the Safe the member gets is owned by THIS key (B-11). One key for signing in and for
 // owning your account.
-
 import { coopJson } from "@/lib/coop-api"
 
 function hex(bytes: Uint8Array): string {
@@ -44,7 +43,7 @@ export interface PasskeyRegistration {
 export async function registerPasskey(
   token: string | undefined,
   displayName: string,
-  username: string,
+  username: string
 ): Promise<PasskeyRegistration> {
   if (!token) throw new Error("You need to be signed in first.")
   if (typeof window === "undefined" || !window.PublicKeyCredential) {
@@ -60,7 +59,10 @@ export async function registerPasskey(
       rp: { name: "irl.coop", id: location.hostname },
       user: { id: userId, name: username, displayName },
       pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256 / P-256
-      authenticatorSelection: { userVerification: "preferred", residentKey: "preferred" },
+      authenticatorSelection: {
+        userVerification: "preferred",
+        residentKey: "preferred",
+      },
       attestation: "none",
       timeout: 60_000,
     },
@@ -72,7 +74,9 @@ export async function registerPasskey(
   const spki =
     typeof response.getPublicKey === "function" ? response.getPublicKey() : null
   if (!spki) {
-    throw new Error("This browser doesn't expose the passkey's public key. Try Chrome or Firefox.")
+    throw new Error(
+      "This browser doesn't expose the passkey's public key. Try Chrome or Firefox."
+    )
   }
   const { x, y } = pointFromSpki(spki)
 

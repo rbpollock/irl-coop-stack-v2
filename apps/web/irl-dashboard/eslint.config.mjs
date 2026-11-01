@@ -20,6 +20,15 @@ const eslintConfig = [
     "plugin:prettier/recommended"
   ),
   {
+    // Keep eslint off static/generated assets and e2e test scripts. Linting the
+    // minified JS/media in public/ made the CI lint step crawl for ~40 min and
+    // then crash the stylish formatter with `RangeError: Invalid string length`
+    // (output past V8's string limit), failing the build/deploy gate. The e2e/
+    // playwright scripts keep runtime-style imports (require, placeholder env
+    // vars) that are false positives under the app lint config.
+    ignores: ["public/**", "public", "e2e/**", "e2e"],
+  },
+  {
     rules: {
       "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
       "@typescript-eslint/consistent-type-imports": "error",

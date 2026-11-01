@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { forceLink } from "d3-force-3d"
+import { useSession } from "next-auth/react"
 import {
   CheckCircle2,
   ChevronDown,
@@ -17,7 +18,6 @@ import {
 import type { Posting, Shape } from "@/lib/needs-offers.data"
 
 import { REGIONS, buildLinks, buildPostings } from "@/lib/needs-offers.data"
-import { useSession } from "next-auth/react"
 import { commitSessionSpend } from "@/lib/weave-session"
 
 // Needs/offers — a force-directed "solution space". Color = shape; line length =
@@ -768,8 +768,8 @@ export function NeedsOffersMockup() {
                   {committing
                     ? "Firing the session spend…"
                     : myWeave.length >= 3
-                    ? "Close this loop →"
-                    : "Match this pair →"}
+                      ? "Close this loop →"
+                      : "Match this pair →"}
                 </button>
               )}
               {commitError && (

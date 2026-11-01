@@ -25,7 +25,11 @@ export type SessionSpendResult = {
   message: string
 }
 
-async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+async function api<T>(
+  path: string,
+  token: string,
+  init?: RequestInit
+): Promise<T> {
   const res = await coopFetch(path, token, init)
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string }
@@ -45,7 +49,7 @@ export function commitSessionSpend(
   token: string,
   target: string,
   amountIn: string,
-  opts?: { value?: string; data?: string; tokenAddr?: string },
+  opts?: { value?: string; data?: string; tokenAddr?: string }
 ): Promise<SessionSpendResult> {
   return api<SessionSpendResult>("/api/safe/session/execute", token, {
     method: "POST",

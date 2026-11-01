@@ -47,7 +47,10 @@ await cdp.send("WebAuthn.addVirtualAuthenticator", {
 
 try {
   // --- 1. passkey login ---
-  await page.goto(`${BASE}/en/sign-in`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/sign-in`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.click("text=Sign in with a passkey")
   await page.waitForSelector("#username", { timeout: 30000 })
   await page.fill("#username", USER)
@@ -60,10 +63,16 @@ try {
     /* already enrolled */
   }
   await page.waitForURL(`${BASE}/**`, { timeout: 30000 })
-  check("passkey login lands on the dashboard", page.url().startsWith(BASE) && !page.url().includes("sign-in"))
+  check(
+    "passkey login lands on the dashboard",
+    page.url().startsWith(BASE) && !page.url().includes("sign-in")
+  )
 
   // --- 2. /apps/chat + the Element iframe ---
-  await page.goto(`${BASE}/en/apps/chat`, { waitUntil: "domcontentloaded", timeout: 30000 })
+  await page.goto(`${BASE}/en/apps/chat`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  })
   await page.waitForTimeout(15000) // Element SSO + shell load
 
   const viewport = page.viewportSize()
@@ -75,7 +84,12 @@ try {
     const r = f.getBoundingClientRect()
     return {
       src: f.src,
-      box: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
+      box: {
+        x: Math.round(r.x),
+        y: Math.round(r.y),
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+      },
       clientH: document.documentElement.clientHeight,
       scrollH: document.documentElement.scrollHeight,
       bodyScrollH: document.body.scrollHeight,
@@ -88,27 +102,47 @@ try {
   })
   console.log(`  (iframe diag: ${JSON.stringify(diag, null, 2)})`)
 
-  check("dashboard /apps/chat iframes Cinny", diag.src?.startsWith("https://cinny.irl.coop") ?? false, String(diag.src))
+  check(
+    "dashboard /apps/chat iframes Cinny",
+    diag.src?.startsWith("https://cinny.irl.coop") ?? false,
+    String(diag.src)
+  )
   if (diag.iframe) {
     // The iframe should roughly fill the viewport height (minus header) — a
     // mismatch here is the "looks weird" (too short / overflowing).
     const expectedH = (viewport?.height ?? 800) - (diag.header ?? 0)
     const fills = Math.abs(diag.box.h - expectedH) < 60
     console.log(`  (expected iframe height ~${expectedH}, got ${diag.box.h})`)
-    check("iframe fills the content height", fills, `expected ~${expectedH}, got ${diag.box.h}`)
-    check("no vertical scroll overflow", diag.scrollH <= (viewport?.height ?? 800) + 2, `scrollH=${diag.scrollH} vs viewport ${viewport?.height}`)
+    check(
+      "iframe fills the content height",
+      fills,
+      `expected ~${expectedH}, got ${diag.box.h}`
+    )
+    check(
+      "no vertical scroll overflow",
+      diag.scrollH <= (viewport?.height ?? 800) + 2,
+      `scrollH=${diag.scrollH} vs viewport ${viewport?.height}`
+    )
   }
 
-  await page.screenshot({ path: "/tmp/chat-e2e.png", fullPage: false }).catch(() => {})
+  await page
+    .screenshot({ path: "/tmp/chat-e2e.png", fullPage: false })
+    .catch(() => {})
   console.log("  (screenshot: /tmp/chat-e2e.png)")
-  const visible = await page.evaluate(() => document.body.innerText.slice(0, 500))
+  const visible = await page.evaluate(() =>
+    document.body.innerText.slice(0, 500)
+  )
   console.log(`  (page text: ${JSON.stringify(visible)})`)
-  console.log(`  (console errors: ${JSON.stringify(consoleErrors.slice(0, 10))})`)
+  console.log(
+    `  (console errors: ${JSON.stringify(consoleErrors.slice(0, 10))})`
+  )
   console.log(`  (page errors: ${JSON.stringify(pageErrors.slice(0, 10))})`)
 } catch (err) {
   failed++
   console.log(`  FAIL  harness error: ${err.message}`)
-  await page.screenshot({ path: "/tmp/chat-e2e-fail.png", fullPage: true }).catch(() => {})
+  await page
+    .screenshot({ path: "/tmp/chat-e2e-fail.png", fullPage: true })
+    .catch(() => {})
 } finally {
   await browser.close()
 }

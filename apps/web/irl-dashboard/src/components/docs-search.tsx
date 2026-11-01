@@ -63,14 +63,13 @@ function resolveLink(c: Context): { href: string; label: string } | null {
   // segment. A fresh slugger per heading: a shared one accumulates, so the
   // SECOND document with a heading like "1. Principles" would anchor to
   // "1-principles-1".
-  const section =
-    c.heading
-      ? c.heading
-          .split("/")
-          .map((part) => part.trim())
-          .filter(Boolean)
-          .pop() ?? c.heading
-      : null
+  const section = c.heading
+    ? (c.heading
+        .split("/")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .pop() ?? c.heading)
+    : null
   const anchor = section ? new GitHubSlugger().slug(section) : null
   return {
     href: `/design/${slug}${anchor ? `#${anchor}` : ""}`,
@@ -99,17 +98,108 @@ function isGroupContext(c: Context): boolean {
 
 /** Words that carry no retrieval signal, so highlighting them is noise. */
 const STOP_WORDS = new Set([
-  "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "is", "are",
-  "was", "were", "be", "been", "do", "does", "did", "how", "what", "when",
-  "where", "which", "who", "why", "that", "this", "these", "those", "it",
-  "its", "as", "at", "by", "from", "with", "without", "into", "can", "could",
-  "should", "would", "my", "our", "your", "their", "his", "her", "them", "they",
-  "we", "you", "us", "him", "she", "if", "not",
-  "no", "any", "all", "each", "there", "here", "than", "then", "so", "but",
-  "about", "over", "under", "between", "get", "got", "make", "made",
-  "also", "some", "such", "more", "most", "other", "others", "many", "much",
-  "very", "just", "only", "same", "own", "after", "before", "during", "while",
-  "because", "another", "every", "either", "neither", "both", "being", "been",
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "of",
+  "to",
+  "in",
+  "on",
+  "for",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "do",
+  "does",
+  "did",
+  "how",
+  "what",
+  "when",
+  "where",
+  "which",
+  "who",
+  "why",
+  "that",
+  "this",
+  "these",
+  "those",
+  "it",
+  "its",
+  "as",
+  "at",
+  "by",
+  "from",
+  "with",
+  "without",
+  "into",
+  "can",
+  "could",
+  "should",
+  "would",
+  "my",
+  "our",
+  "your",
+  "their",
+  "his",
+  "her",
+  "them",
+  "they",
+  "we",
+  "you",
+  "us",
+  "him",
+  "she",
+  "if",
+  "not",
+  "no",
+  "any",
+  "all",
+  "each",
+  "there",
+  "here",
+  "than",
+  "then",
+  "so",
+  "but",
+  "about",
+  "over",
+  "under",
+  "between",
+  "get",
+  "got",
+  "make",
+  "made",
+  "also",
+  "some",
+  "such",
+  "more",
+  "most",
+  "other",
+  "others",
+  "many",
+  "much",
+  "very",
+  "just",
+  "only",
+  "same",
+  "own",
+  "after",
+  "before",
+  "during",
+  "while",
+  "because",
+  "another",
+  "every",
+  "either",
+  "neither",
+  "both",
+  "being",
+  "been",
 ])
 
 function escapeRegExp(value: string): string {
@@ -180,8 +270,10 @@ function bestWindow(
   pattern: RegExp | null,
   terms: string[]
 ): { body: string; head: boolean; tail: boolean } {
-  if (text.length <= SNIPPET_CHARS) return { body: text, head: false, tail: false }
-  if (!pattern) return { body: text.slice(0, SNIPPET_CHARS), head: false, tail: true }
+  if (text.length <= SNIPPET_CHARS)
+    return { body: text, head: false, tail: false }
+  if (!pattern)
+    return { body: text.slice(0, SNIPPET_CHARS), head: false, tail: true }
 
   const hits = [...text.matchAll(new RegExp(pattern.source, "gi"))].map(
     (m) => m.index ?? 0
@@ -198,7 +290,10 @@ function bestWindow(
       const space = text.lastIndexOf(" ", candidate)
       if (space > candidate - 40) candidate = space + 1
     }
-    const score = windowScore(text.slice(candidate, candidate + SNIPPET_CHARS), terms)
+    const score = windowScore(
+      text.slice(candidate, candidate + SNIPPET_CHARS),
+      terms
+    )
     if (
       score.distinct > best.distinct ||
       (score.distinct === best.distinct && score.total > best.total)
@@ -213,7 +308,11 @@ function bestWindow(
     const space = text.lastIndexOf(" ", end)
     if (space > start + SNIPPET_CHARS - 40) end = space
   }
-  return { body: text.slice(start, end), head: start > 0, tail: end < text.length }
+  return {
+    body: text.slice(start, end),
+    head: start > 0,
+    tail: end < text.length,
+  }
 }
 
 function Highlighted({ text, terms }: { text: string; terms: string[] }) {
@@ -274,7 +373,13 @@ function ScoreBadge({ context: c }: { context: Context }) {
   )
 }
 
-function ResultCard({ context: c, query }: { context: Context; query: string }) {
+function ResultCard({
+  context: c,
+  query,
+}: {
+  context: Context
+  query: string
+}) {
   const link = resolveLink(c)
   const terms = queryTerms(query)
   const pattern = matchPattern(terms)
@@ -430,7 +535,9 @@ export function DocsSearch({
     // responsive, then let the design-doc half (the slow, reranked leg) merge in.
     const groupCtx = await queryArea(token, GROUPS_AREA_ID, q).catch(() => [])
     if (run !== runRef.current) return
-    setContexts(dedupe(groupCtx.map((c) => ({ ...c, area: "groups" as const }))))
+    setContexts(
+      dedupe(groupCtx.map((c) => ({ ...c, area: "groups" as const })))
+    )
     setLoading(false)
 
     const docCtx = await queryArea(token, DOCS_AREA_ID, q).catch(() => [])

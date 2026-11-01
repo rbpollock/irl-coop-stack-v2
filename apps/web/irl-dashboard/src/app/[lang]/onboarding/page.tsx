@@ -6,9 +6,10 @@ import { useSession } from "next-auth/react"
 
 import type { LocaleType } from "@/types"
 
-import { buttonVariants } from "@/components/ui/button"
 import { coopJson } from "@/lib/coop-api"
 import { registerPasskey } from "@/lib/passkey"
+
+import { buttonVariants } from "@/components/ui/button"
 
 // Seed prompts for "how do you want to help your community" — the offers side
 // of the needs/offers matching (docs/design/weavers.md). Free-text, tappable.
@@ -82,11 +83,13 @@ export default function OnboardingPage() {
       const res = await registerPasskey(
         token,
         displayName.trim(),
-        session?.user?.email ?? "member@irl.coop",
+        session?.user?.email ?? "member@irl.coop"
       )
       setSafeAddress(res.safe_address)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not set up your passkey")
+      setError(
+        err instanceof Error ? err.message : "Could not set up your passkey"
+      )
     } finally {
       setSaving(false)
     }
@@ -104,7 +107,10 @@ export default function OnboardingPage() {
             One more step — set up your cooperative profile.
           </p>
 
-          <label className="mt-6 block text-sm font-medium" htmlFor="displayName">
+          <label
+            className="mt-6 block text-sm font-medium"
+            htmlFor="displayName"
+          >
             Display name
           </label>
           <input
@@ -165,8 +171,8 @@ export default function OnboardingPage() {
         <section className="w-full max-w-md rounded-xl border bg-card p-8 shadow-sm">
           <h1 className="text-2xl font-bold">Now your key</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your passkey is the key to your account. It signs you in, and it owns
-            your account — nobody else holds a copy, including us.
+            Your passkey is the key to your account. It signs you in, and it
+            owns your account — nobody else holds a copy, including us.
           </p>
 
           {safeAddress ? (
@@ -202,13 +208,16 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={enter}
-                  className={buttonVariants({ variant: "ghost", className: "w-full" })}
+                  className={buttonVariants({
+                    variant: "ghost",
+                    className: "w-full",
+                  })}
                 >
                   Skip for now
                 </button>
                 <p className="text-xs text-muted-foreground">
-                  You can set one up later. Until you do, there is no account here
-                  to hold anything.
+                  You can set one up later. Until you do, there is no account
+                  here to hold anything.
                 </p>
               </>
             )}
