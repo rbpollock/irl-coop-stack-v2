@@ -13,7 +13,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner"
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.BASE_URL as string),
+  metadataBase: new URL(process.env.BASE_URL ?? "http://localhost:3000"),
   title: {
     template: "%s | irl.coop",
     default: "irl.coop",
