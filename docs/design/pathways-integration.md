@@ -308,11 +308,23 @@ sponsor_commitment:
 
 **Sponsor discovery:** A group's insurance profile (derived from historical runs) includes a `sponsor_match` field: templates with similar risk profiles and spend patterns are matched to sponsors who have previously committed to similar coverage. This creates a **risk-guarantee marketplace** — sponsors can offer coverage at scale across templates, and the premium rate is itself a Pathways artifact that can be priced, forked, and competed on.
 
-**Multi-sponsor chains:** For high-value, multi-layer pathways (§4), sponsorship can be tiered — Sponsor A covers the first $1,000 of aggregate escrow, Sponsor B covers the next $2,000, and participants cover the remainder. Each tier carries its own condition set and fee structure, all auditable on the HandoffBus.
+**Yield on locked escrow:** For the duration that insurance is locked up, the sum total is invested to earn yield — using a mechanism analogous to the sponsored transaction spec. The Safe contract stages escrow into a yield-bearing vault (e.g. a low-volatility money market or short-duration bond fund) for the duration of the pathway run. irl.coop may contribute **additional incentive funds** on top of the base escrow to improve the yield rate for sponsors, making smaller-risk runs more attractive to sponsor. At settlement, the vault is unwound and the sponsors receive their principal back plus accrued interest (minus any fees owed for successful runs, or applied to shortfall on failed/disputed runs).
+
+```yaml
+yield_config:
+  vault_strategy: "money_market"       # low-volatility, instant-liquidity
+  irl_coop_top_up: true                 # irl.coop adds incentive funds to boost APY
+  sponsor_shares: true                  # sponsors receive principal + proportional yield
+  settlement_flow:
+    success: "release_yield_to_sponsors; release_remaining_escrow_per_contingency"
+    failure: "apply_yield_to_shortfall; report net_loss_or_surplus_to_sponsors"
+```
+
+This turns escrow from an idle hold into a source of yield for the sponsorship ecosystem — sponsors are compensated not just by fees but by the time value of their capital while it's deployed against risk.
+
+**Multi-sponsor chains:** For high-value, multi-layer pathways (§4), sponsorship can be tiered — Sponsor A covers the first $1,000 of aggregate escrow, Sponsor B covers the next $2,000, and participants cover the remainder. Each tier carries its own condition set and fee structure, and yield is distributed proportionally to each sponsor's committed amount, all auditable on the HandoffBus.
 
 ### Contingency profiles
-
-From the signed weave, the system also generates **contingency profiles** — pre-composed "what if" pathways for each failure scenario:
 
 ```yaml
 contingency_profile:
@@ -430,6 +442,8 @@ Get Pathways semantics into Temporal and talking to the event bus.
 - [ ] Implement ToolGateway as a Temporal Activity interceptor
 - [ ] Translate HandoffBus intents to event bus channels
 - [ ] Run first pathway at A0 with manual escrow setup
+- [ ] Implement third-party escrow sponsorship (§3) — sponsors sign commitment, Safe stages escrow on their behalf
+- [ ] Add yield-bearing vault staging for locked escrow (§3)
 
 ### Phase 2: Autonomy (months 4-6)
 
@@ -488,7 +502,7 @@ Scale the pattern across the federation.
 | **Recursive value propagation** | The model where every pathway step carries embedded insurance profiles that sum up through the provenance chain. The missing piece that makes cross-group cooperation scalable. |
 | **Risk score** | A 0–1 value derived from historical pathway run data (model risk, budget pressure, duration variance, confidence, tool breadth, seam crossings), used to calculate escrow requirements. |
 | **Contingency profile** | A set of failure-mode pathways with pre-allocated escrow, auto-launched on dispute via HandoffBus `intent: dispute:escalate`. |
-| **Weave** | irl.coop term: a people+AI coordination artifact (needs/offers, membership commitments, multi-party transactions). When signed and attested, it becomes a "signed weave." |
+|| **Sponsor commitment** | A signed artifact where a third party agrees to fund part or all of a pathway's escrow in exchange for fees, yield, or reputation weight. Sponsors are not signatories to the run — they are insurers of a specific run's risk profile. Embedded in the `HandoffEnvelope` at launch; the Safe contract reduces participant lock-up by the sponsored amount. |\n|| **Yield vault** | A low-volatility, instant-liquidity investment vehicle (e.g. money market) where locked escrow earns yield during the pathway run. irl.coop may contribute additional incentive funds to boost APY. Sponsors receive principal plus proportional yield at settlement; on failure, yield is applied to any shortfall. Analogous to the sponsored transaction spec. |
 | **Weaving** | The noun form of "loops" — the act of connecting needs and offers into productive pathways that generate mutual value. |
 
 ---
