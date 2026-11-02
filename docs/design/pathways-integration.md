@@ -284,6 +284,32 @@ escrow = 500 × (1 + 0.52 × 0.5) = 500 × 1.26 = $630
 
 Both groups lock $630 in the Safe contract. If the pathway completes successfully, the escrow is released to the fulfilling party minus fees. If it fails or is disputed, the escrow covers the contingency.
 
+### Third-party escrow sponsorship
+
+Not every group has capital sitting idle to cover escrow. A pathway's insurance profile can carry **sponsor commitments** — a third party (or multiple third parties) who agree to partially or fully fund the escrow in exchange for a share of fees, reputation weight, or direct compensation. Sponsors are not signatories to the pathway; they are insurers of a specific run's risk profile.
+
+A sponsor commitment looks like this:
+
+```yaml
+sponsor_commitment:
+  sponsor_group: pr_f3a1...        # the sponsoring group's Safe address (as peer DID)
+  run_id: pr_4b1e8d               # the pathway run being sponsored
+  coverage_type: "partial"        # partial | full | excess_above_threshold
+  amount: 630                     # USD equivalent
+  fee_rate: 0.02                  # 2% of escrow held as sponsor fee on success
+  conditions:
+    - "risk_score < 0.70"         # only sponsor if the template's risk stays below this
+    - "sponsor_not_counterparty"  # sponsor must not be a participant in the run
+  signed_by: did:key:zQmc...
+  signed_at: 2026-11-01T12:00:00Z
+```
+
+**How it works on-chain:** The HandoffBus embeds the `sponsor_commitment` inside the `HandoffEnvelope` at launch. The Safe contract, when staging escrow, checks whether a valid sponsor commitment exists and reduces each participant's required lock-up by the sponsored amount. The contract holds the sponsor's commitment as a pending release — if the run fails or is disputed, the sponsor's escrow covers the shortfall; if the run succeeds, the sponsor receives their fee from the surplus.
+
+**Sponsor discovery:** A group's insurance profile (derived from historical runs) includes a `sponsor_match` field: templates with similar risk profiles and spend patterns are matched to sponsors who have previously committed to similar coverage. This creates a **risk-guarantee marketplace** — sponsors can offer coverage at scale across templates, and the premium rate is itself a Pathways artifact that can be priced, forked, and competed on.
+
+**Multi-sponsor chains:** For high-value, multi-layer pathways (§4), sponsorship can be tiered — Sponsor A covers the first $1,000 of aggregate escrow, Sponsor B covers the next $2,000, and participants cover the remainder. Each tier carries its own condition set and fee structure, all auditable on the HandoffBus.
+
 ### Contingency profiles
 
 From the signed weave, the system also generates **contingency profiles** — pre-composed "what if" pathways for each failure scenario:
