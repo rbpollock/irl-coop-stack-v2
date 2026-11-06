@@ -95,7 +95,7 @@ const APPS: App[] = [
   },
   {
     title: "Docs",
-    href: "/design",
+    href: "/docs/design",
     icon: FileText,
     gradient: "from-zinc-500 to-slate-600",
   },

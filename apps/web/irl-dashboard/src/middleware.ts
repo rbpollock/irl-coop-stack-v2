@@ -43,6 +43,13 @@ export async function middleware(request: NextRequest) {
     }
     return NextResponse.next()
   }
+  // New docs route for design docs: /docs/design/<slug>.md -> raw markdown
+  if (pathname.startsWith("/docs/design/")) {
+    const md = pathname.match(/^\/docs\/design\/([^/]+)\.md$/)
+    if (md) {
+      return NextResponse.rewrite(new URL(`/docs/design/raw/${md[1]}`, request.url))
+    }
+  }
 
   const locale = getLocaleFromPathname(pathname)
   const pathnameWithoutLocale = ensureWithoutPrefix(pathname, `/${locale}`)
@@ -75,7 +82,6 @@ export async function middleware(request: NextRequest) {
       return redirect(redirectPathname, request)
     }
   }
-
   // Redirect to localized URL if the pathname is missing a locale
   if (!locale) {
     return redirect(pathname, request)
@@ -104,7 +110,7 @@ export const config = {
      * - images folder
      * - docs
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|images|fonts|videos|docs|design|phone|group-|llms\\.txt|llms-full\\.txt).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|images|fonts|videos|docs|design|phone|group-|llms\\.txt|llms-full\\.txt).*",
     "/design/:path*",
   ],
 }

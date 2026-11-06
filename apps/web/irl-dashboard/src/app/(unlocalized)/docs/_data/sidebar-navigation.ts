@@ -53,6 +53,36 @@ export const sidebarNavigationData: NavigationType[] = [
     ],
   },
   {
+    title: "Design Docs",
+    items: [
+      {
+        title: "Overview",
+        href: "/docs/design",
+        iconName: "BookOpen",
+      },
+      {
+        title: "Pathways Integration",
+        href: "/docs/design/pathways-integration",
+        iconName: "GitBranch",
+      },
+      {
+        title: "Weaving",
+        href: "/docs/design/weavers",
+        iconName: "GitMerge",
+      },
+      {
+        title: "Group Model",
+        href: "/docs/design/irl-coop-group",
+        iconName: "Users",
+      },
+      {
+        title: "Needs / Offers",
+        href: "/docs/design/needs-offers-matching",
+        iconName: "HeartHandshake",
+      },
+    ],
+  },
+  {
     title: "Miscellaneous",
     items: [
       {

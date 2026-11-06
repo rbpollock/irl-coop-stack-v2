@@ -26,6 +26,17 @@ const nextConfig = {
         destination: "/docs/overview/introduction",
         permanent: true,
       },
+      // Redirect legacy /design route to /docs/design
+      {
+        source: "/design",
+        destination: "/docs/design",
+        permanent: true,
+      },
+      {
+        source: "/design/:path*",
+        destination: "/docs/design/:path*",
+        permanent: true,
+      },
       {
         source: "/:lang([a-z]{2})",
         destination: process.env.HOME_PATHNAME ?? "/",

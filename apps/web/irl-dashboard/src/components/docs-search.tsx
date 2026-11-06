@@ -43,17 +43,17 @@ function resolveLink(c: Context): { href: string; label: string } | null {
     const slug = documentName.replace(/^group-/, "").replace(/\.md$/, "")
     return { href: `/groups/${slug}`, label: "View group" }
   }
-  // Markdown docs link DIRECTLY to /design/<slug> — registered ones render as
+  // Markdown docs link DIRECTLY to /docs/design/<slug> — registered ones render as
   // pages, unregistered ones render via the page's raw-markdown fallback. A
   // direct client-side link keeps the #section-anchor intact (no 307 redirect
   // to drop it or surface an intermediate host). Non-markdown artifacts (.html,
-  // .pdf, …) have no markdown page, so they go to /design/file/<name>, which
+  // .pdf, …) have no markdown page, so they go to /docs/design/file/<name>, which
   // serves the actual file (and redirects registered .md onto its page).
   const slug = documentName.replace(/\.md$/i, "")
   const isMarkdown = /\.md$/i.test(documentName)
   if (!isMarkdown) {
     return {
-      href: `/design/file/${documentName}`,
+      href: `/docs/design/file/${documentName}`,
       label: "View doc",
     }
   }
@@ -72,7 +72,7 @@ function resolveLink(c: Context): { href: string; label: string } | null {
     : null
   const anchor = section ? new GitHubSlugger().slug(section) : null
   return {
-    href: `/design/${slug}${anchor ? `#${anchor}` : ""}`,
+    href: `/docs/design/${slug}${anchor ? `#${anchor}` : ""}`,
     label: anchor ? "Jump to section" : "Read more",
   }
 }
