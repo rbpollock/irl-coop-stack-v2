@@ -29,7 +29,7 @@ export default function DesignLayout({ children }: { children: ReactNode }) {
             <Link href="/#architecture" className="hover:text-foreground">
               Architecture
             </Link>
-            <Link href="/design" className="font-semibold text-foreground">
+            <Link href="/docs/design" className="font-semibold text-foreground">
               Design docs
             </Link>
           </nav>

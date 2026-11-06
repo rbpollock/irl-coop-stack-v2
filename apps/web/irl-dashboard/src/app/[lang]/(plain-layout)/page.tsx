@@ -440,7 +440,7 @@ export default async function LandingPage({
             <a href="#faq" className="hover:text-foreground">
               FAQ
             </a>
-            <Link href="/design" className="hover:text-foreground">
+            <Link href="/docs/design" className="hover:text-foreground">
               Docs
             </Link>
           </nav>
@@ -834,7 +834,7 @@ export default async function LandingPage({
               </p>
             </div>
             <Link
-              href="/design"
+              href="/docs/design"
               className="group inline-flex shrink-0 items-center gap-2 text-sm font-medium"
             >
               View all docs
@@ -851,7 +851,7 @@ export default async function LandingPage({
                   {category.docs.map((doc) => (
                     <Link
                       key={doc.slug}
-                      href={`/design/${doc.slug}`}
+                      href={`/docs/design/${doc.slug}`}
                       className="group flex w-72 shrink-0 flex-col justify-between gap-3 rounded-2xl border p-6 transition hover:border-foreground/20"
                     >
                       <div>
@@ -949,7 +949,7 @@ export default async function LandingPage({
             decide, and build together.
           </p>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/design" className="hover:text-foreground">
+            <Link href="/docs/design" className="hover:text-foreground">
               Design docs
             </Link>
             <Link href="/group-model.html" className="hover:text-foreground">
