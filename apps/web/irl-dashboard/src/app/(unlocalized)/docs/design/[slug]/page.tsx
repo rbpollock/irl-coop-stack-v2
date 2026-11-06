@@ -4,10 +4,8 @@ import rehypeSlug from "rehype-slug"
 import remarkGfm from "remark-gfm"
 
 import { getDesignDoc, readDesignDoc, readRawMarkdown } from "@/lib/design-docs"
-import { cn } from "@/lib/utils"
 
 export function generateStaticParams() {
-  // Lazy-load to avoid importing in client context
   const { getDesignDocs } = require("@/lib/design-docs")
   return getDesignDocs().map((doc: { slug: string }) => ({ slug: doc.slug }))
 }
@@ -37,19 +35,11 @@ export default async function DesignDocPage({
   const content = readDesignDoc(slug) ?? readRawMarkdown(slug)
   if (content == null) notFound()
 
+  // Render inside the docs layout's mdx-content container
+  // (DocsLayout wraps this page with DocsHeader, DocsSidebar, DocsBreadcrumb, DocsPagination, DocsToc)
   return (
-    <article
-      className={cn(
-        "prose max-w-3xl prose-headings:mt-8 prose-headings:font-semibold",
-        "prose-headings:text-foreground prose-strong:text-foreground",
-        "prose-code:text-foreground prose-a:text-foreground",
-        "prose-pre:bg-muted prose-blockquote:text-foreground",
-        "prose-em:text-foreground text-foreground",
-      )}
-    >
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>
-        {content}
-      </Markdown>
-    </article>
+    <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>
+      {content}
+    </Markdown>
   )
 }

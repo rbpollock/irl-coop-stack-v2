@@ -475,7 +475,7 @@ Scale the pattern across the federation.
 
 | Risk | Mitigation |
 |---|---|
-| **Pathways spec changes** — The spec is v1.1.0 and evolving rapidly. | Pin to the RIS 1.1.0 normative sections. Meta-pathways for spec self-provenance will track changes. |
+| **Pathways spec changes** — The spec is v1.2.0 and evolving rapidly. | Pin to the RIS 1.2.0 normative sections (§4.8–§4.9, §10–§13.8). Meta-pathways for spec self-provenance will track changes. 1.3 intake is tracked upstream in `djat_x_pathways/revisions/1.3/`. |
 | **Temporal workflow ID collisions** — Multiple groups might use the same template. | Namespace pathway run IDs with group DID: `pr_<group_hash>_<hex>` |
 | **Gas costs on Safe transactions** — Every HandoffBus envelope costs gas. | Bundle multiple envelopes per transaction during low-activity windows. |
 | **Trust in risk scores** — Groups might game the risk model. | Risk scores are Aqua-attested and forkable. A group with a manipulated score loses peering trust. |
@@ -502,15 +502,14 @@ Scale the pattern across the federation.
 | **Recursive value propagation** | The model where every pathway step carries embedded insurance profiles that sum up through the provenance chain. The missing piece that makes cross-group cooperation scalable. |
 | **Risk score** | A 0–1 value derived from historical pathway run data (model risk, budget pressure, duration variance, confidence, tool breadth, seam crossings), used to calculate escrow requirements. |
 | **Contingency profile** | A set of failure-mode pathways with pre-allocated escrow, auto-launched on dispute via HandoffBus `intent: dispute:escalate`. |
-|| **Sponsor commitment** | A signed artifact where a third party agrees to fund part or all of a pathway's escrow in exchange for fees, yield, or reputation weight. Sponsors are not signatories to the run — they are insurers of a specific run's risk profile. Embedded in the `HandoffEnvelope` at launch; the Safe contract reduces participant lock-up by the sponsored amount. |\n|| **Yield vault** | A low-volatility, instant-liquidity investment vehicle (e.g. money market) where locked escrow earns yield during the pathway run. irl.coop may contribute additional incentive funds to boost APY. Sponsors receive principal plus proportional yield at settlement; on failure, yield is applied to any shortfall. Analogous to the sponsored transaction spec. |
-| **Weaving** | The noun form of "loops" — the act of connecting needs and offers into productive pathways that generate mutual value. |
+|| **Sponsor commitment** | A signed artifact where a third party agrees to fund part or all of a pathway's escrow in exchange for fees, yield, or reputation weight (§4.9, RIS v1.2.0). Sponsors are not signatories to the run — they are insurers of a specific run's risk profile. Embedded in the `HandoffEnvelope` at launch; the Safe contract reduces participant lock-up by the sponsored amount. |\n|| **Yield vault** | A low-volatility, instant-liquidity investment vehicle (e.g. money market) where locked escrow earns yield during the pathway run (§4.9, RIS v1.2.0). irl.coop may contribute additional incentive funds to boost APY. Sponsors receive principal plus proportional yield at settlement; on failure, yield is applied to any shortfall. Analogous to the sponsored transaction spec. |\n| **Weaving** | The noun form of "loops" — the act of connecting needs and offers into productive pathways that generate mutual value. |
 
 ---
 
 ## 8. References
 
-1. **Pathways RIS spec** — `PATHWAYS_REFERENCE_v1.1.0.md` (normative; includes §4.8.7 on HandoffBus, §4.8.8 on capability profiles, §4.8.9 on phase declarations)
-2. **Pathways architecture** — `PATHWAYS_ARCHITECTURE_v1.1.0.md` (descriptive; includes §8 on sub-pathways and the run hypergraph)
+1. **Pathways RIS spec** — `PATHWAYS_REFERENCE_v1.2.0.md` (normative; §4.8 covers Autonomy Bands & Gate Profiles including §4.8.7 HandoffBus, §4.8.8 capability profiles, §4.8.9 phase declarations; §4.9 covers Insurance & Escrow Profiles; §10–§13.8 cover peering, exchange operations, and conformance tests)
+2. **Pathways architecture** — `PATHWAYS_ARCHITECTURE_v1.2.0.md` (descriptive; includes §8 on sub-pathways and the run hypergraph)
 3. **Burin × Pathways README** — `PATHWAYS_README.md` (workspace overview)
 4. **Trust Key technique** — `burin-pathways/techniques/TRUST_KEY_TECHNIQUE.v1.md` (portable provenance root by DJ Thomson & Cameron Sajedi)
 5. **Aqua Protocol plan** — `docs/aqua-protocol-pathways-integration.plan.md` (cryptographic attestations layer)

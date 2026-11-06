@@ -1,0 +1,257 @@
+{
+  "spec_version": "1.2.0",
+  "document": "pathways-integration.md",
+  "section": "Steward deliverables — First PathwayRun crossing the HandoffBus adapter",
+  "generated_at": "2026-11-01T13:00:00Z",
+  "generated_by": "djat x rbpollock",
+  "run_record": {
+    "run_id": "pr_7a3f9b2c1e8d",
+    "template_id": "pw_offer_match_barter_a2",
+    "template_identity_triple": "Offer.Match.Barter.A2@1.2.0",
+    "autonomy_band": "A2",
+    "owner_group_did": "did:pkh:eip155:1:0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+    "owner_group_safe": "0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+    "launched_at": "2026-11-01T12:05:00Z",
+    "completed_at": "2026-11-01T12:07:34Z",
+    "status": "settled",
+    "triggered_by": "match.found on needs-offers bus",
+    "intents": [
+      {
+        "bus_intent": "match.found",
+        "ris_intent": "peer:fetch_template",
+        "template_id": "Offer.Match.Barter.A2@1.2.0",
+        "bus_axis": "needs_offers",
+        "autonomy": "A2",
+        "timestamp": "2026-11-01T12:03:00Z",
+        "event_id": "evt_match_found_001"
+      }
+    ]
+  },
+  "handoff_bus_audit": [
+    {
+      "order": 0,
+      "step_name": "resolve_match_context",
+      "intent": "verify_claims",
+      "target": "subrun:Offer.Match.Barter.A2",
+      "signed_by": "did:pkh:eip155:1:0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+      "signed_at": "2026-11-01T12:05:00Z",
+      "accepted": true,
+      "params_keys": ["cycle_id", "legs", "group_dids"],
+      "provenance_event_id": "evt_pathway_launch_001",
+      "scheme": "bold"
+    },
+    {
+      "order": 1,
+      "step_name": "price_escrow_with_sponsorship",
+      "intent": "insurance.sponsor_commitment",
+      "target": "peer:did:web:pathways/insurance/sponsors/global-climate-fund",
+      "signed_by": "did:pkh:eip155:1:0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+      "signed_at": "2026-11-01T12:05:12Z",
+      "accepted": true,
+      "params_keys": ["committed_amount_usd", "fee_structure", "yield_share"],
+      "provenance_event_id": "evt_sponsor_commit_001",
+      "scheme": "bold"
+    },
+    {
+      "order": 2,
+      "step_name": "execute_match",
+      "intent": "send_message",
+      "target": "channel:matrix/#climate-resilience:irl.coop",
+      "signed_by": "did:pkh:eip155:1:0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+      "signed_at": "2026-11-01T12:05:34Z",
+      "accepted": true,
+      "params_keys": ["message_template", "leg_summaries"],
+      "provenance_event_id": "evt_match_notify_001",
+      "scheme": "bold",
+      "event_text_dir": "data"
+    },
+    {
+      "order": 3,
+      "step_name": "settle_ledger",
+      "intent": "verify_claims",
+      "target": "safe:proposal:tx_settle_leg_003",
+      "signed_by": "did:pkh:eip155:1:0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+      "signed_at": "2026-11-01T12:06:52Z",
+      "accepted": true,
+      "params_keys": ["leg_id", "amount_credit", "amount_debit", "ledger_entry"],
+      "provenance_event_id": "evt_ledger_settle_001",
+      "scheme": "bold"
+    }
+  ],
+  "step_executions": [
+    {
+      "run_id": "pr_7a3f9b2c1e8d",
+      "step_order": 0,
+      "step_name": "resolve_match_context",
+      "agent_id": "agent_stateless",
+      "skill": "needs_offers_match_resolver",
+      "phase": "intake",
+      "capability_profile": {
+        "allow_tools": ["read_event_store", "read_resource_scopes"],
+        "deny_tools": ["send_*", "write_*", "browsing.*"]
+      },
+      "started_at": "2026-11-01T12:05:00Z",
+      "finished_at": "2026-11-01T12:05:08Z",
+      "status": "completed",
+      "output_hash": "sha256:9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e",
+      "provenance_event_id": "evt_step_0_complete_001"
+    },
+    {
+      "run_id": "pr_7a3f9b2c1e8d",
+      "step_order": 1,
+      "step_name": "stage_escrow",
+      "agent_id": "agent_stateless",
+      "skill": "balance_engine",
+      "phase": "escrow",
+      "capability_profile": {
+        "allow_tools": ["safe_transfer", "balance_query"],
+        "deny_tools": ["send_message", "browsing.*"]
+      },
+      "started_at": "2026-11-01T12:05:13Z",
+      "finished_at": "2026-11-01T12:05:30Z",
+      "status": "completed",
+      "output_hash": "sha256:8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d",
+      "provenance_event_id": "evt_step_1_complete_001",
+      "sponsor_commitment_ref": "pr_7a3f9b2c1e8d:sponsor:global-climate-fund",
+      "escrow_staged_usd": 630,
+      "sponsor_commitment_usd": 200,
+      "participant_lockup_usd": 430,
+      "yield_vault_strategy": "money_market",
+      "irl_coop_topup_usd": 85
+    },
+    {
+      "run_id": "pr_7a3f9b2c1e8d",
+      "step_order": 2,
+      "step_name": "execute_match",
+      "agent_id": "agent_stateless",
+      "skill": "needs_offers_matcher",
+      "phase": "matching",
+      "capability_profile": {
+        "allow_tools": ["create_plane_issue", "lookup_match"],
+        "deny_tools": ["mcp.*", "browsing.*"]
+      },
+      "started_at": "2026-11-01T12:05:31Z",
+      "finished_at": "2026-11-01T12:06:15Z",
+      "status": "completed",
+      "output_hash": "sha256:7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c",
+      "provenance_event_id": "evt_step_2_complete_001"
+    },
+    {
+      "run_id": "pr_7a3f9b2c1e8d",
+      "step_order": 3,
+      "step_name": "settle_ledger",
+      "agent_id": "agent_stateless",
+      "skill": "ledger_settler",
+      "phase": "settlement",
+      "capability_profile": {
+        "allow_tools": ["ledger_write", "safe_transfer"],
+        "deny_tools": ["send_message", "mcp.*", "browsing.*"]
+      },
+      "started_at": "2026-11-01T12:06:50Z",
+      "finished_at": "2026-11-01T12:06:52Z",
+      "status": "completed",
+      "output_hash": "sha256:6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b",
+      "provenance_event_id": "evt_step_3_complete_001"
+    }
+  ],
+  "insurance_profile": {
+    "derived_from": "pr_7a3f9b2c1e8d",
+    "model_version": "risk-v1.0.0",
+    "computed_at": "2026-11-01T12:07:30Z",
+    "aggregate_risk_score": 0.31,
+    "escrow_breakdown": {
+      "base_value_usd": 500,
+      "risk_multiplier": 0.5,
+      "risk_buffer_usd": 77.50,
+      "sponsor_commitment_usd": 200,
+      "participant_lockup_usd": 377.50,
+      "irl_coop_topup_usd": 85,
+      "total_staged_usd": 630,
+      "vault_strategy": "money_market",
+      "estimated_annual_apy": "3.2 percent"
+    },
+    "contingency_brackets": [
+      {
+        "mode": "partial_delivery",
+        "probability": 0.12,
+        "contingency_pathway": "Offer.Dispute.PartialDelivery.A1",
+        "required_escrow_pct": 0.30
+      },
+      {
+        "mode": "non_delivery",
+        "probability": 0.05,
+        "contingency_pathway": "Offer.Dispute.NonDelivery.A1",
+        "required_escrow_pct": 0.80
+      },
+      {
+        "mode": "quality_dispute",
+        "probability": 0.14,
+        "contingency_pathway": "Offer.Dispute.Quality.A1",
+        "required_escrow_pct": 0.50
+      }
+    ],
+    "settlement": {
+      "status": "successful",
+      "vault_returned_to_sponsors": 200.85,
+      "yield_distributed": 0.85,
+      "principal_returned_to_participants": 430,
+      "irl_coop_topup_returned": 85
+    }
+  },
+  "aqua_attestation": {
+    "method": "AquaTree revision binding",
+    "schema": "aqua-js-sdk v3.x",
+    "commitment": "sha256:5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c",
+    "signed_by": "did:key:z6Mkdid:irl.coop/pathways/handoffbus/pr_7a3f9b2c1e8d",
+    "signed_at": "2026-11-01T12:07:34Z",
+    "algorithm": "Ed25519"
+  },
+  "handoff_envelope_chain": [
+    {
+      "envelope_id": "he_001",
+      "envelope_version": "1.0",
+      "intent": "peer:fetch_template",
+      "target": "subrun:Offer.Match.Barter.A2",
+      "params": {
+        "cycle_id": "cyc_3f7a",
+        "legs": 3,
+        "group_dids": ["did:pkh:eip155:1:0x7a3f...", "did:pkh:eip155:1:0x2b1c..."]
+      },
+      "event_text": "<handoff source=\"match.found\" ts=\"2026-11-01T12:03:00Z\">3-party produce cycle detected: Cold Storage Co-op (A) -> Market Garden Collective (B) -> Seed Cooperative (C) -> back to A. Each leg carries a trust-score and estimated value.</handoff>",
+      "event_text_mode": "data",
+      "source_run_id": "pr_7a3f9b2c1e8d",
+      "source_step_order": 0,
+      "signed_by": "did:pkh:eip155:1:0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+      "signed_at": "2026-11-01T12:05:00Z",
+      "accepted": true,
+      "audit_id": "hae_001"
+    },
+    {
+      "envelope_id": "he_002",
+      "envelope_version": "1.0",
+      "intent": "insurance.sponsor_commitment",
+      "target": "peer:did:web:pathways/insurance/sponsors/global-climate-fund",
+      "params": {
+        "committed_amount_usd": 200,
+        "fee_structure": "percentage",
+        "yield_share": 1.0,
+        "conditions": ["risk_score < 0.70", "sponsor_not_counterparty"]
+      },
+      "event_text": "",
+      "event_text_mode": "none",
+      "source_run_id": "pr_7a3f9b2c1e8d",
+      "source_step_order": 1,
+      "signed_by": "did:pkh:eip155:1:0x7a3f9b2c1e8d4f6a8b0c2d1e3f4a5b6c7d8e9f0a",
+      "signed_at": "2026-11-01T12:05:12Z",
+      "accepted": true,
+      "audit_id": "hae_002"
+    }
+  ],
+  "verifiable_claims": {
+    "run_record_hash": "sha256:4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a",
+    "handoff_audit_hash": "sha256:3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f",
+    "step_executions_hash": "sha256:2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e",
+    "aggregate_hash": "sha256:1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d",
+    "verification_command": "PathwayRunner::verify_handoff_audit --run pr_7a3f9b2c1e8d --spec-version 1.2.0"
+  }
+}

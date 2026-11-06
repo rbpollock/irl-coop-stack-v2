@@ -1,0 +1,574 @@
+# Pathways Intent Mapping — Practice Profile (R1 cold-start, RIS §4.8.5)
+#
+# Maps irl.coop five-axis event bus intents <-> RIS HandoffBus intents
+# <-> irl.coop pathway template IDs.
+#
+# Spec reference: RIS §4.8.5 (practice profile), §4.8.7 (HandoffBus contract),
+# §4.9 (Insurance & Escrow Profiles)
+# CI check: must be schema-validated at template-write time (RIS §13.7.1)
+
+version: "1.2.0"
+spec_refs:
+  - "PATHWAYS_REFERENCE_v1.2.0.md §4.8.5"
+  - "PATHWAYS_REFERENCE_v1.2.0.md §4.8.7"
+  - "PATHWAYS_REFERENCE_v1.2.0.md §4.9"
+
+metadata:
+  description: >
+    Maps irl.coop bus intents to RIS HandoffBus intents and irl.coop
+    pathway template IDs. Each mapping carries the autonomy band,
+    the escalation rule, and the gate_profile register set that the
+    HandoffBus must enforce before dispatching.
+  provenance: did:web:pathways/irlcoop/practice-profiles/intent-mapping@v1
+  last_updated: "2026-11-01T12:00:00Z"
+  authorship: "djat x rbpollock"
+
+axes:
+  needs_offers:
+    description: "Discovery and matchmaking channel"
+    default_autonomy: A1
+  membership:
+    description: "Group enrollment, voting, steward approval"
+    default_autonomy: A0
+  safe_events:
+    description: "Safe threshold gates, value transfer"
+    default_autonomy: A2
+  matrix:
+    description: "Human-facing communication (chat, announcements)"
+    default_autonomy: A1
+  external_callbacks:
+    description: "Third-party provider callbacks (SMS, email, webhooks)"
+    default_autonomy: A1
+
+mappings:
+
+  match.found:
+    ris_intent: peer:fetch_template
+    template_id: Offer.Match.Barter.A2
+    bus_axis: needs_offers
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto-at-A2
+      R3: auto-at-A1
+      R4:
+        max_usd: auto
+      R5: enabled
+      R6:
+        phase: matchmaking
+    escalation: strict
+    description: >
+      A cycle was detected; dispatch the barter matching template.
+      The matched leg values are carried as params; the HandoffBus
+      renders downstream from the template, never from raw text.
+
+  match.proposed:
+    ris_intent: verify_claims
+    template_id: Offer.Match.Barter.A2
+    bus_axis: needs_offers
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R6:
+        human_gate: true
+    escalation: strict
+    description: >
+      Proposed match needs human confirmation before commitment.
+      The event_text is wrapped as data inside the HandoffEnvelope,
+      not injected as steering.
+
+  offer.match:
+    ris_intent: peer:fetch_template
+    template_id: Offer.Match.Barter.A2
+    bus_axis: needs_offers
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto-at-A2
+      R3: auto-at-A1
+      R4:
+        max_usd: auto
+      R5: enabled
+      R6:
+        phase: matching
+    escalation: strict
+    description: >
+      One group's offer matches a need in another group. Cross-boundary
+      handoff at A3 when target is in a peered group; A2 for same-group.
+
+  trade.proposed:
+    ris_intent: verify_claims
+    template_id: Trade.Chain.Convene.A1
+    bus_axis: needs_offers
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R6:
+        human_gate: true
+    escalation: strict
+    description: "Multi-leg trade cycle proposed; convene parties with human gate."
+
+  trade.leg_confirmed:
+    ris_intent: send_message
+    template_id: Trade.Leg.Track.A1
+    bus_axis: needs_offers
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R3: enabled
+      R5: enabled
+    escalation: strict
+    description: >
+      A party confirmed a leg. Emit tracking event and notify cycle
+      participants via the HandoffBus matrix channel.
+
+  trade.in_transit:
+    ris_intent: send_message
+    template_id: Trade.Leg.Track.A1
+    bus_axis: needs_offers
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R3: enabled
+      R5: enabled
+    escalation: strict
+    description: "Logistics movement - update chain trackers."
+
+  trade.stuck:
+    ris_intent: escalate_to_partner
+    template_id: Trade.Leg.Expedite.A1
+    bus_axis: needs_offers
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R3: enabled
+      R6:
+        human_gate: true
+    escalation: strict
+    description: >
+      Drift detected - dispatch expedite pathway. If drift exceeds
+      threshold, the HandoffBus routes to dispute escalation.
+
+  trade.disputed:
+    ris_intent: escalate_to_partner
+    template_id: Offer.Dispute.Arbitration.A1
+    bus_axis: needs_offers
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R3: enabled
+      R6:
+        human_gate: true
+    escalation: strict
+    description: >
+      A leg is disputed - trigger the arbitration template. The
+      HandoffBus constructs a HandoffEnvelope with the dispute details,
+      signed by the disputing party session key.
+
+  trade.settled:
+    ris_intent: verify_claims
+    template_id: Trade.Leg.Settle.A2
+    bus_axis: safe_events
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: auto-at-A2
+      R4:
+        max_usd: auto
+      R5: enabled
+    escalation: strict
+    description: >
+      Leg settled via mutual-credit ledger. Release any staged escrow
+      and update the run provenance.
+
+  trade.closed:
+    ris_intent: verify_claims
+    template_id: Trade.Chain.Close.A2
+    bus_axis: safe_events
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: auto-at-A2
+      R4:
+        max_usd: auto
+      R5: enabled
+    escalation: strict
+    description: >
+      Full cycle settled or dissolved. Archive the run, release
+      remaining escrow, and emit the signed weave for insurance
+      profile derivation.
+
+  safe:proposal:
+    ris_intent: verify_claims
+    template_id: Safe.Proposal.Evaluate.A2
+    bus_axis: safe_events
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: auto-at-A2
+      R4:
+        max_usd: from-safe-threshold
+      R5: enabled
+    escalation: strict
+    description: >
+      A Safe proposal requires threshold signatures. At A2, the
+      HandoffBus validates the proposal against the group Safe config
+      before dispatching to the proposal evaluation template.
+
+  safe:proposal_approved:
+    ris_intent: send_message
+    template_id: Safe.Proposal.Notify.A1
+    bus_axis: safe_events
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R3: enabled
+    escalation: warn
+    description: "Notify relevant parties that a proposal was approved."
+
+  vote.cast:
+    ris_intent: verify_claims
+    template_id: Vote.Record.A0
+    bus_axis: membership
+    autonomy: A0
+    gate_profile:
+      R1: enabled
+      R6:
+        human_gate: true
+    escalation: strict
+    description: >
+      Human-initiated vote - A0 (assisted). Every vote is recorded
+      as a provenance event but requires no autonomous agent action.
+
+  membership.applied:
+    ris_intent: verify_claims
+    template_id: Membership.Review.A1
+    bus_axis: membership
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R6:
+        human_gate: true
+    escalation: strict
+    description: >
+      New membership application - dispatch the review template
+      to stewards for approval.
+
+  matrix.message:
+    ris_intent: send_message
+    template_id: Matrix.Notify.A1
+    bus_axis: matrix
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R3: enabled
+    escalation: warn
+    description: >
+      Human-facing message via Matrix. The HandoffBus wraps
+      event_text as data, never as steering.
+
+  external.callback:
+    ris_intent: verify_claims
+    template_id: External.Callback.Process.A2
+    bus_axis: external_callbacks
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: auto-if-cross-boundary
+      R4:
+        max_usd: from-template
+      R5: enabled
+    escalation: strict
+    description: >
+      Third-party webhook callback - verify authenticity and
+      dispatch to the appropriate handler template.
+
+  peer.fetch_template:
+    ris_intent: peer:fetch_template
+    template_id: Peer.Template.Fetch.A3
+    bus_axis: needs_offers
+    autonomy: A3
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: enabled
+      R4:
+        max_usd: auto
+      R5: enabled
+      R6:
+        phase: peer_verification
+    escalation: strict
+    description: >
+      Fetch a forked template from a peer DID. A3 - full HandoffBus
+      discipline. The envelope carries the Trust Key verification
+      proof so the receiving group can validate offline.
+
+  dispute.escalate:
+    ris_intent: escalate_to_partner
+    template_id: Offer.Dispute.Arbitration.A1
+    bus_axis: needs_offers
+    autonomy: A1
+    gate_profile:
+      R1: enabled
+      R3: enabled
+      R6:
+        human_gate: true
+    escalation: strict
+    description: >
+      Auto-triggered by the contingency profile when a step fails
+      or a deliverable is disputed. Routes to the appropriate
+      dispute pathway via the HandoffBus.
+
+  insurance.profile_derived:
+    ris_intent: verify_claims
+    template_id: Insurance.Profile.Derive.A2
+    bus_axis: safe_events
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: auto-at-A2
+      R4:
+        max_usd: auto
+      R5: enabled
+    escalation: strict
+    description: >
+      A signed weave has completed - derive its insurance profile
+      (risk score, contingency pathways, escrow recommendation).
+      The profile is stored as a Pathways artifact, Aqua-attested,
+      and carried as a RiskKey in subsequent HandoffEnvelopes.
+
+  insurance.sponsor_commitment:
+    ris_intent: peer:fetch_template
+    template_id: Insurance.Sponsor.A3
+    bus_axis: safe_events
+    autonomy: A3
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: enabled
+      R4:
+        max_usd: from-sponsorship-tier
+      R5: enabled
+      R6:
+        phase: sponsorship
+    escalation: strict
+    description: >
+      Third-party sponsor commits to funding escrow. The
+      HandoffEnvelope carries the sponsor_commitment artifact
+      (signed by the sponsor DID). The Safe contract checks
+      the commitment and reduces participant lock-up accordingly.
+
+  insurance.yield_settle:
+    ris_intent: verify_claims
+    template_id: Insurance.Yield.Settle.A2
+    bus_axis: safe_events
+    autonomy: A2
+    gate_profile:
+      R1: enabled
+      R2: auto
+      R3: auto-at-A2
+      R4:
+        max_usd: auto
+      R5: enabled
+    escalation: strict
+    description: >
+      At pathway completion, unwind the yield vault and distribute
+      principal + yield to sponsors. If the run failed or was
+      disputed, yield is applied to the shortfall first.
+
+templates:
+  Offer.Match.Barter.A2:
+    domain: "Offer"
+    subdomain: "Match"
+    action: "Barter"
+    autonomy_default: A2
+    spec_version: "1.2.0"
+    description: "Match producers and consumers in a multi-leg trade cycle"
+    refs:
+      - "needs-offers-matching.md section 4 (Chain state)"
+      - "needs-offers-matching.md section 5 (Expediting)"
+      - "pathways-integration.md section 3 (Risk, Escrow, Insurance)"
+
+  Trade.Chain.Convene.A1:
+    domain: "Trade"
+    subdomain: "Chain"
+    action: "Convene"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Convene parties on a proposed multi-leg trade cycle"
+
+  Trade.Leg.Track.A1:
+    domain: "Trade"
+    subdomain: "Leg"
+    action: "Track"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Track a single leg through proposed/confirmed/in_transit/received"
+
+  Trade.Leg.Settle.A2:
+    domain: "Trade"
+    subdomain: "Leg"
+    action: "Settle"
+    autonomy_default: A2
+    spec_version: "1.2.0"
+    description: "Settle a leg via the relationship-scoped mutual-credit ledger"
+
+  Trade.Chain.Close.A2:
+    domain: "Trade"
+    subdomain: "Chain"
+    action: "Close"
+    autonomy_default: A2
+    spec_version: "1.2.0"
+    description: "Close a settled or dissolved trade chain"
+
+  Trade.Leg.Expedite.A1:
+    domain: "Trade"
+    subdomain: "Leg"
+    action: "Expedite"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Nudge a stuck leg; escalate to dispute if unresolved"
+
+  Offer.Dispute.Arbitration.A1:
+    domain: "Offer"
+    subdomain: "Dispute"
+    action: "Arbitration"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Arbitrate a disputed leg or failed delivery"
+    refs:
+      - "needs-offers-matching.md section 7 (Arbitration)"
+
+  Offer.Dispute.PartialDelivery.A1:
+    domain: "Offer"
+    subdomain: "Dispute"
+    action: "PartialDelivery"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Handle partial delivery disputes"
+
+  Offer.Dispute.NonDelivery.A1:
+    domain: "Offer"
+    subdomain: "Dispute"
+    action: "NonDelivery"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Handle non-delivery disputes"
+
+  Offer.Dispute.Quality.A1:
+    domain: "Offer"
+    subdomain: "Dispute"
+    action: "Quality"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Handle quality dispute disputes"
+
+  Safe.Proposal.Evaluate.A2:
+    domain: "Safe"
+    subdomain: "Proposal"
+    action: "Evaluate"
+    autonomy_default: A2
+    spec_version: "1.2.0"
+    description: "Evaluate a Safe threshold proposal"
+
+  Safe.Proposal.Notify.A1:
+    domain: "Safe"
+    subdomain: "Proposal"
+    action: "Notify"
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Notify parties of proposal status changes"
+
+  Vote.Record.A0:
+    domain: "Vote"
+    subdomain: "Record"
+    action: ""
+    autonomy_default: A0
+    spec_version: "1.2.0"
+    description: "Record a cast vote as a provenance event"
+
+  Membership.Review.A1:
+    domain: "Membership"
+    subdomain: "Review"
+    action: ""
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Review a membership application"
+
+  Matrix.Notify.A1:
+    domain: "Matrix"
+    subdomain: "Notify"
+    action: ""
+    autonomy_default: A1
+    spec_version: "1.2.0"
+    description: "Send a notification via Matrix"
+
+  External.Callback.Process.A2:
+    domain: "External"
+    subdomain: "Callback"
+    action: "Process"
+    autonomy_default: A2
+    spec_version: "1.2.0"
+    description: "Process a third-party webhook callback"
+
+  Peer.Template.Fetch.A3:
+    domain: "Peer"
+    subdomain: "Template"
+    action: "Fetch"
+    autonomy_default: A3
+    spec_version: "1.2.0"
+    description: "Fetch a forked template from a peer DID with full HandoffBus discipline"
+
+  Insurance.Profile.Derive.A2:
+    domain: "Insurance"
+    subdomain: "Profile"
+    action: "Derive"
+    autonomy_default: A2
+    spec_version: "1.2.0"
+    description: "Derive insurance profile from a signed weave"
+    refs:
+      - "pathways-integration.md section 3"
+
+  Insurance.Sponsor.A3:
+    domain: "Insurance"
+    subdomain: "Sponsor"
+    action: ""
+    autonomy_default: A3
+    spec_version: "1.2.0"
+    description: "Third-party sponsor commitment for escrow funding"
+    refs:
+      - "pathways-integration.md section 3 (Third-party escrow sponsorship)"
+
+  Insurance.Yield.Settle.A2:
+    domain: "Insurance"
+    subdomain: "Yield"
+    action: "Settle"
+    autonomy_default: A2
+    spec_version: "1.2.0"
+    description: "Settle yield vault at pathway completion"
+    refs:
+      - "pathways-integration.md section 3 (Yield on locked escrow)"
+
+  Insurance.Sponsor.Commitment.v1:
+    domain: "Insurance"
+    subdomain: "Sponsor"
+    action: "Commitment"
+    version: "v1"
+    autonomy_default: A3
+    spec_version: "1.2.0"
+    description: >
+      Schema for a sponsor commitment artifact - the signed document
+      a third party signs to commit escrow funding.
+    schema_fields:
+      sponsor_did: "did:key:..."
+      committed_amount_usd: "number"
+      fee_structure: "flat|percentage|tiered"
+      yield_share: "number (0-1, fraction of yield going to sponsor)"
+      conditions: "list of risk constraints"
+      signed_by: "did:key:..."
+      signed_at: "iso8601"

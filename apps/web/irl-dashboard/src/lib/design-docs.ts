@@ -74,9 +74,9 @@ export function readDesignDoc(slug: string): string | null {
 
 /**
  * Read an UNREGISTERED markdown file from docs/design by slug (the search
- * widget links unregistered .md results straight at /design/<slug>, and this is
- * what renders them). Only the basename is used, so the slug can never escape
- * the design directory. Returns null when no such file exists.
+ * widget links unregistered .md results straight at /docs/design/<slug>, and
+ * this is what renders them. Only the basename is used, so the slug can never
+ * escape the design directory. Returns null when no such file exists.
  */
 export function readRawMarkdown(slug: string): string | null {
   const dir = resolveDesignDir()
