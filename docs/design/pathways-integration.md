@@ -444,6 +444,7 @@ Get Pathways semantics into Temporal and talking to the event bus.
 - [ ] Run first pathway at A0 with manual escrow setup
 - [ ] Implement third-party escrow sponsorship (§3) — sponsors sign commitment, Safe stages escrow on their behalf
 - [ ] Add yield-bearing vault staging for locked escrow (§3)
+- [ ] Record first PathwayRun crossing the HandoffBus adapter with verifiable audit rows (cites spec v1.2.0 on run record)
 
 ### Phase 2: Autonomy (months 4-6)
 
