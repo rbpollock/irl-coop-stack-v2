@@ -1,5 +1,13 @@
 [
   {
+    "slug": "irl-coop-overview",
+    "title": "irl.coop — Overview",
+    "category": "Strategy & narrative",
+    "status": "design",
+    "description": "The entry point for the entire design corpus. Five pillars: digital identity sovereignty + federation (FedID), privacy-first relationship graphs and finance, the Weave (dynamic interrelated groups), infrastructure as platform cooperative, and how the stack is built/extended/maintained. Maps each pillar to live reality, designed specs, and open questions.",
+    "file": "irl-coop-overview.md"
+  },
+  {
     "slug": "tier2-entry-model",
     "title": "The Tier-2 Entry Model",
     "category": "Privacy & adversaries",
@@ -721,10 +729,50 @@
   },
   {
     "slug": "pathways-integration",
-    "title": "Pathways \u00d7 irl.coop \u2014 run objects, handoff envelopes, risk-priced escrows",
+    "title": "Pathways × irl.coop — run objects, handoff envelopes, risk-priced escrows",
     "category": "Economy & treasury",
     "status": "design",
-    "description": "Adopts the HandoffEnvelope + gate-profile discipline from djat's Pathways RIS v1.1.0 as the contract for multi-step cooperation on the bus (a weave is a PathwayRun, Temporal is the executor, the bus is the HandoffBus), and puts a versioned risk engine beside it so a signed trade chain carries a priced escrow/insurance profile per leg \u2014 with a learning loop fed by settlements and arbitrations.",
+    "description": "Adopts the HandoffEnvelope + gate-profile discipline from djat's Pathways RIS v1.1.0 as the contract for multi-step cooperation on the bus (a weave is a PathwayRun, Temporal is the executor, the bus is the HandoffBus), and puts a versioned risk engine beside it so a signed trade chain carries a priced escrow/insurance profile per leg — with a learning loop fed by settlements and arbitrations.",
     "file": "pathways-integration.md"
+  },
+  {
+    "slug": "identity-sovereignty-and-fedid",
+    "title": "Digital Identity Sovereignty + Federation (FedID)",
+    "category": "Strategy & narrative",
+    "status": "design",
+    "description": "The identity pillar: sovereign cryptographic identity via passkeys and Safes, fleet SSO through Keycloak, and federation (cross-group seat transfer, FedID protocols, ZK membership proofs). Maps what is live, what is designed, and what is still open.",
+    "file": "identity-sovereignty-and-fedid.md"
+  },
+  {
+    "slug": "privacy-first-graphs-and-finance",
+    "title": "Privacy-First Relationship Graphs and Finance",
+    "category": "Strategy & narrative",
+    "status": "design",
+    "description": "The privacy pillar: RLS, Tier-2 encrypted ledger, zero-knowledge proofs, the disclosure dial (count/bucket/exact), shielded treasury, custody chain, and availability proofs. Maps what is live, what is designed, and what is still open.",
+    "file": "privacy-first-graphs-and-finance.md"
+  },
+  {
+    "slug": "the-weave",
+    "title": "The Weave — Dynamic Interrelated Groups",
+    "category": "Groups & governance",
+    "status": "design",
+    "description": "The weave pillar: groups as Safes, seat model, sector tags, declared bindings, resource scopes, and the designed weave graph API + visual navigator. Maps what is live, what is designed, and what is still open.",
+    "file": "the-weave.md"
+  },
+  {
+    "slug": "platform-cooperative",
+    "title": "The Infrastructure as a Platform Cooperative",
+    "category": "Strategy & narrative",
+    "status": "design",
+    "description": "The cooperative pillar: self-hosted stack, cost model, no lock-in, open-source licensing, platform governance, steward rotation, and the coop launch handoff. Maps what is live, what is designed, and what is still open.",
+    "file": "platform-cooperative.md"
+  },
+  {
+    "slug": "devops-and-maintenance",
+    "title": "DevOps — Build, Extend, Maintain",
+    "category": "Infrastructure",
+    "status": "design",
+    "description": "The devops pillar: declarative generator, stack report, journey suite, reconcilers, admission bar, seam drills, and observability. Maps what is live, what is designed, and what is still open. Includes the five-gate admission bar and the honest gap (no app clears all five).",
+    "file": "devops-and-maintenance.md"
   }
 ]

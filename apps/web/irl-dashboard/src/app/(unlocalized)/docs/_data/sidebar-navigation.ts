@@ -5,50 +5,34 @@ export const sidebarNavigationData: NavigationType[] = [
     title: "Overview",
     items: [
       {
-        title: "Introduction",
-        href: "/docs/overview/introduction",
+        title: "irl.coop — Overview",
+        href: "/docs/design/irl-coop-overview",
         iconName: "Play",
       },
       {
-        title: "Kits",
-        href: "/docs/overview/kits",
-        iconName: "Folders",
+        title: "Identity Sovereignty & FedID",
+        href: "/docs/design/identity-sovereignty-and-fedid",
+        iconName: "Fingerprint",
       },
       {
-        title: "Installation",
-        href: "/docs/overview/installation",
-        iconName: "ArrowDownToLine",
+        title: "Privacy-First Graphs & Finance",
+        href: "/docs/design/privacy-first-graphs-and-finance",
+        iconName: "Shield",
       },
       {
-        title: "Deployment",
-        href: "/docs/overview/deployment",
-        iconName: "ArrowUpToLine",
-      },
-    ],
-  },
-  {
-    title: "Development",
-    items: [
-      {
-        title: "Authentication",
-        href: "/docs/development/authentication",
-        iconName: "Lock",
+        title: "The Weave",
+        href: "/docs/design/the-weave",
+        iconName: "GitMerge",
       },
       {
-        title: "Internationalization (I18n)",
-        href: "/docs/development/i18n",
-        iconName: "Languages",
+        title: "Platform Cooperative",
+        href: "/docs/design/platform-cooperative",
+        iconName: "Landmark",
       },
       {
-        title: "Navigation",
-        href: "/docs/development/navigation",
-        iconName: "Menu",
-      },
-
-      {
-        title: "Theme Color",
-        href: "/docs/development/theme-color",
-        iconName: "SwatchBook",
+        title: "DevOps & Maintenance",
+        href: "/docs/design/devops-and-maintenance",
+        iconName: "Wrench",
       },
     ],
   },
