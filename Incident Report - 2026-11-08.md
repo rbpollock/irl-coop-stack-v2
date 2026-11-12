@@ -73,12 +73,6 @@ All times derived from `journalctl -u ssh` on irl-server-01 and file mtimes on t
 - **Compromised artifact:** The `surfy->irl-server-01` SSH private key was used by the attacker to SSH from 192.168.18.11. The key's origin is on this device.
 - **Likely attack vector on surfy:** Either the key was exfiltrated from a remote compromise of surfy itself, or the attacker operated directly on surfy during the 01:15–01:27 EST SSH window.
 
-### 2.3 Windows host (192.168.18.4) — NOT INVESTIGATED
-
-- **OS:** Windows 11 (hostname DESKTOP-3AK104A)
-- **Risk indicators:** Per Tailscale, this machine is `desktop-3ak104a` and is the only Windows node on the user's tailnet. The user's normal Chrome session is most likely on this machine. The original cookie theft may have happened here, NOT on `irl-server-01`.
-- **Outstanding check needed:** Defender event log scan, Chrome extension audit, PowerShell history, scheduled tasks.
-
 ---
 
 ## 3. Initial Access — Hypothesized Vector
