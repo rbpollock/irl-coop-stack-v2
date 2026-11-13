@@ -127,6 +127,7 @@ A full catalog with badges and project links lives in [`docs/design/stack-catalo
 - mediamtx — RTSP/RTMP/SRT media server
 - roundcube — webmail with OIDC integration
 - stalwart — modern mail server (IMAP/SMTP)
+- restreamer — self-hosted streaming ingest and multi-platform restreaming
 
 **Maps**
 - maps — custom map tile server and geo frontend

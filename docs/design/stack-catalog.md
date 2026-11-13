@@ -5,7 +5,7 @@ Complete inventory of the apps declared in `infra/instances/dev/instance.yaml`.
 - **Open-source** apps show their project logo inside a colored badge.
 - **Custom-built** components use the irl.coop placeholder badge.
 
-**42 elements total** — 31 open-source, 11 custom-built.
+**43 elements total** — 32 open-source, 11 custom-built.
 
 ## Pillars
 
@@ -61,6 +61,7 @@ Complete inventory of the apps declared in `infra/instances/dev/instance.yaml`.
 | <img src="logos/badges/mediamtx.svg" width="28" alt="mediamtx"> | **[Mediamtx](https://github.com/bluenviron/mediamtx)** | RTSP/RTMP/SRT media server. | OSS |
 | <img src="logos/badges/roundcube.svg" width="28" alt="roundcube"> | **[Roundcube](https://roundcube.net)** | Webmail client with OIDC integration. | OSS |
 | <img src="logos/badges/stalwart.svg" width="28" alt="stalwart"> | **[Stalwart](https://stalw.art)** | Modern mail server (IMAP/SMTP) with OIDC and sieve support. | OSS |
+| <img src="logos/badges/restreamer.svg" width="28" alt="restreamer"> | **[Restreamer](https://github.com/datarhei/restreamer)** | Self-hosted streaming ingest, encoding, and multi-platform restreaming. | OSS |
 
 ### Maps
 
