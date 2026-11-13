@@ -94,6 +94,62 @@ compose files and edge rules into `infra/out/`, and `infra/scripts/stack-up.sh` 
 thing up idempotently at boot. **Nothing is hand-edited in `infra/out/`.**
 See [`AGENTS.md`](AGENTS.md) for the full configuration flow.
 
+### Apps in the stack
+
+A full catalog with badges and project links lives in [`docs/design/stack-catalog.md`](docs/design/stack-catalog.md).
+
+**Proxy**
+- traefik — edge router and reverse proxy
+
+**Authentication**
+- coop-api — auth bridge, federation gateway, and event bus
+- keycloak — identity broker and OIDC provider
+
+**Cache**
+- irl-redis — shared caching, sessions, and queues
+
+**Storage**
+- citus — distributed PostgreSQL with row-level security
+- cryptpad — end-to-end encrypted collaborative documents
+- minio — S3-compatible object storage
+- nocodb — spreadsheet/database UI over Postgres
+
+**Communication**
+- cinny — lightweight Matrix web client
+- coturn — TURN/STUN for WebRTC NAT traversal
+- element-call — group video calling via Matrix/WebRTC
+- element-web — primary Matrix web client
+- freeswitch — SIP/VoIP softswitch
+- fusionpbx — web GUI and PBX management
+- livekit — WebRTC SFU for real-time media
+- lk-jwt — LiveKit JWT token issuer
+- matrix — Synapse homeserver with S3 media store
+- mediamtx — RTSP/RTMP/SRT media server
+- roundcube — webmail with OIDC integration
+- stalwart — modern mail server (IMAP/SMTP)
+
+**Maps**
+- maps — custom map tile server and geo frontend
+
+**Workflow**
+- erpnext — ERP for cooperative operations
+- formbricks — form builder and surveys
+- hievents — event ticketing and registration
+- litefarm — farm management and planning
+- llm-inference — local LLM inference endpoint
+- onlyoffice — collaborative document editing
+- peer_xyz_payments — payment-rail wrapper and webhooks
+- plane — project management
+- plane-mcp — Model Context Protocol bridge for Plane
+- postiz — social media scheduling
+- rag / rag-api / rag-inference / rag-migrate / rag-worker — vector search and retrieval pipeline
+- temporal — workflow orchestration
+- temporal-ui — workflow inspection UI
+- treasury-relayer — Safe treasury relayer
+- webstudio — visual website builder
+- wordpress — CMS and blogging
+- zk-proving — zero-knowledge proof generation
+
 ---
 
 ## 4. The account model
