@@ -99,3 +99,9 @@ Complete inventory of the apps declared in `infra/instances/dev/instance.yaml`.
 
 *Generated from the declarative source-of-truth in `infra/instances/dev/`.*
 Badge icons are derived from [Simple Icons](https://simpleicons.org/) where available, or rendered as initials for projects without an icon in that set.
+
+---
+
+## Planned additions
+
+Apps being evaluated but not yet declared: [`planned-additions.md`](planned-additions.md)

@@ -96,7 +96,7 @@ See [`AGENTS.md`](AGENTS.md) for the full configuration flow.
 
 ### Apps in the stack
 
-A full catalog with badges and project links lives in [`docs/design/stack-catalog.md`](docs/design/stack-catalog.md).
+A full catalog with badges and project links lives in [`docs/design/stack-catalog.md`](docs/design/stack-catalog.md). Apps being evaluated for future integration are tracked in [`docs/design/planned-additions.md`](docs/design/planned-additions.md).
 
 **Proxy**
 - traefik — edge router and reverse proxy
