@@ -5,7 +5,7 @@ Complete inventory of the apps declared in `infra/instances/dev/instance.yaml`.
 - **Open-source** apps show their project logo inside a colored badge.
 - **Custom-built** components use the irl.coop placeholder badge.
 
-**43 elements total** — 32 open-source, 11 custom-built.
+**42 elements total** — 31 open-source, 11 custom-built.
 
 ## Pillars
 
@@ -41,8 +41,6 @@ Complete inventory of the apps declared in `infra/instances/dev/instance.yaml`.
 | | App | What it does | |
 |:---:|:---|:---|:---:|
 | <img src="logos/badges/citus.svg" width="28" alt="citus"> | **[Citus](https://www.citusdata.com)** | Distributed PostgreSQL (Citus) — the core data plane with RLS. | OSS |
-| <img src="logos/badges/cryptpad.svg" width="28" alt="cryptpad"> | **[CryptPad](https://cryptpad.org)** | End-to-end encrypted collaborative documents (sheets, docs, whiteboards, kdrive). | OSS |
-| <img src="logos/badges/minio.svg" width="28" alt="minio"> | **[Minio](https://min.io)** | S3-compatible object storage for blobs, profiles, and backups. | OSS |
 | <img src="logos/badges/nocodb.svg" width="28" alt="nocodb"> | **[NocoDB](https://nocodb.com)** | Spreadsheet/database UI over Postgres with SSO gate. | OSS |
 
 ### Communication

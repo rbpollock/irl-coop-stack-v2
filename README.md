@@ -110,7 +110,6 @@ A full catalog with badges and project links lives in [`docs/design/stack-catalo
 
 **Storage**
 - citus — distributed PostgreSQL with row-level security
-- cryptpad — end-to-end encrypted collaborative documents
 - minio — S3-compatible object storage
 - nocodb — spreadsheet/database UI over Postgres
 
