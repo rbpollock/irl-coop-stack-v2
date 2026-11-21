@@ -1,0 +1,16 @@
+name: web
+pillar: web
+type: source
+source: /home/service/development/irl-coop-stack-v2/apps/web/irl-dashboard
+web: https://${DOMAIN}
+proxy:
+  hostname: ${DOMAIN}
+  port: 3000
+  description: irl-dashboard (Next.js host process)
+  priority: 10
+nav:
+  label: Dashboard
+  icon: LayoutDashboard
+  section: Coop
+head:
+  title: irl.coop Dashboard

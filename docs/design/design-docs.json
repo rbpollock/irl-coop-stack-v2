@@ -344,6 +344,22 @@
     "file": "app-admission-audit.md"
   },
   {
+    "slug": "system-map",
+    "title": "System map — how the stack is put together",
+    "category": "Infrastructure",
+    "status": "note",
+    "description": "Checkpoint map of the layers, components, data flow, trust boundaries, and data classification. The diagram is the boundary, not the inventory — this is shape and trust, not endpoints.",
+    "file": "system-map.md"
+  },
+  {
+    "slug": "risk-register",
+    "title": "Risk register",
+    "category": "Working notes",
+    "status": "note",
+    "description": "Eighteen tracked risks with category, impact, likelihood, evidence, current mitigation, the proof or decision still required, and the hibernation action. Impact and likelihood are judgement, not measurement — see the header note.",
+    "file": "risk-register.md"
+  },
+  {
     "slug": "crm-under-fact-kinds",
     "title": "The CRM question under the fact-kind split \u2014 ERPNext-native vs Twenty",
     "category": "Apps & files",

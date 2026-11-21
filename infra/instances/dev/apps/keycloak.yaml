@@ -16,9 +16,9 @@ env:
   KC_DB: postgres
   # Shared Citus coordinator (storage pillar) — the canonical identity store
   # lives on the same Postgres 16 instance as irlcoop/nocodb/matrix/stalwart,
-  # in its own `keycloak` database + `keycloak` role. Reachable via the docker
-  # bridge gateway (172.17.0.1:5432), same as the edge proxy + other fleet apps.
-  KC_DB_URL: jdbc:postgresql://172.17.0.1:5432/keycloak
+  # in its own `keycloak` database + `keycloak` role. Connected via the storage
+  # compose network (container name `storage-postgres-1`) so no host port needed.
+  KC_DB_URL: jdbc:postgresql://storage-postgres-1:5432/keycloak
   KC_DB_USERNAME: keycloak
   KC_DB_PASSWORD: ${SECRET:keycloak.db}
   KEYCLOAK_ADMIN: admin

@@ -1,0 +1,16 @@
+name: hermes-webui
+pillar: web
+type: source
+source: /home/service/hermes-webui
+web: https://hermes.${DOMAIN}
+proxy:
+  hostname: hermes.${DOMAIN}
+  port: 8787
+  description: Hermes WebUI (community interface, systemd managed)
+  priority: 20
+nav:
+  label: Hermes
+  icon: MessageSquare
+  section: Coop
+env:
+  HERMES_HOME: /home/service/.hermes

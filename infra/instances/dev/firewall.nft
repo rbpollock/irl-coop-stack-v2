@@ -1,0 +1,52 @@
+# Base nftables rules for instance "dev".
+# Auto-generated include wrapper sets `backend_ports` from host app specs.
+#
+# Usage:
+#   bash infra/scripts/apply-firewall.sh dev
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        ct state established,related accept
+        iif "lo" accept
+        ip protocol icmp accept
+        ip6 nexthdr ipv6-icmp accept
+
+        # SSH from LAN
+        ip saddr 192.168.18.0/24 tcp dport 22 accept
+
+        # Public edge
+        tcp dport { 80, 443 } accept
+
+        # Tailnet
+        ip saddr 100.64.0.0/10 accept
+        ip6 saddr fd7a:115c:a1e0::/48 accept
+
+        # Docker bridges → host backends (Traefik reverse-proxy to host processes).
+        # Matches ALL docker bridge traffic by source range (172.16.0.0/12),
+        # not by interface name — docker compose creates br-* interfaces.
+        ip saddr 172.16.0.0/12 tcp dport $backend_ports accept
+
+        log prefix "nft-input-drop: " flags all counter drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+
+        # Docker bridge forwarding (inter-container + container↔WAN).
+        iifname "br-*" accept
+        oifname "br-*" ct state established,related accept
+        iifname "docker0" accept
+        oifname "docker0" ct state established,related accept
+
+        log prefix "nft-fwd-drop: " flags all counter drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}
