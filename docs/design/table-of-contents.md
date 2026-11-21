@@ -223,6 +223,7 @@ Click any link to jump to that design document. Status keywords: `design` = spec
 
 | Document | Status | Summary |
 |---|---|---|
+| [ai-pathways-temporal-workflow-generation.md](ai-pathways-temporal-workflow-generation.md) | design | AI-assisted, Pathways-aware Temporal workflow generation with security, versioning, idempotency, and contingency validation |
 | [pathways-integration.md](pathways-integration.md) | design | Pathways × irl.coop integration spec |
 | [jev-temporal-group-workflows.md](jev-temporal-group-workflows.md) | design | Decision Engine on Temporal — scope tightened |
 | [tier2-entry-model.md](tier2-entry-model.md) | design | Tier-2 participation and work entry model |
