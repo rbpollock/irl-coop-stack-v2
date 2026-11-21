@@ -171,6 +171,207 @@ security:
 
 ---
 
+## 1.x Workflow Composition — Workflows Calling Workflows
+
+A workflow is not limited to activities. It can call other workflows as
+**child workflows** or **sub-workflows**. This enables composition: small,
+versioned, reusable workflows that groups assemble into larger processes.
+
+### Child workflow example
+
+```yaml
+# workflows/proposals/grant-application.yaml
+name: grant-application
+version: 1.0.0
+steps:
+  - name: draft-proposal
+    workflow: draft-proposal          # ← calls another workflow
+    inputs:
+      funder: "{{inputs.funder_id}}"
+      amount: "{{inputs.amount}}"
+    output: proposal_doc
+
+  - name: internal-review
+    workflow: group-review            # ← calls workflow with group-local policy
+    inputs:
+      doc: "{{steps.draft-proposal.output}}"
+      required_approvals: "{{group_settings.workflow_policy.approve.threshold}}"
+    output: approved_proposal
+
+  - name: submit-to-funder
+    activity: safe.transfer
+    to: "{{inputs.funder_address}}"
+    amount: "{{inputs.matching_amount}}"
+    condition: "{{steps.internal-review.output.approved}}"
+
+  - name: notify-board-on-failure
+    workflow: board-notification      # ← reusable notification workflow
+    inputs:
+      subject: "Grant application failed"
+      body: "Funder: {{inputs.funder_id}}, Step: {{failure.step}}"
+    condition: "{{failure}}"
+```
+
+### Sub-workflow orchestration (saga pattern)
+
+A parent workflow runs multiple child workflows and compensates if any fail.
+
+```yaml
+# workflows/proposals/budget-allocation.yaml
+name: budget-allocation
+version: 1.0.0
+steps:
+  - name: allocate-line-items
+    parallel:                          # ← fan-out to multiple child workflows
+      - workflow: allocate-line-item
+        inputs: { category: "soil", amount: 5000 }
+      - workflow: allocate-line-item
+        inputs: { category: "water", amount: 3000 }
+      - workflow: allocate-line-item
+        inputs: { category: "labor", amount: 12000 }
+    output: allocations
+    on_failure:
+      compensate:
+        - workflow: reverse-allocation
+          inputs: "{{steps.allocate-line-items.output}}"
+
+  - name: notify-accountants
+    workflow: notification-broadcast
+    inputs:
+      channels: ["#finance", "#ops"]
+      message: "Budget allocated: ${{steps.allocate-line-items.output}}"
+```
+
+**Why compose workflows instead of activities?**
+
+| | Activities | Child Workflows |
+|---|---|---|
+| **Granularity** | Single operation (DB query, API call) | Multi-step process with its own state |
+| **Versioning** | Tied to worker deployment | Independent version per workflow |
+| **Governance** | All activities run under parent policy | Child workflow enforces its own group policy |
+| **Retry** | Single retry policy | Child can have its own retry, timeout, rollback |
+| **Audit** | Logged as parent execution step | Full independent audit log + parent reference |
+| **Forkability** | Cannot be reused across groups | Child workflow can be blessed as canonical |
+
+### Cross-group workflow calls
+
+A workflow in **Group A** can call a child workflow defined in **Group B**.
+This is the federation use case:
+
+```yaml
+# detroit-soil workflow
+trigger:
+  type: event
+  event_type: soil_survey.complete
+steps:
+  - name: request-peer-review
+    workflow: portland-water/peer-review    # ← cross-group call
+    inputs:
+      survey_id: "{{inputs.survey_id}}"
+      scopes: ["soil_moisture", "ph_level"]
+    federation:
+      trust_required: A2
+      timeout: 7d
+      fallback:
+        workflow: notify-board
+        message: "Peer review from Portland timed out"
+```
+
+**How it works:**
+1. Detroit's Temporal worker sees `workflow: portland-water/peer-review`
+2. It looks up Portland's node address in `group_federations`
+3. Sends a `HandoffEnvelope` to Portland's federation gateway
+4. Portland's Temporal worker executes the child workflow under Portland's policy
+5. Result returns via the federation gateway, signed by both Safes
+6. Detroit's parent workflow continues with the signed result
+
+**Governance note:** The child workflow runs under **Portland's** group policy,
+not Detroit's. If Portland requires Safe approval for `peer-review` workflows,
+Detroit's parent workflow waits until Portland's Safe votes.
+
+### The workflow registry enables composition
+
+```typescript
+// coop-api/src/workflows/registry.ts
+export async function resolveWorkflow(
+  name: string,
+  callerGroup: string
+): Promise<WorkflowRegistration> {
+  // 1. Check local registry
+  const local = await db.query(
+    "SELECT * FROM workflow_registry WHERE name = $1 AND group_id = $2",
+    [name, callerGroup]
+  );
+  if (local.rows.length) return local.rows[0];
+
+  // 2. Check for cross-group reference (group/name syntax)
+  const [targetGroup, targetName] = name.split("/");
+  if (targetGroup && targetName) {
+    // Verify federation link exists
+    const fed = await db.query(
+      "SELECT * FROM group_federations WHERE home_group_id = $1 AND foreign_group_id = $2",
+      [callerGroup, targetGroup]
+    );
+    if (!fed.rows.length) throw new Error(`No federation link to ${targetGroup}`);
+
+    // Fetch workflow spec from foreign node (or local cache)
+    return await fetchForeignWorkflow(targetGroup, targetName);
+  }
+
+  // 3. Check canonical registry (on-chain)
+  const canonical = await CoopRegistry.workflows(name);
+  if (canonical && !canonical.revoked) return canonical;
+
+  throw new Error(`Workflow ${name} not found`);
+}
+```
+
+### Version compatibility in composition
+
+When a parent workflow calls a child workflow, version compatibility is checked:
+
+```yaml
+# Parent specifies acceptable child versions
+steps:
+  - name: draft-proposal
+    workflow: draft-proposal
+    version_constraint: ">=1.0.0 <2.0.0"   # semantic version range
+    inputs: ...
+```
+
+If the child workflow's current version is outside the range, the parent
+either:
+- **Fails** (default — parent must be updated)
+- **Falls back** to the last compatible version (if still registered)
+- **Prompts** the group via the dashboard: "Child workflow version mismatch. Update parent?"
+
+### The Workflow Studio visualizes composition
+
+```
+[Workflow Studio — "Grant Application"]
+
+┌──────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│ draft-proposal│─────▶│  group-review   │─────▶│ safe.transfer   │
+│   (child)     │      │    (child)      │      │   (activity)    │
+└──────────────┘      └─────────────────┘      └─────────────────┘
+       │                                               │
+       │  [click to expand]                            │
+       ▼                                               ▼
+┌──────────────┐                              ┌─────────────────┐
+│ draft-doc    │                              │ notify-board    │
+│ review-loop  │                              │   (child)       │
+│ finalize     │                              │   on failure    │
+└──────────────┘                              └─────────────────┘
+
+[+] Add child workflow  [→] Expand/collapse  [🔒] Version constraint
+```
+
+Double-clicking a child workflow node expands it inline to show its own steps.
+Double-clicking again collapses it. Version constraints appear as badges on
+child nodes.
+
+
+
 ## 2. Multi-Party, Real-Time Generation
 
 Workflows are not typed by one person at a terminal. They emerge from
