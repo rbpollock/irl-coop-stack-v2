@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Bootstrap the irl-coop Keycloak realm from scratch."""
-import json, hmac as hm, sys, time
+import json, hmac as hm, sys, time, os, subprocess
 import urllib.request, urllib.error, urllib.parse
 from pathlib import Path
 
@@ -174,6 +174,142 @@ realm["webAuthnPolicyPasswordlessRpId"] = "auth.irl.coop"
 realm["webAuthnPolicyPasswordlessSignatureAlgorithms"] = ["ES256"]
 api("PUT", "", realm)
 say("auth.irl.coop / ES256")
+
+# ── 8. Google Identity Provider ─────────────────────────────────────────────
+print("=== 8. Google IdP ===")
+
+# Read secrets from ansible vault (or env fallback)
+def get_google_credentials():
+    """Try to read google_client_id and google_client_secret from ansible vault."""
+    import yaml
+    vault_file = ROOT / "ansible/inventory/group_vars/all/vault.yml"
+    vault_pass_file = ROOT / "instances/dev/secrets/vault-pass"
+    
+    # First try env vars
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+    
+    if client_id and client_secret:
+        return client_id, client_secret
+    
+    # Try ansible vault
+    if vault_file.exists() and vault_pass_file.exists():
+        try:
+            result = subprocess.run(
+                ["ansible-vault", "view", "--vault-password-file", vault_pass_file, vault_file],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                vault_data = yaml.safe_load(result.stdout)
+                client_id = vault_data.get("google_client_id", "").strip()
+                client_secret = vault_data.get("google_client_secret", "").strip()
+                if client_id and client_secret:
+                    return client_id, client_secret
+        except Exception as e:
+            print(f"  Warning: could not read ansible vault: {e}")
+    
+    return None, None
+
+google_client_id, google_client_secret = get_google_credentials()
+
+if google_client_id and google_client_secret:
+    # Check if Google IdP already exists
+    _, idps = api("GET", "/identity-provider/instances")
+    existing_google = next((idp for idp in (idps or []) if idp.get("alias") == "google"), None)
+    
+    if existing_google:
+        say("google IdP: already exists")
+    else:
+        # Create Google OIDC Identity Provider
+        idp_payload = {
+            "alias": "google",
+            "displayName": "Google",
+            "providerId": "google",
+            "enabled": True,
+            "updateProfileFirstLoginMode": "on",
+            "trustEmail": True,
+            "storeToken": False,
+            "addReadTokenRoleOnCreate": False,
+            "authenticateByDefault": False,
+            "linkOnly": False,
+            "firstBrokerLoginFlowAlias": "first broker login",
+            "config": {
+                "clientId": google_client_id,
+                "clientSecret": google_client_secret,
+                "defaultScope": "openid profile email",
+                "useJwksUrl": "true",
+            }
+        }
+        api("POST", "/identity-provider/instances", idp_payload)
+        say("google IdP: created")
+        
+        # Add mappers (CRITICAL: emailVerified must be synced)
+        _, idps = api("GET", "/identity-provider/instances")
+        google_idp = next((idp for idp in idps if idp.get("alias") == "google"), None)
+        
+        if google_idp:
+            idp_alias = google_idp["alias"]
+            
+            # Mapper 1: Email Verified (the missing piece from the original)
+            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
+                "name": "email verified",
+                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+                "config": {
+                    "claim": "email_verified",
+                    "user.attribute": "emailVerified",
+                    "syncMode": "FORCE"
+                }
+            })
+            say("google mapper: email_verified -> emailVerified (FORCE)")
+            
+            # Mapper 2: Username from email
+            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
+                "name": "username",
+                "identityProviderMapper": "oidc-username-idp-mapper",
+                "config": {
+                    "template": "${CLAIM.email}",
+                    "syncMode": "IMPORT"
+                }
+            })
+            say("google mapper: email -> username")
+            
+            # Mapper 3: Email
+            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
+                "name": "email",
+                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+                "config": {
+                    "claim": "email",
+                    "user.attribute": "email",
+                    "syncMode": "IMPORT"
+                }
+            })
+            say("google mapper: email -> email")
+            
+            # Mapper 4: First Name
+            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
+                "name": "first name",
+                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+                "config": {
+                    "claim": "given_name",
+                    "user.attribute": "firstName",
+                    "syncMode": "IMPORT"
+                }
+            })
+            say("google mapper: given_name -> firstName")
+            
+            # Mapper 5: Last Name
+            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
+                "name": "last name",
+                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+                "config": {
+                    "claim": "family_name",
+                    "user.attribute": "lastName",
+                    "syncMode": "IMPORT"
+                }
+            })
+            say("google mapper: family_name -> lastName")
+else:
+    say("Google IdP: credentials not found (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or add to ansible vault)")
 
 # ── 8. Activate ─────────────────────────────────────────────────────────────
 print("=== 8. Activate ===")
