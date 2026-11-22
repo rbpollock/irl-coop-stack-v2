@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Joni Schwartz Books & Events
  * Description: Custom post type, taxonomy, book detail template, events templates, and homepage carousel/events list.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Robbie
  */
 
@@ -1189,7 +1189,7 @@ function joni_events_list_shortcode( $atts ) {
                         <?php endif; ?>
 
                         <p class="joni-event-desc">
-                            Join Joni for an evening at <?php echo esc_html( $ev_venue ); ?> in Brooklyn discussing her latest writing, research, and publications.
+                            Join Joni for an evening at <?php echo esc_html( $ev_venue ); ?> discussing her latest writing, research, and publications.
                         </p>
                     </div>
                 </div>
@@ -1595,3 +1595,77 @@ function joni_book_pages_label( $pages ) {
     if ( $pages <= 0 ) { return ''; }
     return $pages . ' pages';
 }
+
+// ---------------------------------------------------------------------------
+// Event Details meta box (edit _event_* meta on posts).
+//
+// Why this exists: the keys below are "protected" meta — they start with an
+// underscore, and WordPress hides protected keys from the Custom Fields panel.
+// Enabling "Custom fields" in the block editor therefore shows nothing for
+// them. This box is the supported place to edit location/time.
+// ---------------------------------------------------------------------------
+add_action( 'add_meta_boxes_post', 'joni_event_details_meta_box_register' );
+function joni_event_details_meta_box_register() {
+    add_meta_box(
+        'joni_event_details',
+        'Event Details',
+        'joni_event_details_meta_box_render',
+        'post',
+        'side',
+        'high'
+    );
+}
+
+function joni_event_details_meta_box_render( $post ) {
+    wp_nonce_field( 'joni_event_details_save', 'joni_event_details_nonce' );
+    $date    = get_post_meta( $post->ID, '_event_date', true );
+    $time    = get_post_meta( $post->ID, '_event_time', true );
+    $venue   = get_post_meta( $post->ID, '_event_venue', true );
+    $address = get_post_meta( $post->ID, '_event_address', true );
+    ?>
+    <p style="margin:0 0 8px;">Leave everything blank on non-event posts.</p>
+    <p><label for="joni_event_date"><strong>Date</strong></label><br>
+    <input type="date" id="joni_event_date" name="joni_event_date" value="<?php echo esc_attr( $date ); ?>" style="width:100%;"></p>
+    <p><label for="joni_event_time"><strong>Time</strong> (e.g. 6:30 PM)</label><br>
+    <input type="text" id="joni_event_time" name="joni_event_time" value="<?php echo esc_attr( $time ); ?>" style="width:100%;"></p>
+    <p><label for="joni_event_venue"><strong>Venue</strong></label><br>
+    <input type="text" id="joni_event_venue" name="joni_event_venue" value="<?php echo esc_attr( $venue ); ?>" style="width:100%;"></p>
+    <p><label for="joni_event_address"><strong>Address</strong></label><br>
+    <input type="text" id="joni_event_address" name="joni_event_address" value="<?php echo esc_attr( $address ); ?>" style="width:100%;"></p>
+    <p class="description" style="margin:0;">Month badge, weekday and "Where:" maps link on the site are derived automatically from Date + Venue + Address.</p>
+    <?php
+}
+
+add_action( 'save_post_post', 'joni_event_details_save' );
+function joni_event_details_save( $post_id ) {
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) { return; }
+    if ( wp_is_post_revision( $post_id ) ) { return; }
+    if ( ! isset( $_POST['joni_event_details_nonce'] )
+        || ! wp_verify_nonce( $_POST['joni_event_details_nonce'], 'joni_event_details_save' ) ) { return; }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) { return; }
+
+    $date    = isset( $_POST['joni_event_date'] )    ? sanitize_text_field( wp_unslash( $_POST['joni_event_date'] ) )   : '';
+    $time    = isset( $_POST['joni_event_time'] )    ? sanitize_text_field( wp_unslash( $_POST['joni_event_time'] ) )   : '';
+    $venue   = isset( $_POST['joni_event_venue'] )   ? sanitize_text_field( wp_unslash( $_POST['joni_event_venue'] ) )  : '';
+    $address = isset( $_POST['joni_event_address'] ) ? sanitize_text_field( wp_unslash( $_POST['joni_event_address'] ) ) : '';
+
+    update_post_meta( $post_id, '_event_date', $date );
+    update_post_meta( $post_id, '_event_time', $time );
+    update_post_meta( $post_id, '_event_venue', $venue );
+    update_post_meta( $post_id, '_event_address', $address );
+
+    // Derived fields the templates rely on (month badge, day, formatted date).
+    $ts = strtotime( $date );
+    if ( $date && $ts ) {
+        update_post_meta( $post_id, '_event_month',    strtoupper( date_i18n( 'M', $ts ) ) );
+        update_post_meta( $post_id, '_event_day',      date( 'j', $ts ) );
+        update_post_meta( $post_id, '_event_date_formatted', date_i18n( 'l, F j, Y', $ts ) );
+    } else {
+        update_post_meta( $post_id, '_event_month', '' );
+        update_post_meta( $post_id, '_event_day', '' );
+        update_post_meta( $post_id, '_event_date_formatted', '' );
+    }
+}
+// ---------------------------------------------------------------------------
+// End Event Details meta box
+// ---------------------------------------------------------------------------

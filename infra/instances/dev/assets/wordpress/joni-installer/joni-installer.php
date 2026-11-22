@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Joni Site Installer
  * Description: One-click migration of the jonischwartzchaney.com redesign from staging. Upload, activate, Tools -> Joni Site Installer -> Run all.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: irl.coop
  */
 
@@ -391,6 +391,8 @@ function joni_step_content() {
 			'post_title'   => $item['title'],
 			'post_content' => $item['content'],
 			'post_status'  => $item['status'] ?? 'publish',
+		
+			'menu_order'   => (int) ( $item['menu_order'] ?? 0 ),
 		);
 		if ( ! empty( $item['date'] ) ) {
 			$data['post_date']     = $item['date'];

@@ -87,7 +87,7 @@ issue_cert() {
     DOMAIN_ARGS+=(-d "$extra")
   done
 
-  docker run --rm \
+  docker run --rm --network host \
     --user "$(id -u):$(id -g)" \
     -e GANDI_API_KEY \
     -e GANDI_LIVEDNS_KEY \

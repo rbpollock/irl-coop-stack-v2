@@ -93,6 +93,7 @@
     "hls.js": "^1.7.1",
     "input-otp": "1.4.2",
     "lucide-react": "0.446.0",
+    "mermaid": "^11.17.2",
     "negotiator": "0.6.3",
     "next": "15.2.8",
     "next-auth": "4.24.11",

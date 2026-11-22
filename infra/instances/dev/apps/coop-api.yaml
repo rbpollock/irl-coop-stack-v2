@@ -88,6 +88,7 @@ env:
   # calls GET /api/internal/groups?sub=<sub> (CoopGroupsMapper SPI JAR) to
   # resolve a user's groups live from coop-api. Server-to-server only.
   KEYCLOAK_GROUPS_TOKEN: ${SECRET:keycloak.groups-token}
+  KEYCLOAK_CLIENT_SECRET: ${SECRET:keycloak.coop-api}
   # --- coop-run CPU chat fallback (llm-inference, docker bridge :8002) ---
   # The provider key stays server-side: the dashboard assistant calls
   # /api/v1/assistant/chat on coop-api and this process holds the key. Named
