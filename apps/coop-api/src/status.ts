@@ -319,11 +319,13 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
     if (!claims) return;
 
     let containers: ContainerInfo[];
+    let dockerAvailable = true;
     try {
       containers = await dockerContainers();
     } catch (err) {
-      request.log.error({ err }, "docker ps failed");
-      return reply.code(503).send({ error: "docker_unavailable" });
+      request.log.warn({ err }, "docker ps failed — returning declared config only");
+      containers = [];
+      dockerAvailable = false;
     }
 
     const decls = declaredComposes();
@@ -433,6 +435,7 @@ export default async function statusRoutes(fastify: FastifyInstance): Promise<vo
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return reply.send({
+      docker_available: dockerAvailable,
       generated_at: new Date().toISOString(),
       stack_root: STACK_ROOT,
       summary: {
