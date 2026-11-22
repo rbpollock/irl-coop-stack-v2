@@ -17,3 +17,20 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./acme.json:/letsencrypt/acme.json
     restart: always
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy
+    ports:
+      - "127.0.0.1:2375:2375"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Read-only proxy: disable all mutating HTTP methods
+      POST: "0"
+      DELETE: "0"
+      PUT: "0"
+      PATCH: "0"
+      # Only allow container inspection (docker ps) and ping
+      CONTAINERS: "1"
+      PING: "1"
+      # Everything else denied by default (networks, volumes, images, etc.)
+    restart: unless-stopped
