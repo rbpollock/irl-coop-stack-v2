@@ -218,7 +218,22 @@ if google_client_id and google_client_secret:
     existing_google = next((idp for idp in (idps or []) if idp.get("alias") == "google"), None)
     
     if existing_google:
-        say("google IdP: already exists")
+        idp_alias = existing_google["alias"]
+        # Update existing IdP with current credentials
+        api("PUT", f"/identity-provider/instances/{idp_alias}", {
+            "alias": "google",
+            "displayName": "Google",
+            "providerId": "google",
+            "enabled": True,
+            "trustEmail": True,
+            "config": {
+                "clientId": google_client_id,
+                "clientSecret": google_client_secret,
+                "defaultScope": "openid profile email",
+                "useJwksUrl": "true",
+            }
+        })
+        say("google IdP: updated with current credentials")
     else:
         # Create Google OIDC Identity Provider
         idp_payload = {
@@ -242,74 +257,83 @@ if google_client_id and google_client_secret:
         }
         api("POST", "/identity-provider/instances", idp_payload)
         say("google IdP: created")
-        
-        # Add mappers (CRITICAL: emailVerified must be synced)
-        _, idps = api("GET", "/identity-provider/instances")
-        google_idp = next((idp for idp in idps if idp.get("alias") == "google"), None)
-        
-        if google_idp:
-            idp_alias = google_idp["alias"]
-            
-            # Mapper 1: Email Verified (the missing piece from the original)
-            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
-                "name": "email verified",
-                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
-                "config": {
-                    "claim": "email_verified",
-                    "user.attribute": "emailVerified",
-                    "syncMode": "FORCE"
-                }
-            })
-            say("google mapper: email_verified -> emailVerified (FORCE)")
-            
-            # Mapper 2: Username from email
-            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
-                "name": "username",
-                "identityProviderMapper": "oidc-username-idp-mapper",
-                "config": {
-                    "template": "${CLAIM.email}",
-                    "syncMode": "IMPORT"
-                }
-            })
-            say("google mapper: email -> username")
-            
-            # Mapper 3: Email
-            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
-                "name": "email",
-                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
-                "config": {
-                    "claim": "email",
-                    "user.attribute": "email",
-                    "syncMode": "IMPORT"
-                }
-            })
-            say("google mapper: email -> email")
-            
-            # Mapper 4: First Name
-            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
-                "name": "first name",
-                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
-                "config": {
-                    "claim": "given_name",
-                    "user.attribute": "firstName",
-                    "syncMode": "IMPORT"
-                }
-            })
-            say("google mapper: given_name -> firstName")
-            
-            # Mapper 5: Last Name
-            api("POST", f"/identity-provider/instances/{idp_alias}/mappers", {
-                "name": "last name",
-                "identityProviderMapper": "oidc-user-attribute-idp-mapper",
-                "config": {
-                    "claim": "family_name",
-                    "user.attribute": "lastName",
-                    "syncMode": "IMPORT"
-                }
-            })
-            say("google mapper: family_name -> lastName")
+    
+    # Ensure mappers exist (idempotent — handle 409 gracefully)
+    idp_alias = "google"
+    
+    def upsert_mapper(name, mapper_payload):
+        """Create mapper, ignore 409 (already exists), warn on other errors."""
+        import time
+        time.sleep(0.2)
+        status, resp = api("POST", f"/identity-provider/instances/{idp_alias}/mappers", mapper_payload)
+        if status in [201, 204]:
+            say(f"google mapper: {name} created")
+        elif status == 409:
+            say(f"google mapper: {name} already exists")
+        else:
+            say(f"google mapper: {name} HTTP {status} — {resp}")
+    
+    # Note: Keycloak 25 rejects simple mapper names like "email" or "username"
+    # (conflicts with internal naming). Prefixed names are required.
+    upsert_mapper("email_verified -> emailVerified (FORCE)", {
+        "name": "google-email-verified",
+        "identityProviderAlias": "google",
+        "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+        "config": {
+            "claim": "email_verified",
+            "user.attribute": "emailVerified",
+            "syncMode": "FORCE"
+        }
+    })
+    
+    upsert_mapper("email -> username", {
+        "name": "google-username",
+        "identityProviderAlias": "google",
+        "identityProviderMapper": "oidc-username-idp-mapper",
+        "config": {
+            "template": "${CLAIM.email}",
+            "syncMode": "IMPORT"
+        }
+    })
+    
+    upsert_mapper("email -> email", {
+        "name": "google-email",
+        "identityProviderAlias": "google",
+        "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+        "config": {
+            "claim": "email",
+            "user.attribute": "email",
+            "syncMode": "IMPORT"
+        }
+    })
+    
+    upsert_mapper("given_name -> firstName", {
+        "name": "google-first-name",
+        "identityProviderAlias": "google",
+        "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+        "config": {
+            "claim": "given_name",
+            "user.attribute": "firstName",
+            "syncMode": "IMPORT"
+        }
+    })
+    
+    upsert_mapper("family_name -> lastName", {
+        "name": "google-last-name",
+        "identityProviderAlias": "google",
+        "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+        "config": {
+            "claim": "family_name",
+            "user.attribute": "lastName",
+            "syncMode": "IMPORT"
+        }
+    })
+
+
 else:
     say("Google IdP: credentials not found (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or add to ansible vault)")
+
+
 
 # ── 8. Activate ─────────────────────────────────────────────────────────────
 print("=== 8. Activate ===")
