@@ -2,7 +2,7 @@
 # irl.coop Design Documents — Table of Contents
 
 Last updated: 2026-11-20  
-Total documents: ~150  
+Total documents: ~151  
 
 Click any link to jump to that design document. Status keywords: `design` = spec/decision record, `plan` = execution plan, `research` = options explored, `audit` = review/assessment.
 
@@ -225,6 +225,7 @@ Click any link to jump to that design document. Status keywords: `design` = spec
 |---|---|---|
 | [ai-pathways-temporal-workflow-generation.md](ai-pathways-temporal-workflow-generation.md) | design | Multi-party, real-time workflow generation (chat/call/doc/form/task/dashboard) with group-local governance, audit trail under RLS, optional on-chain anchoring, and visual Workflow Studio |
 | [pathways-integration.md](pathways-integration.md) | design | Pathways × irl.coop integration spec |
+| [pathways.md](pathways.md) | index | Cross-reference index and imagined integrations for pathways |
 | [jev-temporal-group-workflows.md](jev-temporal-group-workflows.md) | design | Decision Engine on Temporal — scope tightened |
 | [tier2-entry-model.md](tier2-entry-model.md) | design | Tier-2 participation and work entry model |
 | [capital-campaign-subgroup.md](capital-campaign-subgroup.md) | design | Reusable pattern for non-governor contributors |
