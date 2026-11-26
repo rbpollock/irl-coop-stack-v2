@@ -86,6 +86,7 @@ Click any link to jump to that design document. Status keywords: `design` = spec
 | [payment-stub-and-handoff.md](payment-stub-and-handoff.md) | design | The payment seam — a stub rail and checkout handoff |
 | [payout-capability.md](payout-capability.md) | design | Recognised work to money a member can spend |
 | [fundraising-programmable-transfers.md](fundraising-programmable-transfers.md) | design | Fundraising dashboard + programmable transfer automation |
+| [local-election-fundraising.md](local-election-fundraising.md) | design | Local election fundraising workflows and compliance scoping |
 | [treasury-ui-and-note-secret.md](treasury-ui-and-note-secret.md) | design | Treasury on-screen: note vault, split, and privacy |
 | [mainnet-deploy.md](mainnet-deploy.md) | runbook | Contracts on Base mainnet deployment plan |
 | [transfer-authority.md](transfer-authority.md) | design | Transfer authority state machine and edge registry |
@@ -142,6 +143,7 @@ Click any link to jump to that design document. Status keywords: `design` = spec
 | [group-app-integrations.md](group-app-integrations.md) | wishlist | SSO wishlist for group app integrations |
 | [integration-first-templates.md](integration-first-templates.md) | design | Integration-first templates (Track B) |
 | [member-scoped-app-access.md](member-scoped-app-access.md) | design | Plane, NocoDB, ERPNext, Temporal member scoping |
+| [plane-irl-integration.md](plane-irl-integration.md) | design | Plane CE integration with irl.coop group governance and pathways |
 | [resolver-v2-and-qa.md](resolver-v2-and-qa.md) | assessment | Resolver v2 + built-in QA feasibility |
 | [platform-views.md](platform-views.md) | design | Keep the types, extend the union |
 | [webstudio-identity-and-group-routing.md](webstudio-identity-and-group-routing.md) | design | Webstudio identity + `{groupname}.irl.coop` dynamic routing |
@@ -226,6 +228,7 @@ Click any link to jump to that design document. Status keywords: `design` = spec
 | [ai-pathways-temporal-workflow-generation.md](ai-pathways-temporal-workflow-generation.md) | design | Multi-party, real-time workflow generation (chat/call/doc/form/task/dashboard) with group-local governance, audit trail under RLS, optional on-chain anchoring, and visual Workflow Studio |
 | [pathways-integration.md](pathways-integration.md) | design | Pathways × irl.coop integration spec |
 | [pathways.md](pathways.md) | index | Cross-reference index and imagined integrations for pathways |
+| [e2e-test-plans.md](e2e-test-plans.md) | design | E2E test suite for group governance, pathways, and Plane integration |
 | [jev-temporal-group-workflows.md](jev-temporal-group-workflows.md) | design | Decision Engine on Temporal — scope tightened |
 | [tier2-entry-model.md](tier2-entry-model.md) | design | Tier-2 participation and work entry model |
 | [capital-campaign-subgroup.md](capital-campaign-subgroup.md) | design | Reusable pattern for non-governor contributors |

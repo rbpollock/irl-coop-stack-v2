@@ -51,6 +51,8 @@ irl.coop is built on the idea that **groups are autonomous, not users**. A group
 | [global-node-architecture.md](./global-node-architecture.md) | 23, 25, 139 | Pathway runs replace ActivityPub follows/replies for cross-instance batch transfers and resource sharing. |
 | [sealed-accord-weaving.md](./sealed-accord-weaving.md) | 228 | Uses Pathways orchestration alongside Aqua attestations and Lit Chipotle confidential execution. |
 | [trainable_mediator_skills.md](./trainable_mediator_skills.md) | 10, 125 | References Pathways Cooperative Governance, mutual-respect edges, and pathway pluralism in mediation. |
+| [plane-irl-integration.md](./plane-irl-integration.md) | 92, 216 | Group pathway runner integration and `pathway: intake-review` event on the five-axis bus. |
+| [e2e-test-plans.md](./e2e-test-plans.md) | 1, 4, 92–137 | E2E test suite covering pathway launch, step blocking by intent, A0/A3 autonomy bands, and pathway-to-Plane handoffs. |
 
 ---
 
