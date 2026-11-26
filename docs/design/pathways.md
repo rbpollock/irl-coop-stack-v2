@@ -44,6 +44,8 @@ irl.coop is built on the idea that **groups are autonomous, not users**. A group
 | Document | Relevant Lines | Context |
 |----------|---------------|---------|
 | [pathways-bus-integration.md](./pathways-bus-integration.md) | Entire doc | Core integration design between the djat pathway engine and the irl.coop event bus. Covers intent emission, step execution, sub-pathways, and handoff envelopes. |
+| [pathways-integration.md](./pathways-integration.md) | Entire doc | Full Pathways × irl.coop integration spec: sovereignty invariant, escrow, insurance primitives, and practice profile binding. |
+| [ai-pathways-temporal-workflow-generation.md](./ai-pathways-temporal-workflow-generation.md) | Entire doc | AI-assisted, Pathways-aware Temporal workflow generation with automated validation, version pinning, and group-local governance. |
 | [event-bus-and-governance.md](./event-bus-and-governance.md) | 38, 260–289, 388–404 | Defines cross-group pathway handoffs as a governance primitive on the event bus. Lists pathway runner integration as an open todo. |
 | [e2e-test-plans.md](./e2e-test-plans.md) | 1, 4, 92–137 | E2E test suite covering pathway launch, step blocking by intent, A0/A3 autonomy bands, and pathway-to-Plane handoffs. |
 | [plane-irl-integration.md](./plane-irl-integration.md) | 92, 216 | References group pathway runner and the `pathway: intake-review` event on the bus. |
