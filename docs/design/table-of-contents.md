@@ -1,8 +1,8 @@
 
 # irl.coop Design Documents — Table of Contents
 
-Last updated: 2026-11-20  
-Total documents: ~151  
+Last updated: 2026-11-26  
+Total documents: ~152  
 
 Click any link to jump to that design document. Status keywords: `design` = spec/decision record, `plan` = execution plan, `research` = options explored, `audit` = review/assessment.
 
@@ -102,6 +102,7 @@ Click any link to jump to that design document. Status keywords: `design` = spec
 | [zk-membership-graph-proofs.md](zk-membership-graph-proofs.md) | feasibility | Provable-but-private group graph |
 | [privacy-first-graphs-and-finance.md](privacy-first-graphs-and-finance.md) | design | Privacy-first relationship graphs and finance |
 | [proven-zk-options.md](proven-zk-options.md) | research | ZK options investigated and tradeoffs |
+| [tee-backdoors-and-zk-alternative.md](tee-backdoors-and-zk-alternative.md) | design | Why we avoid TEEs (Intel/ARM/AMD) in favor of crypto and ZK proofs |
 | [p2-build-plan.md](p2-build-plan.md) | design | Shielded treasury circuit family and test plan |
 | [p2-stack-integration.md](p2-stack-integration.md) | design | How the proving layer slots into the stack |
 | [groth16-ceremony.md](groth16-ceremony.md) | design | Trusted setup — launch honesty, member attestation, rotation |
